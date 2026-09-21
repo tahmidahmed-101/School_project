@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
 import { getDeliveryFee } from "../lib/checkout";
@@ -94,13 +93,6 @@ export function CheckoutView() {
           <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
             {ui("checkoutTitle")}
           </h1>
-          <Link
-            href="/shop"
-            className="hidden items-center gap-1 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-600 sm:inline-flex"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>{ui("backToShop")}</span>
-          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">

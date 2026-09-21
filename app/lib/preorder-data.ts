@@ -33,6 +33,7 @@ export const PREORDER_PRODUCTS: Product[] = [
       preorderCloses: { en: "October 6, 2026", bn: "৬ অক্টোবর, ২০২৬" },
       maxQuantity: 150,
       currentQuantity: 62,
+      status: "closing-soon",
     },
   }),
   makeProduct({
@@ -65,6 +66,7 @@ export const PREORDER_PRODUCTS: Product[] = [
       preorderCloses: { en: "October 8, 2026", bn: "৮ অক্টোবর, ২০২৬" },
       maxQuantity: 120,
       currentQuantity: 47,
+      status: "closing-soon",
     },
   }),
   makeProduct({

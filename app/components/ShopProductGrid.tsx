@@ -8,7 +8,7 @@ import { countActiveFilters, type FilterChange, type FilterState } from "../lib/
 import { ProductCard } from "./ProductCard";
 import { ProductListItem } from "./ProductListItem";
 import { ScrollReveal, CardReveal } from "./Reveal";
-import { Dropdown } from "./Dropdown";
+import { FilterDropdown } from "./FilterDropdown";
 import { SearchField } from "./SearchField";
 
 interface ShopProductGridProps {
@@ -18,9 +18,6 @@ interface ShopProductGridProps {
   onReset: () => void;
   onOpenMobileFilter: () => void;
 }
-
-const SORT_TRIGGER_CLASS =
-  "shadow-xs flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-ink-200 bg-ink-50 px-3.5 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 focus:border-gold-500 focus:bg-white";
 
 const VIEW_BUTTON_BASE = "cursor-pointer rounded-lg p-2 transition-all";
 const viewButtonClass = (active: boolean) =>
@@ -51,13 +48,11 @@ export function ShopProductGrid({
   ];
 
   const sortDropdown = (className: string) => (
-    <Dropdown
+    <FilterDropdown
       value={filters.sort}
       onChange={(value) => onFilterChange("sort", value)}
       options={sortOptions}
       className={className}
-      triggerClassName={SORT_TRIGGER_CLASS}
-      menuAlign="right"
     />
   );
 
@@ -70,7 +65,7 @@ export function ShopProductGrid({
             className="w-full"
             value={filters.searchQuery}
             onChange={(value) => onFilterChange("searchQuery", value)}
-            placeholder={ui("navSearchPlaceholder")}
+            placeholder={ui("searchPlaceholderShort")}
           />
 
           <div className="flex items-center gap-2.5">
@@ -97,7 +92,7 @@ export function ShopProductGrid({
             className="max-w-lg flex-1"
             value={filters.searchQuery}
             onChange={(value) => onFilterChange("searchQuery", value)}
-            placeholder={ui("navSearchPlaceholder")}
+            placeholder={ui("searchPlaceholderShort")}
           />
 
           <div className="flex items-center gap-3 text-xs">

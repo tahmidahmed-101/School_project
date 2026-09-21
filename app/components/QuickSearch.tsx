@@ -72,7 +72,7 @@ export function QuickSearch({ isOpen, onClose }: QuickSearchProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={ui("navSearchPlaceholder")}
+                placeholder={ui("searchPlaceholderShort")}
                 className="w-full bg-transparent px-3 py-1 text-base text-ink-900 placeholder-ink-400 focus:outline-none"
               />
               {query && (

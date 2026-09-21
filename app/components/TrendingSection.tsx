@@ -64,9 +64,9 @@ export function TrendingSection() {
           </Link>
         </ScrollReveal>
 
-        {/* Filters: wrapping chips inside the section width on mobile, underline tabs from sm up */}
-        <ScrollReveal delay={0.05} className="mb-5 sm:mb-8 sm:border-b sm:border-ink-200/90">
-          <div className="no-scrollbar flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-8 sm:overflow-x-auto">
+        {/* Filter tabs: same underline design on every screen; the row scrolls sideways inside the section width */}
+        <ScrollReveal delay={0.05} className="mb-6 border-b border-ink-200/90 sm:mb-8">
+          <div className="no-scrollbar flex items-center gap-6 overflow-x-auto sm:gap-8">
             {FILTER_TABS.map((tab) => {
               const isActive = activeTabId === tab.id;
 
@@ -75,10 +75,10 @@ export function TrendingSection() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTabId(tab.id)}
-                  className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-150 sm:-mb-px sm:shrink-0 sm:rounded-none sm:border-0 sm:border-b-2 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0 sm:text-[15px] ${
+                  className={`-mb-px shrink-0 cursor-pointer whitespace-nowrap pb-3 text-sm font-semibold transition-colors duration-150 sm:text-[15px] ${
                     isActive
-                      ? "border-gold-500 bg-gold-500 font-bold text-ink-950 sm:border-gold-500 sm:text-gold-600"
-                      : "border-ink-200 bg-white text-ink-600 hover:border-gold-500 sm:border-transparent sm:text-ink-500 sm:hover:border-transparent sm:hover:text-ink-900"
+                      ? "border-b-2 border-gold-500 font-bold text-gold-600"
+                      : "border-b-2 border-transparent text-ink-500 hover:text-ink-900"
                   }`}
                   aria-pressed={isActive}
                 >

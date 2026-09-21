@@ -1,9 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
-import { photo } from "../lib/photo";
 
 type LoaderVariant = "page" | "section" | "inline";
 
@@ -24,7 +21,7 @@ const WRAPPER_CLASS: Record<Exclude<LoaderVariant, "inline">, string> = {
   section: "min-h-[240px]",
 };
 
-/** Branded loading indicator: the gold cart on a green disc, with a gold ring spinning around it. */
+/** Loading indicator: a gold arc spinning around a pale ring, with a short label. */
 export function Loader({ variant = "page", label, className = "" }: LoaderProps) {
   const { ui } = useLang();
   const text = label ?? ui("loading");
@@ -47,25 +44,13 @@ export function Loader({ variant = "page", label, className = "" }: LoaderProps)
       aria-live="polite"
       className={`flex w-full flex-col items-center justify-center gap-5 bg-white px-4 ${WRAPPER_CLASS[variant]} ${className}`}
     >
-      <div className="relative flex h-20 w-20 items-center justify-center">
-        {/* Track and spinning gold arc */}
-        <span aria-hidden="true" className="absolute inset-0 rounded-full border-[3px] border-gold-100" />
+      {/* Gold arc spinning around a pale track */}
+      <div className="relative h-14 w-14">
+        <span aria-hidden="true" className="absolute inset-0 rounded-full border-4 border-gold-100" />
         <span
           aria-hidden="true"
-          className="absolute inset-0 animate-spin rounded-full border-[3px] border-transparent border-t-gold-500"
+          className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-gold-500"
         />
-
-        {/* Brand disc with the cart */}
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-800 shadow-md">
-          <Image
-            src={photo(BRAND_INFO.logoCart)}
-            alt=""
-            width={382}
-            height={282}
-            priority
-            className="h-7 w-auto animate-pulse"
-          />
-        </span>
       </div>
 
       <div className="flex items-center gap-1.5 text-sm font-semibold text-ink-600">

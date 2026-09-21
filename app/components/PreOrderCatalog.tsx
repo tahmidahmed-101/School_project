@@ -7,6 +7,7 @@ import { PREORDER_PRODUCTS } from "../lib/preorder-data";
 import { ProductCard } from "./ProductCard";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CardReveal } from "./Reveal";
+import { FilterDropdown } from "./FilterDropdown";
 import { useLang } from "../lib/i18n";
 
 type CategoryFilter = "all" | "gadgets";
@@ -139,7 +140,30 @@ export function PreOrderCatalog() {
         </div>
 
         {/* Filter Navigation Tabs */}
-        <div className="mb-8 flex flex-col gap-4 border-b border-ink-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 sm:mb-8 sm:border-b sm:border-ink-200 sm:pb-4">
+          {/* Mobile: category dropdown on the left, status dropdown on the right */}
+          <div className="grid grid-cols-2 gap-3 sm:hidden">
+            <FilterDropdown
+              value={activeCategory}
+              onChange={(value) => setActiveCategory(value as CategoryFilter)}
+              options={categories.map((cat) => ({
+                value: cat.id,
+                label: `${t(cat.label)} (${n(countsByCategory[cat.id])})`,
+              }))}
+            />
+            <FilterDropdown
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value as StatusFilter)}
+              options={[
+                { value: "all", label: "All statuses" },
+                { value: "available", label: "Available now" },
+                { value: "closing-soon", label: "Closing soon" },
+              ]}
+            />
+          </div>
+
+          {/* Desktop: category tabs and status filter (unchanged) */}
+          <div className="hidden sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:px-0 sm:pb-0">
             {categories.map((cat) => {
               const isActive = activeCategory === cat.id;
@@ -180,6 +204,7 @@ export function PreOrderCatalog() {
               <option value="available">Available now</option>
               <option value="closing-soon">Closing soon</option>
             </select>
+          </div>
           </div>
         </div>
 

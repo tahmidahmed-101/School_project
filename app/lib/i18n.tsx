@@ -92,6 +92,7 @@ const DICT = {
   browseAllCategories: { en: "Browse All", bn: "সব ক্যাটাগরি দেখুন" },
   navWishlist: { en: "Wishlist", bn: "উইশলিস্ট" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
+  searchPlaceholderShort: { en: "Search...", bn: "খুঁজুন..." },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
   navSearchPlaceholder: { en: "Search products, gadgets, bags, fashion...", bn: "পণ্য, গ্যাজেট বা ফ্যাশন খুঁজুন..." },
   matchingProducts: { en: "Matching Products", bn: "সম্পর্কিত পণ্যসমূহ" },
@@ -168,7 +169,6 @@ const DICT = {
   confirmPreOrderBtn: { en: "Confirm Pre-order", bn: "প্রি-অর্ডার নিশ্চিত করুন" },
   checkoutPreOrderNotice: { en: "This order contains a pre-order product.", bn: "এই অর্ডারে প্রি-অর্ডার পণ্য রয়েছে।" },
   checkoutPreOrderShipping: { en: "The product will be shipped after stock arrives.", bn: "স্টক পৌঁছানোর পর পণ্যটি ডেলিভারি করা হবে।" },
-  backToShop: { en: "Back to shop", bn: "দোকানে ফিরে যান" },
   backToShopping: { en: "Back to shopping", bn: "কেনাকাটায় ফিরে যান" },
 
   // Cart Drawer
