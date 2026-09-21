@@ -1,0 +1,120 @@
+:root {
+  --ts-bg: #ffffff;
+  --ts-surface-1: #f6f9f5;
+  --ts-surface-2: #ecf2ea;
+  --ts-surface-3: #dbe4d8;
+  --ts-card: #ffffff;
+  --ts-card-hover: #f6f9f5;
+  --ts-border: rgba(0, 0, 0, 0.08);
+  --ts-border-strong: rgba(0, 0, 0, 0.16);
+  --ts-border-accent: rgba(229, 192, 76, 0.45);
+
+  --ts-accent: #e5c04c;
+  --ts-accent-hover: #d4ad3b;
+  --ts-accent-glow: rgba(229, 192, 76, 0.22);
+  --ts-accent-subtle: rgba(229, 192, 76, 0.12);
+
+  --ts-tech: #276325;
+  --ts-tech-subtle: rgba(39, 99, 37, 0.12);
+  --ts-success: #3a8036;
+
+  --ts-ink: #162114;
+  --ts-ink-dim: #46574a;
+  --ts-ink-subtle: #66756a;
+}
+
+.ts-font-scope,
+.ts-root {
+  background-color: var(--ts-bg);
+  color: var(--ts-ink);
+  font-family:
+    var(--font-ts-jost),
+    "Jost",
+    var(--font-ts-bengali),
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ts-root :is(h1, h2, h3, h4, h5, h6, .ts-display, .font-display) {
+  font-family:
+    var(--font-ts-jost),
+    "Jost",
+    var(--font-ts-bengali),
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif !important;
+  letter-spacing: normal;
+}
+
+.ts-display {
+  font-family:
+    var(--font-ts-jost),
+    "Jost",
+    var(--font-ts-bengali),
+    sans-serif !important;
+  letter-spacing: normal;
+}
+
+/* Custom scrollbars (neutral & subtle, brand-tinted) */
+.ts-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ts-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ts-root ::-webkit-scrollbar-thumb {
+  background: rgba(22, 33, 20, 0.12);
+  border-radius: 9999px;
+}
+.ts-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 33, 20, 0.22);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glass & Glow utilities */
+.ts-glass {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.ts-card-glow {
+  box-shadow:
+    0 0 0 1px var(--ts-border),
+    0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ts-card-glow:hover {
+  box-shadow:
+    0 0 0 1px var(--ts-border-strong),
+    0 8px 24px -6px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Subtle dot mesh background for signature sections */
+.ts-dot-mesh {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/*
+ * Kull Mart palette — sampled from the logo (deep-forest green field, polished-gold cart).
+ *   brand  = the logo's green   (#276325 at 700, #1b4816 at 900)
+ *   gold   = the logo's gold    (sampled ramp: #f7d862 highlight, #e5c04c face, #d4ad3b, #c0962d, #a98223 shadow)
+ *   ink    = green-tinted neutrals for text, borders and surfaces
+ * Gold 600+ keeps the logo's hue (~44°) and follows its shadow tones (#c0962d, #a98223) for text and hovers.
+ */
+@theme {
+  --color-brand-50: #f1f8ef;
+  --color-brand-100: #ddeeda;
+  --color-brand-200: #bcdcb6;
+  --color-brand-300: #90c286;
+  --color-brand-400: #5fa055;
+  --color-brand-500: #3a8036;
+  --color-brand-600: #2d6e2a;
+  --color-brand-700: #276325;
+  --color-brand-800: #1f4f1d;
+  --color-brand-900: #1b4816;
+  --color-brand-950: #0f2a0d;
+
+  --color-gold-50: #fefaea;
+  --color-gold-100: #fdf3cc;
+  --color-gold-200: #fbe8a0;
+  --color-gold-300: #f7d862;
+  --color-gold-400: #f0cd57;
+  --color-gold-500: #e5c04c;
+  --color-gold-600: #c0962d;
+  --color-gold-700: #a98223;
+  --color-gold-800: #8a6a1a;
+  --color-gold-900: #6b5214;
+  --color-gold-950: #3f300b;
+
+  --color-ink-50: #f6f9f5;
+  --color-ink-100: #ecf2ea;
+  --color-ink-200: #dbe4d8;
+  --color-ink-300: #c2cfbe;
+  --color-ink-400: #94a58f;
+  --color-ink-500: #6b7d67;
+  --color-ink-600: #536450;
+  --color-ink-700: #3d4d3b;
+  --color-ink-800: #263424;
+  --color-ink-900: #162114;
+  --color-ink-950: #0c150b;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #ffffff;
+}

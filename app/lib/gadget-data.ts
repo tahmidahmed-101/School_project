@@ -1,0 +1,191 @@
+import type { Product } from "./types";
+import { makeProduct } from "./make-product";
+
+export const GADGET_PRODUCTS: Product[] = [
+  makeProduct({
+    id: "gadget-01",
+    slug: "hoco-eq33-wireless-earbuds",
+    sku: "KM-GAD-001",
+    category: "gadgets",
+    name: { en: "Hoco EQ33 Wireless Earbuds", bn: "হোকো EQ33 ওয়্যারলেস ইয়ারবাড" },
+    tagline: {
+      en: "Small size, big sound — semi-in-ear comfort for calls, classes and listening",
+      bn: "ছোট সাইজ, দারুণ সাউন্ড — কল, অনলাইন ক্লাস আর শোনার জন্য আরামদায়ক সেমি-ইন-ইয়ার",
+    },
+    description: {
+      en: "The Hoco EQ33 is a comfortable semi-in-ear headset with Bluetooth 5.4 and a hall-switch charging case. Made for everyday calling, online classes, Quran recitation, waz and ghazal.",
+      bn: "হোকো EQ33 — ব্লুটুথ ৫.৪ ও হল-সুইচ চার্জিং কেসসহ আরামদায়ক সেমি-ইন-ইয়ার হেডসেট। প্রতিদিনের কল, অনলাইন ক্লাস, কুরআন তিলাওয়াত, ওয়াজ ও গজল শোনার জন্য তৈরি।",
+    },
+    images: ["hoco-eq33-earbuds.jpg"],
+    price: 1490,
+    stockCount: 24,
+    badge: { en: "Trending", bn: "ট্রেন্ডিং" },
+    featured: true,
+    trending: true,
+    newArrival: true,
+    specs: [
+      { label: { en: "Connection", bn: "কানেকশন" }, value: { en: "Bluetooth 5.4", bn: "ব্লুটুথ ৫.৪" } },
+      { label: { en: "Fit", bn: "ফিট" }, value: { en: "Semi-in-ear", bn: "সেমি-ইন-ইয়ার" } },
+      { label: { en: "Case", bn: "কেস" }, value: { en: "Hall-switch charging case", bn: "হল-সুইচ চার্জিং কেস" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-02",
+    slug: "oraimo-airpods-pro-tws-earbuds",
+    sku: "KM-GAD-002",
+    category: "gadgets",
+    name: { en: "Oraimo Airpods Pro TWS Earbuds", bn: "ওরাইমো এয়ারপডস প্রো TWS ইয়ারবাড" },
+    tagline: {
+      en: "True wireless earbuds with silicone tips and a compact charging case",
+      bn: "সিলিকন টিপ ও কমপ্যাক্ট চার্জিং কেসসহ ট্রু ওয়্যারলেস ইয়ারবাড",
+    },
+    description: {
+      en: "True wireless earbuds in a slim white charging case, with soft silicone ear tips for a snug fit. Pair once and they reconnect each time you open the case.",
+      bn: "স্লিম সাদা চার্জিং কেসের ট্রু ওয়্যারলেস ইয়ারবাড, নরম সিলিকন ইয়ার টিপসহ। একবার পেয়ার করলে প্রতিবার কেস খুললেই কানেক্ট হয়ে যায়।",
+    },
+    images: ["oraimo-airpods-pro.jpg"],
+    price: 1690,
+    stockCount: 20,
+    featured: true,
+    trending: true,
+    specs: [
+      { label: { en: "Type", bn: "ধরন" }, value: { en: "True wireless (TWS)", bn: "ট্রু ওয়্যারলেস (TWS)" } },
+      { label: { en: "Tips", bn: "টিপ" }, value: { en: "Soft silicone ear tips", bn: "নরম সিলিকন ইয়ার টিপ" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-03",
+    slug: "led-power-display-tws-earbuds",
+    sku: "KM-GAD-003",
+    category: "gadgets",
+    name: { en: "LED Power-Display TWS Earbuds", bn: "এলইডি পাওয়ার-ডিসপ্লে TWS ইয়ারবাড" },
+    tagline: {
+      en: "Charging case with a live battery percentage display",
+      bn: "চার্জিং কেসে ব্যাটারির শতাংশ দেখা যায় লাইভ ডিসপ্লেতে",
+    },
+    description: {
+      en: "Wireless earbuds in a black charging case with an LED display that shows the remaining battery percentage, so you always know when to recharge.",
+      bn: "কালো চার্জিং কেসের ওয়্যারলেস ইয়ারবাড — এলইডি ডিসপ্লেতে ব্যাটারি কত শতাংশ বাকি দেখা যায়, তাই কখন চার্জ দিতে হবে আগেই বোঝা যায়।",
+    },
+    images: ["tws-led-display-earbuds.jpg"],
+    price: 1190,
+    stockCount: 30,
+    trending: true,
+    specs: [
+      { label: { en: "Case", bn: "কেস" }, value: { en: "LED battery display", bn: "এলইডি ব্যাটারি ডিসপ্লে" } },
+      { label: { en: "Type", bn: "ধরন" }, value: { en: "True wireless (TWS)", bn: "ট্রু ওয়্যারলেস (TWS)" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-04",
+    slug: "mirror-case-led-tws-earbuds",
+    sku: "KM-GAD-004",
+    category: "gadgets",
+    name: { en: "Mirror-Case LED TWS Earbuds", bn: "মিরর-কেস এলইডি TWS ইয়ারবাড" },
+    tagline: {
+      en: "Glossy blue mirror-finish case with a bright LED readout",
+      bn: "চকচকে নীল মিরর-ফিনিশ কেস, উজ্জ্বল এলইডি রিডআউটসহ",
+    },
+    description: {
+      en: "Wireless earbuds in a flip-top charging case with a mirror finish and a bright LED readout. Eye-catching, and easy to check at a glance.",
+      bn: "ফ্লিপ-টপ চার্জিং কেসের ওয়্যারলেস ইয়ারবাড — মিরর ফিনিশ আর উজ্জ্বল এলইডি রিডআউটসহ। দেখতে আকর্ষণীয়, এক নজরেই ব্যাটারি চেক করা যায়।",
+    },
+    images: ["tws-mirror-led-earbuds.jpg"],
+    price: 1090,
+    stockCount: 26,
+    newArrival: true,
+    specs: [
+      { label: { en: "Case", bn: "কেস" }, value: { en: "Mirror finish, flip top", bn: "মিরর ফিনিশ, ফ্লিপ টপ" } },
+      { label: { en: "Display", bn: "ডিসপ্লে" }, value: { en: "LED readout", bn: "এলইডি রিডআউট" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-05",
+    slug: "remax-rm-512-wired-earphone",
+    sku: "KM-GAD-005",
+    category: "gadgets",
+    name: { en: "Remax RM-512 Wired Earphone", bn: "রিম্যাক্স RM-512 ওয়্যার্ড ইয়ারফোন" },
+    tagline: {
+      en: "In-ear wired earphone with inline mic and 3.5mm jack",
+      bn: "ইনলাইন মাইক ও ৩.৫মিমি জ্যাকসহ ইন-ইয়ার ওয়্যার্ড ইয়ারফোন",
+    },
+    description: {
+      en: "A reliable wired in-ear earphone with an inline mic for calls and a standard 3.5mm plug. No charging, no pairing — plug in and play.",
+      bn: "কলের জন্য ইনলাইন মাইকসহ নির্ভরযোগ্য ওয়্যার্ড ইন-ইয়ার ইয়ারফোন, স্ট্যান্ডার্ড ৩.৫মিমি প্লাগ। চার্জ বা পেয়ারিং ছাড়াই — লাগান আর শুনুন।",
+    },
+    images: ["remax-rm512-earphone.jpg"],
+    price: 390,
+    stockCount: 50,
+    specs: [
+      { label: { en: "Model", bn: "মডেল" }, value: { en: "RM-512", bn: "RM-512" } },
+      { label: { en: "Connector", bn: "কানেক্টর" }, value: { en: "3.5mm jack", bn: "৩.৫মিমি জ্যাক" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-06",
+    slug: "om-music-stereo-earphones",
+    sku: "KM-GAD-006",
+    category: "gadgets",
+    name: { en: "O.M Music Stereo Earphones", bn: "ও.এম মিউজিক স্টেরিও ইয়ারফোন" },
+    tagline: {
+      en: "Everyday stereo earphones with a built-in mic",
+      bn: "বিল্ট-ইন মাইকসহ প্রতিদিনের স্টেরিও ইয়ারফোন",
+    },
+    description: {
+      en: "Lightweight stereo earphones with a built-in mic and a 3.5mm plug. A simple, affordable pick for music, videos and calls.",
+      bn: "বিল্ট-ইন মাইক ও ৩.৫মিমি প্লাগসহ হালকা স্টেরিও ইয়ারফোন। গান, ভিডিও আর কলের জন্য সহজ ও সাশ্রয়ী পছন্দ।",
+    },
+    images: ["om-stereo-earphone.jpg"],
+    price: 290,
+    stockCount: 60,
+    specs: [
+      { label: { en: "Type", bn: "ধরন" }, value: { en: "Wired stereo", bn: "ওয়্যার্ড স্টেরিও" } },
+      { label: { en: "Connector", bn: "কানেক্টর" }, value: { en: "3.5mm jack", bn: "৩.৫মিমি জ্যাক" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-07",
+    slug: "mini-ball-bluetooth-speaker",
+    sku: "KM-GAD-007",
+    category: "gadgets",
+    name: { en: "Mini Ball Bluetooth Speaker", bn: "মিনি বল ব্লুটুথ স্পিকার" },
+    tagline: {
+      en: "Palm-size round speaker with a metal mesh grille",
+      bn: "হাতের তালুর মাপের গোল স্পিকার, মেটাল মেশ গ্রিলসহ",
+    },
+    description: {
+      en: "A compact ball-shaped Bluetooth speaker with a metal mesh grille. Small enough for a pocket or a desk, and handy for music on the go.",
+      bn: "মেটাল মেশ গ্রিলসহ কমপ্যাক্ট বল-আকৃতির ব্লুটুথ স্পিকার। পকেট বা ডেস্কে রাখার মতো ছোট — চলতি পথে গান শোনার জন্য সুবিধাজনক।",
+    },
+    images: ["mini-ball-speaker.jpg"],
+    price: 590,
+    stockCount: 30,
+    trending: true,
+    specs: [
+      { label: { en: "Connection", bn: "কানেকশন" }, value: { en: "Bluetooth", bn: "ব্লুটুথ" } },
+      { label: { en: "Design", bn: "ডিজাইন" }, value: { en: "Compact ball, metal mesh", bn: "কমপ্যাক্ট বল, মেটাল মেশ" } },
+    ],
+  }),
+  makeProduct({
+    id: "gadget-08",
+    slug: "goodx-15w-type-c-fast-charger",
+    sku: "KM-GAD-008",
+    category: "gadgets",
+    name: { en: "Goodx 15W Type-C Fast Charger", bn: "গুডএক্স ১৫ ওয়াট টাইপ-সি ফাস্ট চার্জার" },
+    tagline: {
+      en: "15W wall charger with a matching white cable",
+      bn: "ম্যাচিং সাদা ক্যাবলসহ ১৫ ওয়াট ওয়াল চার্জার",
+    },
+    description: {
+      en: "A 15W fast wall charger with a Type-C cable in the box. Charges phones and accessories quickly from any standard socket.",
+      bn: "বক্সে টাইপ-সি ক্যাবলসহ ১৫ ওয়াট ফাস্ট ওয়াল চার্জার। যেকোনো স্ট্যান্ডার্ড সকেট থেকে ফোন ও এক্সেসরিজ দ্রুত চার্জ করে।",
+    },
+    images: ["goodx-15w-charger.jpg"],
+    price: 480,
+    stockCount: 45,
+    specs: [
+      { label: { en: "Output", bn: "আউটপুট" }, value: { en: "15W fast charging", bn: "১৫ ওয়াট ফাস্ট চার্জিং" } },
+      { label: { en: "Cable", bn: "ক্যাবল" }, value: { en: "Type-C, included", bn: "টাইপ-সি, সাথেই" } },
+    ],
+  }),
+];
