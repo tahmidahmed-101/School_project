@@ -20,7 +20,7 @@ export function PreOrderConfirmationModal() {
     : "October 5–10, 2026";
 
   return (
-    <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal" lockScroll={false}>
+    <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal">
       {/* Modal Dialog Card */}
       <motion.div
         role="dialog"
