@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock } from "lucide-react";
+import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock, Menu } from "lucide-react";
 import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
@@ -56,7 +56,12 @@ function buildNavLinks(pathname: string, activeCategory: string | null): NavLink
   ];
 }
 
-export function Navbar() {
+interface NavbarProps {
+  /** Opens the mobile hamburger menu, rendered at the ClientShell root so it can stack above the bottom bar. */
+  onOpenMenu: () => void;
+}
+
+export function Navbar({ onOpenMenu }: NavbarProps) {
   const pathname = usePathname();
 
   const { lang, setLang, t, ui, n } = useLang();
@@ -80,7 +85,16 @@ export function Navbar() {
       {/* Tier 1: logo, live search, language / wishlist / cart */}
       <div className="border-b border-white/10 lg:border-b-0">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:gap-6 sm:px-6 sm:py-3.5 lg:gap-8 lg:px-8">
-          <div className="flex shrink-0 items-center">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+            <button
+              type="button"
+              onClick={onOpenMenu}
+              aria-label={ui("openMenu")}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
             <Link href="/" className="group flex items-center gap-2 sm:gap-2.5">
               <Image
                 src={photo(BRAND_INFO.logoCart)}
@@ -103,19 +117,21 @@ export function Navbar() {
             <Link
               href="/pre-order"
               aria-label={ui("navPreOrder")}
-              className={`relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors lg:hidden ${
+              className={`relative flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 transition-colors lg:hidden ${
                 pathname.startsWith("/pre-order")
                   ? "text-gold-300"
                   : "text-white hover:bg-white/10 hover:text-gold-300"
               }`}
             >
-              <Clock className="h-5 w-5" />
+              <Clock className="h-5 w-5 shrink-0" />
+              <span className="text-xs font-semibold whitespace-nowrap">{ui("navPreOrder")}</span>
             </Link>
 
+            {/* Desktop only; on mobile the language toggle lives in the hamburger menu */}
             <button
               type="button"
               onClick={() => setLang(lang === "en" ? "bn" : "en")}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20 sm:px-3"
+              className="hidden cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20 lg:flex sm:px-3"
               aria-label="Switch language between English and Bangla"
             >
               <Globe className="h-3.5 w-3.5 text-gold-300" />

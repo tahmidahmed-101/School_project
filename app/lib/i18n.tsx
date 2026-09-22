@@ -94,6 +94,9 @@ const DICT = {
   // Navigation
   navHome: { en: "Home", bn: "হোম" },
   navShop: { en: "Shop all", bn: "সব পণ্য" },
+  navMenu: { en: "Menu", bn: "মেনু" },
+  openMenu: { en: "Open menu", bn: "মেনু খুলুন" },
+  closeMenu: { en: "Close menu", bn: "মেনু বন্ধ করুন" },
   shopByCategories: { en: "Shop by Categories", bn: "ক্যাটাগরি দেখুন" },
   browseAllCategories: { en: "Browse All", bn: "সব ক্যাটাগরি দেখুন" },
   navWishlist: { en: "Wishlist", bn: "উইশলিস্ট" },
