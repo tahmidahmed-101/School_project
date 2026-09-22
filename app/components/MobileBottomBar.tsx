@@ -4,7 +4,7 @@ import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Store, Search, Heart, Clock } from "lucide-react";
+import { Home, Store, Search, Heart } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { useWishlist } from "../lib/wishlist";
 
@@ -18,12 +18,12 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
   const { ui, n } = useLang();
   const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
 
-  // Active tab index:
-  // 0 = Home, 1 = Shop, 2 = Pre-order, 3 = Search, 4 = Wishlist
+  // Active tab index (-1 = none, e.g. on the pre-order page which has its own nav entry):
+  // 0 = Home, 1 = Shop, 2 = Search, 3 = Wishlist
   const activeIndex = useMemo(() => {
-    if (isWishlistOpen) return 4;
-    if (isSearchOpen) return 3;
-    if (pathname.startsWith("/pre-order")) return 2;
+    if (isWishlistOpen) return 3;
+    if (isSearchOpen) return 2;
+    if (pathname.startsWith("/pre-order")) return -1;
     if (
       pathname.startsWith("/shop") ||
       pathname.startsWith("/product")
@@ -47,14 +47,6 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
       label: ui("navShop"),
       href: "/shop",
       icon: Store,
-      badge: 0,
-      onClick: undefined,
-    },
-    {
-      id: "pre-order",
-      label: ui("navPreOrder"),
-      href: "/pre-order",
-      icon: Clock,
       badge: 0,
       onClick: undefined,
     },
@@ -84,11 +76,11 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
       <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-[0_-4px_24px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom,0px)]">
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
-          {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
+          {/* Smooth moving spotlight beam & top glowing indicator (4 tabs -> w-1/4) */}
           <motion.div
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden"
-            animate={{ x: `${activeIndex * 100}%` }}
+            className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/4 flex-col items-center justify-start overflow-hidden"
+            animate={{ x: `${Math.max(activeIndex, 0) * 100}%`, opacity: activeIndex === -1 ? 0 : 1 }}
             transition={{
               type: "spring",
               stiffness: 380,

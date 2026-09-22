@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Heart, Globe, Phone, MapPin } from "lucide-react";
+import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock } from "lucide-react";
 import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
@@ -88,9 +88,9 @@ export function Navbar() {
                 width={382}
                 height={282}
                 priority
-                className="h-8 w-auto shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-105 sm:h-10"
+                className="h-6 w-auto shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
-              <span className="text-base font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
+              <span className="text-sm font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
                 {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
               </span>
             </Link>
@@ -99,6 +99,19 @@ export function Navbar() {
           <NavbarSearch />
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+            {/* Mobile only; on desktop Pre-order already lives in the Tier 2 nav links */}
+            <Link
+              href="/pre-order"
+              aria-label={ui("navPreOrder")}
+              className={`relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors lg:hidden ${
+                pathname.startsWith("/pre-order")
+                  ? "text-gold-300"
+                  : "text-white hover:bg-white/10 hover:text-gold-300"
+              }`}
+            >
+              <Clock className="h-5 w-5" />
+            </Link>
+
             <button
               type="button"
               onClick={() => setLang(lang === "en" ? "bn" : "en")}
@@ -130,7 +143,7 @@ export function Navbar() {
               type="button"
               onClick={openDrawer}
               aria-label="Open cart drawer"
-              className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
+              className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
             >
               <ShoppingBag className="h-5 w-5 transition-transform hover:scale-105" />
               {totalItems > 0 && (
