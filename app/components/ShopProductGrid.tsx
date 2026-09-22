@@ -126,13 +126,13 @@ export function ShopProductGrid({
         </div>
       </ScrollReveal>
 
-      <div className="flex items-center justify-between px-1">
+      <ScrollReveal y={12} duration={0.5} className="flex items-center justify-between px-1">
         <span className="text-xs font-medium text-ink-500">
           {ui("filterShowing")}{" "}
           <strong className="text-sm font-bold text-ink-900">{n(products.length)}</strong>{" "}
           {ui("itemsFound")}
         </span>
-      </div>
+      </ScrollReveal>
 
       {products.length === 0 ? (
         <EmptyState
