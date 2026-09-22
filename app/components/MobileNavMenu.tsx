@@ -44,14 +44,14 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-ink-200 bg-white p-5 shadow-2xl"
+              className="pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-white/10 bg-brand-800 p-5 shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-ink-200 pb-3">
-                <h3 className="text-base font-bold text-ink-900">{ui("navMenu")}</h3>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="text-base font-bold text-white">{ui("navMenu")}</h3>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="cursor-pointer rounded-lg bg-ink-100 p-1.5 text-ink-500 transition-colors hover:bg-ink-200 hover:text-ink-900"
+                  className="cursor-pointer rounded-lg bg-white/10 p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
                   aria-label={ui("closeMenu")}
                 >
                   <X className="h-5 w-5" />
@@ -64,8 +64,8 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                   onClick={onClose}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                     pathname === "/"
-                      ? "bg-gold-500/15 text-gold-700"
-                      : "text-ink-700 hover:bg-ink-50"
+                      ? "bg-white/10 text-gold-300"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   <Home className="h-4 w-4 shrink-0" />
@@ -80,15 +80,15 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                           pathname === SHOP_PATH && !activeCategory
-                            ? "bg-gold-500/15 text-gold-700"
-                            : "text-ink-700 hover:bg-ink-50"
+                            ? "bg-white/10 text-gold-300"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
                         }`}
                       >
                         <Store className="h-4 w-4 shrink-0" />
                         <span>{ui("navShop")}</span>
                       </Link>
 
-                      <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-ink-400">
+                      <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-white/40">
                         {ui("shopByCategories")}
                       </div>
 
@@ -99,8 +99,8 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                           onClick={onClose}
                           className={`flex items-center rounded-xl px-3 py-2.5 pl-9 text-sm font-medium transition-colors ${
                             activeCategory === category.slug
-                              ? "bg-gold-500/15 font-bold text-gold-700"
-                              : "text-ink-600 hover:bg-ink-50"
+                              ? "bg-white/10 font-bold text-gold-300"
+                              : "text-white/70 hover:bg-white/10 hover:text-white"
                           }`}
                         >
                           <span className="truncate">{t(category.name)}</span>
@@ -111,14 +111,14 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                 </WithActiveCategory>
               </nav>
 
-              <div className="border-t border-ink-200 pt-4">
+              <div className="border-t border-white/10 pt-4">
                 <button
                   type="button"
                   onClick={() => setLang(lang === "en" ? "bn" : "en")}
-                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm font-semibold text-ink-800 transition-colors hover:bg-ink-100"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
                   aria-label="Switch language between English and Bangla"
                 >
-                  <Globe className="h-4 w-4 text-gold-600" />
+                  <Globe className="h-4 w-4 text-gold-300" />
                   <span>{lang === "en" ? "বাংলা" : "English"}</span>
                 </button>
               </div>
