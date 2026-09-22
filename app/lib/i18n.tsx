@@ -150,7 +150,7 @@ const DICT = {
   relatedProducts: { en: "You may also like", bn: "সম্পর্কিত অন্যান্য পণ্য" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
-  preOrderNow: { en: "Pre-order Now", bn: "প্রি-অর্ডার করুন" },
+  preOrderNow: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "PRE-ORDER SOLD OUT", bn: "প্রি-অর্ডার স্টক শেষ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
