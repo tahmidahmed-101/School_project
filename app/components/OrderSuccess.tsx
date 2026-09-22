@@ -57,11 +57,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
           </div>
           <div className="flex justify-between border-b border-ink-200 pb-2">
             <span className="text-ink-500">{ui("checkoutPaymentMethod")}</span>
-            <span className="font-semibold text-ink-800">
-              {orderResult.customer.paymentMethod === "cod"
-                ? ui("checkoutCodLabel")
-                : ui("checkoutBkashLabel")}
-            </span>
+            <span className="font-semibold text-ink-800">{ui("checkoutCodLabel")}</span>
           </div>
           <div className="space-y-0.5 pt-1 text-ink-600">
             <span className="block font-semibold text-ink-900">

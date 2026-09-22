@@ -1,6 +1,5 @@
 "use client";
 
-import { Store, Truck, MessageCircle } from "lucide-react";
 import type { Product } from "../../lib/types";
 import { useLang } from "../../lib/i18n";
 import { AccordionItem } from "../ui/AccordionItem";
@@ -49,26 +48,11 @@ export function ProductAccordions({ product }: { product: Product }) {
               delivery on orders over ৳2,000. Wholesale and retail orders are both welcome.
             </p>
             <p>
-              Questions about size, colour or a product's details? Message us on WhatsApp or
+              Questions about size, colour or a product&apos;s details? Message us on WhatsApp or
               Facebook before you order and we will help you choose.
             </p>
           </div>
         </AccordionItem>
-      </div>
-
-      <div className="mt-8 grid grid-cols-3 gap-3 border-t border-ink-100 pt-6 text-[11px] font-medium text-ink-600">
-        <div className="flex items-center gap-1.5">
-          <Store className="h-4 w-4 shrink-0 text-gold-600" />
-          <span>{ui("featureOpenBoxTitle")}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Truck className="h-4 w-4 shrink-0 text-gold-600" />
-          <span>{ui("featureFastTitle")}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <MessageCircle className="h-4 w-4 shrink-0 text-gold-600" />
-          <span>WhatsApp support</span>
-        </div>
       </div>
     </>
   );

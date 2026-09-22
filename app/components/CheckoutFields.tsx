@@ -86,57 +86,11 @@ export function CheckoutFields({ form, onChange }: CheckoutFieldsProps) {
 
       <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-ink-900">{ui("checkoutPaymentMethod")}</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <PaymentOption
-            method="cod"
-            selected={form.paymentMethod === "cod"}
-            onSelect={() => onChange({ paymentMethod: "cod" })}
-            label={ui("checkoutCodLabel")}
-            description={ui("checkoutCodSub")}
-          />
-          <PaymentOption
-            method="bkash"
-            selected={form.paymentMethod === "bkash"}
-            onSelect={() => onChange({ paymentMethod: "bkash" })}
-            label={ui("checkoutBkashLabel")}
-            description={ui("checkoutBkashSub")}
-          />
+        <div className="rounded-xl border border-gold-500 bg-gold-50/80 p-3.5">
+          <span className="block text-xs font-bold text-ink-900">{ui("checkoutCodLabel")}</span>
+          <span className="mt-0.5 block text-[11px] text-ink-600">{ui("checkoutCodSub")}</span>
         </div>
       </div>
     </>
-  );
-}
-
-interface PaymentOptionProps {
-  method: OrderForm["paymentMethod"];
-  selected: boolean;
-  onSelect: () => void;
-  label: string;
-  description: string;
-}
-
-function PaymentOption({ method, selected, onSelect, label, description }: PaymentOptionProps) {
-  return (
-    <div
-      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all ${
-        selected
-          ? "border-gold-500 bg-gold-50/80"
-          : "border-ink-200 bg-ink-50 hover:bg-ink-100"
-      }`}
-    >
-      <input
-        id={`pay-${method}`}
-        type="radio"
-        name="payment"
-        value={method}
-        checked={selected}
-        onChange={onSelect}
-        className="mt-0.5 cursor-pointer accent-gold-500"
-      />
-      <label htmlFor={`pay-${method}`} className="cursor-pointer">
-        <span className="block text-xs font-bold text-ink-900">{label}</span>
-        <span className="mt-0.5 block text-[11px] text-ink-600">{description}</span>
-      </label>
-    </div>
   );
 }

@@ -97,7 +97,7 @@ export interface OrderForm {
   deliveryAddress: string;
   cityArea: string;
   deliveryZone: "inside-dhaka" | "outside-dhaka";
-  paymentMethod: "cod" | "bkash";
+  paymentMethod: "cod";
   deliveryNotes?: string;
 }
 

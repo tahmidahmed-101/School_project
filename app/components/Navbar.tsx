@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ShoppingBag, Heart, Globe, Phone, MapPin } from "lucide-react";
 import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
@@ -13,6 +13,7 @@ import { photo } from "../lib/photo";
 import type { T } from "../lib/types";
 import { NavbarSearch } from "./NavbarSearch";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
+import { WithActiveCategory } from "./WithActiveCategory";
 
 const SHOP_PATH = "/shop";
 
@@ -22,24 +23,9 @@ interface NavLink {
   isActive: boolean;
 }
 
-export function Navbar() {
-  const pathname = usePathname();
-  const activeCategory = useSearchParams().get("category");
-
-  const { lang, setLang, t, ui, n } = useLang();
-  const { totalItems, openDrawer } = useCart();
-  const { totalWishlistItems, openWishlist } = useWishlist();
-
-  // Sticky shadow once the page has scrolled
-  const [isScrolled, setIsScrolled] = useState(false);
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
+function buildNavLinks(pathname: string, activeCategory: string | null): NavLink[] {
   const onShop = pathname === SHOP_PATH;
-  const navLinks: NavLink[] = [
+  return [
     { label: { en: "Home", bn: "হোম" }, href: "/", isActive: pathname === "/" },
     { label: { en: "Shop All", bn: "সব পণ্য" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
     {
@@ -68,6 +54,22 @@ export function Navbar() {
       isActive: onShop && activeCategory === "kids",
     },
   ];
+}
+
+export function Navbar() {
+  const pathname = usePathname();
+
+  const { lang, setLang, t, ui, n } = useLang();
+  const { totalItems, openDrawer } = useCart();
+  const { totalWishlistItems, openWishlist } = useWishlist();
+
+  // Sticky shadow once the page has scrolled
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 30);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <header
@@ -76,8 +78,8 @@ export function Navbar() {
       }`}
     >
       {/* Tier 1: logo, live search, language / wishlist / cart */}
-      <div className="border-b border-white/10 px-3 py-3 sm:px-6 sm:py-3.5 lg:border-b-0 lg:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 sm:gap-6 lg:gap-8">
+      <div className="border-b border-white/10 lg:border-b-0">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:gap-6 sm:px-6 sm:py-3.5 lg:gap-8 lg:px-8">
           <div className="flex shrink-0 items-center">
             <Link href="/" className="group flex items-center gap-2 sm:gap-2.5">
               <Image
@@ -148,19 +150,23 @@ export function Navbar() {
             <NavCategoriesMenu />
 
             <nav className="flex items-center gap-6 text-sm font-medium">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`inline-flex items-center gap-1.5 py-2 transition-colors ${
-                    link.isActive
-                      ? "font-bold text-gold-300"
-                      : "text-white/80 hover:text-gold-300"
-                  }`}
-                >
-                  <span>{t(link.label)}</span>
-                </Link>
-              ))}
+              <WithActiveCategory>
+                {(activeCategory) =>
+                  buildNavLinks(pathname, activeCategory).map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`inline-flex items-center gap-1.5 py-2 transition-colors ${
+                        link.isActive
+                          ? "font-bold text-gold-300"
+                          : "text-white/80 hover:text-gold-300"
+                      }`}
+                    >
+                      <span>{t(link.label)}</span>
+                    </Link>
+                  ))
+                }
+              </WithActiveCategory>
             </nav>
           </div>
 

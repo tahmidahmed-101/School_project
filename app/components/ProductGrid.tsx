@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Product } from "../lib/types";
-import { ProductCard } from "./ProductCard";
-import { ScrollReveal, CardReveal } from "./Reveal";
+import { ProductCardGrid } from "./ProductCardGrid";
+import { ScrollReveal } from "./Reveal";
 import { useLang } from "../lib/i18n";
 
 interface ProductGridProps {
@@ -59,13 +59,11 @@ export function ProductGrid({
           </ScrollReveal>
         )}
 
-        <div className={`grid ${gridColsClass} gap-3 sm:gap-6`}>
-          {products.map((product, idx) => (
-            <CardReveal key={product.id} delay={(idx % columns) * 0.08}>
-              <ProductCard product={product} />
-            </CardReveal>
-          ))}
-        </div>
+        <ProductCardGrid
+          products={products}
+          className={`grid ${gridColsClass} gap-3 sm:gap-6`}
+          delayCycle={columns}
+        />
       </div>
     </section>
   );

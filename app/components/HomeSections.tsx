@@ -5,7 +5,6 @@ import { Hero } from "./Hero";
 import { CategoryShowcase } from "./CategoryShowcase";
 import { TrendingSection } from "./TrendingSection";
 import { ProductGrid } from "./ProductGrid";
-import { PreOrderSection } from "./PreOrderSection";
 import { Newsletter } from "./Newsletter";
 import { PRODUCTS } from "../lib/data";
 import { useLang } from "../lib/i18n";
@@ -28,9 +27,6 @@ export function HomeSections() {
 
       {/* Trending Picks with Interactive Category Filter */}
       <TrendingSection />
-
-      {/* Pre-order Section */}
-      <PreOrderSection />
 
       {/* Best Seller Showcase */}
       <ProductGrid

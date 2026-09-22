@@ -5,9 +5,9 @@ import type { Product } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { PRODUCTS } from "../lib/data";
 import { isPreOrderSoldOut } from "../lib/product";
-import { ProductCard } from "./ProductCard";
+import { ProductCardGrid } from "./ProductCardGrid";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ScrollReveal, CardReveal } from "./Reveal";
+import { ScrollReveal } from "./Reveal";
 import { PreOrderInfo } from "./PreOrderInfo";
 import { ProductGallery } from "./product/ProductGallery";
 import { ProductSummary } from "./product/ProductSummary";
@@ -89,13 +89,10 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
             <ScrollReveal>
               <h3 className="mb-8 text-xl font-bold text-ink-950">{ui("relatedProducts")}</h3>
             </ScrollReveal>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4">
-              {relatedProducts.map((p, idx) => (
-                <CardReveal key={p.id} delay={(idx % 4) * 0.08}>
-                  <ProductCard product={p} />
-                </CardReveal>
-              ))}
-            </div>
+            <ProductCardGrid
+              products={relatedProducts}
+              className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4"
+            />
           </div>
         )}
       </div>

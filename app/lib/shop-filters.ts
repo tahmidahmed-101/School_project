@@ -1,5 +1,5 @@
 import type { Product } from "./types";
-import { getDiscountPercent } from "./product";
+import { getDiscountPercent, matchesQuery } from "./product";
 
 export interface FilterState {
   category: string;
@@ -36,17 +36,19 @@ export function countActiveFilters(filters: FilterState): number {
 }
 
 function matchesSearch(product: Product, rawQuery: string): boolean {
-  const q = rawQuery.trim().toLowerCase();
-  if (!q) return true;
-  return [
-    product.name.en,
-    product.name.bn,
-    product.description.en,
-    product.description.bn,
-    product.category,
-    product.categoryName.en,
-    product.categoryName.bn,
-  ].some((field) => field.toLowerCase().includes(q));
+  if (!rawQuery.trim()) return true;
+  return matchesQuery(
+    [
+      product.name.en,
+      product.name.bn,
+      product.description.en,
+      product.description.bn,
+      product.category,
+      product.categoryName.en,
+      product.categoryName.bn,
+    ],
+    rawQuery,
+  );
 }
 
 function matchesFilters(product: Product, filters: FilterState): boolean {

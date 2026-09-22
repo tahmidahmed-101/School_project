@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { SlidersHorizontal, LayoutGrid, List, RotateCcw, Package } from "lucide-react";
+import { SlidersHorizontal, LayoutGrid, List, Package } from "lucide-react";
 import type { Product } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { countActiveFilters, type FilterChange, type FilterState } from "../lib/shop-filters";
-import { ProductCard } from "./ProductCard";
+import { ProductCardGrid } from "./ProductCardGrid";
 import { ProductListItem } from "./ProductListItem";
-import { ScrollReveal, CardReveal } from "./Reveal";
+import { ScrollReveal } from "./Reveal";
 import { FilterDropdown } from "./FilterDropdown";
 import { SearchField } from "./SearchField";
+import { EmptyState } from "./EmptyState";
 
 interface ShopProductGridProps {
   products: Product[];
@@ -134,30 +135,18 @@ export function ShopProductGrid({
       </div>
 
       {products.length === 0 ? (
-        <ScrollReveal y={20} duration={0.6}>
-          <div className="shadow-xs my-4 rounded-2xl border border-ink-200/80 bg-white p-12 text-center sm:p-16">
-            <Package className="mx-auto mb-3 h-12 w-12 text-ink-300" />
-            <h4 className="ts-display mb-2 text-lg font-bold text-ink-900 sm:text-xl">
-              {ui("noProductsFound")}
-            </h4>
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gold-500 px-7 py-3 text-xs font-bold tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>{ui("resetFilters")}</span>
-            </button>
-          </div>
-        </ScrollReveal>
+        <EmptyState
+          icon={<Package className="mx-auto mb-3 h-12 w-12 text-ink-300" />}
+          title={ui("noProductsFound")}
+          onReset={onReset}
+        />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-          {products.map((product, idx) => (
-            <CardReveal key={product.id} delay={(idx % 3) * 0.06}>
-              <ProductCard product={product} />
-            </CardReveal>
-          ))}
-        </div>
+        <ProductCardGrid
+          products={products}
+          className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3"
+          delayStep={0.06}
+          delayCycle={3}
+        />
       ) : (
         <div className="space-y-3">
           {products.map((product, idx) => (

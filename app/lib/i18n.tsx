@@ -27,6 +27,12 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // The server always renders English (lang="en"); keep the document language in step with the toggle so screen
+  // readers pick the right voice and the browser offers the right hyphenation and font fallbacks.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     window.localStorage.setItem("kullmart:lang", l);
@@ -98,10 +104,6 @@ const DICT = {
   matchingProducts: { en: "Matching Products", bn: "সম্পর্কিত পণ্যসমূহ" },
   viewAllResults: { en: "View all matching results", bn: "সব ফলাফল দেখুন" },
 
-  // Value propositions
-  featureFastTitle: { en: "Delivery across Bangladesh", bn: "সারা দেশে ডেলিভারি" },
-  featureOpenBoxTitle: { en: "Wholesale & retail", bn: "পাইকারি ও খুচরা" },
-
   // Sections
   featuredTitle: { en: "Trending right now", bn: "চলতি সপ্তাহের সেরা পছন্দ" },
   trendingNow: { en: "Trending now", bn: "চলতি ট্রেন্ড" },
@@ -150,14 +152,9 @@ const DICT = {
   preOrderSoldOut: { en: "PRE-ORDER SOLD OUT", bn: "প্রি-অর্ডার স্টক শেষ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
   preOrderCapacityReached: { en: "Pre-order capacity has been reached.", bn: "প্রি-অর্ডারের সর্বোচ্চ সীমা পূর্ণ হয়েছে।" },
-  preOrderHeaderTitle: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
-  preOrderSectionTitle: { en: "Pre-order now", bn: "প্রি-অর্ডার কালেকশন" },
-  viewAllPreOrders: { en: "View all pre-orders", bn: "সব প্রি-অর্ডার দেখুন" },
   expectedDelivery: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারি" },
-  preOrderExpectedDelivery: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারি" },
   preOrderCloses: { en: "Pre-order closes", bn: "প্রি-অর্ডার শেষ হবে" },
   preOrderEndsIn: { en: "Pre-order ends in", bn: "প্রি-অর্ডার শেষ হতে বাকি" },
-  preOrderReserved: { en: "reserved", bn: "বুকিং সম্পন্ন" },
   preOrderInfoTitle: { en: "Pre-order information", bn: "প্রি-অর্ডার সংক্রান্ত তথ্য" },
   preOrderInfo1: { en: "Reserve your product before regular stock arrives", bn: "সাধারণ স্টক আসার আগেই পণ্যটি নিশ্চিত বুকিং করুন" },
   preOrderInfo2: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারির তারিখ" },
@@ -224,11 +221,6 @@ const DICT = {
   checkoutCodSub: {
     en: "Pay with cash after checking parcel at your door",
     bn: "পণ্য হাতে পেয়ে দেখে টাকা দিন",
-  },
-  checkoutBkashLabel: { en: "bKash / Nagad payment", bn: "বিকাশ / নগদ পেমেন্ট" },
-  checkoutBkashSub: {
-    en: "Pay advance or on delivery via mobile banking",
-    bn: "মোবাইল ব্যাংকিংয়ের মাধ্যমে পরিশোধ",
   },
   checkoutOrderSummary: { en: "Order summary", bn: "অর্ডার বিবরণী" },
   checkoutItemsTotal: { en: "Items total", bn: "পণ্যের মূল্য" },

@@ -2,16 +2,15 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronDown, Layers } from "lucide-react";
 import { CATEGORIES } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useClickOutside } from "../lib/useClickOutside";
+import { WithActiveCategory } from "./WithActiveCategory";
 
 /** "Shop by Categories" pill in the desktop nav bar with its animated menu. */
 export function NavCategoriesMenu() {
   const { lang, t, ui, n } = useLang();
-  const activeCategory = useSearchParams().get("category");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,23 +40,27 @@ export function NavCategoriesMenu() {
             : "pointer-events-none -translate-y-1 scale-y-95 opacity-0"
         }`}
       >
-        {CATEGORIES.map((category) => (
-          <Link
-            key={category.id}
-            href={`/shop?category=${category.slug}`}
-            onClick={close}
-            className={`flex cursor-pointer items-center justify-between px-5 py-2.5 text-xs font-semibold transition-colors ${
-              activeCategory === category.slug
-                ? "bg-gold-500/15 font-bold text-gold-800"
-                : "text-ink-700 hover:bg-gold-50/70 hover:text-ink-950"
-            }`}
-          >
-            <span className="truncate">{t(category.name)}</span>
-            <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-400">
-              {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
-            </span>
-          </Link>
-        ))}
+        <WithActiveCategory>
+          {(activeCategory) =>
+            CATEGORIES.map((category) => (
+              <Link
+                key={category.id}
+                href={`/shop?category=${category.slug}`}
+                onClick={close}
+                className={`flex cursor-pointer items-center justify-between px-5 py-2.5 text-xs font-semibold transition-colors ${
+                  activeCategory === category.slug
+                    ? "bg-gold-500/15 font-bold text-gold-800"
+                    : "text-ink-700 hover:bg-gold-50/70 hover:text-ink-950"
+                }`}
+              >
+                <span className="truncate">{t(category.name)}</span>
+                <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-400">
+                  {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
+                </span>
+              </Link>
+            ))
+          }
+        </WithActiveCategory>
         <div className="mt-2 border-t border-ink-100 px-5 pt-2">
           <Link
             href="/shop"

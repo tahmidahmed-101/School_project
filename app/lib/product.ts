@@ -1,5 +1,12 @@
 import type { Product } from "./types";
 
+/** True if any field contains the query, case-insensitively. */
+export function matchesQuery(fields: string[], query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  return fields.some((field) => field.toLowerCase().includes(q));
+}
+
 /** Whole-number percentage off, or null when the product is not discounted. */
 export function getDiscountPercent(product: Product): number | null {
   if (!product.compareAtPrice || product.compareAtPrice <= product.price) return null;
@@ -35,13 +42,12 @@ export function searchProducts(
   limit: number,
   { includeDescription = false }: { includeDescription?: boolean } = {},
 ): Product[] {
-  const q = rawQuery.trim().toLowerCase();
-  if (!q) return [];
+  if (!rawQuery.trim()) return [];
   return products
     .filter((p) => {
       const fields = [p.name.en, p.name.bn, p.tagline.en, p.category];
       if (includeDescription) fields.push(p.description.en);
-      return fields.some((field) => field.toLowerCase().includes(q));
+      return matchesQuery(fields, rawQuery);
     })
     .slice(0, limit);
 }

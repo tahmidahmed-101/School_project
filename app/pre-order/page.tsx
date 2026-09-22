@@ -1,17 +1,25 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import { PreOrderCatalog } from "../components/PreOrderCatalog";
-import { Loader } from "../components/Loader";
+import { PreOrderSections } from "../components/PreOrderSections";
+import { JsonLd } from "../components/JsonLd";
+import { breadcrumbJsonLd, pageMetadata } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Pre-order Collection | Kull Mart",
-  description: "Reserve upcoming Kull Mart products before regular stock arrives.",
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Pre-order Collection",
+  description:
+    "Reserve upcoming Kull Mart products — earbuds, power banks and more — before regular stock arrives, with delivery all across Bangladesh.",
+  path: "/pre-order",
+});
 
 export default function KullMartPreOrderPage() {
   return (
-    <Suspense fallback={<Loader variant="page" />}>
-      <PreOrderCatalog />
-    </Suspense>
+    <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Pre-order Collection", path: "/pre-order" },
+        ])}
+      />
+      <PreOrderSections />
+    </>
   );
 }
