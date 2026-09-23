@@ -1,6 +1,6 @@
 import type { Product, ProductCategory, ProductSpec, ProductVariant, T } from "./types";
 
-export const CATEGORY_NAMES: Record<ProductCategory, T> = {
+const CATEGORY_NAMES: Record<ProductCategory, T> = {
   "womens-fashion": { en: "Women's Fashion", bn: "নারীদের ফ্যাশন" },
   "bags-wallets": { en: "Bags & Wallets", bn: "ব্যাগ ও ওয়ালেট" },
   jewellery: { en: "Jewellery", bn: "জুয়েলারি" },
@@ -9,7 +9,7 @@ export const CATEGORY_NAMES: Record<ProductCategory, T> = {
   lifestyle: { en: "Home & Lifestyle", bn: "হোম ও লাইফস্টাইল" },
 };
 
-export interface ProductInput {
+interface ProductInput {
   id: string;
   slug: string;
   sku: string;

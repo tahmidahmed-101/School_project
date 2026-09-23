@@ -2,15 +2,16 @@
 
 import { useMemo } from "react";
 import { Hero } from "./Hero";
+import { PromoMarquee } from "./PromoMarquee";
 import { CategoryShowcase } from "./CategoryShowcase";
 import { TrendingSection } from "./TrendingSection";
 import { ProductGrid } from "./ProductGrid";
 import { Newsletter } from "./Newsletter";
-import { PRODUCTS } from "../lib/data";
+import { CATEGORIES, PRODUCTS } from "../lib/data";
 import { useLang } from "../lib/i18n";
 
 export function HomeSections() {
-  const { ui } = useLang();
+  const { t, ui } = useLang();
 
   // Best-seller shelf: hand-picked (featured) products first, then the rest of the catalogue
   const bestSellerProducts = useMemo(() => {
@@ -20,12 +21,21 @@ export function HomeSections() {
       .slice(0, 8);
   }, []);
 
+  // One shelf per category, each showing every non-pre-order product in that category
+  const categorySections = useMemo(() => {
+    return CATEGORIES.map((category) => ({
+      category,
+      products: PRODUCTS.filter((p) => !p.isPreOrder && p.category === category.id),
+    })).filter((section) => section.products.length > 0);
+  }, []);
+
   return (
     <div>
       <Hero />
+      <PromoMarquee />
       <CategoryShowcase />
 
-      {/* Trending Picks with Interactive Category Filter */}
+      {/* Trending Picks */}
       <TrendingSection />
 
       {/* Best Seller Showcase */}
@@ -35,6 +45,17 @@ export function HomeSections() {
         viewAllLink="/shop"
         viewAllText={ui("viewAllProducts")}
       />
+
+      {/* One shelf per category (Women's Fashion, Bags & Wallets, ...) */}
+      {categorySections.map(({ category, products }) => (
+        <ProductGrid
+          key={category.id}
+          products={products}
+          title={t(category.name)}
+          viewAllLink={`/shop?category=${category.slug}`}
+          viewAllText={ui("viewAllProducts")}
+        />
+      ))}
 
       <Newsletter />
     </div>

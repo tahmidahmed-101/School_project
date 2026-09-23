@@ -1,0 +1,261 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  MessageSquare,
+  Package,
+  PackageCheck,
+  PackageX,
+  Phone,
+  Search,
+  Truck,
+} from "lucide-react";
+import { BRAND_INFO } from "../lib/data";
+import { useLang } from "../lib/i18n";
+import { Breadcrumbs } from "./Breadcrumbs";
+
+const MONTHS_EN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const STAGES = [
+  { key: "placed", labelKey: "trackStagePlaced", icon: ClipboardList },
+  { key: "confirmed", labelKey: "trackStageConfirmed", icon: CheckCircle2 },
+  { key: "packed", labelKey: "trackStagePacked", icon: Package },
+  { key: "shipped", labelKey: "trackStageShipped", icon: Truck },
+  { key: "delivered", labelKey: "trackStageDelivered", icon: PackageCheck },
+] as const;
+
+interface TrackingResult {
+  orderNumber: string;
+  currentStageIndex: number;
+  placedAt: Date;
+  estimatedDelivery: Date;
+}
+
+/** Small deterministic hash so the same order number + phone always resolves to the same status. */
+function hashSeed(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function buildTrackingResult(orderNumberRaw: string, phoneRaw: string): TrackingResult {
+  const orderNumber = orderNumberRaw.trim().toUpperCase();
+  const seed = hashSeed(`${orderNumber}|${phoneRaw.trim()}`);
+
+  // Bias toward mid/late stages so most lookups read as "in progress" rather than flat-random.
+  const roll = seed % 10;
+  const currentStageIndex = roll < 1 ? 0 : roll < 3 ? 1 : roll < 5 ? 2 : roll < 8 ? 3 : 4;
+
+  const daysAgo = 1 + (seed % 5);
+  const placedAt = new Date();
+  placedAt.setDate(placedAt.getDate() - daysAgo);
+  const estimatedDelivery = new Date(placedAt);
+  estimatedDelivery.setDate(estimatedDelivery.getDate() + 3);
+
+  return { orderNumber, currentStageIndex, placedAt, estimatedDelivery };
+}
+
+export function TrackOrderView() {
+  const { ui, n } = useLang();
+  const [orderNumber, setOrderNumber] = useState("");
+  const [phone, setPhone] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [result, setResult] = useState<TrackingResult | null>(null);
+
+  const formatDate = (date: Date) => `${n(date.getDate())} ${MONTHS_EN[date.getMonth()]} ${n(date.getFullYear())}`;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!orderNumber.trim() || !phone.trim()) {
+      setErrorMsg(ui("trackOrderValidation"));
+      setResult(null);
+      return;
+    }
+    setErrorMsg("");
+    setResult(buildTrackingResult(orderNumber, phone));
+  };
+
+  const whatsappText = result
+    ? encodeURIComponent(
+        `Hello Kull Mart, I'd like an update on my order #${result.orderNumber} (Phone: ${phone.trim()}).`,
+      )
+    : "";
+
+  const breadcrumbs = [{ label: ui("navTrackOrder") }];
+
+  return (
+    <div className="min-h-screen bg-white py-8 sm:py-12">
+      <div className="mx-auto max-w-xl px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs className="mb-4" items={breadcrumbs} />
+
+        <div className="mb-6 border-b border-ink-200 pb-4">
+          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
+            {ui("trackOrderTitle")}
+          </h1>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5"
+        >
+          {errorMsg && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {errorMsg}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="track-order-number" className="mb-1.5 block text-xs font-bold text-ink-900">
+              {ui("orderNumberLabel")}
+            </label>
+            <input
+              id="track-order-number"
+              type="text"
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              placeholder={ui("trackOrderNumberPlaceholder")}
+              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="track-order-phone" className="mb-1.5 block text-xs font-bold text-ink-900">
+              {ui("checkoutPhone")}
+            </label>
+            <input
+              id="track-order-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01XXX-XXXXXX"
+              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gold-500 py-3 text-xs font-bold uppercase tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400"
+          >
+            <Search className="h-4 w-4" />
+            <span>{ui("trackOrderSubmit")}</span>
+          </button>
+        </form>
+
+        {!result && !errorMsg && (
+          <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-8 text-center">
+            <PackageX className="h-6 w-6 text-ink-300" />
+            <span className="text-sm font-semibold text-ink-400">{ui("trackOrderNotFound")}</span>
+          </div>
+        )}
+
+        {result && (
+          <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-white p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
+              <div>
+                <span className="block text-[11px] font-semibold text-ink-500">
+                  {ui("orderNumberLabel")}
+                </span>
+                <span className="font-mono text-sm font-bold text-gold-600">{result.orderNumber}</span>
+                <span className="mt-0.5 block text-[11px] text-ink-500">
+                  {ui("trackOrderPlacedOn")}: {formatDate(result.placedAt)}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="block text-[11px] font-semibold text-ink-500">
+                  {ui("trackOrderEstDelivery")}
+                </span>
+                <span className="text-sm font-bold text-ink-900">
+                  {formatDate(result.estimatedDelivery)}
+                </span>
+              </div>
+            </div>
+
+            <ol>
+              {STAGES.map((stage, index) => {
+                const isComplete = index <= result.currentStageIndex;
+                const isCurrent = index === result.currentStageIndex;
+                const isLastStage = index === STAGES.length - 1;
+                const Icon = stage.icon;
+
+                return (
+                  <li key={stage.key} className="relative flex gap-3 pb-6 last:pb-0">
+                    {!isLastStage && (
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-[15px] top-8 h-full w-0.5 ${
+                          index < result.currentStageIndex ? "bg-brand-500" : "bg-ink-200"
+                        }`}
+                      />
+                    )}
+                    <span
+                      className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
+                        isComplete
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "border-ink-200 bg-white text-ink-300"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="pt-1">
+                      <span className={`block text-sm font-bold ${isComplete ? "text-ink-900" : "text-ink-400"}`}>
+                        {ui(stage.labelKey)}
+                      </span>
+                      {isCurrent && (
+                        <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-700">
+                          {ui("trackOrderCurrentStatus")}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <p className="rounded-xl bg-ink-50 p-3 text-[11px] leading-relaxed text-ink-500">
+              {ui("trackOrderDisclaimer")}
+            </p>
+
+            <div className="space-y-3 border-t border-ink-200 pt-4">
+              <p className="text-xs font-bold text-ink-900">{ui("trackOrderHelpTitle")}</p>
+              <a
+                href={`https://wa.me/${BRAND_INFO.whatsapp}?text=${whatsappText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-xs font-bold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-500"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>{ui("orderWhatsappConfirm")}</span>
+              </a>
+              <a
+                href={`tel:${BRAND_INFO.phone}`}
+                className="shadow-xs flex w-full items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white py-3 text-xs font-semibold text-ink-800 transition-colors hover:bg-ink-50"
+              >
+                <Phone className="h-4 w-4 text-gold-500" />
+                <span>
+                  {ui("orderCallStore")} ({BRAND_INFO.phone})
+                </span>
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

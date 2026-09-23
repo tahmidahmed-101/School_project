@@ -5,7 +5,6 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { CartDrawer } from "./CartDrawer";
 import { WishlistDrawer } from "./WishlistDrawer";
-import { QuickSearch } from "./QuickSearch";
 import { MobileBottomBar } from "./MobileBottomBar";
 import { MobileNavMenu } from "./MobileNavMenu";
 import { PreOrderModalProvider } from "../lib/preorder-modal";
@@ -16,7 +15,6 @@ interface ClientShellProps {
 }
 
 export function ClientShell({ children }: ClientShellProps) {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -27,12 +25,8 @@ export function ClientShell({ children }: ClientShellProps) {
         <Footer />
         <CartDrawer />
         <WishlistDrawer />
-        <QuickSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-        <MobileBottomBar
-          onOpenSearch={() => setIsSearchOpen(true)}
-          isSearchOpen={isSearchOpen}
-        />
+        <MobileBottomBar />
         <PreOrderConfirmationModal />
       </div>
     </PreOrderModalProvider>

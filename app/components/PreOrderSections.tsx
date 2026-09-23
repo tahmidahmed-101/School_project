@@ -14,7 +14,7 @@ export function PreOrderSections() {
     <div>
       <Hero />
 
-      {/* Browsable pre-order picks with category filter */}
+      {/* Browsable pre-order picks */}
       <TrendingSection
         products={PREORDER_PRODUCTS}
         title={ui("navPreOrder")}

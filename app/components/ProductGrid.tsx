@@ -10,7 +10,6 @@ import { useLang } from "../lib/i18n";
 interface ProductGridProps {
   products: Product[];
   title?: string;
-  subtitle?: string;
   viewAllLink?: string;
   viewAllText?: string;
   columns?: 2 | 3 | 4;
@@ -19,7 +18,6 @@ interface ProductGridProps {
 export function ProductGrid({
   products,
   title,
-  subtitle,
   viewAllLink,
   viewAllText,
   columns = 4,
@@ -28,8 +26,8 @@ export function ProductGrid({
 
   const gridColsClass =
     columns === 3
-      ? "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3"
-      : "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-3"
+      : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
   return (
     <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
@@ -38,12 +36,9 @@ export function ProductGrid({
           <ScrollReveal className="mb-5 flex flex-nowrap items-center justify-between gap-2 sm:mb-8 sm:gap-4">
             <div className="min-w-0 flex-1">
               {title && (
-                <h2 className="ts-display truncate text-base font-bold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
+                <h2 className="ts-display truncate text-xl font-extrabold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
                   {title}
                 </h2>
-              )}
-              {subtitle && (
-                <p className="mt-0.5 truncate text-xs text-ink-600 sm:text-sm">{subtitle}</p>
               )}
             </div>
 
@@ -59,11 +54,7 @@ export function ProductGrid({
           </ScrollReveal>
         )}
 
-        <ProductCardGrid
-          products={products}
-          className={`grid ${gridColsClass} gap-3 sm:gap-6`}
-          delayCycle={columns}
-        />
+        <ProductCardGrid products={products} className={`grid ${gridColsClass} gap-2.5 sm:gap-4`} />
       </div>
     </section>
   );

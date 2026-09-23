@@ -143,9 +143,8 @@ export function ShopProductGrid({
       ) : viewMode === "grid" ? (
         <ProductCardGrid
           products={products}
-          className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3"
-          delayStep={0.06}
-          delayCycle={3}
+          className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
+          stagger={0.05}
         />
       ) : (
         <div className="space-y-3">

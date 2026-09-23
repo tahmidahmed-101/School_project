@@ -27,16 +27,6 @@ export interface ProductSpec {
   value: T;
 }
 
-export interface ProductReview {
-  id: string;
-  author: string;
-  rating: number;
-  date: string;
-  comment: T;
-  verified: boolean;
-  location?: string;
-}
-
 export interface Product {
   id: string;
   slug: string;
@@ -62,7 +52,6 @@ export interface Product {
   variants?: ProductVariant[];
   specs?: ProductSpec[];
   highlights?: T[];
-  reviews?: ProductReview[];
   // Pre-order attributes
   isPreOrder?: boolean;
   preorderEndDate?: string;

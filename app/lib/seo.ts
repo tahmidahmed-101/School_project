@@ -11,7 +11,7 @@ export const SITE_DESCRIPTION =
   "Kull Mart, Dhaka — women's fashion, innerwear, kids' items and gadgets. Wholesale & retail with delivery all across Bangladesh.";
 export const CURRENCY_CODE = "BDT";
 
-export interface SocialImage {
+interface SocialImage {
   url: string;
   alt?: string;
   width?: number;

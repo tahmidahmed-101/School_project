@@ -104,15 +104,32 @@ const DICT = {
   searchPlaceholderShort: { en: "Search...", bn: "খুঁজুন..." },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
   navSearchPlaceholder: { en: "Search products, gadgets, bags, fashion...", bn: "পণ্য, গ্যাজেট বা ফ্যাশন খুঁজুন..." },
+  mobileSearchPlaceholder: { en: "Search Product ...", bn: "পণ্য খুঁজুন ..." },
   matchingProducts: { en: "Matching Products", bn: "সম্পর্কিত পণ্যসমূহ" },
   viewAllResults: { en: "View all matching results", bn: "সব ফলাফল দেখুন" },
+
+  // Hero
+  heroCategoriesTitle: { en: "Shop by Category", bn: "ক্যাটাগরি দেখুন" },
+  heroWelcomeTitle: { en: "Welcome to Kull Mart", bn: "কুল মার্টে স্বাগতম" },
+  heroWelcomeSubtitle: {
+    en: "Women's fashion, innerwear, kids & gadgets",
+    bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
+  },
+  heroShopNow: { en: "Shop Now", bn: "কিনুন" },
+  heroWhatsapp: { en: "WhatsApp Us", bn: "হোয়াটসঅ্যাপ করুন" },
+  heroFeaturedTitle: { en: "Featured Product", bn: "ফিচারড পণ্য" },
+  heroFeaturedSubtitle: { en: "Don't miss out", bn: "মিস করবেন না" },
+  heroPreorderTitle: { en: "Preorder", bn: "প্রি-অর্ডার" },
+  heroPreorderSubtitle: { en: "Reserve yours early", bn: "আগেভাগে বুক করুন" },
+  heroPromotionTitle: { en: "Promotion", bn: "প্রমোশন" },
+  heroPromotionSubtitle: { en: "Special offers", bn: "বিশেষ অফার" },
 
   // Sections
   featuredTitle: { en: "Trending right now", bn: "চলতি সপ্তাহের সেরা পছন্দ" },
   trendingNow: { en: "Trending now", bn: "চলতি ট্রেন্ড" },
   bestSellersTitle: { en: "Best seller collection", bn: "সেরা বিক্রিত কালেকশন" },
   categoriesTitle: { en: "Browse by category", bn: "ক্যাটাগরি অনুযায়ী দেখুন" },
-  viewAllProducts: { en: "View all products", bn: "সব পণ্য দেখুন" },
+  viewAllProducts: { en: "View all", bn: "সব দেখুন" },
 
   // Shop Page
   shopHeading: { en: "Shop all collections", bn: "আমাদের সব কালেকশন" },
@@ -141,6 +158,7 @@ const DICT = {
   // Product Card & Detail
   addToCart: { en: "Add to bag", bn: "ব্যাগে নিন" },
   buyNow: { en: "Buy now", bn: "এখনই অর্ডার করুন" },
+  orderNow: { en: "Order now", bn: "অর্ডার করুন" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },
   category: { en: "Category", bn: "ক্যাটাগরি" },
@@ -150,7 +168,7 @@ const DICT = {
   relatedProducts: { en: "You may also like", bn: "সম্পর্কিত অন্যান্য পণ্য" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
-  preOrderNow: { en: "Pre-order", bn: "প্রি-অর্ডার" },
+  preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "PRE-ORDER SOLD OUT", bn: "প্রি-অর্ডার স্টক শেষ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
@@ -247,6 +265,31 @@ const DICT = {
   orderCallStore: { en: "Call store directly", bn: "সরাসরি স্টোরে কল করুন" },
   orderContinueShopping: { en: "Continue shopping", bn: "আরও কেনাকাটা করুন" },
 
+  // Track Order
+  navTrackOrder: { en: "Track Order", bn: "অর্ডার ট্র্যাক করুন" },
+  trackOrderTitle: { en: "Track Your Order", bn: "আপনার অর্ডার ট্র্যাক করুন" },
+  trackOrderNumberPlaceholder: { en: "e.g. TS-12345", bn: "যেমন TS-12345" },
+  trackOrderSubmit: { en: "Track Order", bn: "অর্ডার ট্র্যাক করুন" },
+  trackOrderValidation: {
+    en: "Please enter both your order number and phone number.",
+    bn: "অনুগ্রহ করে অর্ডার নম্বর ও মোবাইল নম্বর উভয়ই দিন।",
+  },
+  trackOrderNotFound: { en: "Order not found", bn: "অর্ডার খুঁজে পাওয়া যায়নি" },
+  trackOrderPlacedOn: { en: "Order placed", bn: "অর্ডার করা হয়েছে" },
+  trackOrderEstDelivery: { en: "Estimated delivery", bn: "সম্ভাব্য ডেলিভারি" },
+  trackOrderCurrentStatus: { en: "Current status", bn: "বর্তমান অবস্থা" },
+  trackStagePlaced: { en: "Order placed", bn: "অর্ডার সম্পন্ন হয়েছে" },
+  trackStageConfirmed: { en: "Order confirmed", bn: "অর্ডার নিশ্চিত হয়েছে" },
+  trackStagePacked: { en: "Packed", bn: "প্যাক করা হয়েছে" },
+  trackStageShipped: { en: "Out for delivery", bn: "ডেলিভারির জন্য পাঠানো হয়েছে" },
+  trackStageDelivered: { en: "Delivered", bn: "ডেলিভারি সম্পন্ন" },
+  trackOrderHelpTitle: { en: "Need help with this order?", bn: "এই অর্ডার নিয়ে সাহায্য দরকার?" },
+  trackOrderDisclaimer: {
+    en: "Status shown is our best estimate. For exact updates, message or call us anytime.",
+    bn: "প্রদর্শিত অবস্থা আনুমানিক। সঠিক তথ্যের জন্য যেকোনো সময় আমাদের মেসেজ বা কল করুন।",
+  },
+  trackOrderSearchAnother: { en: "Track another order", bn: "অন্য অর্ডার ট্র্যাক করুন" },
+
   // Newsletter
   newsletterTitle: { en: "Join the Kull Mart list", bn: "কুল মার্টের সাথে যুক্ত থাকুন" },
   newsletterSubtitle: {
@@ -268,6 +311,8 @@ const DICT = {
   footerQuickLinks: { en: "Quick links", bn: "প্রয়োজনীয় লিংক" },
   footerCategories: { en: "Categories", bn: "ক্যাটাগরি" },
   footerContactUs: { en: "Store contact", bn: "যোগাযোগের ঠিকানা" },
+  footerReturnPolicy: { en: "Return Policy", bn: "রিটার্ন নীতি" },
+  footerRefundPolicy: { en: "Refund Policy", bn: "রিফান্ড নীতি" },
   footerHours: { en: "Always open for online orders", bn: "অনলাইন অর্ডারের জন্য সবসময় খোলা" },
   footerRights: { en: "All rights reserved.", bn: "সর্বস্বত্ব সংরক্ষিত।" },
   footerDisclaimer: {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock, Menu } from "lucide-react";
+import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock, Menu, Truck } from "lucide-react";
 import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
@@ -12,6 +12,7 @@ import { useWishlist } from "../lib/wishlist";
 import { photo } from "../lib/photo";
 import type { T } from "../lib/types";
 import { NavbarSearch } from "./NavbarSearch";
+import { MobileSearchBar } from "./MobileSearchBar";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
 import { WithActiveCategory } from "./WithActiveCategory";
 
@@ -138,6 +139,20 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               <span>{lang === "en" ? "বাংলা" : "EN"}</span>
             </button>
 
+            {/* Desktop only; on mobile Track Order lives in the hamburger menu */}
+            <Link
+              href="/track-order"
+              aria-label={ui("navTrackOrder")}
+              title={ui("navTrackOrder")}
+              className={`relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors lg:flex ${
+                pathname === "/track-order"
+                  ? "text-gold-300"
+                  : "text-white hover:bg-white/10 hover:text-gold-300"
+              }`}
+            >
+              <Truck className="h-5 w-5" />
+            </Link>
+
             {/* Desktop only; on mobile the wishlist lives in the bottom bar */}
             <button
               type="button"
@@ -169,6 +184,11 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               )}
             </button>
           </div>
+        </div>
+
+        {/* Mobile-only: full-width product search row directly under the top bar */}
+        <div className="px-3 pb-3 lg:hidden">
+          <MobileSearchBar />
         </div>
       </div>
 

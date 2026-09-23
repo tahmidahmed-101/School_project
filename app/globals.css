@@ -43,6 +43,25 @@
   --color-ink-800: #263424;
   --color-ink-900: #162114;
   --color-ink-950: #0c150b;
+
+  --animate-marquee-ltr: marquee-ltr 26s linear infinite;
+}
+
+/* Two copies of the track sit side by side; sliding from -50% to 0% reads as the
+   text travelling left-to-right, looping seamlessly the instant a copy is offscreen. */
+@keyframes marquee-ltr {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-ltr {
+    animation: none;
+  }
 }
 
 :root {

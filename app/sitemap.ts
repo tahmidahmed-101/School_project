@@ -8,6 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/",
     "/shop",
     "/pre-order",
+    "/return-policy",
+    "/refund-policy",
     ...CATEGORIES.map((category) => `/shop?category=${category.slug}`),
     ...PRODUCTS.map((product) => `/product/${product.slug}`),
   ];

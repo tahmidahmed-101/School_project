@@ -105,6 +105,24 @@ export function Footer() {
                   {ui("checkoutTitle")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/track-order"
+                  className="transition-colors hover:text-gold-300"
+                >
+                  {ui("navTrackOrder")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/return-policy" className="transition-colors hover:text-gold-300">
+                  {ui("footerReturnPolicy")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund-policy" className="transition-colors hover:text-gold-300">
+                  {ui("footerRefundPolicy")}
+                </Link>
+              </li>
             </ul>
           </div>
 

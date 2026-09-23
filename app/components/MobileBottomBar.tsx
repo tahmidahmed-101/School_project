@@ -4,25 +4,20 @@ import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Store, Search, Heart } from "lucide-react";
+import { Home, Store, Truck, Heart } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { useWishlist } from "../lib/wishlist";
 
-export interface MobileBottomBarProps {
-  onOpenSearch: () => void;
-  isSearchOpen?: boolean;
-}
-
-function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBottomBarProps) {
+function MobileBottomBarInner() {
   const pathname = usePathname();
   const { ui, n } = useLang();
   const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
 
   // Active tab index (-1 = none, e.g. on the pre-order page which has its own nav entry):
-  // 0 = Home, 1 = Shop, 2 = Search, 3 = Wishlist
+  // 0 = Home, 1 = Shop, 2 = Track Order, 3 = Wishlist
   const activeIndex = useMemo(() => {
     if (isWishlistOpen) return 3;
-    if (isSearchOpen) return 2;
+    if (pathname.startsWith("/track-order")) return 2;
     if (pathname.startsWith("/pre-order")) return -1;
     if (
       pathname.startsWith("/shop") ||
@@ -31,7 +26,7 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
       return 1;
     }
     return 0; // Default to Home
-  }, [pathname, isSearchOpen, isWishlistOpen]);
+  }, [pathname, isWishlistOpen]);
 
   const tabs = [
     {
@@ -51,12 +46,12 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
       onClick: undefined,
     },
     {
-      id: "search",
-      label: ui("navSearch"),
-      href: undefined,
-      icon: Search,
+      id: "track",
+      label: ui("navTrackOrder"),
+      href: "/track-order",
+      icon: Truck,
       badge: 0,
-      onClick: onOpenSearch,
+      onClick: undefined,
     },
     {
       id: "wishlist",
@@ -182,10 +177,10 @@ function MobileBottomBarInner({ onOpenSearch, isSearchOpen = false }: MobileBott
   );
 }
 
-export function MobileBottomBar({ onOpenSearch, isSearchOpen }: MobileBottomBarProps) {
+export function MobileBottomBar() {
   return (
     <Suspense fallback={null}>
-      <MobileBottomBarInner onOpenSearch={onOpenSearch} isSearchOpen={isSearchOpen} />
+      <MobileBottomBarInner />
     </Suspense>
   );
 }

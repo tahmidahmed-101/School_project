@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Home, Store, Globe } from "lucide-react";
+import { X, Home, Store, Globe, Truck } from "lucide-react";
 import { CATEGORIES } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useOverlay } from "../lib/useOverlay";
@@ -86,6 +86,19 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                       >
                         <Store className="h-4 w-4 shrink-0" />
                         <span>{ui("navShop")}</span>
+                      </Link>
+
+                      <Link
+                        href="/track-order"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          pathname === "/track-order"
+                            ? "bg-white/10 text-gold-300"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Truck className="h-4 w-4 shrink-0" />
+                        <span>{ui("navTrackOrder")}</span>
                       </Link>
 
                       <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-white/40">

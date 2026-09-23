@@ -1,4 +1,4 @@
-export interface DistrictOption {
+interface DistrictOption {
   value: string;
   label: string;
 }
