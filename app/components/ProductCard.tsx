@@ -35,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-xl border border-ink-200/90 bg-white p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/70 hover:shadow-lg hover:shadow-ink-200/60 sm:p-2.5">
+    <div className="group relative flex h-full flex-col justify-between rounded-xl border border-ink-200/90 bg-white p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/70 hover:shadow-lg hover:shadow-ink-200/60 sm:p-2.5">
       {/* Top Image Area */}
       <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-lg border border-ink-100 bg-ink-50 sm:mb-2">
         <Link href={`/product/${product.slug}`} className="relative block h-full w-full">

@@ -47,7 +47,7 @@ export function ProductCardGrid({ products, className, stagger = 0.08 }: Product
   return (
     <div ref={gridRef} className={className}>
       {products.map((product, idx) => (
-        <CardReveal key={product.id} delay={(idx % columns) * stagger}>
+        <CardReveal key={product.id} delay={(idx % columns) * stagger} className="h-full">
           <ProductCard product={product} />
         </CardReveal>
       ))}
