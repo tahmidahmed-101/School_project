@@ -23,7 +23,7 @@ export function VoucherSection() {
         <ScrollReveal className="mb-3">
           <h2 className="ts-display text-xl font-bold tracking-tight text-gold-600 sm:text-2xl">{ui("voucherTitle")}</h2>
         </ScrollReveal>
-        <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:py-0 lg:grid-cols-4">
           {vouchers.map((v, idx) => {
             const isCollected = collected.includes(v.code);
             return (

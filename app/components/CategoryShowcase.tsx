@@ -106,7 +106,7 @@ function CategoryTrack({
           drag.current.moved = false;
         }
       }}
-      className={`scrollbar-none -mx-4 flex scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:-mx-8 lg:scroll-px-8 lg:gap-4 lg:px-8 ${
+      className={`scrollbar-none -mx-4 flex scroll-px-4 overflow-y-hidden overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:-mx-8 lg:scroll-px-8 lg:gap-4 lg:px-8 ${
         isDragging ? "cursor-grabbing select-none" : "snap-x snap-mandatory scroll-smooth"
       }`}
     >
