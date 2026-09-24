@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingBag, Zap, Sparkles, Calendar } from "lucide-react";
+import { Heart, ShoppingCart, Zap, Sparkles, Calendar } from "lucide-react";
 import type { Product } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
@@ -148,7 +148,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 aria-label={`${ui("addToCart")} - ${t(product.name)}`}
                 title={ui("addToCart")}
               >
-                <ShoppingBag className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4" />
               </button>
               <button
                 type="button"

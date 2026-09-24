@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Minus, ShoppingBag, Zap, Heart, Sparkles } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Zap, Heart, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Product } from "../../lib/types";
 import { useLang } from "../../lib/i18n";
@@ -115,7 +115,7 @@ export function ProductActions({
               onClick={() => addItem(product, quantity, selectedVariants)}
               className={CTA_DARK}
             >
-              <ShoppingBag className="h-4 w-4 text-gold-400" />
+              <ShoppingCart className="h-4 w-4 text-gold-400" />
               <span>{ui("addToCart")}</span>
             </button>
             {buyNowButton}

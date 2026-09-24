@@ -44,22 +44,22 @@
   --color-ink-900: #162114;
   --color-ink-950: #0c150b;
 
-  --animate-marquee-ltr: marquee-ltr 26s linear infinite;
+  --animate-marquee-rtl: marquee-rtl 26s linear infinite;
 }
 
-/* Two copies of the track sit side by side; sliding from -50% to 0% reads as the
-   text travelling left-to-right, looping seamlessly the instant a copy is offscreen. */
-@keyframes marquee-ltr {
+/* Two copies of the track sit side by side; sliding from 0% to -50% reads as the
+   text travelling right-to-left, looping seamlessly the instant a copy is offscreen. */
+@keyframes marquee-rtl {
   from {
-    transform: translateX(-50%);
+    transform: translateX(0%);
   }
   to {
-    transform: translateX(0%);
+    transform: translateX(-50%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee-ltr {
+  .animate-marquee-rtl {
     animation: none;
   }
 }

@@ -4,7 +4,7 @@ import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Store, Truck, Heart } from "lucide-react";
+import { Home, Store, Truck, Heart, User } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { useWishlist } from "../lib/wishlist";
 
@@ -14,9 +14,10 @@ function MobileBottomBarInner() {
   const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
 
   // Active tab index (-1 = none, e.g. on the pre-order page which has its own nav entry):
-  // 0 = Home, 1 = Shop, 2 = Track Order, 3 = Wishlist
+  // 0 = Home, 1 = Shop, 2 = Track Order, 3 = Wishlist, 4 = Profile
   const activeIndex = useMemo(() => {
     if (isWishlistOpen) return 3;
+    if (pathname.startsWith("/login")) return 4;
     if (pathname.startsWith("/track-order")) return 2;
     if (pathname.startsWith("/pre-order")) return -1;
     if (
@@ -61,6 +62,14 @@ function MobileBottomBarInner() {
       badge: totalWishlistItems,
       onClick: openWishlist,
     },
+    {
+      id: "profile",
+      label: ui("navProfile"),
+      href: "/login",
+      icon: User,
+      badge: 0,
+      onClick: undefined,
+    },
   ];
 
   return (
@@ -71,10 +80,10 @@ function MobileBottomBarInner() {
       <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-[0_-4px_24px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom,0px)]">
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
-          {/* Smooth moving spotlight beam & top glowing indicator (4 tabs -> w-1/4) */}
+          {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
           <motion.div
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/4 flex-col items-center justify-start overflow-hidden"
+            className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden"
             animate={{ x: `${Math.max(activeIndex, 0) * 100}%`, opacity: activeIndex === -1 ? 0 : 1 }}
             transition={{
               type: "spring",

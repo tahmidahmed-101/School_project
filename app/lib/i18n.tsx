@@ -100,6 +100,38 @@ const DICT = {
   shopByCategories: { en: "Shop by Categories", bn: "ক্যাটাগরি দেখুন" },
   browseAllCategories: { en: "Browse All", bn: "সব ক্যাটাগরি দেখুন" },
   navWishlist: { en: "Wishlist", bn: "উইশলিস্ট" },
+  navProfile: { en: "Profile", bn: "প্রোফাইল" },
+  loginTitle: { en: "Log In", bn: "লগ ইন" },
+  loginSubtitle: { en: "Welcome back to Kull Mart", bn: "কুল মার্টে আবার স্বাগতম" },
+  loginIdentifierLabel: { en: "Phone or email", bn: "ফোন বা ইমেইল" },
+  loginIdentifierPlaceholder: { en: "01XXX-XXXXXX or you@example.com", bn: "01XXX-XXXXXX বা you@example.com" },
+  loginPasswordLabel: { en: "Password", bn: "পাসওয়ার্ড" },
+  loginShowPassword: { en: "Show password", bn: "পাসওয়ার্ড দেখান" },
+  loginHidePassword: { en: "Hide password", bn: "পাসওয়ার্ড লুকান" },
+  loginSubmit: { en: "Log In", bn: "লগ ইন করুন" },
+  loginValidation: {
+    en: "Please enter your phone/email and password.",
+    bn: "অনুগ্রহ করে ফোন/ইমেইল এবং পাসওয়ার্ড দিন।",
+  },
+  loginUnavailable: {
+    en: "Accounts are coming soon. For now you can order without logging in.",
+    bn: "অ্যাকাউন্ট সুবিধা শীঘ্রই আসছে। এখনকার জন্য লগ ইন ছাড়াই অর্ডার করতে পারবেন।",
+  },
+  loginForgot: { en: "Forgot password?", bn: "পাসওয়ার্ড ভুলে গেছেন?" },
+  registerTitle: { en: "Register", bn: "রেজিস্টার" },
+  registerSubtitle: { en: "Create your Kull Mart account", bn: "আপনার কুল মার্ট অ্যাকাউন্ট তৈরি করুন" },
+  registerNameLabel: { en: "Full name", bn: "পুরো নাম" },
+  registerPhoneLabel: { en: "Phone number", bn: "ফোন নম্বর" },
+  registerConfirmLabel: { en: "Confirm password", bn: "পাসওয়ার্ড নিশ্চিত করুন" },
+  registerSubmit: { en: "Create account", bn: "অ্যাকাউন্ট তৈরি করুন" },
+  registerValidation: { en: "Please fill in all fields.", bn: "অনুগ্রহ করে সব ঘর পূরণ করুন।" },
+  registerMismatch: { en: "Passwords do not match.", bn: "পাসওয়ার্ড মিলছে না।" },
+  registerHaveAccount: { en: "Already have an account? Log in", bn: "আগেই অ্যাকাউন্ট আছে? লগ ইন করুন" },
+  loginNoAccount: { en: "New here? Register", bn: "নতুন? রেজিস্টার করুন" },
+  voucherTitle: { en: "Collect Vouchers", bn: "ভাউচার সংগ্রহ করুন" },
+  voucherCollect: { en: "Collect", bn: "সংগ্রহ" },
+  voucherCollected: { en: "Collected", bn: "সংগৃহীত" },
+  loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
   searchPlaceholderShort: { en: "Search...", bn: "খুঁজুন..." },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
@@ -156,7 +188,7 @@ const DICT = {
   resetFilters: { en: "Reset all filters", bn: "ফিল্টার রিসেট করুন" },
 
   // Product Card & Detail
-  addToCart: { en: "Add to bag", bn: "ব্যাগে নিন" },
+  addToCart: { en: "Add to cart", bn: "কার্টে নিন" },
   buyNow: { en: "Buy now", bn: "এখনই অর্ডার করুন" },
   orderNow: { en: "Order now", bn: "অর্ডার করুন" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
@@ -190,7 +222,7 @@ const DICT = {
   backToShopping: { en: "Back to shopping", bn: "কেনাকাটায় ফিরে যান" },
 
   // Cart Drawer
-  cartTitle: { en: "Your shopping bag", bn: "আপনার শপিং ব্যাগ" },
+  cartTitle: { en: "Your shopping cart", bn: "আপনার শপিং কার্ট" },
   cartEmptyTitle: { en: "Your cart is currently empty", bn: "আপনার ব্যাগ এখন খালি" },
   cartEmptySubtitle: {
     en: "Discover our gadgets, bags, jewellery and everyday fashion.",
@@ -217,7 +249,7 @@ const DICT = {
     en: "Save items you love to find them easily later or move them to cart.",
     bn: "আপনার প্রিয় পণ্যগুলো সেভ করে রাখুন যাতে পরে সহজে খুঁজে পেতে পারেন।",
   },
-  wishlistMoveToCart: { en: "Move to bag", bn: "ব্যাগে নিন" },
+  wishlistMoveToCart: { en: "Move to cart", bn: "কার্টে নিন" },
   wishlistClear: { en: "Clear all", bn: "সব মুছুন" },
 
   // Checkout Page

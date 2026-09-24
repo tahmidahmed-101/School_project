@@ -27,7 +27,7 @@ const MARQUEE_ITEMS: T[] = [
   },
 ];
 
-/** Continuously scrolling promo strip shown right below the hero. */
+/** Continuously scrolling (right to left) promo strip shown right below the hero on the home and pre-order pages. */
 export function PromoMarquee() {
   const { lang } = useLang();
 
@@ -52,7 +52,7 @@ export function PromoMarquee() {
     >
       <div className="overflow-hidden rounded border border-gold-600/40 bg-gold-400 py-2 sm:rounded-md">
         <div className="sr-only">{MARQUEE_ITEMS.map((item) => item[lang]).join(" — ")}</div>
-        <div className="flex w-max animate-marquee-ltr hover:[animation-play-state:paused]">
+        <div className="flex w-max animate-marquee-rtl hover:[animation-play-state:paused]">
           {track}
           {track}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, ArrowRight, ArrowLeft, Info } from "lucide-react";
+import { ShoppingCart, ArrowRight, ArrowLeft, Info } from "lucide-react";
 import { useCart } from "../lib/cart";
 import { useLang } from "../lib/i18n";
 import { CartItemRow } from "./CartItemRow";
@@ -20,7 +20,7 @@ export function CartDrawer() {
       onClose={closeDrawer}
       label={ui("cartTitle")}
       closeLabel="Close cart drawer"
-      icon={<ShoppingBag className="h-5 w-5 text-gold-500" />}
+      icon={<ShoppingCart className="h-5 w-5 text-gold-500" />}
       title={
         <>
           {ui("cartTitle")} ({n(totalItems)})
@@ -37,7 +37,7 @@ export function CartDrawer() {
 
         {items.length === 0 ? (
           <DrawerEmpty
-            icon={<ShoppingBag className="h-8 w-8" />}
+            icon={<ShoppingCart className="h-8 w-8" />}
             iconWrapClassName="bg-ink-100 text-ink-400"
             title={ui("cartEmptyTitle")}
             subtitle={ui("cartEmptySubtitle")}

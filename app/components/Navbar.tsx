@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Heart, Globe, Phone, MapPin, Clock, Menu, Truck } from "lucide-react";
+import { ShoppingCart, Heart, Globe, Phone, MapPin, Clock, Menu, Truck, User } from "lucide-react";
 import { BRAND_INFO } from "../lib/data";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
@@ -28,31 +28,11 @@ function buildNavLinks(pathname: string, activeCategory: string | null): NavLink
   const onShop = pathname === SHOP_PATH;
   return [
     { label: { en: "Home", bn: "হোম" }, href: "/", isActive: pathname === "/" },
-    { label: { en: "Shop All", bn: "সব পণ্য" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
+    { label: { en: "Stock Items", bn: "স্টক আইটেম" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
     {
       label: { en: "Pre-order", bn: "প্রি-অর্ডার" },
       href: "/pre-order",
       isActive: pathname.startsWith("/pre-order"),
-    },
-    {
-      label: { en: "Gadgets", bn: "গ্যাজেটস" },
-      href: `${SHOP_PATH}?category=gadgets`,
-      isActive: onShop && activeCategory === "gadgets",
-    },
-    {
-      label: { en: "Women's", bn: "নারীদের" },
-      href: `${SHOP_PATH}?category=womens-fashion`,
-      isActive: onShop && activeCategory === "womens-fashion",
-    },
-    {
-      label: { en: "Bags", bn: "ব্যাগ" },
-      href: `${SHOP_PATH}?category=bags-wallets`,
-      isActive: onShop && activeCategory === "bags-wallets",
-    },
-    {
-      label: { en: "Kids", bn: "কিডস" },
-      href: `${SHOP_PATH}?category=kids`,
-      isActive: onShop && activeCategory === "kids",
     },
   ];
 }
@@ -153,6 +133,20 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               <Truck className="h-5 w-5" />
             </Link>
 
+            {/* Desktop only; on mobile the profile icon lives in the bottom bar */}
+            <Link
+              href="/login"
+              aria-label={ui("navProfile")}
+              title={ui("navProfile")}
+              className={`relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors lg:flex ${
+                pathname === "/login"
+                  ? "text-gold-300"
+                  : "text-white hover:bg-white/10 hover:text-gold-300"
+              }`}
+            >
+              <User className="h-5 w-5" />
+            </Link>
+
             {/* Desktop only; on mobile the wishlist lives in the bottom bar */}
             <button
               type="button"
@@ -176,7 +170,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               aria-label="Open cart drawer"
               className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
             >
-              <ShoppingBag className="h-5 w-5 transition-transform hover:scale-105" />
+              <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
               {totalItems > 0 && (
                 <span className="shadow-xs absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-ink-950">
                   {n(totalItems)}

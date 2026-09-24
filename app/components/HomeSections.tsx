@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
+import { VoucherSection } from "./VoucherSection";
 import { CategoryShowcase } from "./CategoryShowcase";
 import { TrendingSection } from "./TrendingSection";
 import { ProductGrid } from "./ProductGrid";
@@ -33,6 +34,7 @@ export function HomeSections() {
     <div>
       <Hero />
       <PromoMarquee />
+      <VoucherSection />
       <CategoryShowcase />
 
       {/* Trending Picks */}

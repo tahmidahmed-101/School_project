@@ -7,6 +7,7 @@ import { CartDrawer } from "./CartDrawer";
 import { WishlistDrawer } from "./WishlistDrawer";
 import { MobileBottomBar } from "./MobileBottomBar";
 import { MobileNavMenu } from "./MobileNavMenu";
+import { FloatingContact } from "./FloatingContact";
 import { PreOrderModalProvider } from "../lib/preorder-modal";
 import { PreOrderConfirmationModal } from "./PreOrderConfirmationModal";
 
@@ -27,6 +28,7 @@ export function ClientShell({ children }: ClientShellProps) {
         <WishlistDrawer />
         <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
         <MobileBottomBar />
+        <FloatingContact />
         <PreOrderConfirmationModal />
       </div>
     </PreOrderModalProvider>

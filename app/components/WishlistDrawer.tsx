@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Trash2, Heart, ShoppingBag, ArrowRight } from "lucide-react";
+import { Trash2, Heart, ShoppingCart, ArrowRight } from "lucide-react";
 import { useWishlist } from "../lib/wishlist";
 import { useCart } from "../lib/cart";
 import { useLang } from "../lib/i18n";
@@ -75,7 +75,7 @@ export function WishlistDrawer() {
                     onClick={() => addItem(item)}
                     className="shadow-xs inline-flex cursor-pointer items-center gap-1 rounded-md bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950 transition-all hover:bg-gold-400"
                   >
-                    <ShoppingBag className="h-3 w-3" />
+                    <ShoppingCart className="h-3 w-3" />
                     <span>{ui("wishlistMoveToCart")}</span>
                   </button>
 
@@ -101,8 +101,8 @@ export function WishlistDrawer() {
             onClick={() => items.forEach((item) => addItem(item))}
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gold-500 py-3 text-xs font-bold text-ink-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-400"
           >
-            <ShoppingBag className="h-4 w-4" />
-            <span>Move all to bag</span>
+            <ShoppingCart className="h-4 w-4" />
+            <span>Move all to cart</span>
           </button>
           <Link
             href="/shop"

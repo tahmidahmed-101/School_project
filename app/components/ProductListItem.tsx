@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import type { Product } from "../lib/types";
 import { useCart } from "../lib/cart";
 import { useLang } from "../lib/i18n";
@@ -68,7 +68,7 @@ export function ProductListItem({ product }: { product: Product }) {
           onClick={() => addItem(product)}
           className="shadow-xs flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-500 px-3.5 py-1.5 text-[11px] font-bold text-ink-950 transition-colors hover:bg-gold-400 sm:px-5 sm:py-2 sm:text-xs"
         >
-          <ShoppingBag className="h-3.5 w-3.5" />
+          <ShoppingCart className="h-3.5 w-3.5" />
           <span>{ui("addToCart")}</span>
         </button>
       </div>

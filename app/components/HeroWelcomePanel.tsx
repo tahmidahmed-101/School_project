@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Clock, Gift, MessageCircle, Sparkles, Store } from "lucide-react";
-import { BRAND_INFO } from "../lib/data";
+import { ChevronRight, Clock, Gift, Sparkles, Store } from "lucide-react";
 import { useLang } from "../lib/i18n";
 
 const QUICK_LINKS = [
@@ -53,20 +52,17 @@ export function HeroWelcomePanel() {
         </div>
         <div className="flex w-full flex-col gap-1.5">
           <Link
-            href="/shop"
+            href="/login"
             className="flex items-center justify-center rounded-full bg-gold-400 px-3 py-2 text-[11px] font-bold text-ink-950 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-gold-300 active:scale-[0.98]"
           >
-            {ui("heroShopNow")}
+            {ui("loginTitle")}
           </Link>
-          <a
-            href={`https://wa.me/${BRAND_INFO.whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/register"
             className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-2 text-[11px] font-bold text-white ring-1 ring-inset ring-white/30 transition-all duration-200 hover:bg-white/20"
           >
-            <MessageCircle className="h-3 w-3" />
-            {ui("heroWhatsapp")}
-          </a>
+            {ui("registerTitle")}
+          </Link>
         </div>
       </div>
 

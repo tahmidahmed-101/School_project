@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Hero } from "./Hero";
+import { PromoMarquee } from "./PromoMarquee";
+import { VoucherSection } from "./VoucherSection";
 import { TrendingSection } from "./TrendingSection";
 import { Newsletter } from "./Newsletter";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
@@ -28,6 +30,8 @@ export function PreOrderSections() {
   return (
     <div>
       <Hero />
+      <PromoMarquee />
+      <VoucherSection />
 
       {/* Browsable pre-order picks */}
       <TrendingSection
