@@ -1,13 +1,20 @@
 "use client";
 
-import { Layers, Sparkles } from "lucide-react";
+import { Check, Layers, Sparkles } from "lucide-react";
 import { CATEGORIES } from "../lib/data";
 import { useLang } from "../lib/i18n";
-import { MAX_PRICE, MIN_PRICE, type FilterChange, type FilterState } from "../lib/shop-filters";
+import { MAX_PRICE, MIN_PRICE, type FilterChange, type FilterState, type StockType } from "../lib/shop-filters";
 import type { T } from "../lib/types";
 import { FilterSelect } from "./FilterSelect";
 
 const ALL_ITEMS: T = { en: "All items", bn: "সব আইটেম" };
+
+const STOCK_TITLE: T = { en: "Availability", bn: "প্রাপ্যতা" };
+
+const STOCK_OPTIONS: { id: StockType; label: T }[] = [
+  { id: "normal", label: { en: "Stock items", bn: "স্টক আইটেম" } },
+  { id: "preorder", label: { en: "Pre-order items", bn: "প্রি-অর্ডার আইটেম" } },
+];
 
 const COLLECTIONS: { id: string; label: T }[] = [
   { id: "all", label: { en: "All drops", bn: "সব পণ্য" } },
@@ -35,6 +42,34 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
   return (
     <div className="space-y-6 text-xs text-ink-900">
+      <div role="radiogroup" aria-label={t(STOCK_TITLE)} className="space-y-2">
+        <h5 className="text-[11px] font-bold tracking-wider text-gold-700">{t(STOCK_TITLE)}</h5>
+        {STOCK_OPTIONS.map((opt) => {
+          const checked = filters.stockType === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              onClick={() => onFilterChange("stockType", opt.id)}
+              className="flex w-full cursor-pointer select-none items-center gap-2.5 text-left"
+            >
+              <span
+                className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                  checked ? "border-gold-500 bg-gold-500 text-white" : "border-ink-300 bg-white"
+                }`}
+              >
+                {checked && <Check className="h-3 w-3" strokeWidth={3} />}
+              </span>
+              <span className={`text-xs font-semibold ${checked ? "text-gold-700" : "text-ink-800"}`}>
+                {t(opt.label)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="relative">
         <div className="mb-2 flex items-center justify-between">
           <h5 className="text-[11px] font-bold tracking-wider text-gold-700">

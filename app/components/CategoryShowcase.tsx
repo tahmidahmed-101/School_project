@@ -121,12 +121,12 @@ function CategoryTrack({
           <CardReveal
             key={cat.id}
             delay={(idx % 6) * 0.08}
-            className="w-[clamp(128px,calc((100vw-5.25rem)/2),170px)] shrink-0 snap-start sm:w-[190px] lg:w-[200px]"
+            className="flex w-[clamp(128px,calc((100vw-5.25rem)/2),170px)] shrink-0 snap-start sm:w-[190px] lg:w-[200px]"
           >
             <Link
               draggable={false}
               href={`/shop?category=${cat.slug}`}
-              className={`py-4.5 group relative flex flex-col items-center justify-center rounded-xl border px-3 text-center transition-all duration-300 sm:rounded-2xl sm:px-3.5 sm:py-5 ${
+              className={`py-4.5 group relative flex h-full w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition-all duration-300 sm:rounded-2xl sm:px-3.5 sm:py-5 ${
                 isActive
                   ? "border-gold-500 bg-gold-50/70 shadow-sm ring-1 ring-gold-400/30"
                   : "shadow-2xs border-ink-200/90 bg-white hover:-translate-y-0.5 hover:border-gold-500 hover:bg-gold-50/70 hover:shadow-md hover:shadow-gold-500/10"

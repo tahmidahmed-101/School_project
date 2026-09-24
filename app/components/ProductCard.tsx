@@ -91,6 +91,13 @@ export function ProductCard({ product }: ProductCardProps) {
             {t(product.name)}
           </Link>
 
+          {product.productCode && (
+            <p className="text-[9.5px] font-medium leading-tight text-ink-500 sm:text-[10.5px]">
+              {ui("productCode")}: {n(product.productCode)}
+              {product.productType && ` (${t(product.productType)})`}
+            </p>
+          )}
+
           {/* Pre-order Expected Delivery Info: short date only, wraps instead of overflowing */}
           {product.isPreOrder && product.expectedDelivery && (
             <div

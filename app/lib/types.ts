@@ -45,6 +45,9 @@ export interface Product {
   inStock: boolean;
   stockCount: number;
   sku: string;
+  /** Customer-facing code and short type label, e.g. 1001 (Earbuds). */
+  productCode?: number;
+  productType?: T;
   badge?: T;
   featured?: boolean;
   trending?: boolean;

@@ -8,7 +8,7 @@ import { CategoryShowcase } from "./CategoryShowcase";
 import { TrendingSection } from "./TrendingSection";
 import { ProductGrid } from "./ProductGrid";
 import { Newsletter } from "./Newsletter";
-import { CATEGORIES, PRODUCTS } from "../lib/data";
+import { CATEGORIES, STOCK_PRODUCTS } from "../lib/data";
 import { useLang } from "../lib/i18n";
 
 export function HomeSections() {
@@ -16,8 +16,7 @@ export function HomeSections() {
 
   // Best-seller shelf: hand-picked (featured) products first, then the rest of the catalogue
   const bestSellerProducts = useMemo(() => {
-    return [...PRODUCTS]
-      .filter((p) => !p.isPreOrder)
+    return [...STOCK_PRODUCTS]
       .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
       .slice(0, 8);
   }, []);
@@ -26,7 +25,7 @@ export function HomeSections() {
   const categorySections = useMemo(() => {
     return CATEGORIES.map((category) => ({
       category,
-      products: PRODUCTS.filter((p) => !p.isPreOrder && p.category === category.id),
+      products: STOCK_PRODUCTS.filter((p) => p.category === category.id),
     })).filter((section) => section.products.length > 0);
   }, []);
 

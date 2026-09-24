@@ -17,6 +17,15 @@ async function categoryFrom(searchParams: ShopSearchParams) {
 
 export async function generateMetadata({ searchParams }: { searchParams: ShopSearchParams }): Promise<Metadata> {
   const category = await categoryFrom(searchParams);
+  const { type } = await searchParams;
+  if (!category && type === "preorder") {
+    return pageMetadata({
+      title: "Pre-order Products",
+      description:
+        "Reserve upcoming Kull Mart arrivals with pre-order — fashion, bags, jewellery, kids' items and gadgets, delivered across Bangladesh.",
+      path: "/shop?type=preorder",
+    });
+  }
   if (category) {
     return pageMetadata({
       title: `Shop ${category.name.en}`,
@@ -26,9 +35,9 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
     });
   }
   return pageMetadata({
-    title: "Shop All Products",
+    title: "Shop In-Stock Products",
     description:
-      "Browse the full Kull Mart collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery all across Bangladesh.",
+      "Browse the Kull Mart in-stock collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery all across Bangladesh.",
     path: "/shop",
   });
 }

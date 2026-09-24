@@ -16,8 +16,8 @@ export function buildLlmsTxt(): string {
     [
       "## Sections",
       "",
-      `- Shop (all products): ${absoluteUrl("/shop")}`,
-      `- Pre-order collection: ${absoluteUrl("/pre-order")}`,
+      `- Shop (in-stock products): ${absoluteUrl("/shop")}`,
+      `- Pre-order collection: ${absoluteUrl("/pre-order")} (all pre-order items: ${absoluteUrl("/shop?type=preorder")})`,
       `- Product pages: ${absoluteUrl("/product/{slug}")} — full details, price, specs and images`,
       `- Product feed (machine-readable): ${absoluteUrl("/products.xml")}`,
     ].join("\n"),

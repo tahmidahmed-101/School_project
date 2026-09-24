@@ -8,6 +8,7 @@ import {
   DEFAULT_FILTERS,
   filterAndSortProducts,
   type FilterChange,
+  parseStockType,
   type FilterState,
 } from "../lib/shop-filters";
 import { ShopFilterSidebar } from "./ShopFilterSidebar";
@@ -25,6 +26,7 @@ export function ShopCatalog() {
     collection: searchParams.get("collection") || DEFAULT_FILTERS.collection,
     sort: searchParams.get("sort") || DEFAULT_FILTERS.sort,
     searchQuery: searchParams.get("q") || DEFAULT_FILTERS.searchQuery,
+    stockType: parseStockType(searchParams.get("type")),
   }));
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -34,15 +36,21 @@ export function ShopCatalog() {
     const collection = searchParams.get("collection");
     const sort = searchParams.get("sort");
     const searchQuery = searchParams.get("q");
+    const type = searchParams.get("type");
 
     setFilters((prev) => ({
       ...prev,
+      // Only follow the URL when it names a type, so the user's checkbox choice isn't overwritten.
+      ...(type && { stockType: parseStockType(type) }),
       ...(category && { category }),
       ...(collection && { collection }),
       ...(sort && { sort }),
       ...(searchQuery && { searchQuery }),
     }));
   }, [searchParams]);
+
+  // Reset clears the user's filters but stays on the same stock type (normal / pre-order).
+  const resetFilters = () => setFilters((prev) => ({ ...DEFAULT_FILTERS, stockType: prev.stockType }));
 
   const handleFilterChange: FilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -51,7 +59,11 @@ export function ShopCatalog() {
   const filteredProducts = useMemo(() => filterAndSortProducts(PRODUCTS, filters), [filters]);
 
   const activeCategory = CATEGORIES.find((c) => c.id === filters.category);
-  const activeCategoryTitle = activeCategory ? t(activeCategory.name) : ui("shopHeading");
+  const activeCategoryTitle = activeCategory
+    ? t(activeCategory.name)
+    : filters.stockType === "preorder"
+      ? ui("navPreOrder")
+      : ui("shopHeading");
 
   return (
     <div className="min-h-screen w-full bg-ink-50/60">
@@ -77,7 +89,7 @@ export function ShopCatalog() {
           <ShopFilterSidebar
             filters={filters}
             onFilterChange={handleFilterChange}
-            onReset={() => setFilters(DEFAULT_FILTERS)}
+            onReset={() => resetFilters()}
             isMobileOpen={isMobileFilterOpen}
             onMobileClose={() => setIsMobileFilterOpen(false)}
             productCount={filteredProducts.length}
@@ -87,7 +99,7 @@ export function ShopCatalog() {
             products={filteredProducts}
             filters={filters}
             onFilterChange={handleFilterChange}
-            onReset={() => setFilters(DEFAULT_FILTERS)}
+            onReset={() => resetFilters()}
             onOpenMobileFilter={() => setIsMobileFilterOpen(true)}
           />
         </div>

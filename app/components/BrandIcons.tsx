@@ -11,6 +11,14 @@ export function FacebookIcon(props: IconProps) {
   );
 }
 
+export function MessengerIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M12 0C5.24 0 0 4.952 0 11.64c0 3.5 1.435 6.526 3.77 8.616.196.176.315.42.32.684l.066 2.135a.96.96 0 0 0 1.347.85l2.38-1.05a.96.96 0 0 1 .642-.048c1.09.3 2.25.46 3.475.46 6.76 0 12-4.952 12-11.647C24 4.952 18.76 0 12 0Zm7.2 8.96-3.52 5.585a1.8 1.8 0 0 1-2.6.48l-2.8-2.1a.72.72 0 0 0-.87 0l-3.78 2.868c-.504.383-1.163-.222-.826-.757l3.52-5.585a1.8 1.8 0 0 1 2.6-.48l2.8 2.1a.72.72 0 0 0 .87 0l3.78-2.868c.504-.383 1.163.222.826.757Z" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>

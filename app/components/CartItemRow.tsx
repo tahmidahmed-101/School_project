@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Minus, Plus, Trash2, Calendar } from "lucide-react";
+import { Trash2, Calendar } from "lucide-react";
 import type { CartItem } from "../lib/types";
 import { useCart } from "../lib/cart";
 import { useLang } from "../lib/i18n";
 import { PreOrderBadge } from "./PreOrderBadge";
+import { QuantityStepper } from "./QuantityStepper";
 import { DrawerItemImage } from "./ui/Drawer";
 
 export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: () => void }) {
-  const { t, ui, money, n } = useLang();
+  const { t, ui, money } = useLang();
   const { updateQuantity, removeItem } = useCart();
   const { product, quantity, selectedVariant } = item;
 
@@ -51,27 +52,10 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
         )}
 
         <div className="flex items-center gap-2 pt-1">
-          <div className="inline-flex items-center rounded-lg border border-ink-200 bg-white p-0.5">
-            <button
-              type="button"
-              onClick={() => updateQuantity(product.id, quantity - 1, selectedVariant)}
-              className="cursor-pointer p-1 text-ink-600 hover:text-ink-900"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="h-3 w-3" />
-            </button>
-            <span className="min-w-[20px] px-2 text-center text-xs font-bold text-ink-900">
-              {n(quantity)}
-            </span>
-            <button
-              type="button"
-              onClick={() => updateQuantity(product.id, quantity + 1, selectedVariant)}
-              className="cursor-pointer p-1 text-ink-600 hover:text-ink-900"
-              aria-label="Increase quantity"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
+          <QuantityStepper
+            quantity={quantity}
+            onChange={(next) => updateQuantity(product.id, next, selectedVariant)}
+          />
 
           <button
             type="button"

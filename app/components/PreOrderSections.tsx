@@ -29,7 +29,7 @@ export function PreOrderSections() {
 
   return (
     <div>
-      <Hero />
+      <Hero shopLink="/shop?type=preorder" />
       <PromoMarquee />
       <VoucherSection />
 

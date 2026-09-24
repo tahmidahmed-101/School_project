@@ -1,14 +1,14 @@
 "use client";
 
 import { BRAND_INFO } from "../lib/data";
-import { FacebookIcon, WhatsAppIcon } from "./BrandIcons";
+import { MessengerIcon, WhatsAppIcon } from "./BrandIcons";
 
 const LINKS = [
   {
-    id: "facebook",
-    href: BRAND_INFO.facebook,
-    label: "Message us on Facebook",
-    icon: FacebookIcon,
+    id: "messenger",
+    href: BRAND_INFO.facebook.replace("www.facebook.com", "m.me"),
+    label: "Message us on Messenger",
+    icon: MessengerIcon,
     tint: "bg-[#1877f2]",
   },
   {
@@ -20,7 +20,7 @@ const LINKS = [
   },
 ] as const;
 
-/** Floating Facebook + WhatsApp shortcuts, pinned bottom-right (above the mobile bottom bar). */
+/** Floating Messenger + WhatsApp shortcuts, pinned bottom-right (above the mobile bottom bar). */
 export function FloatingContact() {
   return (
     <div className="fixed bottom-[76px] right-3 z-30 flex flex-col gap-2.5 sm:right-5 lg:bottom-6">

@@ -579,6 +579,9 @@ const BASE_PRODUCTS: Product[] = [
 
 export const PRODUCTS: Product[] = [...BASE_PRODUCTS, ...GADGET_PRODUCTS, ...PREORDER_PRODUCTS];
 
+/** Regular in-stock catalogue: everything except pre-order items. */
+export const STOCK_PRODUCTS: Product[] = PRODUCTS.filter((product) => !product.isPreOrder);
+
 export const CATEGORIES: CategoryInfo[] = CATEGORY_DEFS.map((category) => ({
   ...category,
   itemCount: PRODUCTS.filter((product) => product.category === category.id).length,

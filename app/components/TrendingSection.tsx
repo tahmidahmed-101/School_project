@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Product } from "../lib/types";
-import { PRODUCTS } from "../lib/data";
+import { STOCK_PRODUCTS } from "../lib/data";
 import { ProductCardGrid } from "./ProductCardGrid";
 import { ScrollReveal } from "./Reveal";
 import { useLang } from "../lib/i18n";
@@ -23,7 +23,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
   const { ui } = useLang();
 
   // Default teaser: a handful of picks, not the full catalogue (that's what "View all" is for)
-  const sourceProducts = products ?? PRODUCTS.filter((p) => !p.isPreOrder).slice(0, 12);
+  const sourceProducts = products ?? STOCK_PRODUCTS.slice(0, 12);
 
   return (
     <section className="border-b border-ink-200 bg-white py-8 sm:py-14">

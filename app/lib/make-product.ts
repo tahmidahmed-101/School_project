@@ -1,3 +1,4 @@
+import { PRODUCT_CODES } from "./product-codes";
 import type { Product, ProductCategory, ProductSpec, ProductVariant, T } from "./types";
 
 const CATEGORY_NAMES: Record<ProductCategory, T> = {
@@ -45,6 +46,7 @@ interface ProductInput {
 export function makeProduct(input: ProductInput): Product {
   const gallery = input.images.map((file) => `products/${file}`);
   const { preorder } = input;
+  const productCode = PRODUCT_CODES[input.slug];
   return {
     id: input.id,
     slug: input.slug,
@@ -63,6 +65,8 @@ export function makeProduct(input: ProductInput): Product {
     inStock: true,
     stockCount: input.stockCount,
     sku: input.sku,
+    productCode: productCode?.code,
+    productType: productCode?.type,
     badge: input.badge,
     featured: input.featured,
     trending: input.trending,

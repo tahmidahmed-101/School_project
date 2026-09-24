@@ -40,6 +40,7 @@ function item(product: Product): string {
     ...(onSale ? [tag("sale_price", money(product.price))] : []),
     tag("availability", availability(product)),
     tag("brand", SITE_NAME),
+    ...(product.productCode ? [tag("mpn", String(product.productCode))] : []),
     tag("condition", "new"),
     tag("product_type", product.categoryName.en),
   ];

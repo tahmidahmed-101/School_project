@@ -1,17 +1,33 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { HERO_BANNER } from "../lib/hero-content";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { HERO_CTA_TEXT, HERO_SLIDES } from "../lib/hero-content";
 import { useLang } from "../lib/i18n";
 import { photo } from "../lib/photo";
 import { ScrollReveal } from "./Reveal";
 import { HeroCategoryRail } from "./HeroCategoryRail";
 import { HeroWelcomePanel } from "./HeroWelcomePanel";
 
-export function Hero() {
+const AUTOPLAY_MS = 5000;
+
+/** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
+export function Hero({ shopLink = "/shop?type=normal" }: { shopLink?: string }) {
   const { lang } = useLang();
+  const [index, setIndex] = useState(0);
+  const slide = HERO_SLIDES[index];
+
+  const go = useCallback((next: number) => {
+    setIndex((next + HERO_SLIDES.length) % HERO_SLIDES.length);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => go(index + 1), AUTOPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [index, go]);
 
   return (
     <section
@@ -27,17 +43,25 @@ export function Hero() {
             <HeroCategoryRail />
           </ScrollReveal>
 
-          {/* Middle: big banner (no reveal animation — it's the LCP content, shown immediately) */}
+          {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
           <div className="flex h-full flex-col lg:order-2 lg:col-span-8">
-            <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-[28px] lg:min-h-[360px]">
-              <Image
-                src={photo("brand/hero-banner.png")}
-                alt="Kull Mart hero banner: phones, earbuds, laptop, headphones and everyday accessories"
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 810px"
-                className="object-cover"
-              />
+            <div
+              className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-[28px] lg:min-h-[360px]"
+            >
+              {HERO_SLIDES.map((s, i) => (
+                <Image
+                  key={s.image}
+                  src={photo(s.image)}
+                  alt={s.alt}
+                  fill
+                  priority={i === 0}
+                  sizes="(max-width: 1024px) 100vw, 810px"
+                  aria-hidden={i !== index}
+                  className={`object-cover transition-opacity duration-700 ease-in-out ${
+                    i === index ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              ))}
               <div
                 className="pointer-events-none absolute inset-0"
                 style={{
@@ -46,31 +70,70 @@ export function Hero() {
                 }}
               />
 
-              <ScrollReveal
-                y={18}
-                duration={0.8}
-                className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9"
-              >
-                <div className="inline-flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
-                  <span className="sm:truncate">{HERO_BANNER.tag[lang]}</span>
-                </div>
+              <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <div className="inline-flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
+                      <span className="sm:truncate">{slide.tag[lang]}</span>
+                    </div>
 
-                <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-[32px] xl:text-[38px]">
-                  {HERO_BANNER.title[lang].split("\n").map((line, i) => (
-                    <span key={i} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </h1>
+                    <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-[32px] xl:text-[38px]">
+                      {slide.title[lang].split("\n").map((line, i) => (
+                        <span key={i} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </h1>
+                  </motion.div>
+                </AnimatePresence>
 
                 <Link
-                  href={HERO_BANNER.ctaLink}
+                  href={shopLink}
                   className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-gold-400 hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
                 >
-                  <span>{HERO_BANNER.ctaText[lang]}</span>
+                  <span>{HERO_CTA_TEXT[lang]}</span>
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
                 </Link>
-              </ScrollReveal>
+              </div>
+
+              <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => go(index - 1)}
+                  aria-label="Previous slide"
+                  className="hidden h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="flex gap-1.5">
+                  {HERO_SLIDES.map((s, i) => (
+                    <button
+                      key={s.image}
+                      type="button"
+                      onClick={() => go(i)}
+                      aria-label={`Go to slide ${i + 1}`}
+                      aria-current={i === index}
+                      className={`h-2 cursor-pointer rounded-full transition-all ${
+                        i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => go(index + 1)}
+                  aria-label="Next slide"
+                  className="hidden h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 

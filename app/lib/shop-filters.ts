@@ -8,6 +8,15 @@ export interface FilterState {
   inStockOnly: boolean;
   sort: string;
   searchQuery: string;
+  /** "normal" (default) hides pre-order items, "preorder" shows only them. */
+  stockType: StockType;
+}
+
+export type StockType = "normal" | "preorder";
+
+export function parseStockType(value: string | null): StockType {
+  // The shop hides pre-order items unless a type is explicitly requested.
+  return value === "preorder" ? value : "normal";
 }
 
 export type FilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
@@ -22,6 +31,7 @@ export const DEFAULT_FILTERS: FilterState = {
   inStockOnly: false,
   sort: "featured",
   searchQuery: "",
+  stockType: "normal",
 };
 
 /** How many filters (search, category, collection, price cap, stock) narrow the catalogue. */
@@ -60,6 +70,9 @@ function matchesFilters(product: Product, filters: FilterState): boolean {
   ) {
     return false;
   }
+
+  if (filters.stockType === "normal" && product.isPreOrder) return false;
+  if (filters.stockType === "preorder" && !product.isPreOrder) return false;
 
   if (filters.collection === "trending" && !product.trending) return false;
   if (filters.collection === "sale" && getDiscountPercent(product) === null) return false;

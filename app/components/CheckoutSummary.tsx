@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Calendar } from "lucide-react";
+import { ArrowLeft, Sparkles, Calendar, Trash2 } from "lucide-react";
 import type { CartItem } from "../lib/types";
+import { useCart } from "../lib/cart";
 import { useLang } from "../lib/i18n";
 import { photo } from "../lib/photo";
 import { PreOrderBadge } from "./PreOrderBadge";
 import { Loader } from "./Loader";
+import { QuantityStepper } from "./QuantityStepper";
 
 interface CheckoutSummaryProps {
   items: CartItem[];
@@ -26,6 +28,7 @@ export function CheckoutSummary({
   isSubmitting,
 }: CheckoutSummaryProps) {
   const { t, ui, money, n } = useLang();
+  const { updateQuantity, removeItem } = useCart();
 
   const preOrderItem = items.find((i) => i.product.isPreOrder);
   const hasPreOrder = Boolean(preOrderItem);
@@ -54,8 +57,8 @@ export function CheckoutSummary({
         </div>
       )}
 
-      <div className="max-h-60 space-y-2.5 overflow-y-auto pr-1">
-        {items.map(({ product, quantity }, idx) => (
+      <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
+        {items.map(({ product, quantity, selectedVariant }, idx) => (
           <div key={`${product.id}-${idx}`} className="flex items-start gap-3 text-xs">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
               <Image
@@ -77,8 +80,20 @@ export function CheckoutSummary({
                   />
                 )}
               </div>
-              <div className="text-[11px] font-medium text-ink-500">
-                {n(quantity)} × {money(product.price)}
+              <div className="text-[11px] font-medium text-ink-500">{money(product.price)}</div>
+              <div className="flex items-center gap-2 pt-0.5">
+                <QuantityStepper
+                  quantity={quantity}
+                  onChange={(next) => updateQuantity(product.id, next, selectedVariant)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(product.id, selectedVariant)}
+                  className="cursor-pointer p-1 text-ink-400 transition-colors hover:text-red-600"
+                  aria-label={ui("cartRemove")}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
               {product.isPreOrder && product.expectedDelivery && (
                 <div className="flex items-center gap-1 text-[10px] font-medium text-gold-700">

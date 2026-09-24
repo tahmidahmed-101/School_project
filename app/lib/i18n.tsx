@@ -191,6 +191,7 @@ const DICT = {
   addToCart: { en: "Add to cart", bn: "কার্টে নিন" },
   buyNow: { en: "Buy now", bn: "এখনই অর্ডার করুন" },
   orderNow: { en: "Order now", bn: "অর্ডার করুন" },
+  productCode: { en: "Product Code", bn: "প্রোডাক্ট কোড" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },
   category: { en: "Category", bn: "ক্যাটাগরি" },

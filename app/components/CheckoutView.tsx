@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/cart";
 import { getDeliveryFee } from "../lib/checkout";
@@ -70,8 +71,10 @@ export function CheckoutView() {
   if (items.length === 0) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white py-20">
-        <Breadcrumbs className="mb-6 justify-center" items={breadcrumbs} />
         <div className="max-w-sm space-y-4 px-4 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold-50 ring-1 ring-gold-200">
+            <ShoppingCart className="h-9 w-9 text-gold-600" strokeWidth={1.75} aria-hidden="true" />
+          </div>
           <p className="text-base font-bold text-ink-900">{ui("cartEmptyTitle")}</p>
           <p className="text-xs text-ink-600">{ui("cartEmptySubtitle")}</p>
           <Link

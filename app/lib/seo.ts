@@ -162,6 +162,7 @@ export function productJsonLd(product: Product): JsonLdNode {
     name: product.name.en,
     description: product.description.en,
     sku: product.sku,
+    ...(product.productCode && { mpn: String(product.productCode) }),
     category: product.categoryName.en,
     url,
     image: product.gallery.map(assetUrl),
