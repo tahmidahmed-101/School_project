@@ -15,8 +15,17 @@ import { HeroWelcomePanel } from "./HeroWelcomePanel";
 const AUTOPLAY_MS = 5000;
 
 /** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
-export function Hero({ shopLink = "/shop?type=normal" }: { shopLink?: string }) {
+export function Hero({
+  shopLink = "/shop?type=normal",
+  preorder = false,
+}: {
+  shopLink?: string;
+  preorder?: boolean;
+}) {
   const { lang } = useLang();
+  const badge = preorder
+    ? { en: "Pre Order", bn: "প্রি-অর্ডার" }
+    : { en: "Stock", bn: "স্টক" };
   const [index, setIndex] = useState(0);
   const slide = HERO_SLIDES[index];
 
@@ -79,7 +88,10 @@ export function Hero({ shopLink = "/shop?type=normal" }: { shopLink?: string }) 
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <div className="inline-flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
+                    <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
+                      {badge[lang]}
+                    </span>
+                    <div className="flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
                       <span className="sm:truncate">{slide.tag[lang]}</span>
                     </div>
 
