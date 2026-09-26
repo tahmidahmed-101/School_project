@@ -10,6 +10,7 @@ from apps.audit.services.audit import log_action
 from apps.common.exceptions import DomainError
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.orders.models import Coupon, SalesOrder
+from apps.orders.selectors.coupons import get_active_coupon_by_code
 from apps.orders.services.carts import _ensure_pending
 
 
@@ -52,6 +53,40 @@ def _release_coupon(coupon_id) -> None:
     Coupon.objects.filter(id=coupon_id).update(times_used=F("times_used") - 1)
 
 
+def _check_coupon_eligible(coupon: Coupon, subtotal: Decimal) -> None:
+    """Shared by `apply_coupon` and `preview_coupon` so a code that passes
+    preview cannot fail checkout (or vice versa) on a rule checked only in
+    one of the two places."""
+    if subtotal < coupon.min_order_amount:
+        raise DomainError(
+            f"Order subtotal must be at least {coupon.min_order_amount} to use this coupon.",
+            code="coupon_minimum_not_met",
+        )
+    if coupon.expires_at is not None and coupon.expires_at < timezone.now():
+        raise DomainError("This coupon has expired.", code="coupon_expired")
+    if coupon.usage_limit is not None and coupon.times_used >= coupon.usage_limit:
+        raise DomainError(
+            "This coupon has reached its usage limit.", code="coupon_usage_limit_reached"
+        )
+
+
+def preview_coupon(*, code: str, subtotal: Decimal) -> dict:
+    """Read-only eligibility check against a prospective subtotal, for a
+    storefront to validate a code before it commits to an order. Does not
+    lock the row or touch `times_used` — `apply_coupon` re-checks for real
+    once there is an order to attach the coupon to."""
+    coupon = get_active_coupon_by_code(code)
+    if coupon is None:
+        raise DomainError("Coupon not found.", code="invalid_coupon")
+    _check_coupon_eligible(coupon, subtotal)
+    return {
+        "code": coupon.code,
+        "discount_type": coupon.discount_type,
+        "value": coupon.value,
+        "discount_amount": _compute_discount(coupon, subtotal),
+    }
+
+
 @transaction.atomic
 def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
     _ensure_pending(order)
@@ -65,17 +100,7 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
     )
     if coupon is None:
         raise DomainError("Coupon not found.", code="invalid_coupon")
-    if order.subtotal < coupon.min_order_amount:
-        raise DomainError(
-            f"Order subtotal must be at least {coupon.min_order_amount} to use this coupon.",
-            code="coupon_minimum_not_met",
-        )
-    if coupon.expires_at is not None and coupon.expires_at < timezone.now():
-        raise DomainError("This coupon has expired.", code="coupon_expired")
-    if coupon.usage_limit is not None and coupon.times_used >= coupon.usage_limit:
-        raise DomainError(
-            "This coupon has reached its usage limit.", code="coupon_usage_limit_reached"
-        )
+    _check_coupon_eligible(coupon, order.subtotal)
 
     if order.coupon_id and order.coupon_id != coupon.id:
         _release_coupon(order.coupon_id)

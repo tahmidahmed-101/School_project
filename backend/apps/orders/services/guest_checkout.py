@@ -1,19 +1,53 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.db import transaction
 
 from apps.accounts.models import Address, User
 from apps.accounts.selectors.users import get_active_user_by_email
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import create_user
-from apps.catalog.selectors.products import get_variant_by_id
-from apps.common.exceptions import BusinessRuleViolationError
+from apps.catalog.selectors.products import get_variant_by_id, get_variants_by_ids
+from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.utils.codes import generate_document_number
 from apps.logistics.selectors.rates import (
     get_carrier_by_id,
 )
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
+
+
+def _variants_by_id(items: list[dict]) -> dict:
+    ids = [item["variant_id"] for item in items]
+    return {str(variant.id): variant for variant in get_variants_by_ids(ids)}
+
+
+def weight_for_items(items: list[dict]) -> Decimal:
+    """Shipment weight for a raw item list, mirroring `checkout.order_weight`
+    for callers that don't have an order yet — a guest's shipping quote."""
+    variants_by_id = _variants_by_id(items)
+    weight = Decimal("0")
+    for item in items:
+        variant = variants_by_id.get(str(item["variant_id"]))
+        if variant is None:
+            raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
+        if variant.weight is not None:
+            weight += variant.weight * item["quantity"]
+    return weight
+
+
+def subtotal_for_items(items: list[dict]) -> Decimal:
+    """Order subtotal for a raw item list — same per-line price `guest_checkout`
+    would charge, used to preview a coupon before an order exists."""
+    variants_by_id = _variants_by_id(items)
+    subtotal = Decimal("0")
+    for item in items:
+        variant = variants_by_id.get(str(item["variant_id"]))
+        if variant is None:
+            raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
+        subtotal += variant.effective_price * item["quantity"]
+    return subtotal
 
 
 def _is_preorder_line(line: SalesOrderLine) -> bool:
@@ -99,6 +133,7 @@ def guest_checkout(
     last_name: str,
     items: list[dict],
     shipping_address: dict,
+    payment_method: str,
     carrier_id: str | None = None,
     coupon_code: str | None = None,
     notes: str = "",
@@ -177,8 +212,16 @@ def guest_checkout(
         from apps.orders.services.coupons import apply_coupon
         try:
             apply_coupon(order=order, code=coupon_code, actor=user)
-        except BusinessRuleViolationError as exc:
-            if exc.code not in ("coupon_not_found", "coupon_expired", "coupon_usage_exceeded"):
+        except DomainError as exc:
+            # A guest checkout is one irreversible form submission — a bad
+            # coupon code shouldn't cost the customer their whole order, so
+            # these fall back to no discount rather than aborting checkout.
+            if exc.code not in (
+                "invalid_coupon",
+                "coupon_expired",
+                "coupon_usage_limit_reached",
+                "coupon_minimum_not_met",
+            ):
                 raise
 
     carrier = None
@@ -189,4 +232,9 @@ def guest_checkout(
             raise BusinessRuleViolationError("Carrier not found.", code="carrier_not_found")
 
     from apps.orders.services.checkout import checkout
-    return checkout(order=order, shipping_address=address, carrier=carrier)
+    order = checkout(order=order, shipping_address=address, carrier=carrier)
+
+    from apps.orders.services.payments import capture_payment
+    capture_payment(order=order, amount=order.grand_total, method=payment_method)
+    order.refresh_from_db()
+    return order

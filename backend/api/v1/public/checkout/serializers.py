@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import SalesOrder
 
 
@@ -28,6 +29,7 @@ class GuestCheckoutSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
     items = GuestCheckoutItemSerializer(many=True)
     shipping_address = GuestCheckoutAddressSerializer()
+    payment_method = serializers.ChoiceField(choices=PaymentMethodKey.choices)
     carrier_id = serializers.UUIDField(required=False, allow_null=True)
     coupon_code = serializers.CharField(max_length=32, required=False, allow_blank=True)
     notes = serializers.CharField(allow_blank=True, required=False)
@@ -55,3 +57,27 @@ class GuestOrderSerializer(serializers.Serializer):
     def get_shipments(self, obj) -> list[dict]:
         from api.v1.customer.orders.serializers import CustomerShipmentSerializer
         return CustomerShipmentSerializer(obj.shipments.all(), many=True).data
+
+
+class GuestShippingLocationSerializer(serializers.Serializer):
+    """A guest has no saved addresses, so — unlike the customer cart's
+    shipping serializers — location is always either typed text or an
+    explicit zone, never an address_id."""
+
+    items = GuestCheckoutItemSerializer(many=True)
+    address_text = serializers.CharField(required=False, allow_blank=True)
+    zone_id = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if not (attrs.get("address_text") or attrs.get("zone_id")):
+            raise serializers.ValidationError("Provide either address_text or zone_id.")
+        return attrs
+
+
+class GuestShippingQuoteRequestSerializer(GuestShippingLocationSerializer):
+    carrier_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class GuestCouponValidationSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=32)
+    items = GuestCheckoutItemSerializer(many=True)

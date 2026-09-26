@@ -15,6 +15,7 @@ from apps.common.params import get_uuid
 from apps.common.permissions import IsCustomer
 from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import CapturePaymentSerializer
+from apps.common.throttling import CouponRateThrottle
 from apps.logistics.selectors.rates import (
     address_zone_text,
     find_zone_by_address_text,
@@ -133,6 +134,7 @@ class CartLineDetailView(APIView):
 class CartCouponView(APIView):
     serializer_class = ApplyCouponSerializer
     permission_classes: ClassVar[list] = [IsCustomer]
+    throttle_classes: ClassVar[list] = [CouponRateThrottle]
 
     def post(self, request) -> Response:
         cart = get_or_create_cart(request.user)
