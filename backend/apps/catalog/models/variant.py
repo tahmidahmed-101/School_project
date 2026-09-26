@@ -31,6 +31,12 @@ class ProductVariant(FullAuditModel):
     color: models.CharField = models.CharField(max_length=50, blank=True)
     size: models.CharField = models.CharField(max_length=50, blank=True)
 
+    # Wholesale fields
+    wholesale_price: models.DecimalField | None = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    show_wholesale_price: models.BooleanField = models.BooleanField(default=False)
+
     # Pre-order fields
     is_preorder_enabled: models.BooleanField = models.BooleanField(default=False)
     preorder_price: models.DecimalField | None = models.DecimalField(

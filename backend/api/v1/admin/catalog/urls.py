@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from django.urls import path
 
+from .brand_views import (
+    AdminBrandBulkStatusView,
+    AdminBrandDetailView,
+    AdminBrandListCreateView,
+    AdminBrandRestoreView,
+)
 from .bundle_views import AdminBundleDetailView, AdminBundleListCreateView, AdminBundleRestoreView
 from .category_views import (
     AdminCategoryDetailView,
@@ -28,6 +34,22 @@ from .variant_views import (
 app_name = "admin_catalog"
 
 urlpatterns = [
+    path("brands/", AdminBrandListCreateView.as_view(), name="brand-list"),
+    path(
+        "brands/<uuid:brand_id>/",
+        AdminBrandDetailView.as_view(),
+        name="brand-detail",
+    ),
+    path(
+        "brands/<uuid:brand_id>/restore/",
+        AdminBrandRestoreView.as_view(),
+        name="brand-restore",
+    ),
+    path(
+        "brands/bulk-status/",
+        AdminBrandBulkStatusView.as_view(),
+        name="brand-bulk-status",
+    ),
     path("categories/", AdminCategoryListCreateView.as_view(), name="category-list"),
     path(
         "categories/<uuid:category_id>/",

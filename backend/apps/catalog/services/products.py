@@ -159,6 +159,9 @@ def create_variant(
     weight: Decimal | None = None,
     color: str = "",
     size: str = "",
+    # Wholesale fields
+    wholesale_price: Decimal | None = None,
+    show_wholesale_price: bool = False,
     # Pre-order fields
     is_preorder_enabled: bool = False,
     preorder_price: Decimal | None = None,
@@ -211,6 +214,9 @@ def create_variant(
         weight=weight,
         color=color,
         size=size,
+        # Wholesale fields
+        wholesale_price=wholesale_price,
+        show_wholesale_price=show_wholesale_price,
         # Pre-order fields
         is_preorder_enabled=is_preorder_enabled,
         preorder_price=preorder_price,
@@ -264,6 +270,9 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         "color",
         "size",
         "is_active",
+        # Wholesale fields
+        "wholesale_price",
+        "show_wholesale_price",
         # Pre-order fields
         "is_preorder_enabled",
         "preorder_price",
@@ -272,7 +281,7 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         "release_date",
         "preorder_stock_limit",
     }
-    price_fields = {"price", "cost_price", "discount_price"}
+    price_fields = {"price", "cost_price", "discount_price", "wholesale_price"}
     changed_fields = [field for field in data if field in allowed_fields]
     previous_values = {
         field: getattr(variant, field)

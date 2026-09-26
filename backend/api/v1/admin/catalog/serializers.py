@@ -45,6 +45,11 @@ class ProductVariantSerializer(serializers.Serializer):
     is_active = serializers.BooleanField()
     color = serializers.CharField(allow_blank=True)
     size = serializers.CharField(allow_blank=True)
+    # Wholesale fields
+    wholesale_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, allow_null=True, required=False
+    )
+    show_wholesale_price = serializers.BooleanField()
     # Pre-order fields
     is_preorder_enabled = serializers.BooleanField()
     preorder_price = serializers.DecimalField(
@@ -132,6 +137,11 @@ class ProductVariantCreateSerializer(serializers.Serializer):
     )
     color = serializers.CharField(required=False, allow_blank=True)
     size = serializers.CharField(required=False, allow_blank=True)
+    # Wholesale fields
+    wholesale_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+    show_wholesale_price = serializers.BooleanField(required=False, default=False)
     # Pre-order fields
     is_preorder_enabled = serializers.BooleanField(required=False, default=False)
     preorder_price = serializers.DecimalField(
@@ -191,6 +201,11 @@ class ProductVariantUpdateSerializer(serializers.Serializer):
     color = serializers.CharField(required=False, allow_blank=True)
     size = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
+    # Wholesale fields
+    wholesale_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+    show_wholesale_price = serializers.BooleanField(required=False)
     # Pre-order fields
     is_preorder_enabled = serializers.BooleanField(required=False)
     preorder_price = serializers.DecimalField(
@@ -408,5 +423,45 @@ class ProductImageUpdateSerializer(serializers.Serializer):
 
 
 class ProductBulkStatusSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)
+    is_active = serializers.BooleanField()
+
+
+class BrandSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField()
+    slug = serializers.CharField(read_only=True)
+    description = serializers.CharField(allow_blank=True)
+    is_active = serializers.BooleanField()
+    image = serializers.SerializerMethodField()
+    category_ids = serializers.SerializerMethodField()
+    deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    def get_image(self, obj) -> str | None:
+        return _image_url(obj, self.context)
+
+    def get_category_ids(self, obj) -> list[str]:
+        return [str(cat.id) for cat in obj.categories.all()]
+
+
+class BrandCreateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True)
+    category_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, default=list
+    )
+
+
+class BrandUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False)
+    image = serializers.ImageField(required=False)
+    category_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False
+    )
+
+
+class BrandBulkStatusSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)
     is_active = serializers.BooleanField()

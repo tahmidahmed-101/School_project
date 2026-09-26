@@ -63,6 +63,9 @@ class PublicProductVariantSerializer(serializers.Serializer):
     size = serializers.CharField()
     components = serializers.SerializerMethodField()
     is_bundle = serializers.SerializerMethodField()
+    # Wholesale fields
+    wholesale_price = serializers.SerializerMethodField()
+    show_wholesale_price = serializers.BooleanField(read_only=True)
     # Pre-order fields
     is_preorder_enabled = serializers.BooleanField(read_only=True)
     preorder_price = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
@@ -71,6 +74,12 @@ class PublicProductVariantSerializer(serializers.Serializer):
     release_date = serializers.DateTimeField(allow_null=True)
     is_preorder_active = serializers.SerializerMethodField()
     is_preorder_price_applied = serializers.SerializerMethodField()
+
+    def get_wholesale_price(self, obj) -> str | None:
+        """Only expose wholesale price if show_wholesale_price is True."""
+        if obj.show_wholesale_price and obj.wholesale_price is not None:
+            return str(obj.wholesale_price)
+        return None
 
     def _bundle_components(self, obj) -> list:
         return list(obj.bundle_components.all())

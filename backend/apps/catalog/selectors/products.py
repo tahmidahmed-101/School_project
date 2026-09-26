@@ -162,9 +162,14 @@ def variants_list(
     color: str = "",
     size: str = "",
     is_active: bool | None = None,
+    preorder_only: bool = False,
+    preorder_status: str | None = None,
+    preorder_active_only: bool = True,
 ) -> QuerySet[ProductVariant]:
     """Global, cross-product variant listing for the admin variant table —
     unlike `variants_for_product`, this isn't scoped to a single product."""
+    from django.utils import timezone
+
     queryset = (
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related("images", "product__images")
@@ -180,6 +185,23 @@ def variants_list(
         queryset = queryset.filter(size=size)
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
+    if preorder_only or preorder_status:
+        preorder_filter = Q(
+            is_preorder_enabled=True,
+            deleted_at__isnull=True,
+        )
+        active_window_filter = Q()
+        if preorder_active_only or preorder_status in ("active", "inactive"):
+            now = timezone.now()
+            active_window_filter = Q(
+                preorder_start_date__lte=now,
+                preorder_end_date__gte=now,
+            )
+        if preorder_status == "active" or (preorder_active_only and not preorder_status):
+            preorder_filter &= active_window_filter
+        if preorder_status == "inactive":
+            preorder_filter &= ~active_window_filter
+        queryset = queryset.filter(preorder_filter).distinct()
     return queryset.order_by("sku")
 
 
