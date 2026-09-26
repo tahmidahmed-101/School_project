@@ -261,6 +261,13 @@ REST_FRAMEWORK = {
         # OTP issuance costs real money per send (Twilio) and reaches a phone
         # the caller supplies, so it is capped far below the generic user rate.
         "otp": "5/hour",
+        # Guest checkout creates a user, an address and reserves stock per
+        # request — an anonymous cost the default anon rate (300/hour) is too
+        # loose to bound.
+        "guest_checkout": "20/hour",
+        # Order tracking answers found/not-found per (order_number, phone)
+        # guess, so it needs the same brute-force-guarding treatment as login.
+        "tracking": "30/hour",
     },
     "EXCEPTION_HANDLER": "apps.common.exception_handler.custom_exception_handler",
     # nginx appends to any client-supplied X-Forwarded-For, so without this DRF

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.responses import not_found
-from apps.common.throttling import PublicReadRateThrottle
+from apps.common.throttling import TrackingRateThrottle
 from apps.orders.selectors.sales_orders import _orders_with_related
 
 from .serializers import PublicTrackOrderSerializer
@@ -19,7 +19,7 @@ from .serializers import PublicTrackOrderSerializer
 class PublicTrackOrderView(APIView):
     serializer_class = PublicTrackOrderSerializer
     permission_classes: ClassVar[list] = [AllowAny]
-    throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
+    throttle_classes: ClassVar[list] = [TrackingRateThrottle]
 
     def post(self, request) -> Response:
         order_number = request.data.get("order_number", "").strip()

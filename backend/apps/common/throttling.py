@@ -74,3 +74,26 @@ class OtpRateThrottle(SettingsRateMixin, UserRateThrottle):
     """
 
     scope = "otp"
+
+
+class CouponRateThrottle(SettingsRateMixin, UserRateThrottle):
+    """Caps coupon-code guesses per customer, or per IP for a guest — a
+    valid/invalid answer on every submission makes this brute-forceable at
+    the generic `user` rate."""
+
+    scope = "coupon"
+
+
+class GuestCheckoutRateThrottle(SettingsRateMixin, AnonRateThrottle):
+    """Guest checkout creates a user, an address and reserves stock per
+    request — an anonymous cost the default anon rate is too loose to bound."""
+
+    scope = "guest_checkout"
+
+
+class TrackingRateThrottle(SettingsRateMixin, AnonRateThrottle):
+    """Order tracking answers found/not-found per (order_number, phone)
+    guess, so it needs a brute-force-guarding rate rather than the generic
+    public-read one."""
+
+    scope = "tracking"

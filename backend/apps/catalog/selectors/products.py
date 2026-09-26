@@ -119,6 +119,13 @@ def get_variant_by_id(variant_id: str | UUID) -> ProductVariant | None:
     return ProductVariant.objects.filter(id=variant_id, deleted_at__isnull=True).first()
 
 
+def get_variants_by_ids(variant_ids: list[str | UUID]) -> QuerySet[ProductVariant]:
+    """Bulk counterpart to `get_variant_by_id` — one query for a list of ids
+    instead of one query per id, for callers that price or weigh several
+    items at once (guest shipping quotes, coupon previews)."""
+    return ProductVariant.objects.filter(id__in=variant_ids, deleted_at__isnull=True)
+
+
 def get_variant_by_sku(sku: str) -> ProductVariant | None:
     return ProductVariant.objects.filter(sku=sku, deleted_at__isnull=True).first()
 
