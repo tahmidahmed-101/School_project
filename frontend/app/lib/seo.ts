@@ -18,7 +18,7 @@ interface SocialImage {
   height?: number;
 }
 
-export const DEFAULT_SOCIAL_IMAGE: SocialImage = {
+const DEFAULT_SOCIAL_IMAGE: SocialImage = {
   url: "/brand/og-default.jpg",
   alt: SITE_TITLE,
   width: 1200,
@@ -68,15 +68,17 @@ interface PageMetadataOptions {
   title?: string;
   description: string;
   path: string;
+  /** Canonical URL when it differs from `path` (e.g. a filtered view of a page that has its own URL). */
+  canonical?: string;
   image?: SocialImage;
 }
 
 /** Title, description, canonical URL and social cards for an indexable page. */
-export function pageMetadata({ title, description, path, image }: PageMetadataOptions): Metadata {
+export function pageMetadata({ title, description, path, canonical, image }: PageMetadataOptions): Metadata {
   return {
     ...(title ? { title } : {}),
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: canonical ?? path },
     ...socialMetadata({ title: title ? `${title} | ${SITE_NAME}` : SITE_TITLE, description, path, image }),
   };
 }

@@ -32,13 +32,13 @@ export interface ApiCategory {
   parent_id: string | null;
 }
 
-export interface ApiProductImage {
+interface ApiProductImage {
   url: string;
   alt_text: string;
   sort_order: number;
 }
 
-export interface ApiBundleComponent {
+interface ApiBundleComponent {
   variant_id: string;
   sku: string;
   quantity: number;
@@ -85,7 +85,7 @@ export interface ApiProduct {
   description?: string;
 }
 
-export interface ApiReview {
+interface ApiReview {
   id: string;
   customer_name: string;
   rating: number;
@@ -97,23 +97,6 @@ export interface ApiReview {
 export interface ApiReviewPage extends ApiPage<ApiReview> {
   average_rating: number | null;
   review_count: number;
-}
-
-export interface ApiBundleItem {
-  quantity: number;
-  price: string;
-  product: { id: string; slug: string; name: string; category_id: string; image: string | null };
-}
-
-export interface ApiBundle {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  highlights: string[];
-  price: string;
-  original_price: string;
-  components: ApiBundleItem[];
 }
 
 export interface ProductListParams {
@@ -155,7 +138,7 @@ export interface ApiCheckoutItem {
   quantity: number;
 }
 
-export interface ApiCheckoutAddress {
+interface ApiCheckoutAddress {
   full_name: string;
   phone: string;
   line1: string;
@@ -173,12 +156,31 @@ export interface ApiCheckoutRequest {
   last_name?: string;
   items: ApiCheckoutItem[];
   shipping_address: ApiCheckoutAddress;
+  /** Required. One of the keys from GET /payment-methods/ (cod, bkash, nagad, ...). */
+  payment_method: string;
   carrier_id?: string | null;
   coupon_code?: string;
   notes?: string;
 }
 
-export interface ApiOrderLine {
+/** POST /checkout/coupon/ */
+export interface ApiCouponPreview {
+  code: string;
+  discount_type: string;
+  value: string;
+  discount_amount: string;
+  subtotal: string;
+}
+
+/** POST /checkout/shipping-quote/. `shipping_total` is null when no rate is configured for the zone. */
+export interface ApiShippingQuote {
+  zone: string;
+  weight: string;
+  carrier_id: string | null;
+  shipping_total: string | null;
+}
+
+interface ApiOrderLine {
   id: string;
   product_name: string;
   variant_sku: string;
@@ -189,7 +191,7 @@ export interface ApiOrderLine {
   is_preorder: boolean;
 }
 
-export interface ApiShipment {
+interface ApiShipment {
   id: string;
   carrier_name: string | null;
   tracking_number: string;

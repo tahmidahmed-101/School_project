@@ -6,7 +6,7 @@ export type T = {
 };
 
 /** Category slug from the API (categories are data now, not a fixed list). */
-export type ProductCategory = string;
+type ProductCategory = string;
 
 export interface ProductVariant {
   name: T;

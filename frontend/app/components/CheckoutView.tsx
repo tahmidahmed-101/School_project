@@ -17,6 +17,7 @@ import {
   validateOrderForm,
   type FormErrors,
 } from "../lib/checkout";
+import { useCoupon, usePaymentMethods, useShippingQuote } from "../lib/useCheckoutPricing";
 import type { OrderForm, OrderResult } from "../lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "./Breadcrumbs";
@@ -32,6 +33,13 @@ export function CheckoutView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
+  const [chosenPayment, setChosenPayment] = useState("cod");
+
+  const paymentMethods = usePaymentMethods();
+  // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
+  const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
+  const shipping = useShippingQuote(items, form);
+  const coupon = useCoupon(items);
 
   /** Turns the "required" / "invalid" markers from local validation into text in the shopper's language. */
   const localise = (errors: FormErrors): FormErrors =>
@@ -58,7 +66,7 @@ export function CheckoutView() {
     setFieldErrors({});
     try {
       // The backend prices the order (shipping zone, tax, discounts); its response is what the shopper sees.
-      const order = await placeOrder(buildCheckoutRequest(form, items));
+      const order = await placeOrder(buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code }));
       setOrderResult(
         toOrderResult(order, {
           name: [form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(" "),
@@ -140,6 +148,9 @@ export function CheckoutView() {
               form={form}
               errors={fieldErrors}
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+              paymentMethods={paymentMethods}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setChosenPayment}
             />
           </div>
 
@@ -148,6 +159,8 @@ export function CheckoutView() {
               items={items}
               subtotal={subtotal}
               isSubmitting={isSubmitting}
+              shipping={shipping}
+              coupon={coupon}
             />
           </div>
         </form>

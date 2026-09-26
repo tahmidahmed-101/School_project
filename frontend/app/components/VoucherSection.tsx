@@ -23,13 +23,13 @@ export function VoucherSection() {
         <ScrollReveal className="mb-3">
           <h2 className="ts-display text-xl font-bold tracking-tight text-gold-600 sm:text-2xl">{ui("voucherTitle")}</h2>
         </ScrollReveal>
-        <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:py-0 lg:grid-cols-4">
+        <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:py-0 lg:grid-cols-4">
           {vouchers.map((v, idx) => {
             const isCollected = collected.includes(v.code);
             return (
-              <CardReveal key={v.code} delay={(idx % 4) * 0.08} className="w-[280px] shrink-0 snap-start sm:w-auto sm:shrink">
+              <CardReveal key={v.code} delay={(idx % 4) * 0.08} className="w-[250px] min-w-0 shrink-0 snap-start sm:w-auto sm:shrink">
               <div className="flex h-full items-stretch overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm">
-                <div className="flex w-16 shrink-0 flex-col sm:w-20 items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 lg:w-16">
+                <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 sm:w-20 lg:w-16">
                   <Ticket className="h-6 w-6" />
                   <span className="whitespace-nowrap text-[9px] font-extrabold tracking-wider">
                     {lang === "bn" ? "কুল মার্ট" : "KULL MART"}

@@ -1,6 +1,6 @@
 import type { T } from "./types";
 
-export interface PolicySection {
+interface PolicySection {
   heading: T;
   body: T;
 }

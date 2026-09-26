@@ -4,6 +4,7 @@ import { useLang } from "../lib/i18n";
 import { BD_DISTRICTS } from "../lib/districts";
 import type { FormErrors } from "../lib/checkout";
 import type { OrderForm } from "../lib/types";
+import type { ApiPaymentMethod } from "../lib/api/types";
 import { Dropdown } from "./Dropdown";
 import { FormField, INPUT_CLASS, INPUT_ERROR_CLASS } from "./ui/FormField";
 
@@ -11,9 +12,19 @@ interface CheckoutFieldsProps {
   form: OrderForm;
   errors: FormErrors;
   onChange: (patch: Partial<OrderForm>) => void;
+  paymentMethods: ApiPaymentMethod[];
+  paymentMethod: string;
+  onPaymentMethodChange: (key: string) => void;
 }
 
-export function CheckoutFields({ form, errors, onChange }: CheckoutFieldsProps) {
+export function CheckoutFields({
+  form,
+  errors,
+  onChange,
+  paymentMethods,
+  paymentMethod,
+  onPaymentMethodChange,
+}: CheckoutFieldsProps) {
   const { ui } = useLang();
   const inputClass = (field: keyof OrderForm) =>
     `${INPUT_CLASS} ${errors[field] ? INPUT_ERROR_CLASS : ""}`;
@@ -137,9 +148,36 @@ export function CheckoutFields({ form, errors, onChange }: CheckoutFieldsProps) 
 
       <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-ink-900">{ui("checkoutPaymentMethod")}</h3>
-        <div className="rounded-xl border border-gold-500 bg-gold-50/80 p-3.5">
-          <span className="block text-xs font-bold text-ink-900">{ui("checkoutCodLabel")}</span>
-          <span className="mt-0.5 block text-[11px] text-ink-600">{ui("checkoutCodSub")}</span>
+        <div role="radiogroup" aria-label={ui("checkoutPaymentMethod")} className="space-y-2">
+          {paymentMethods.map((method) => {
+            const selected = method.key === paymentMethod;
+            const isCod = method.key === "cod";
+            return (
+              <label
+                key={method.key}
+                className={`block cursor-pointer rounded-xl border p-3.5 transition-colors ${
+                  selected ? "border-gold-500 bg-gold-50/80" : "border-ink-200 hover:border-gold-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value={method.key}
+                  checked={selected}
+                  onChange={() => onPaymentMethodChange(method.key)}
+                  className="sr-only"
+                />
+                <span className="block text-xs font-bold text-ink-900">
+                  {isCod ? ui("checkoutCodLabel") : method.label}
+                </span>
+                {(isCod || method.description) && (
+                  <span className="mt-0.5 block text-[11px] text-ink-600">
+                    {isCod ? ui("checkoutCodSub") : method.description}
+                  </span>
+                )}
+              </label>
+            );
+          })}
         </div>
       </div>
     </>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 import { useLang } from "../lib/i18n";
 
-export interface BreadcrumbItem {
+interface BreadcrumbItem {
   label: string;
   href?: string;
 }
@@ -66,5 +66,3 @@ export function Breadcrumbs({ items, className = "", showHome = true }: Breadcru
     </nav>
   );
 }
-
-export const Breadcrumb = Breadcrumbs;

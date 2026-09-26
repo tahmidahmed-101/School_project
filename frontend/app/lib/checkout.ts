@@ -20,6 +20,7 @@ const API_FIELD_TO_FORM: Record<string, keyof OrderForm> = {
   first_name: "firstName",
   last_name: "lastName",
   notes: "notes",
+  payment_method: "notes",
   "shipping_address.full_name": "firstName",
   "shipping_address.phone": "phone",
   "shipping_address.line1": "address",
@@ -31,7 +32,11 @@ const API_FIELD_TO_FORM: Record<string, keyof OrderForm> = {
 export type FormErrors = Partial<Record<keyof OrderForm, string>>;
 
 /** Builds the POST /checkout/ body. Prices are never sent: the backend prices every line from its variant id. */
-export function buildCheckoutRequest(form: OrderForm, items: CartItem[]): ApiCheckoutRequest {
+export function buildCheckoutRequest(
+  form: OrderForm,
+  items: CartItem[],
+  extras: { paymentMethod: string; couponCode?: string },
+): ApiCheckoutRequest {
   const firstName = form.firstName.trim();
   const lastName = form.lastName.trim();
   const phone = form.phone.trim();
@@ -50,6 +55,8 @@ export function buildCheckoutRequest(form: OrderForm, items: CartItem[]): ApiChe
       postal_code: form.postalCode.trim(),
       country: "Bangladesh",
     },
+    payment_method: extras.paymentMethod,
+    ...(extras.couponCode && { coupon_code: extras.couponCode }),
     ...(form.notes.trim() && { notes: form.notes.trim() }),
   };
 }

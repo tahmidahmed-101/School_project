@@ -26,6 +26,7 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
       description:
         "Reserve upcoming Kull Mart arrivals with pre-order — fashion, bags, jewellery, kids' items and gadgets, delivered across Bangladesh.",
       path: "/shop?type=preorder",
+      canonical: "/pre-order",
     });
   }
   if (category) {

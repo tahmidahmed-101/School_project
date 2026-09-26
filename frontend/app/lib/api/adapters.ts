@@ -24,13 +24,13 @@ const toNumber = (value: string | null | undefined): number => {
 };
 
 /** Shown when a product has no photo, so the card layout never breaks. */
-export const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
+const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
 
 /**
  * Photos come back as `/media/...` (served through the same-origin proxy) or as absolute URLs. An absolute URL that
  * points at the API's own media folder is reduced to its path so it also goes through the proxy.
  */
-export function normalizeImageUrl(url: string): string {
+function normalizeImageUrl(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) return "";
   const media = trimmed.match(/^https?:\/\/[^/]+(\/media\/.*)$/i);
