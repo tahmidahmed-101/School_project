@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
+from django.db import transaction
+
+from apps.catalog.selectors.bundles import expand_variant
+from apps.common.exceptions import BusinessRuleViolationError
+from apps.inventory.services.stock import reserve_stock
+from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
+from apps.logistics.services.rates import quote_shipping
+from apps.orders.models import SalesOrder, StockReservation
+from apps.orders.services.address_snapshot import build_address_snapshot
+from apps.orders.services.carts import _check_preorder_stock_limit
+from apps.orders.services.coupons import revalidate_applied_coupon
+from apps.orders.services.orders import lock_order
+
+
+def order_weight(order: SalesOrder) -> Decimal:
+    """Total shipment weight = sum(variant.weight x quantity). Zero when no
+    weights are set, which still matches a rate bracket starting at 0."""
+    weight = Decimal("0")
+    for line in order.lines.select_related("variant"):
+        if line.variant.weight is not None:
+            weight += line.variant.weight * line.quantity
+    return weight
+
+
+def _is_preorder_line(line) -> bool:
+    """Check if an order line is a pre-order."""
+    variant = line.variant
+    return variant.is_preorder_enabled and variant.is_preorder_active
+
+
+@transaction.atomic
+def checkout(*, order: SalesOrder, shipping_address=None, carrier=None) -> SalesOrder:
+    """Reserve stock for every line (Available -> Reserved, no ledger entry
+    yet, per blueprint §5). Bundles reserve their components' stock. The
+    order moves to "awaiting_payment", which freezes its lines and makes
+    checkout non-re-entrant; `payments.capture_payment` then flips it to
+    "confirmed", matching the blueprint's Checkout -> Reserve -> Payment
+    captured -> Order confirmed sequence.
+
+    The order row is locked for the whole transaction so two concurrent
+    checkouts of the same cart can't both pass the status gate and reserve
+    stock twice.
+
+    Pre-order lines skip real inventory stock reservation since the product
+    may not be in stock yet.
+    """
+    lock_order(order)
+    if order.status != SalesOrder.Status.PENDING:
+        raise BusinessRuleViolationError(
+            "Only a pending order can be checked out.", code="not_pending"
+        )
+    lines = list(order.lines.select_related("variant"))
+    if not lines:
+        raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
+
+    # Validate pre-order items are still within pre-order period at checkout
+    for line in lines:
+        variant = line.variant
+        if variant.is_preorder_enabled and not variant.is_preorder_active:
+            raise BusinessRuleViolationError(
+                f"Pre-order period has ended for {variant.product.name} ({variant.sku}).",
+                code="preorder_expired"
+            )
+        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+            # Check stock limit at checkout (line.quantity is already in preordered count)
+            _check_preorder_stock_limit(variant, line.quantity, line.quantity)
+
+    # A cart can sit long enough for its applied coupon to expire or hit its
+    # usage limit before checkout actually runs — re-validate here too.
+    revalidate_applied_coupon(order)
+
+    for line in lines:
+        # Skip stock reservation for pre-order items (they don't need real inventory yet)
+        if _is_preorder_line(line):
+            # Still create StockReservation records for tracking, but with 0 quantity
+            # or skip them entirely. For now, skip reservation but keep the line.
+            continue
+        for component, component_qty in expand_variant(line.variant, line.quantity):
+            reserve_stock(variant=component, quantity=component_qty)
+            StockReservation.objects.create(
+                order_line=line,
+                variant=component,
+                quantity=component_qty,
+            )
+
+    if shipping_address is not None:
+        order.shipping_address = shipping_address
+        order.shipping_address_snapshot = build_address_snapshot(shipping_address)
+        zone = find_zone_by_address_text(address_zone_text(shipping_address))
+        if zone is None:
+            raise BusinessRuleViolationError(
+                "Delivery is not available yet — no shipping zones are configured.",
+                code="no_shipping_zone",
+            )
+        order.shipping_total = quote_shipping(
+            zone=zone, weight=order_weight(order), carrier=carrier
+        )
+    else:
+        order.shipping_total = Decimal("0")
+
+    order.status = SalesOrder.Status.AWAITING_PAYMENT
+    order.save(
+        update_fields=[
+            "shipping_address",
+            "shipping_address_snapshot",
+            "shipping_total",
+            "status",
+            "updated_at",
+        ]
+    )
+    order.recalculate_totals()
+
+    return order

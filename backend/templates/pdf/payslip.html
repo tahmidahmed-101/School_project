@@ -1,0 +1,101 @@
+{% extends "pdf/base.html" %}
+{% load pdf_format %}
+
+{% block content %}
+
+<section class="parties">
+  <div class="parties__block">
+    <span class="label">Employee</span>
+    <div class="parties__name">{{ employee_name }}</div>
+    <div class="parties__lines">
+      <div>{{ employee_email }}</div>
+      {% for item in identity %}<div>{{ item.label }} · {{ item.value }}</div>{% endfor %}
+    </div>
+  </div>
+  <div class="parties__block">
+    <span class="label">Payment</span>
+    <div class="parties__name">{{ period }}</div>
+    <div class="parties__lines">
+      {% for item in banking %}<div>{{ item.label }} · {{ item.value }}</div>{% endfor %}
+      {% if not banking %}<div>No bank details on record</div>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <span class="label">Earnings</span>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th class="num">Amount ({{ currency }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in earnings %}
+      <tr>
+        <td>
+          <div class="cell__title">{{ row.label }}</div>
+          {% if row.detail %}<div class="cell__sub">{{ row.detail }}</div>{% endif %}
+        </td>
+        <td class="num">{{ row.amount|amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="section">
+  <span class="label">Deductions</span>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th class="num">Amount ({{ currency }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in deductions %}
+      <tr>
+        <td><div class="cell__title">{{ row.label }}</div></td>
+        <td class="num">{{ row.amount|amount }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td>No deductions applied</td>
+        <td class="num">{{ zero|amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<div class="summary">
+  <table class="summary__table">
+    <tr>
+      <td class="k">Gross pay</td>
+      <td class="num">{{ gross_pay|money }}</td>
+    </tr>
+    <tr class="rule">
+      <td class="k">Total deductions</td>
+      <td class="num">&minus;{{ total_deductions|money }}</td>
+    </tr>
+    <tr class="grand">
+      <td class="k">Net pay</td>
+      <td class="num">{{ net_pay|money }}</td>
+    </tr>
+  </table>
+</div>
+
+{% if notes %}
+<section class="note">
+  <span class="label">Notes</span>
+  <div class="note__body">{{ notes }}</div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block closing %}
+<div>Payslip {{ doc_number }} for {{ period }}. {% if is_paid %}Payment has been released.{% else %}This payslip is not yet settled.{% endif %} Computer generated — no signature required.</div>
+{% endblock %}

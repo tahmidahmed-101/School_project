@@ -1,0 +1,89 @@
+{% extends "pdf/base.html" %}
+{% load pdf_format %}
+
+{% block content %}
+
+<section class="parties">
+  <div class="parties__block">
+    <span class="label">Supplier</span>
+    <div class="parties__name">{{ supplier_name }}</div>
+    <div class="parties__lines">
+      {% for line in supplier_lines %}<div>{{ line }}</div>{% endfor %}
+    </div>
+  </div>
+  <div class="parties__block">
+    <span class="label">Deliver to</span>
+    <div class="parties__name">{{ deliver_name }}</div>
+    <div class="parties__lines">
+      {% for line in deliver_lines %}<div>{{ line }}</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <span class="label">Order lines</span>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="num">Ordered</th>
+        <th class="num">Received</th>
+        <th class="num">Unit cost</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>
+          <div class="cell__title">{{ line.name }}</div>
+          <div class="cell__sub">{{ line.sku }}</div>
+        </td>
+        <td class="num">{{ line.ordered }}</td>
+        <td class="num">{{ line.received }}</td>
+        <td class="num">{{ line.unit_cost|amount:4 }}</td>
+        <td class="num">{{ line.total|amount }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">This purchase order has no lines.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <table class="summary__table">
+      <tr class="grand">
+        <td class="k">Order total</td>
+        <td class="num">{{ total|money }}</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="stats__item">
+    <span class="label">Lines</span>
+    <div class="stats__value">{{ line_count }}</div>
+  </div>
+  <div class="stats__item">
+    <span class="label">Units ordered</span>
+    <div class="stats__value">{{ total_units }}</div>
+  </div>
+  <div class="stats__item">
+    <span class="label">Status</span>
+    <div class="stats__value">{{ doc_status }}</div>
+  </div>
+</section>
+
+{% if notes %}
+<section class="note">
+  <span class="label">Notes</span>
+  <div class="note__body">{{ notes }}</div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block closing %}
+<div>Please confirm receipt of this order and quote {{ doc_number }} on your invoice and delivery documents.</div>
+{% endblock %}

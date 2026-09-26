@@ -1,0 +1,116 @@
+{% extends "pdf/base.html" %}
+{% load pdf_format %}
+
+{% block content %}
+
+<section class="parties">
+  <div class="parties__block">
+    <span class="label">Billed to</span>
+    <div class="parties__name">{{ customer_name }}</div>
+    <div class="parties__lines">
+      <div>{{ customer_email }}</div>
+      {% if customer_phone %}<div>{{ customer_phone }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="parties__block">
+    <span class="label">Shipped to</span>
+    {% if ship_lines %}
+    <div class="parties__name">{{ ship_name }}</div>
+    <div class="parties__lines">
+      {% for line in ship_lines %}<div>{{ line }}</div>{% endfor %}
+    </div>
+    {% else %}
+    <div class="parties__lines">No shipping address on this order</div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <span class="label">Items</span>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="num">Qty</th>
+        <th class="num">Unit</th>
+        <th class="num">Discount</th>
+        <th class="num">Tax</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>
+          <div class="cell__title">{{ line.name }}</div>
+          <div class="cell__sub">{{ line.sku }}</div>
+        </td>
+        <td class="num">{{ line.quantity }}</td>
+        <td class="num">{{ line.unit_price|amount }}</td>
+        <td class="num">{% if line.discount %}&minus;{{ line.discount|amount }}{% else %}—{% endif %}</td>
+        <td class="num">{{ line.tax|amount }}</td>
+        <td class="num">{{ line.total|amount }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">This order has no line items.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <table class="summary__table">
+      <tr>
+        <td class="k">Subtotal</td>
+        <td class="num">{{ subtotal|money }}</td>
+      </tr>
+      {% if discount_total %}
+      <tr>
+        <td class="k">Discount</td>
+        <td class="num">&minus;{{ discount_total|money }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td class="k">Shipping</td>
+        <td class="num">{{ shipping_total|money }}</td>
+      </tr>
+      <tr>
+        <td class="k">Tax</td>
+        <td class="num">{{ tax_total|money }}</td>
+      </tr>
+      <tr class="grand">
+        <td class="k">Total</td>
+        <td class="num">{{ grand_total|money }}</td>
+      </tr>
+      <tr class="rule">
+        <td class="k">Paid</td>
+        <td class="num">{{ paid|money }}</td>
+      </tr>
+      {% if refunded %}
+      <tr>
+        <td class="k">Refunded</td>
+        <td class="num">{{ refunded|money }}</td>
+      </tr>
+      {% endif %}
+      {% if not is_settled %}
+      <tr class="due">
+        <td class="k">Balance due</td>
+        <td class="num">{{ balance|money }}</td>
+      </tr>
+      {% endif %}
+    </table>
+  </div>
+</section>
+
+
+{% if notes %}
+<section class="note">
+  <span class="label">Notes</span>
+  <div class="note__body">{{ notes }}</div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block closing %}
+<div>{% if is_settled %}Paid in full — thank you for your order.{% else %}Balance of {{ balance|money }} is payable on this invoice.{% endif %}</div>
+{% endblock %}

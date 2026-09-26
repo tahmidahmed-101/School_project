@@ -1,0 +1,200 @@
+from __future__ import annotations
+
+from typing import ClassVar
+
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.catalog.selectors.categories import get_category_by_id
+from apps.catalog.selectors.products import (
+    get_product_by_id,
+    products_list,
+)
+from apps.catalog.services.products import (
+    create_product,
+    delete_product,
+    stage_product_status,
+    update_product,
+)
+from apps.common.exceptions import DomainError
+from apps.common.generics import (
+    BulkActionMixin,
+    GenericListAPIView,
+    IncludeDeletedMixin,
+    RestoreAPIView,
+)
+from apps.common.params import get_bool, get_choice, get_related
+from apps.common.responses import error_from_exception, not_found
+from apps.inventory.selectors.stock import (
+    available_quantities_for_variants,
+    reorder_points_for_variants,
+)
+
+from .permissions import (
+    CatalogManagePermission,
+    CatalogPermissionMixin,
+)
+from .serializers import (
+    ProductBulkStatusSerializer,
+    ProductCreateSerializer,
+    ProductSerializer,
+    ProductUpdateSerializer,
+)
+
+
+class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, GenericListAPIView):
+    serializer_class = ProductSerializer
+    search_fields = ("name",)
+    ordering_fields = ("name", "created_at")
+    default_ordering = "-created_at"
+    include_deleted_permission = CatalogManagePermission
+
+    def get_queryset(self):
+        params = self.request.query_params
+        category = get_related(params, "category_id", get_category_by_id, "Category not found.")
+        is_active = get_bool(params, "is_active")
+        product_type = params.get("product_type", "").strip().lower() or None
+        include_bundles = get_bool(params, "include_bundles", default=True)
+        preorder_only = bool(get_bool(params, "preorder_only", default=False))
+        preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
+        return products_list(
+            category=category,
+            is_active=is_active,
+            include_deleted=self.include_deleted(),
+            include_bundles=include_bundles,
+            product_type=product_type,
+            preorder_only=preorder_only,
+            preorder_active_only=False,
+            preorder_status=preorder_status,
+        )
+
+    def get(self, request) -> Response:
+        return self.list_response(request)
+
+    def list_response(self, request) -> Response:
+        queryset = self.get_filtered_queryset(request)
+        total_count = queryset.count()
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        items = list(page if page is not None else queryset)
+        variant_ids = [v.id for product in items for v in product.active_variants]
+        stock_by_variant = available_quantities_for_variants(variant_ids)
+        reorder_point_by_variant = reorder_points_for_variants(variant_ids)
+        serializer = self.serializer_class(
+            items,
+            many=True,
+            context={
+                "request": request,
+                "stock_by_variant": stock_by_variant,
+                "reorder_point_by_variant": reorder_point_by_variant,
+            },
+        )
+        return Response(
+            {
+                "data": {
+                    "results": serializer.data,
+                    "count": total_count,
+                    "next": paginator.get_next_link() if page is not None else None,
+                    "previous": paginator.get_previous_link() if page is not None else None,
+                },
+                "message": "Success",
+            }
+        )
+
+    def post(self, request) -> Response:
+        serializer = ProductCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        category = get_category_by_id(data.pop("category_id"))
+        if category is None:
+            return error_from_exception(
+                DomainError("Category not found.", code="category_not_found")
+            )
+        try:
+            product = create_product(category=category, actor=request.user, **data)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        # ProductSerializer reads the `active_variants` prefetch attribute, which only the
+        # selector attaches — serializing the freshly built instance raises AttributeError.
+        return Response(
+            {
+                "data": ProductSerializer(
+                    get_product_by_id(product.id), context={"request": request}
+                ).data,
+                "message": "Success",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema(tags=["Catalog"])
+class AdminProductDetailView(CatalogPermissionMixin, APIView):
+    serializer_class = ProductSerializer
+
+    def get(self, request, product_id) -> Response:
+        product = get_product_by_id(product_id)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        return Response(
+            {
+                "data": ProductSerializer(product, context={"request": request}).data,
+                "message": "Success",
+            }
+        )
+
+    def patch(self, request, product_id) -> Response:
+        product = get_product_by_id(product_id)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        serializer = ProductUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        if "category_id" in data:
+            category = get_category_by_id(data.pop("category_id"))
+            if category is None:
+                return error_from_exception(
+                    DomainError("Category not found.", code="category_not_found")
+                )
+            data["category"] = category
+        product = update_product(product=product, data=data)
+        return Response(
+            {
+                "data": ProductSerializer(product, context={"request": request}).data,
+                "message": "Success",
+            }
+        )
+
+    def delete(self, request, product_id) -> Response:
+        product = get_product_by_id(product_id)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        delete_product(product=product, actor=request.user)
+        return Response({"data": {}, "message": "Success"})
+
+
+@extend_schema(tags=["Catalog"])
+class AdminProductRestoreView(RestoreAPIView):
+    permission_classes: ClassVar[list] = [CatalogManagePermission]
+    get_object_fn = staticmethod(get_product_by_id)
+    serializer_class = ProductSerializer
+    not_found_code = "product_not_found"
+    not_found_message = "Product not found."
+
+
+@extend_schema(tags=["Catalog"])
+class AdminProductBulkStatusView(BulkActionMixin, APIView):
+    serializer_class = ProductBulkStatusSerializer
+    permission_classes: ClassVar[list] = [CatalogManagePermission]
+
+    def post(self, request) -> Response:
+        serializer = ProductBulkStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        is_active = serializer.validated_data["is_active"]
+        return self.bulk_action(
+            request,
+            queryset_fn=lambda: products_list(is_active=None),
+            action_fn=lambda product: stage_product_status(product=product, is_active=is_active),
+            update_fields=["is_active", "updated_at"],
+        )

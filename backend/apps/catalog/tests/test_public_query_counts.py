@@ -1,0 +1,60 @@
+"""The storefront list and detail endpoints are the highest-traffic reads in
+the project, and both used to issue a stock query per variant. These lock in
+the batched behaviour so a future serializer change cannot quietly restore it.
+"""
+
+from __future__ import annotations
+
+import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+
+from apps.catalog.factories import ProductFactory, ProductVariantFactory
+
+pytestmark = pytest.mark.django_db
+
+SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
+
+
+def _catalog(products: int, variants_per_product: int) -> None:
+    for _ in range(products):
+        product = ProductFactory(is_active=True)
+        for index in range(variants_per_product):
+            ProductVariantFactory(product=product, size=SIZES[index])
+
+
+def test_product_list_query_count_does_not_grow_with_the_catalog(api_client):
+    _catalog(products=2, variants_per_product=2)
+    with CaptureQueriesContext(connection) as small:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    _catalog(products=6, variants_per_product=3)
+    with CaptureQueriesContext(connection) as large:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    assert len(large) == len(small)
+
+
+def test_product_detail_query_count_does_not_grow_with_variants(api_client):
+    one = ProductFactory(is_active=True)
+    ProductVariantFactory(product=one)
+    with CaptureQueriesContext(connection) as single:
+        assert api_client.get(f"/api/v1/public/catalog/products/{one.slug}/").status_code == 200
+
+    many = ProductFactory(is_active=True)
+    for index in range(6):
+        ProductVariantFactory(product=many, size=SIZES[index])
+    with CaptureQueriesContext(connection) as multiple:
+        assert api_client.get(f"/api/v1/public/catalog/products/{many.slug}/").status_code == 200
+
+    assert len(multiple) == len(single)
+
+
+def test_list_endpoint_counts_the_page_once(api_client):
+    _catalog(products=3, variants_per_product=1)
+
+    with CaptureQueriesContext(connection) as queries:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    counts = [q["sql"] for q in queries.captured_queries if "COUNT(" in q["sql"].upper()]
+    assert len(counts) == 1

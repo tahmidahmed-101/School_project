@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import ClassVar
+
+from django.conf import settings
+from django.db import models
+
+from apps.common.models import FullAuditModel, TimeStampedModel
+
+
+class SalesOrder(FullAuditModel):
+    """Lifecycle: `pending` (still an editable cart) -> `awaiting_payment`
+    (checked out, stock reserved, lines frozen) -> `confirmed` (payment
+    captured) -> `shipped` (every line fully shipped) -> `delivered`.
+    `cancelled` is reachable from any pre-shipment state.
+
+    The `awaiting_payment` step exists so checkout is not re-entrant: once an
+    order leaves `pending`, `carts._ensure_pending` refuses further line
+    edits and `checkout` refuses to reserve stock a second time.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        AWAITING_PAYMENT = "awaiting_payment", "Awaiting payment"
+        CONFIRMED = "confirmed", "Confirmed"
+        SHIPPED = "shipped", "Shipped"
+        DELIVERED = "delivered", "Delivered"
+        CANCELLED = "cancelled", "Cancelled"
+        CLOSED = "closed", "Closed"
+
+    order_number: models.CharField = models.CharField(max_length=32, unique=True)
+    customer: models.ForeignKey = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sales_orders"
+    )
+    shipping_address: models.ForeignKey | None = models.ForeignKey(
+        "accounts.Address", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    # The FK is SET_NULL, so a deleted address would otherwise blank the ship-to
+    # block on invoices that were already issued.
+    shipping_address_snapshot: models.JSONField = models.JSONField(default=dict, blank=True)
+    coupon: models.ForeignKey | None = models.ForeignKey(
+        "orders.Coupon", on_delete=models.SET_NULL, null=True, blank=True, related_name="orders"
+    )
+    status: models.CharField = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    notes: models.TextField = models.TextField(blank=True)
+    # Order-level overrides. Blank means "use the customer account's value" —
+    # correcting a typo on one order must not rewrite the customer's profile.
+    contact_email: models.EmailField = models.EmailField(blank=True, default="")
+    contact_phone: models.CharField = models.CharField(max_length=32, blank=True, default="")
+    subtotal: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    tax_total: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    shipping_total: models.DecimalField = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0
+    )
+    discount_total: models.DecimalField = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0
+    )
+    grand_total: models.DecimalField = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0
+    )
+
+    class Meta:
+        ordering: ClassVar[list] = ["-created_at"]
+        indexes: ClassVar[list] = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["customer", "deleted_at"], name="so_cust_del_idx"),
+            models.Index(fields=["deleted_at", "status"], name="so_del_status_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.order_number
+
+    def recalculate_totals(self) -> None:
+        lines = list(self.lines.all())
+        subtotal = sum((line.unit_price * line.quantity for line in lines), Decimal("0"))
+        tax_total = sum((line.tax_amount for line in lines), Decimal("0"))
+        self.subtotal = subtotal
+        self.tax_total = tax_total
+        # Clamp at 0: stacked automatic discounts + a coupon can otherwise
+        # combine to exceed subtotal + tax + shipping and go negative.
+        self.grand_total = max(
+            subtotal + tax_total + self.shipping_total - self.discount_total,
+            Decimal("0"),
+        )
+        self.save(update_fields=["subtotal", "tax_total", "grand_total", "updated_at"])
+
+
+class SalesOrderLine(TimeStampedModel):
+    order: models.ForeignKey = models.ForeignKey(
+        SalesOrder, on_delete=models.CASCADE, related_name="lines"
+    )
+    variant: models.ForeignKey = models.ForeignKey(
+        "catalog.ProductVariant", on_delete=models.PROTECT, related_name="sales_order_lines"
+    )
+    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
+    # Snapshotted at add time: an invoice must keep saying what was sold, even
+    # after the product is renamed or the SKU is reissued.
+    product_name: models.CharField = models.CharField(max_length=200, blank=True)
+    variant_sku: models.CharField = models.CharField(max_length=64, blank=True)
+    unit_price: models.DecimalField = models.DecimalField(max_digits=12, decimal_places=2)
+    tax_amount: models.DecimalField = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0
+    )
+    discount_amount: models.DecimalField = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0
+    )
+    # Pre-order tracking
+    is_preorder: models.BooleanField = models.BooleanField(default=False)
+    # Fulfillment counters. Denormalized rather than aggregated per call so
+    # `create_shipment` / `create_rma` can lock the line row (select_for_update)
+    # and check the remaining balance in the same statement, closing the
+    # over-ship / over-return race.
+    shipped_quantity: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+    returned_quantity: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.CheckConstraint(
+                condition=models.Q(shipped_quantity__lte=models.F("quantity")),
+                name="orderline_shipped_not_over_ordered",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(returned_quantity__lte=models.F("shipped_quantity")),
+                name="orderline_returned_not_over_shipped",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.order_id}: {self.variant_id} x{self.quantity}"
+
+    @property
+    def shippable_quantity(self) -> int:
+        """Units still awaiting a shipment on this line."""
+        return self.quantity - self.shipped_quantity
+
+    @property
+    def returnable_quantity(self) -> int:
+        """Units already shipped that have not yet been returned."""
+        return self.shipped_quantity - self.returned_quantity

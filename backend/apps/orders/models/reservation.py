@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+from datetime import timedelta
+from typing import ClassVar
+
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
+from apps.common.models import TimeStampedModel
+
+from .sales_order import SalesOrderLine
+
+
+def default_reservation_expiry():
+    return timezone.now() + timedelta(hours=settings.STOCK_RESERVATION_TTL_HOURS)
+
+
+class StockReservation(TimeStampedModel):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        RELEASED = "released", "Released"
+
+    order_line: models.ForeignKey = models.ForeignKey(
+        SalesOrderLine, on_delete=models.CASCADE, related_name="reservations"
+    )
+    variant: models.ForeignKey = models.ForeignKey(
+        "catalog.ProductVariant", on_delete=models.PROTECT, related_name="stock_reservations"
+    )
+    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
+    status: models.CharField = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE
+    )
+    expires_at: models.DateTimeField = models.DateTimeField(default=default_reservation_expiry)
+
+    class Meta:
+        indexes: ClassVar[list] = [
+            models.Index(fields=["variant"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["status", "expires_at"], name="reservation_status_exp_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.order_line_id}: {self.quantity} ({self.status})"
+
+    @property
+    def is_expired(self) -> bool:
+        return self.status == self.Status.ACTIVE and self.expires_at <= timezone.now()

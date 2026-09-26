@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p>Posting an adjustment for {{ items|length }} stock item(s):</p>
+<ul>
+  {% for item in items %}
+    <li>{{ item }}</li>
+  {% endfor %}
+</ul>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="hidden" name="action" value="post_adjustment_action">
+  <input type="submit" name="apply" value="Post adjustment">
+</form>
+{% endblock %}

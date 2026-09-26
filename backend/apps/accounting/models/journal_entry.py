@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from typing import ClassVar
+
+from django.db import models
+
+from apps.common.models import FullAuditModel, TimeStampedModel
+
+from .account import Account
+
+
+class JournalEntry(FullAuditModel):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        POSTED = "posted", "Posted"
+
+    entry_date: models.DateField = models.DateField()
+    reference_type: models.CharField = models.CharField(max_length=50, blank=True)
+    reference_id: models.UUIDField | None = models.UUIDField(null=True, blank=True)
+    status: models.CharField = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
+    description: models.CharField = models.CharField(max_length=255, blank=True)
+    reverses: models.ForeignKey = models.ForeignKey(
+        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="reversals"
+    )
+
+    class Meta:
+        ordering: ClassVar[list] = ["-entry_date"]
+        indexes: ClassVar[list] = [
+            models.Index(fields=["reference_type", "reference_id"]),
+            models.Index(fields=["status", "entry_date"]),
+            models.Index(fields=["deleted_at", "entry_date"], name="je_deleted_date_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"JE-{self.id} ({self.status})"
+
+
+class JournalEntryLine(TimeStampedModel):
+    journal_entry: models.ForeignKey = models.ForeignKey(
+        JournalEntry, on_delete=models.CASCADE, related_name="lines"
+    )
+    account: models.ForeignKey = models.ForeignKey(
+        Account, on_delete=models.PROTECT, related_name="lines"
+    )
+    debit: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    credit: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.CheckConstraint(
+                condition=models.Q(debit__gte=0) & models.Q(credit__gte=0),
+                name="jeline_amounts_non_negative",
+            ),
+            # A line is one side or the other; posted entries are immutable, so a
+            # two-sided line can never be corrected in place.
+            models.CheckConstraint(
+                condition=models.Q(debit=0) | models.Q(credit=0),
+                name="jeline_single_sided",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.account.code}: D{self.debit}/C{self.credit}"

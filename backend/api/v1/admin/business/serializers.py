@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import URLValidator
+from rest_framework import serializers
+
+_validate_url = URLValidator()
+
+
+class AdminBusinessProfileSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    legal_name = serializers.CharField(allow_blank=True)
+    tagline = serializers.CharField(allow_blank=True)
+    logo_url = serializers.CharField(allow_blank=True)
+
+    phone = serializers.CharField(allow_blank=True)
+    whatsapp = serializers.CharField(allow_blank=True)
+    email = serializers.CharField(allow_blank=True)
+    website = serializers.CharField(allow_blank=True)
+    google_maps_url = serializers.CharField(allow_blank=True)
+    opening_hours = serializers.CharField(allow_blank=True)
+
+    address_line = serializers.CharField(allow_blank=True)
+    district = serializers.CharField(allow_blank=True)
+    thana = serializers.CharField(allow_blank=True)
+    postcode = serializers.CharField(allow_blank=True)
+    country = serializers.CharField(allow_blank=True)
+    formatted_address = serializers.CharField(read_only=True)
+
+    currency_code = serializers.CharField()
+    currency_symbol = serializers.CharField()
+
+    tax_id = serializers.CharField(allow_blank=True)
+    trade_licence_no = serializers.CharField(allow_blank=True)
+
+    facebook_url = serializers.CharField(allow_blank=True)
+    instagram_url = serializers.CharField(allow_blank=True)
+    tiktok_url = serializers.CharField(allow_blank=True)
+    youtube_url = serializers.CharField(allow_blank=True)
+    linkedin_url = serializers.CharField(allow_blank=True)
+
+    updated_at = serializers.DateTimeField(read_only=True)
+
+
+class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
+    """Only `name` is mandatory — everything else may be cleared, so each optional
+    URL/email field must accept "" alongside a valid value."""
+
+    name = serializers.CharField(required=False, allow_blank=False, max_length=200)
+    legal_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    tagline = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    logo_url = serializers.CharField(required=False, allow_blank=True)
+
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    whatsapp = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    email = serializers.EmailField(required=False, allow_blank=True, max_length=254)
+    website = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    google_maps_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    opening_hours = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+    address_line = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    district = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    thana = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    postcode = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    country = serializers.CharField(required=False, allow_blank=True, max_length=100)
+
+    currency_code = serializers.CharField(required=False, allow_blank=False, max_length=3)
+    currency_symbol = serializers.CharField(required=False, allow_blank=False, max_length=8)
+
+    tax_id = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    trade_licence_no = serializers.CharField(required=False, allow_blank=True, max_length=50)
+
+    facebook_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    instagram_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    tiktok_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    youtube_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    linkedin_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    URL_FIELDS = (
+        "website",
+        "google_maps_url",
+        "facebook_url",
+        "instagram_url",
+        "tiktok_url",
+        "youtube_url",
+        "linkedin_url",
+    )
+
+    def validate(self, attrs: dict) -> dict:
+        errors = {}
+        for field in self.URL_FIELDS:
+            value = attrs.get(field, "").strip() if field in attrs else ""
+            if field not in attrs or not value:
+                if field in attrs:
+                    attrs[field] = ""
+                continue
+            # The seeded website is a bare domain; assume https rather than reject it.
+            candidate = value if "://" in value else f"https://{value}"
+            try:
+                _validate_url(candidate)
+            except DjangoValidationError:
+                errors[field] = ["Enter a valid URL."]
+            else:
+                attrs[field] = candidate
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
+
+class AdminModuleConfigFieldSerializer(serializers.Serializer):
+    key = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    value = serializers.BooleanField(read_only=True)
+
+
+class AdminModuleSerializer(serializers.Serializer):
+    key = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    is_licensed = serializers.BooleanField(read_only=True)
+    is_enabled = serializers.BooleanField(read_only=True)
+    can_disable = serializers.BooleanField(read_only=True)
+    locked_reason = serializers.CharField(read_only=True)
+    depends_on = serializers.ListField(child=serializers.CharField(), read_only=True)
+    dependents = serializers.ListField(child=serializers.CharField(), read_only=True)
+    blocking_dependents = serializers.ListField(child=serializers.CharField(), read_only=True)
+    missing_dependencies = serializers.ListField(child=serializers.CharField(), read_only=True)
+    permission_codes = serializers.ListField(child=serializers.CharField(), read_only=True)
+    config_fields = AdminModuleConfigFieldSerializer(many=True, read_only=True)
+
+
+class AdminModuleUpdateSerializer(serializers.Serializer):
+    """A PATCH carries either the on/off switch or a config change, never both —
+    they take different code paths and mixing them hides which one was refused."""
+
+    is_enabled = serializers.BooleanField(required=False)
+    config = serializers.DictField(child=serializers.BooleanField(), required=False)
+
+    def validate(self, attrs: dict) -> dict:
+        if ("is_enabled" in attrs) == ("config" in attrs):
+            raise serializers.ValidationError("Send exactly one of is_enabled or config.")
+        return attrs
+
+
+class AdminSmsStatusSerializer(serializers.Serializer):
+    provider = serializers.CharField(read_only=True)
+    is_configured = serializers.BooleanField(read_only=True)
+    from_number = serializers.CharField(read_only=True, allow_blank=True)
+
+
+class AdminIntegrationStatusSerializer(serializers.Serializer):
+    sms = AdminSmsStatusSerializer(read_only=True)
+
+
+class AdminPaymentMethodSerializer(serializers.Serializer):
+    key = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    is_enabled = serializers.BooleanField(read_only=True)
+    can_disable = serializers.BooleanField(read_only=True)
+    locked_reason = serializers.CharField(read_only=True)
+
+
+class AdminPaymentMethodUpdateSerializer(serializers.Serializer):
+    is_enabled = serializers.BooleanField()

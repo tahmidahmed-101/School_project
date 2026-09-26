@@ -1,0 +1,205 @@
+[project]
+name = "django-foundation-backend"
+version = "0.1.0"
+description = "Reusable Django REST authentication + CRUD foundation for future projects."
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<6.0",
+    "djangorestframework>=3.15,<4.0",
+    "djangorestframework-simplejwt>=5.3,<6.0",
+    "django-cors-headers>=4.3,<5.0",
+    "django-filter>=24.0",
+    "dj-database-url>=2.1,<3.0",
+    "drf-spectacular>=0.27,<1.0",
+    "gunicorn>=22.0,<24.0",
+    "psycopg[binary]>=3.1,<4.0",
+    "python-decouple>=3.8,<4.0",
+    "twilio>=9.0,<10.0",
+    "whitenoise>=6.6,<7.0",
+    "Pillow>=12.3,<13.0",
+    "pillow-heif>=0.16,<2.0",
+    "qrcode[pil]>=7.4,<9.0",
+    "python-barcode[images]>=0.15,<1.0",
+    "openpyxl>=3.1,<4.0",
+    "weasyprint>=62,<70",
+    "sqlparse>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=26.3.1",
+    "pip>=26.2",
+    "pre-commit>=3.7,<4.0",
+    "pytest>=9.0.3",
+    "pytest-django>=4.8,<5.0",
+    "pytest-cov>=5.0,<6.0",
+    "ruff>=0.4,<1.0",
+    "mypy>=1.10,<2.0",
+    "django-stubs>=5.0,<6.0",
+    "djangorestframework-stubs>=3.15,<4.0",
+    "factory-boy>=3.3,<4.0",
+    "python-decouple-stubs>=3.8.0.1",
+    "vulture>=2.11,<3.0",
+    "deptry>=0.20,<1.0",
+    "import-linter>=2.0,<3.0",
+    "radon>=6.0,<7.0",
+    "xenon>=0.9,<1.0",
+    "pip-audit>=2.7,<3.0",
+    "codespell>=2.3,<3.0",
+]
+
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*.py"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "I", "B", "UP", "DJ", "C90",
+    "S",    # bandit-equivalent security checks
+    "SIM",  # simplification
+    "ARG",  # unused arguments
+    "RET",  # return-statement anti-patterns
+    "PTH",  # pathlib over os.path
+    "ERA",  # commented-out code
+    "T20",  # stray print()
+    "RUF",  # ruff-specific (mutable defaults, unused noqa, etc.)
+    "PERF", # performance anti-patterns
+    "C4",   # comprehension anti-patterns
+    "N",    # pep8-naming
+]
+# Test files routinely need assert / hardcoded fixtures that S flags.
+# ARG002/ARG001 below: these paths override Django/DRF/base-class signatures
+# where the arg is required by the caller, not dead code.
+per-file-ignores = { "**/tests/*.py" = [
+    "S",
+    "ARG",
+], "**/factories.py" = [
+    "S",
+], "api/v1/**/*views.py" = [
+    "ARG002",
+    "RUF012",
+], "apps/**/admin.py" = [
+    "ARG002",
+], "apps/**/management/commands/*.py" = [
+    "ARG002",
+], "apps/common/generics.py" = [
+    "ARG002",
+], "apps/common/permissions.py" = [
+    "ARG002",
+], "apps/common/throttling.py" = [
+    "ARG002",
+], "apps/common/pdf/render.py" = [
+    "ARG002",
+], "apps/common/utils/export.py" = [
+    "ARG002",
+], "apps/logistics/services/couriers/*.py" = [
+    "ARG002",
+], "api/health.py" = [
+    "ARG001",
+], "config/urls.py" = [
+    "ARG001",
+], "apps/common/utils/files.py" = [
+    "ARG001",
+] }
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+# Generated files; ruff already skips them via extend-exclude.
+force-exclude = "/migrations/"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--cov=apps --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+ignore_missing_imports = true
+mypy_path = "backend"
+strict_optional = true
+
+# The DRF stubs model SerializerMethodField and Response payloads loosely
+# enough that the view/serializer layer reports ~60 errors that are stub
+# artefacts, not defects. CI type-checks `apps` and `config` — where a type
+# error means a real bug — and leaves this layer out. See docs/typing.md.
+[[tool.mypy.overrides]]
+module = [
+    "api.v1.customer.*",
+    "api.v1.admin.*",
+    "api.v1.public.*",
+]
+ignore_errors = true
+
+# Test doubles, factories and seed scripts trade type precision for brevity by
+# design; the production packages above them are checked and must stay clean.
+[[tool.mypy.overrides]]
+module = [
+    "apps.*.tests.*",
+    "apps.*.factories",
+    "apps.common.services.demo_seed.*",
+    "apps.*.management.commands.*",
+]
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"
+
+[tool.vulture]
+paths = ["apps", "api", "config"]
+exclude = ["*/migrations/*", "*/tests/*"]
+min_confidence = 80
+# Unlike `self`, vulture doesn't special-case an unused `cls` on classmethods.
+ignore_names = ["cls"]
+
+[tool.deptry]
+exclude = ["migrations", "tests", ".venv"]
+# Django, DRF etc. are configured by string reference (INSTALLED_APPS, settings
+# modules), so deptry's import scan can't see the usage — false positives, not gaps.
+ignore = ["DEP002", "DEP003"]
+
+[tool.deptry.package_module_name_map]
+Django = "django"
+djangorestframework = "rest_framework"
+djangorestframework-simplejwt = "rest_framework_simplejwt"
+django-cors-headers = "corsheaders"
+django-filter = "django_filters"
+dj-database-url = "dj_database_url"
+python-decouple = "decouple"
+pillow-heif = "pillow_heif"
+"qrcode[pil]" = "qrcode"
+"python-barcode[images]" = "barcode"
+"psycopg[binary]" = "psycopg"
+
+[tool.codespell]
+skip = "*/migrations/*,*.min.js,*/staticfiles/*,*.lock"
+ignore-words-list = "ba,nd"
+
+[tool.importlinter]
+root_package = "apps"
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture within each app"
+type = "layers"
+layers = ["services", "selectors", "models"]
+# Restricted to apps that actually have all three layers on disk — coupons,
+# discounts, reporting and common are structured differently and would just
+# error out of the contract ("missing layer") rather than be checked by it.
+containers = [
+    "apps.accounting", "apps.accounts", "apps.audit", "apps.business",
+    "apps.catalog", "apps.inventory", "apps.logistics",
+    "apps.orders", "apps.procurement",
+]
+

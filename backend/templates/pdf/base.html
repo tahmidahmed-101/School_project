@@ -1,0 +1,42 @@
+{% load pdf_format %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ doc_title }} {{ doc_number }}</title>
+<style>{% include "pdf/document.css" %}</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand">
+    {% if business.name %}<div class="brand__name">{{ business.name }}</div>{% endif %}
+    <div class="brand__rule"></div>
+    <div class="brand__lines">
+      {% if business.address %}<div>{{ business.address }}</div>{% endif %}
+      {% if business.phone %}<div>{{ business.phone }}</div>{% endif %}
+      {% if business.email %}<div>{{ business.email }}</div>{% endif %}
+      {% if business.tax_id %}<div>BIN {{ business.tax_id }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="docmark">
+    <h1 class="docmark__title" data-ref="{{ doc_title }} {{ doc_number }}">{{ doc_title }}</h1>
+    {% if doc_number %}<div class="docmark__number">{{ doc_number }}</div>{% endif %}
+    {% if doc_meta %}
+    <div class="docmark__meta">
+      {% for item in doc_meta %}<div><span class="k">{{ item.label }}</span> &nbsp;{{ item.value }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if doc_status %}<div class="pill {{ doc_status_class }}">{{ doc_status }}</div>{% endif %}
+  </div>
+</header>
+
+{% block content %}{% endblock %}
+
+{# Legal/contact line rides in the page margin box, never in flow, so it cannot spill a page. #}
+<div class="closing" data-footer="{% if business.legal_name %}{{ business.legal_name }}{% endif %}{% if business.address %} · {{ business.address }}{% endif %}{% if business.website %} · {{ business.website }}{% endif %}">
+  {% block closing %}{% endblock %}
+</div>
+
+</body>
+</html>

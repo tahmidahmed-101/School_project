@@ -1,9 +1,27 @@
-node_modules
-.next
-next-env.d.ts
-*.tsbuildinfo
-*.log
-.env*.local
+# Backend (Django / LaunchCart)
+backend/.venv/
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/db.sqlite3.bak*
+backend/logs/
+backend/media/
+backend/staticfiles/
+backend/debug.log
+backend/.env
+backend/.env.*
+!backend/.env.example
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors / OS
+.vscode/
+.idea/
 .DS_Store
-# Playwright MCP session output (screenshots / snapshots / console logs)
+Thumbs.db
+
+# Playwright MCP session output
 .playwright-mcp

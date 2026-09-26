@@ -1,0 +1,377 @@
+/* Latin subsets of Inter / Plus Jakarta Sans with the Bengali taka sign merged
+   in, renamed so the image can also install them as system fonts (see Dockerfile). */
+@font-face {
+  font-family: "Vantage Sans";
+  src: url("{{ font_dir }}/VantageSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "Vantage Sans";
+  src: url("{{ font_dir }}/VantageSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+@font-face {
+  font-family: "Vantage Display";
+  src: url("{{ font_dir }}/VantageDisplay-Bold.ttf") format("truetype");
+  font-weight: 700;
+}
+
+:root {
+  --ink: #0d0d0e;
+  --muted: #6f6f76;
+  --faint: #9a9aa2;
+  --hairline: #e5e5e9;
+  --rule: #14141a;
+  --accent: #c8a45d;
+  --accent-deep: #8a6a24;
+  --wash: #faf8f4;
+}
+
+@page {
+  size: A4;
+  margin: 11mm 15mm 13mm;
+
+  @top-right {
+    content: string(doc-ref);
+    font-family: "Vantage Sans", sans-serif;
+    font-size: 7pt;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    margin-bottom: 6mm;
+  }
+  @bottom-left {
+    content: string(doc-footer);
+    font-family: "Vantage Sans", sans-serif;
+    font-size: 6.5pt;
+    letter-spacing: 0.04em;
+    color: var(--faint);
+    margin-top: 5mm;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "Vantage Sans", sans-serif;
+    font-size: 6.5pt;
+    letter-spacing: 0.04em;
+    color: var(--faint);
+    margin-top: 5mm;
+  }
+}
+
+/* Page 1 carries the full masthead, so the running reference would be a duplicate. */
+@page :first {
+  @top-right {
+    content: none;
+  }
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: #fff;
+  font-family: "Vantage Sans", sans-serif;
+  font-size: 9pt;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -weasy-hyphens: none;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 400;
+}
+
+.label {
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12mm;
+  padding-bottom: 5mm;
+  border-bottom: 2px solid var(--rule);
+}
+
+.brand__name {
+  font-family: "Vantage Display", sans-serif;
+  font-weight: 700;
+  font-size: 15pt;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+.brand__rule {
+  width: 14mm;
+  height: 2pt;
+  margin: 2.5mm 0;
+  background: var(--accent);
+}
+
+.brand__lines {
+  font-size: 7.5pt;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.docmark {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.docmark__title {
+  font-family: "Vantage Display", sans-serif;
+  font-weight: 700;
+  font-size: 22pt;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  string-set: doc-ref attr(data-ref);
+}
+
+.docmark__number {
+  margin-top: 2.5mm;
+  font-size: 10pt;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.docmark__meta {
+  margin-top: 2.5mm;
+  font-size: 7.5pt;
+  color: var(--muted);
+}
+
+.docmark__meta div + div {
+  margin-top: 0.8mm;
+}
+
+.docmark__meta .k {
+  color: var(--faint);
+}
+
+.pill {
+  display: inline-block;
+  margin-top: 3mm;
+  padding: 1.2mm 3mm;
+  border: 0.75pt solid var(--accent);
+  border-radius: 999px;
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+
+.pill--settled {
+  border-color: var(--rule);
+  background: var(--rule);
+  color: #fff;
+}
+
+.pill--void {
+  border-color: var(--hairline);
+  color: var(--faint);
+}
+
+.parties {
+  display: flex;
+  gap: 10mm;
+  margin-top: 5mm;
+}
+
+.parties__block {
+  flex: 1;
+}
+
+.parties__block .label {
+  display: block;
+  padding-bottom: 2mm;
+  margin-bottom: 2.5mm;
+  border-bottom: 0.75pt solid var(--hairline);
+}
+
+.parties__name {
+  font-size: 10pt;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.parties__lines {
+  margin-top: 1.2mm;
+  font-size: 8pt;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.section {
+  margin-top: 6mm;
+}
+
+.section > .label {
+  display: block;
+  margin-bottom: 3mm;
+}
+
+table.lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.lines thead {
+  display: table-header-group;
+}
+
+table.lines th {
+  padding: 0 0 2.2mm;
+  border-bottom: 1pt solid var(--rule);
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+}
+
+table.lines td {
+  padding: 1.9mm 0;
+  border-bottom: 0.5pt solid var(--hairline);
+  vertical-align: top;
+}
+
+table.lines tr {
+  break-inside: avoid;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Outranks `table.lines th`, which would otherwise left-align these headers. */
+table.lines th.num {
+  width: 24mm;
+  text-align: right;
+}
+
+.cell__title {
+  font-weight: 600;
+}
+
+.cell__sub {
+  font-size: 7.5pt;
+  color: var(--faint);
+}
+
+.summary {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4mm;
+  break-inside: avoid;
+}
+
+.summary__table {
+  width: 78mm;
+  border-collapse: collapse;
+}
+
+.summary__table td {
+  padding: 1.7mm 0;
+  font-size: 8.5pt;
+}
+
+.summary__table td.num {
+  font-weight: 600;
+}
+
+.summary__table .k {
+  color: var(--muted);
+}
+
+.summary__table tr.rule td {
+  border-top: 0.5pt solid var(--hairline);
+}
+
+.summary__table tr.grand td {
+  padding-top: 3.2mm;
+  border-top: 1.5pt solid var(--rule);
+  font-family: "Vantage Display", sans-serif;
+  font-weight: 700;
+  font-size: 13pt;
+  letter-spacing: -0.02em;
+}
+
+.summary__table tr.grand .k {
+  font-size: 7pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.summary__table tr.due td {
+  color: var(--accent-deep);
+}
+
+.callout {
+  margin-top: 6mm;
+  padding: 5mm 6mm;
+  background: var(--wash);
+  border-left: 2pt solid var(--accent);
+  break-inside: avoid;
+}
+
+.callout__figure {
+  font-family: "Vantage Display", sans-serif;
+  font-weight: 700;
+  font-size: 20pt;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.stats {
+  display: flex;
+  gap: 8mm;
+  margin-top: 7mm;
+  break-inside: avoid;
+}
+
+.stats__item {
+  flex: 1;
+  padding-top: 2.5mm;
+  border-top: 1pt solid var(--rule);
+}
+
+.stats__value {
+  margin-top: 1mm;
+  font-size: 10pt;
+  font-weight: 600;
+}
+
+.note {
+  margin-top: 4mm;
+  break-inside: avoid;
+}
+
+.note__body {
+  margin-top: 1.5mm;
+  font-size: 8pt;
+  color: var(--muted);
+  white-space: pre-line;
+}
+
+.closing {
+  margin-top: 4mm;
+  padding-top: 3mm;
+  border-top: 0.75pt solid var(--hairline);
+  font-size: 7pt;
+  line-height: 1.6;
+  color: var(--faint);
+  string-set: doc-footer attr(data-footer);
+  break-inside: avoid;
+}

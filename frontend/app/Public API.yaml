@@ -1,0 +1,1255 @@
+openapi: 3.0.3
+info:
+  title: Public API - Storefront
+  version: "1.0.0"
+  description: |-
+    Public, unauthenticated endpoints exposed to the storefront.
+    The response envelope is always {"data": ..., "message": "Success"}.
+    Error responses use {"error": {"code", "message", "fields"}}.
+servers:
+  - url: /api/v1/public
+paths:
+  /catalog/categories/:
+    get:
+      summary: List active categories
+      operationId: public_category_list
+      tags:
+        - Public Catalog
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicCategory'
+                  message:
+                    type: string
+
+  /catalog/categories/{slug}/:
+    get:
+      summary: Get category by slug
+      operationId: public_category_detail
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicCategory'
+                  message:
+                    type: string
+        '404':
+          description: category_not_found
+
+  /catalog/products/:
+    get:
+      summary: List active storefront products
+      operationId: public_product_list
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Case-insensitive match on product name.
+        - in: query
+          name: ordering
+          schema:
+            type: string
+            enum: [name, -name, created_at, -created_at]
+          description: Sort order.
+        - in: query
+          name: category_id
+          schema:
+            type: string
+            format: uuid
+          description: Filter by category ID.
+        - in: query
+          name: preorder_only
+          schema:
+            type: boolean
+          description: If true, return only pre-order products.
+        - in: query
+          name: featured
+          schema:
+            type: boolean
+          description: Filter by featured products.
+        - in: query
+          name: trending
+          schema:
+            type: boolean
+          description: Filter by trending products.
+        - in: query
+          name: new_arrival
+          schema:
+            type: boolean
+          description: Filter by new arrival products.
+        - in: query
+          name: badge
+          schema:
+            type: string
+            enum: ["", "bestseller", "popular", "new", "sale", "limited", "exclusive"]
+          description: Filter by product badge.
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number, defaults to 1.
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+          description: Page size, defaults to 20, maximum 100.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicProductList'
+                      count:
+                        type: integer
+                      next:
+                        type: string
+                        nullable: true
+                      previous:
+                        type: string
+                        nullable: true
+                  message:
+                    type: string
+
+  /catalog/products/{slug}/:
+    get:
+      summary: Get product by slug
+      operationId: public_product_detail
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicProductDetail'
+                  message:
+                    type: string
+        '404':
+          description: product_not_found
+
+  /catalog/products/{slug}/reviews/:
+    get:
+      summary: List product reviews
+      operationId: public_product_reviews
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: ordering
+          schema:
+            type: string
+            enum: [created_at, -created_at]
+          description: Sort order, defaults to -created_at.
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicProductReview'
+                      count:
+                        type: integer
+                      next:
+                        type: string
+                        nullable: true
+                      previous:
+                        type: string
+                        nullable: true
+                      average_rating:
+                        type: number
+                        format: float
+                        nullable: true
+                      review_count:
+                        type: integer
+                  message:
+                    type: string
+        '404':
+          description: product_not_found
+
+  /catalog/bundles/:
+    get:
+      summary: List public bundles
+      operationId: public_bundle_list
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Case-insensitive match on bundle product name.
+        - in: query
+          name: ordering
+          schema:
+            type: string
+            enum: [product__name, -product__name, created_at, -created_at]
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PublicBundle'
+                      count:
+                        type: integer
+                      next:
+                        type: string
+                        nullable: true
+                      previous:
+                        type: string
+                        nullable: true
+                  message:
+                    type: string
+
+  /catalog/bundles/{slug}/:
+    get:
+      summary: Get bundle by slug
+      operationId: public_bundle_detail
+      tags:
+        - Public Catalog
+      security: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicBundle'
+                  message:
+                    type: string
+        '404':
+          description: variant_not_found
+
+  /checkout/:
+    post:
+      summary: Guest checkout - place an order
+      operationId: guest_checkout
+      tags:
+        - Public Checkout
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestCheckoutRequest'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GuestOrderResponse'
+                  message:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tracking/track/:
+    post:
+      summary: Track an order by order number and phone
+      operationId: track_order
+      tags:
+        - Public Tracking
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackOrderRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicTrackOrder'
+                  message:
+                    type: string
+        '400':
+          description: Missing order number or phone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Order not found or phone does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /marketing/subscribe/:
+    post:
+      summary: Subscribe an email to the newsletter
+      operationId: newsletter_subscribe
+      tags:
+        - Newsletter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  message:
+                    type: string
+
+  /marketing/unsubscribe/:
+    post:
+      summary: Unsubscribe an email from the newsletter
+      operationId: newsletter_unsubscribe
+      tags:
+        - Newsletter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewsletterEmail'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  message:
+                    type: string
+
+  /business-profile/:
+    get:
+      summary: Get business profile used by the storefront
+      operationId: public_business_profile
+      tags:
+        - Public Business
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicBusinessProfile'
+                  message:
+                    type: string
+
+  /payment-methods/:
+    get:
+      summary: List enabled public payment methods
+      operationId: public_payment_methods
+      tags:
+        - Public Business
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicPaymentMethod'
+                  message:
+                    type: string
+
+components:
+  schemas:
+    NewsletterEmail:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    PublicCategory:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - parent_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        slug:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    PublicProductImage:
+      type: object
+      required:
+        - url
+        - alt_text
+        - sort_order
+      properties:
+        url:
+          type: string
+        alt_text:
+          type: string
+        sort_order:
+          type: integer
+
+    PublicBundleComponent:
+      type: object
+      required:
+        - variant_id
+        - sku
+        - quantity
+        - price
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          type: string
+        quantity:
+          type: integer
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+
+    PublicProductVariant:
+      type: object
+      required:
+        - id
+        - sku
+        - price
+        - discount_price
+        - effective_price
+        - in_stock
+        - color
+        - size
+        - components
+        - is_bundle
+        - is_preorder_enabled
+        - preorder_price
+        - preorder_start_date
+        - preorder_end_date
+        - release_date
+        - is_preorder_active
+        - is_preorder_price_applied
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        discount_price:
+          type: string
+          format: decimal
+          nullable: true
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Null when there is no valid sale price.
+        effective_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Price the customer actually pays.
+        in_stock:
+          type: boolean
+          readOnly: true
+        color:
+          type: string
+        size:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicBundleComponent'
+          readOnly: true
+        is_bundle:
+          type: boolean
+          readOnly: true
+        is_preorder_enabled:
+          type: boolean
+          readOnly: true
+        preorder_price:
+          type: string
+          format: decimal
+          nullable: true
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        preorder_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        preorder_end_date:
+          type: string
+          format: date-time
+          nullable: true
+        release_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_preorder_active:
+          type: boolean
+          readOnly: true
+        is_preorder_price_applied:
+          type: boolean
+          readOnly: true
+
+    PublicBundleItemProduct:
+      type: object
+      required:
+        - id
+        - slug
+        - name
+        - category_id
+        - image
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+        name:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+          readOnly: true
+        image:
+          type: string
+          nullable: true
+          readOnly: true
+
+    PublicBundleItem:
+      type: object
+      required:
+        - quantity
+        - price
+        - product
+      properties:
+        quantity:
+          type: integer
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        product:
+          $ref: '#/components/schemas/PublicBundleItemProduct'
+
+    PublicBundle:
+      type: object
+      required:
+        - id
+        - slug
+        - name
+        - description
+        - highlights
+        - price
+        - original_price
+        - components
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        original_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicBundleItem'
+          readOnly: true
+
+    PublicProductList:
+      type: object
+      required:
+        - id
+        - category_id
+        - name
+        - slug
+        - product_type
+        - tagline
+        - featured
+        - trending
+        - new_arrival
+        - badge
+        - specs
+        - variants
+        - images
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        category_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        slug:
+          type: string
+        product_type:
+          type: string
+        tagline:
+          type: string
+        featured:
+          type: boolean
+          readOnly: true
+        trending:
+          type: boolean
+          readOnly: true
+        new_arrival:
+          type: boolean
+          readOnly: true
+        badge:
+          type: string
+          readOnly: true
+        specs:
+          type: object
+          readOnly: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicProductVariant'
+          readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicProductImage'
+          readOnly: true
+
+    PublicProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicProductList'
+        - type: object
+          required:
+            - description
+          properties:
+            description:
+              type: string
+
+    PublicProductReview:
+      type: object
+      required:
+        - id
+        - customer_name
+        - rating
+        - comment
+        - is_verified_purchase
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        customer_name:
+          type: string
+          readOnly: true
+          description: Falls back to "Anonymous" when the reviewer has no name.
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          readOnly: true
+        comment:
+          type: string
+          readOnly: true
+        is_verified_purchase:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    PublicBusinessProfile:
+      type: object
+      description: |-
+        Storefront-facing subset. Registration data such as tax_id and trade
+        licence is intentionally omitted because this endpoint is public.
+      required:
+        - name
+        - legal_name
+        - tagline
+        - logo_url
+        - phone
+        - whatsapp
+        - email
+        - website
+        - google_maps_url
+        - opening_hours
+        - address
+        - social
+      properties:
+        name:
+          type: string
+        legal_name:
+          type: string
+        tagline:
+          type: string
+        logo_url:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        google_maps_url:
+          type: string
+        opening_hours:
+          type: string
+        address:
+          type: string
+        social:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+
+    PublicPaymentMethod:
+      type: object
+      description: |-
+        No internal `can_disable` or `locked_reason` details are exposed here.
+      required:
+        - key
+        - label
+        - description
+      properties:
+        key:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+
+    # New schemas for Checkout
+    GuestCheckoutItemRequest:
+      type: object
+      required:
+        - variant_id
+        - quantity
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+
+    GuestCheckoutAddressRequest:
+      type: object
+      required:
+        - full_name
+        - phone
+        - line1
+        - postal_code
+      properties:
+        full_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 32
+        line1:
+          type: string
+          maxLength: 255
+        line2:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        postal_code:
+          type: string
+          maxLength: 32
+        country:
+          type: string
+          maxLength: 100
+          default: "Bangladesh"
+
+    GuestCheckoutRequest:
+      type: object
+      required:
+        - email
+        - phone
+        - first_name
+        - items
+        - shipping_address
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 32
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuestCheckoutItemRequest'
+          minItems: 1
+        shipping_address:
+          $ref: '#/components/schemas/GuestCheckoutAddressRequest'
+        carrier_id:
+          type: string
+          format: uuid
+          nullable: true
+        coupon_code:
+          type: string
+          maxLength: 32
+        notes:
+          type: string
+
+    GuestOrderResponse:
+      type: object
+      required:
+        - id
+        - order_number
+        - status
+        - contact_email
+        - contact_phone
+        - subtotal
+        - tax_total
+        - shipping_total
+        - discount_total
+        - grand_total
+        - coupon_code
+        - lines
+        - shipments
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          enum: [pending, awaiting_payment, confirmed, shipped, delivered, cancelled, closed]
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          readOnly: true
+        contact_phone:
+          type: string
+          readOnly: true
+        subtotal:
+          type: string
+          format: decimal
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          readOnly: true
+        shipping_total:
+          type: string
+          format: decimal
+          readOnly: true
+        discount_total:
+          type: string
+          format: decimal
+          readOnly: true
+        grand_total:
+          type: string
+          format: decimal
+          readOnly: true
+        coupon_code:
+          type: string
+          nullable: true
+          readOnly: true
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              product_name:
+                type: string
+              variant_sku:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+                format: decimal
+              tax_amount:
+                type: string
+                format: decimal
+              total:
+                type: string
+                format: decimal
+              is_preorder:
+                type: boolean
+          readOnly: true
+        shipments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              carrier_name:
+                type: string
+              tracking_number:
+                type: string
+              status:
+                type: string
+              shipped_at:
+                type: string
+                format: date-time
+                nullable: true
+              delivered_at:
+                type: string
+                format: date-time
+                nullable: true
+          readOnly: true
+
+    # New schemas for Order Tracking
+    TrackOrderRequest:
+      type: object
+      required:
+        - order_number
+        - phone
+      properties:
+        order_number:
+          type: string
+        phone:
+          type: string
+
+    PublicTrackOrderItem:
+      type: object
+      required:
+        - id
+        - product_name
+        - variant_sku
+        - quantity
+        - unit_price
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product_name:
+          type: string
+          readOnly: true
+        variant_sku:
+          type: string
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        unit_price:
+          type: string
+          format: decimal
+          readOnly: true
+
+    PublicTrackShipment:
+      type: object
+      required:
+        - id
+        - carrier_name
+        - tracking_number
+        - status
+        - shipped_at
+        - delivered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        carrier_name:
+          type: string
+          nullable: true
+          readOnly: true
+        tracking_number:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          enum: [pending, shipped, in_transit, out_for_delivery, delivered, cancelled, returned]
+          readOnly: true
+        shipped_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+
+    PublicTrackOrder:
+      type: object
+      required:
+        - order_number
+        - status
+        - created_at
+        - items
+        - shipments
+        - delivery_info
+        - tracking_timeline
+      properties:
+        order_number:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          enum: [Placed, Confirmed, Packed, Shipped, In Transit, Out for Delivery, Delivered, Cancelled]
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicTrackOrderItem'
+          readOnly: true
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicTrackShipment'
+          readOnly: true
+        delivery_info:
+          type: object
+          nullable: true
+          properties:
+            full_name:
+              type: string
+            phone:
+              type: string
+            line1:
+              type: string
+            line2:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            postal_code:
+              type: string
+            country:
+              type: string
+          readOnly: true
+        tracking_timeline:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              description:
+                type: string
+              tracking_number:
+                type: string
+          readOnly: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

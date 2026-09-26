@@ -1,0 +1,19 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{% if admin_stats %}
+<div class="module">
+    <h2>Critical issues (24h)</h2>
+    <table>
+        <tbody>
+            <tr>
+                <td><strong>Failed logins</strong></td>
+                <td>{{ admin_stats.failed_logins }}</td>
+                <td><a href="{% url 'admin:audit_loginhistory_changelist' %}?was_successful__exact=0">view</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
