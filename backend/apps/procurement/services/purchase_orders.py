@@ -72,7 +72,7 @@ def update_purchase_order(*, purchase_order: PurchaseOrder, data: dict) -> Purch
     allowed_fields = {"order_date", "notes", "supplier"}
     update_fields = [field for field in data if field in allowed_fields]
     if update_fields:
-        if purchase_order.status != PurchaseOrder.Status.DRAFT and set(update_fields) != {"notes"}:
+        if purchase_order.status != PurchaseOrder.Status.DRAFT:
             raise BusinessRuleViolationError(
                 "Only a draft purchase order header can be edited.", code="not_draft"
             )
