@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import Category
 from apps.catalog.selectors.categories import get_category_by_id
 from apps.catalog.selectors.products import (
     get_product_by_id,
@@ -54,6 +55,7 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
     def get_queryset(self):
         params = self.request.query_params
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
+        category_type = get_choice(params, "category_type", Category.CategoryType.values)
         is_active = get_bool(params, "is_active")
         product_type = params.get("product_type", "").strip().lower() or None
         include_bundles = get_bool(params, "include_bundles", default=True)
@@ -61,6 +63,7 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
         preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
         return products_list(
             category=category,
+            category_type=category_type,
             is_active=is_active,
             include_deleted=self.include_deleted(),
             include_bundles=include_bundles,

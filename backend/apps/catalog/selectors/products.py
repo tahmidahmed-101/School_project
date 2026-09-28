@@ -31,6 +31,7 @@ SELLABLE_VARIANT_FILTER = Q(variants__deleted_at__isnull=True, variants__is_acti
 def products_list(
     *,
     category=None,
+    category_type: str | None = None,
     search: str | None = None,
     is_active: bool | None = True,
     include_deleted: bool = False,
@@ -60,6 +61,8 @@ def products_list(
         queryset = queryset.filter(is_active=is_active)
     if category is not None:
         queryset = queryset.filter(category=category)
+    if category_type:
+        queryset = queryset.filter(category__category_type=category_type)
     if featured is not None:
         queryset = queryset.filter(featured=featured)
     if trending is not None:
@@ -159,6 +162,7 @@ def variants_list(
     *,
     product=None,
     category=None,
+    category_type: str | None = None,
     color: str = "",
     size: str = "",
     is_active: bool | None = None,
@@ -179,6 +183,8 @@ def variants_list(
         queryset = queryset.filter(product=product)
     if category is not None:
         queryset = queryset.filter(product__category=category)
+    if category_type:
+        queryset = queryset.filter(product__category__category_type=category_type)
     if color:
         queryset = queryset.filter(color=color)
     if size:

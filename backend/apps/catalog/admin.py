@@ -47,8 +47,8 @@ class ProductImageInline(admin.TabularInline):
 class CategoryAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     view_permission_code = StaffPermissionCode.CATALOG_MANAGE
     manage_permission_code = StaffPermissionCode.CATALOG_MANAGE
-    list_display = ("name", "parent", "is_active")
-    list_filter = ("is_active",)
+    list_display = ("name", "parent", "category_type", "is_active")
+    list_filter = ("category_type", "is_active")
     search_fields = ("name", "slug")
     prepopulated_fields: ClassVar[dict] = {"slug": ("name",)}
     autocomplete_fields = ("parent",)

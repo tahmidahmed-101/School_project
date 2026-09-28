@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import Category
 from apps.catalog.selectors.categories import all_categories, get_category_by_id
 from apps.catalog.services.categories import create_category, delete_category, update_category
 from apps.common.exceptions import DomainError
@@ -15,6 +16,7 @@ from apps.common.generics import (
     IncludeDeletedMixin,
     RestoreAPIView,
 )
+from apps.common.params import get_choice
 from apps.common.responses import error_from_exception, not_found
 
 from .permissions import (
@@ -37,7 +39,10 @@ class AdminCategoryListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, G
     include_deleted_permission = CatalogManagePermission
 
     def get_queryset(self):
-        return all_categories(include_deleted=self.include_deleted())
+        category_type = get_choice(
+            self.request.query_params, "category_type", Category.CategoryType.values
+        )
+        return all_categories(include_deleted=self.include_deleted(), category_type=category_type)
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -54,9 +59,15 @@ class AdminCategoryListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, G
                 return error_from_exception(
                     DomainError("Parent category not found.", code="parent_not_found")
                 )
-        category = create_category(
-            name=data["name"], parent=parent, description=data.get("description", "")
-        )
+        try:
+            category = create_category(
+                name=data["name"],
+                parent=parent,
+                description=data.get("description", ""),
+                category_type=data.get("category_type"),
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
         return Response(
             {
                 "data": CategorySerializer(category, context={"request": request}).data,
@@ -97,7 +108,10 @@ class AdminCategoryDetailView(CatalogPermissionMixin, APIView):
                     DomainError("Parent category not found.", code="parent_not_found")
                 )
             data["parent"] = parent
-        category = update_category(category=category, data=data)
+        try:
+            category = update_category(category=category, data=data)
+        except DomainError as exc:
+            return error_from_exception(exc)
         return Response(
             {
                 "data": CategorySerializer(category, context={"request": request}).data,

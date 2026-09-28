@@ -615,3 +615,189 @@ def test_admin_rejects_a_discount_that_is_not_below_the_price(api_client):
     )
 
     assert response.status_code == 400
+
+
+def test_admin_category_defaults_to_stock_type(api_client):
+    admin = create_user(email="catalog-category-type-default@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.post("/api/v1/admin/catalog/categories/", {"name": "Gadgets"})
+
+    assert response.status_code == 201
+    assert response.data["data"]["category_type"] == "stock"
+
+
+def test_admin_can_create_root_preorder_category(api_client):
+    admin = create_user(email="catalog-preorder-category-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.post(
+        "/api/v1/admin/catalog/categories/",
+        {"name": "Upcoming Releases", "category_type": "preorder"},
+    )
+
+    assert response.status_code == 201
+    assert response.data["data"]["category_type"] == "preorder"
+
+
+def test_subcategory_inherits_parent_category_type(api_client):
+    admin = create_user(email="catalog-subcat-inherit-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    parent = CategoryFactory(name="Pre-order Root", category_type="preorder")
+
+    response = api_client.post(
+        "/api/v1/admin/catalog/categories/",
+        {"name": "Pre-order Phones", "parent_id": str(parent.id)},
+    )
+
+    assert response.status_code == 201
+    assert response.data["data"]["category_type"] == "preorder"
+
+
+def test_subcategory_create_rejects_type_mismatch_with_parent(api_client):
+    admin = create_user(email="catalog-subcat-mismatch-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    parent = CategoryFactory(name="Stock Root", category_type="stock")
+
+    response = api_client.post(
+        "/api/v1/admin/catalog/categories/",
+        {
+            "name": "Mismatched Subcategory",
+            "parent_id": str(parent.id),
+            "category_type": "preorder",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "category_type_mismatch"
+
+
+def test_admin_cannot_change_subcategory_type_directly(api_client):
+    admin = create_user(email="catalog-subcat-locked-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    parent = CategoryFactory(name="Stock Parent", category_type="stock")
+    child = CategoryFactory(name="Stock Child", parent=parent, category_type="stock")
+
+    response = api_client.patch(
+        f"/api/v1/admin/catalog/categories/{child.id}/", {"category_type": "preorder"}
+    )
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "category_type_locked_to_parent"
+    child.refresh_from_db()
+    assert child.category_type == "stock"
+
+
+def test_root_category_type_change_cascades_to_descendants(api_client):
+    admin = create_user(email="catalog-cascade-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    root = CategoryFactory(name="Cascade Root", category_type="stock")
+    child = CategoryFactory(name="Cascade Child", parent=root, category_type="stock")
+    grandchild = CategoryFactory(name="Cascade Grandchild", parent=child, category_type="stock")
+
+    response = api_client.patch(
+        f"/api/v1/admin/catalog/categories/{root.id}/", {"category_type": "preorder"}
+    )
+
+    assert response.status_code == 200
+    child.refresh_from_db()
+    grandchild.refresh_from_db()
+    assert child.category_type == "preorder"
+    assert grandchild.category_type == "preorder"
+
+
+def test_reparenting_category_adopts_new_parent_type_and_cascades(api_client):
+    admin = create_user(email="catalog-reparent-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    stock_root = CategoryFactory(name="Stock Root Reparent", category_type="stock")
+    preorder_root = CategoryFactory(name="Preorder Root Reparent", category_type="preorder")
+    moved = CategoryFactory(name="Moved Category", parent=stock_root, category_type="stock")
+    moved_child = CategoryFactory(name="Moved Child", parent=moved, category_type="stock")
+
+    response = api_client.patch(
+        f"/api/v1/admin/catalog/categories/{moved.id}/", {"parent_id": str(preorder_root.id)}
+    )
+
+    assert response.status_code == 200
+    assert response.data["data"]["category_type"] == "preorder"
+    moved_child.refresh_from_db()
+    assert moved_child.category_type == "preorder"
+
+
+def test_admin_category_list_filters_by_category_type(api_client):
+    admin = create_user(email="catalog-type-filter-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    stock_category = CategoryFactory(name="Stock Filter Category", category_type="stock")
+    preorder_category = CategoryFactory(name="Preorder Filter Category", category_type="preorder")
+
+    response = api_client.get("/api/v1/admin/catalog/categories/?category_type=preorder")
+
+    assert response.status_code == 200
+    names = [item["name"] for item in response.data["data"]["results"]]
+    assert preorder_category.name in names
+    assert stock_category.name not in names
+
+
+def test_admin_product_list_filters_by_category_type(api_client):
+    admin = create_user(email="catalog-product-type-filter-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    stock_category = CategoryFactory(name="Stock Product Category", category_type="stock")
+    preorder_category = CategoryFactory(
+        name="Preorder Product Category", category_type="preorder"
+    )
+    stock_product = ProductFactory(name="Stock Category Product", category=stock_category)
+    preorder_product = ProductFactory(
+        name="Preorder Category Product", category=preorder_category
+    )
+
+    response = api_client.get("/api/v1/admin/catalog/products/?category_type=preorder")
+
+    assert response.status_code == 200
+    names = [item["name"] for item in response.data["data"]["results"]]
+    assert preorder_product.name in names
+    assert stock_product.name not in names
+
+
+def test_public_category_list_filters_by_category_type(api_client):
+    stock_category = CategoryFactory(name="Public Stock Category", category_type="stock")
+    preorder_category = CategoryFactory(
+        name="Public Preorder Category", category_type="preorder"
+    )
+
+    response = api_client.get("/api/v1/public/catalog/categories/?category_type=preorder")
+
+    assert response.status_code == 200
+    names = [item["name"] for item in response.data["data"]]
+    assert preorder_category.name in names
+    assert stock_category.name not in names
+
+
+def test_public_product_list_filters_by_category_type(api_client):
+    stock_category = CategoryFactory(name="Public Stock Product Category", category_type="stock")
+    preorder_category = CategoryFactory(
+        name="Public Preorder Product Category", category_type="preorder"
+    )
+    stock_product = ProductFactory(
+        name="Public Stock Category Product", category=stock_category, is_active=True
+    )
+    ProductVariantFactory(product=stock_product)
+    preorder_product = ProductFactory(
+        name="Public Preorder Category Product", category=preorder_category, is_active=True
+    )
+    ProductVariantFactory(product=preorder_product)
+
+    response = api_client.get("/api/v1/public/catalog/products/?category_type=preorder")
+
+    assert response.status_code == 200
+    names = [item["name"] for item in response.data["data"]["results"]]
+    assert preorder_product.name in names
+    assert stock_product.name not in names
+
+
+def test_invalid_category_type_filter_is_rejected(api_client):
+    admin = create_user(email="catalog-invalid-type-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.get("/api/v1/admin/catalog/categories/?category_type=bogus")
+
+    assert response.status_code == 400

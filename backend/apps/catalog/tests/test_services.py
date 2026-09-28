@@ -14,8 +14,8 @@ from apps.catalog.factories import (
     ProductFactory,
     ProductVariantFactory,
 )
-from apps.catalog.models import Product, ProductVariant
-from apps.catalog.services.categories import create_category, delete_category
+from apps.catalog.models import Category, Product, ProductVariant
+from apps.catalog.services.categories import create_category, delete_category, update_category
 from apps.catalog.services.products import (
     create_product,
     create_variant,
@@ -48,6 +48,70 @@ def test_delete_category_rejects_when_children_exist():
 
     with pytest.raises(BusinessRuleViolationError):
         delete_category(category=parent)
+
+
+def test_create_category_defaults_to_stock_type():
+    category = create_category(name="Shoes Root")
+
+    assert category.category_type == Category.CategoryType.STOCK
+
+
+def test_create_category_accepts_explicit_preorder_type():
+    category = create_category(name="Upcoming Drops", category_type=Category.CategoryType.PREORDER)
+
+    assert category.category_type == Category.CategoryType.PREORDER
+
+
+def test_create_subcategory_inherits_parent_type():
+    parent = CategoryFactory(category_type=Category.CategoryType.PREORDER)
+
+    child = create_category(name="Pre-order Sneakers", parent=parent)
+
+    assert child.category_type == Category.CategoryType.PREORDER
+
+
+def test_create_subcategory_rejects_mismatched_explicit_type():
+    parent = CategoryFactory(category_type=Category.CategoryType.STOCK)
+
+    with pytest.raises(BusinessRuleViolationError) as exc_info:
+        create_category(
+            name="Mismatched",
+            parent=parent,
+            category_type=Category.CategoryType.PREORDER,
+        )
+    assert exc_info.value.code == "category_type_mismatch"
+
+
+def test_update_category_rejects_direct_type_change_on_subcategory():
+    parent = CategoryFactory(category_type=Category.CategoryType.STOCK)
+    child = CategoryFactory(parent=parent, category_type=Category.CategoryType.STOCK)
+
+    with pytest.raises(BusinessRuleViolationError) as exc_info:
+        update_category(category=child, data={"category_type": Category.CategoryType.PREORDER})
+    assert exc_info.value.code == "category_type_locked_to_parent"
+
+
+def test_update_category_type_cascades_to_descendants():
+    root = CategoryFactory(category_type=Category.CategoryType.STOCK)
+    child = CategoryFactory(parent=root, category_type=Category.CategoryType.STOCK)
+    grandchild = CategoryFactory(parent=child, category_type=Category.CategoryType.STOCK)
+
+    update_category(category=root, data={"category_type": Category.CategoryType.PREORDER})
+
+    child.refresh_from_db()
+    grandchild.refresh_from_db()
+    assert child.category_type == Category.CategoryType.PREORDER
+    assert grandchild.category_type == Category.CategoryType.PREORDER
+
+
+def test_update_category_reparent_adopts_new_parent_type():
+    stock_root = CategoryFactory(category_type=Category.CategoryType.STOCK)
+    preorder_root = CategoryFactory(category_type=Category.CategoryType.PREORDER)
+    moved = CategoryFactory(parent=stock_root, category_type=Category.CategoryType.STOCK)
+
+    updated = update_category(category=moved, data={"parent": preorder_root})
+
+    assert updated.category_type == Category.CategoryType.PREORDER
 
 
 def test_create_product_and_variant_duplicate_sku_rejected():

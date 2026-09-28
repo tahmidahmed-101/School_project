@@ -42,6 +42,7 @@ class PublicCategorySerializer(serializers.Serializer):
     name = serializers.CharField()
     slug = serializers.CharField()
     parent_id = serializers.UUIDField(allow_null=True)
+    category_type = serializers.CharField(read_only=True)
 
 
 class PublicBundleComponentSerializer(serializers.Serializer):

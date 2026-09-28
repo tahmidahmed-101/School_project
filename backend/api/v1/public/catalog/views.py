@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import Category
 from apps.catalog.selectors.bundles import (
     get_public_bundle_variant_by_slug,
     public_bundle_variants_list,
@@ -19,7 +20,7 @@ from apps.catalog.selectors.categories import (
 from apps.catalog.selectors.products import get_product_by_slug, products_list
 from apps.catalog.selectors.reviews import product_review_summary, reviews_for_product
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_related
+from apps.common.params import get_bool, get_choice, get_related
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
 
@@ -40,7 +41,10 @@ class PublicCategoryListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
-        categories = active_categories()
+        category_type = get_choice(
+            request.query_params, "category_type", Category.CategoryType.values
+        )
+        categories = active_categories(category_type=category_type)
         return Response(
             {"data": PublicCategorySerializer(categories, many=True).data, "message": "Success"}
         )
@@ -73,6 +77,7 @@ class PublicProductListView(GenericListAPIView):
         category = get_related(
             params, "category_id", get_category_by_id, "Category not found."
         )
+        category_type = get_choice(params, "category_type", Category.CategoryType.values)
         preorder_only = bool(get_bool(params, "preorder_only", default=False))
         featured = get_bool(params, "featured", default=None)
         trending = get_bool(params, "trending", default=None)
@@ -80,6 +85,7 @@ class PublicProductListView(GenericListAPIView):
         badge = params.get("badge") or None
         return products_list(
             category=category,
+            category_type=category_type,
             is_active=True,
             sellable_only=True,
             preorder_only=preorder_only,

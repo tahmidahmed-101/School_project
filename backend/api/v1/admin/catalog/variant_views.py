@@ -11,6 +11,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import Category
 from apps.catalog.selectors.categories import get_category_by_id
 from apps.catalog.selectors.products import (
     get_product_by_id,
@@ -123,12 +124,14 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
         params = self.request.query_params
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
+        category_type = get_choice(params, "category_type", Category.CategoryType.values)
         is_active = get_bool(params, "is_active")
         preorder_only = bool(get_bool(params, "preorder_only", default=False))
         preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
         queryset = variants_list(
             product=product,
             category=category,
+            category_type=category_type,
             color=params.get("color", ""),
             size=params.get("size", ""),
             is_active=is_active,

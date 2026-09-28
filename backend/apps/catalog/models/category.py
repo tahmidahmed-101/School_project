@@ -13,6 +13,10 @@ def _category_image_path(instance: Category, filename: str) -> str:
 
 
 class Category(FullAuditModel):
+    class CategoryType(models.TextChoices):
+        STOCK = "stock", "Stock"
+        PREORDER = "preorder", "Pre-order"
+
     name: models.CharField = models.CharField(max_length=150)
     slug: models.SlugField = models.SlugField(max_length=170, unique=True)
     parent: models.ForeignKey = models.ForeignKey(
@@ -22,11 +26,20 @@ class Category(FullAuditModel):
     image: models.ImageField = models.ImageField(
         upload_to=_category_image_path, null=True, blank=True
     )
+    # A subcategory always shares its parent's type (enforced in
+    # apps.catalog.services.categories) — stored per row rather than derived by
+    # walking the parent chain, so filtering by type stays a single indexed query.
+    category_type: models.CharField = models.CharField(
+        max_length=20, choices=CategoryType.choices, default=CategoryType.STOCK
+    )
 
     class Meta:
         ordering: ClassVar[list] = ["name"]
         indexes: ClassVar[list] = [
             models.Index(fields=["deleted_at", "is_active"], name="cat_del_active_idx"),
+            models.Index(
+                fields=["category_type", "deleted_at", "is_active"], name="cat_type_del_active_idx"
+            ),
         ]
         verbose_name_plural = "categories"
 

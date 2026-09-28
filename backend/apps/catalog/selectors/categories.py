@@ -7,19 +7,27 @@ from django.db.models import QuerySet
 from apps.catalog.models import Category
 
 
-def all_categories(*, include_deleted: bool = False) -> QuerySet[Category]:
+def all_categories(
+    *, include_deleted: bool = False, category_type: str | None = None
+) -> QuerySet[Category]:
     queryset = Category.objects.all()
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
+    if category_type:
+        queryset = queryset.filter(category_type=category_type)
     return queryset
 
 
-def active_categories() -> QuerySet[Category]:
-    return all_categories().filter(is_active=True)
+def active_categories(*, category_type: str | None = None) -> QuerySet[Category]:
+    return all_categories(category_type=category_type).filter(is_active=True)
 
 
-def category_tree() -> QuerySet[Category]:
-    return active_categories().filter(parent__isnull=True).prefetch_related("children")
+def category_tree(*, category_type: str | None = None) -> QuerySet[Category]:
+    return (
+        active_categories(category_type=category_type)
+        .filter(parent__isnull=True)
+        .prefetch_related("children")
+    )
 
 
 def get_category_by_id(

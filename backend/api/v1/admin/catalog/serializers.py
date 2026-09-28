@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.catalog.models import Product
+from apps.catalog.models import Category, Product
 from apps.catalog.selectors.images import variant_image_url
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
@@ -266,6 +266,7 @@ class CategorySerializer(serializers.Serializer):
     slug = serializers.CharField(read_only=True)
     parent_id = serializers.UUIDField(allow_null=True, read_only=True)
     description = serializers.CharField(allow_blank=True)
+    category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, read_only=True)
     is_active = serializers.BooleanField()
     image = serializers.SerializerMethodField()
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
@@ -278,12 +279,18 @@ class CategoryCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     parent_id = serializers.UUIDField(required=False, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    # Omitted for a subcategory (inherits its parent's type); required in effect
+    # only for a root category, where it defaults to Stock if left out.
+    category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
 
 
 class CategoryUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     parent_id = serializers.UUIDField(required=False, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    # Only settable on a root category — a subcategory's type is locked to its
+    # parent's and is rejected by the service layer if sent directly.
+    category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
     is_active = serializers.BooleanField(required=False)
     image = serializers.ImageField(required=False)
 
