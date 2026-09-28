@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare
+
 from apps.orders.models import Shipment
 
 from .exceptions import CourierAuthError, CourierRateLimitedError, CourierRejectedError
-from .http import HttpCourierGateway
+from .http import HttpCourierGateway, parse_courier_datetime
 from .recipient import build_recipient, cod_amount, item_description, total_quantity
 
 # docs/couriers.md — Steadfast API Documentation V1. Closed vocabulary; anything
@@ -71,6 +74,38 @@ class SteadfastGateway(HttpCourierGateway):
             self._request("POST", "/create_return_request", {"consignment_id": consignment_id})
         )
         return True
+
+    def verify_webhook(self, headers: dict[str, str], query: dict[str, str], body: bytes) -> bool:
+        expected = self.carrier.webhook_secret
+        supplied = headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        return bool(expected) and constant_time_compare(expected, supplied)
+
+    def parse_webhook(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        notification = str(payload.get("notification_type", ""))
+        occurred = parse_courier_datetime(payload.get("updated_at")) or timezone.now()
+        consignment_id = str(payload.get("consignment_id", ""))
+
+        if notification == "tracking_update":
+            # Free-text progress note with no status of its own; recorded, but
+            # it must not move the shipment.
+            return [
+                {
+                    "consignment_id": consignment_id,
+                    "status": "",
+                    "provider_status": notification,
+                    "occurred_at": occurred,
+                }
+            ]
+
+        provider_status = str(payload.get("status", "")).lower()
+        return [
+            {
+                "consignment_id": consignment_id,
+                "status": STATUS_MAP.get(provider_status or notification, ""),
+                "provider_status": provider_status or notification,
+                "occurred_at": occurred,
+            }
+        ]
 
     def _payload(self, shipment) -> dict[str, Any]:
         recipient = build_recipient(shipment)

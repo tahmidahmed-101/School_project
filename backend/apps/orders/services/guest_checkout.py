@@ -137,6 +137,7 @@ def guest_checkout(
     carrier_id: str | None = None,
     coupon_code: str | None = None,
     notes: str = "",
+    ip_address: str = "",
 ) -> SalesOrder:
     user = _get_or_create_guest_user(
         email=email,
@@ -232,7 +233,9 @@ def guest_checkout(
             raise BusinessRuleViolationError("Carrier not found.", code="carrier_not_found")
 
     from apps.orders.services.checkout import checkout
-    order = checkout(order=order, shipping_address=address, carrier=carrier)
+    order = checkout(
+        order=order, shipping_address=address, carrier=carrier, ip_address=ip_address
+    )
 
     from apps.orders.services.payments import capture_payment
     capture_payment(order=order, amount=order.grand_total, method=payment_method)

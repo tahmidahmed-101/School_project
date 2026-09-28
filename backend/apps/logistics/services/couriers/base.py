@@ -31,3 +31,18 @@ class CourierGateway(ABC):
     @abstractmethod
     def cancel_consignment(self, consignment_id: str) -> bool:
         """Cancel a previously created consignment. Returns success."""
+
+    def verify_webhook(self, headers: dict[str, str], query: dict[str, str], body: bytes) -> bool:
+        """Reject a delivery that does not carry this carrier's secret.
+        Providers with no webhook feed leave this raising."""
+        raise NotImplementedError
+
+    def parse_webhook(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        """One dict per tracking event, each shaped like `get_tracking_status`'s
+        return plus `occurred_at` — `status`/`provider_status` (`status` empty
+        when unmapped) and `occurred_at` a timezone-aware datetime."""
+        raise NotImplementedError
+
+    def webhook_ack(self) -> tuple[int, dict[str, str], dict[str, Any]]:
+        """Status code, extra headers and body this courier requires in reply."""
+        return 200, {}, {"status": "success"}

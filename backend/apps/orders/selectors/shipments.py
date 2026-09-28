@@ -18,3 +18,11 @@ def shipments_list(*, order=None, status: str | None = None) -> QuerySet[Shipmen
 
 def get_shipment_by_id(shipment_id: str | UUID) -> Shipment | None:
     return Shipment.objects.filter(id=shipment_id, deleted_at__isnull=True).first()
+
+
+def get_shipment_by_carrier_and_tracking_number(carrier, tracking_number: str) -> Shipment | None:
+    if not tracking_number:
+        return None
+    return Shipment.objects.select_related("order").filter(
+        carrier=carrier, tracking_number=tracking_number, deleted_at__isnull=True
+    ).first()

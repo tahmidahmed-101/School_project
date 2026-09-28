@@ -41,3 +41,6 @@ class StaffPermissionCode(models.TextChoices):
 
     MARKETING_VIEW = "marketing.view", "View newsletter subscribers"
     MARKETING_MANAGE = "marketing.manage", "Manage newsletter subscribers"
+
+    RISK_VIEW = "risk.view", "View fraud & risk"
+    RISK_MANAGE = "risk.manage", "Manage fraud & risk (blocklists, cases)"

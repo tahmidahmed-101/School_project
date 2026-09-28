@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounting.services.postings import post_sales_shipment
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.utils.phone import local_bd_mobile
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement, release_reservation
 from apps.logistics.services.couriers.registry import get_gateway_for_carrier
 from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, ShipmentLine
 from apps.orders.services.orders import lock_order
 from apps.orders.services.reservations import release_line_reservations
+
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -68,6 +73,12 @@ def create_shipment(
                 code="over_shipment",
             )
 
+    recipient_phone = ""
+    if order.contact_phone:
+        recipient_phone = local_bd_mobile(order.contact_phone)
+    elif order.shipping_address_id:
+        recipient_phone = local_bd_mobile(order.shipping_address.phone)
+
     shipment = Shipment.objects.create(
         order=order,
         carrier=carrier,
@@ -76,6 +87,7 @@ def create_shipment(
         cod_amount=cod_amount,
         status=Shipment.Status.SHIPPED,
         shipped_at=timezone.now(),
+        recipient_phone=recipient_phone,
     )
     for line_id, quantity in requested.items():
         order_line = locked_lines[line_id]
@@ -119,8 +131,32 @@ def _mark_order_delivered_if_complete(order: SalesOrder) -> None:
     order.save(update_fields=["status", "updated_at"])
 
 
+# Forward-only progression for the states a parcel passes through en route.
+# DELIVERED/RETURNED/CANCELLED are handled by the terminal-status guard above;
+# FAILED is intentionally excluded, since a failed attempt can be retried and
+# move back into IN_TRANSIT.
+_PROGRESSION_RANK = {
+    Shipment.Status.PENDING: 0,
+    Shipment.Status.SHIPPED: 1,
+    Shipment.Status.IN_TRANSIT: 2,
+    Shipment.Status.OUT_FOR_DELIVERY: 3,
+}
+
+
+def can_advance_shipment_status(current: str, new: str) -> bool:
+    """Whether a webhook-reported status is safe to apply given redelivery and
+    out-of-order arrival are both normal."""
+    current_rank = _PROGRESSION_RANK.get(current)
+    new_rank = _PROGRESSION_RANK.get(new)
+    if current_rank is None or new_rank is None:
+        return True
+    return new_rank >= current_rank
+
+
 @transaction.atomic
-def update_shipment_status(*, shipment: Shipment, status: str, actor=None) -> Shipment:
+def update_shipment_status(
+    *, shipment: Shipment, status: str, actor=None, courier_status: str | None = None
+) -> Shipment:
     if shipment.status in Shipment.TERMINAL_STATUSES:
         raise BusinessRuleViolationError(
             f"Shipment is already {shipment.get_status_display()} and cannot change status.",
@@ -134,24 +170,65 @@ def update_shipment_status(*, shipment: Shipment, status: str, actor=None) -> Sh
     if actor is not None:
         shipment.updated_by = actor
         update_fields.append("updated_by")
+    if courier_status is not None:
+        shipment.courier_status = courier_status
+        update_fields.append("courier_status")
     if status == Shipment.Status.DELIVERED:
         shipment.delivered_at = timezone.now()
         update_fields.append("delivered_at")
     shipment.save(update_fields=update_fields)
     if status == Shipment.Status.DELIVERED:
         _mark_order_delivered_if_complete(shipment.order)
+    if status in Shipment.TERMINAL_STATUSES:
+        _refresh_phone_risk_profile(shipment)
     return shipment
+
+
+def _refresh_phone_risk_profile(shipment: Shipment) -> None:
+    """Keep the per-phone delivery history current as outcomes settle. Never
+    let a profile rebuild fail the status update that produced it."""
+    if not shipment.recipient_phone:
+        return
+    try:
+        from apps.risk.services.phone_profile import rebuild_phone_profile
+
+        rebuild_phone_profile(shipment.recipient_phone)
+    except Exception:
+        logger.exception(
+            "Phone risk profile rebuild failed for shipment %s", shipment.id
+        )
 
 
 @transaction.atomic
 def dispatch_to_courier(*, shipment: Shipment) -> Shipment:
-    if shipment.carrier is None:
-        raise BusinessRuleViolationError("Shipment has no carrier assigned.", code="no_carrier")
+    carrier = shipment.carrier
+    if carrier is None:
+        carrier = _auto_select_carrier(shipment)
+        shipment.carrier = carrier
+        shipment.save(update_fields=["carrier", "updated_at"])
 
-    gateway = get_gateway_for_carrier(shipment.carrier)
+    gateway = get_gateway_for_carrier(carrier)
     result = gateway.create_consignment(shipment)
 
     shipment.tracking_number = result.get("consignment_id") or shipment.tracking_number
     shipment.courier_status = result.get("status", "")
     shipment.save(update_fields=["tracking_number", "courier_status", "updated_at"])
     return shipment
+
+
+def _auto_select_carrier(shipment: Shipment):
+    """No carrier was picked by hand at checkout — route to the cheapest one
+    still quoting a live rate for this destination and weight."""
+    from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
+    from apps.logistics.services.courier_selection import select_courier
+    from apps.logistics.services.couriers.recipient import total_weight
+
+    address = shipment.order.shipping_address
+    zone = find_zone_by_address_text(address_zone_text(address)) if address else None
+    if zone is None:
+        raise BusinessRuleViolationError(
+            "Cannot auto-select a carrier: no shipping zone for this order's address.",
+            code="no_shipping_zone",
+        )
+    selection = select_courier(zone=zone, weight=total_weight(shipment))
+    return selection.carrier

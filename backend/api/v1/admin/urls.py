@@ -19,4 +19,5 @@ urlpatterns = [
     path("accounting/", include("api.v1.admin.accounting.urls")),
     path("reporting/", include("api.v1.admin.reporting.urls")),
     path("settings/", include("api.v1.admin.business.urls")),
+    path("risk/", include("api.v1.admin.risk.urls")),
 ]

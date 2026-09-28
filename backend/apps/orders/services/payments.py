@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 
 from django.db import transaction
@@ -12,6 +13,8 @@ from apps.orders.constants import PAYMENT_METHODS_BY_KEY, PaymentMethodKey
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
 from apps.orders.services.orders import lock_order
+
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -52,7 +55,19 @@ def capture_payment(
     post_customer_payment(payment)
     order.status = SalesOrder.Status.CONFIRMED
     order.save(update_fields=["status"])
+    _assess_order_risk(order)
     return payment
+
+
+def _assess_order_risk(order: SalesOrder) -> None:
+    """Score the now-confirmed order for fraud risk. Never let a scoring bug
+    undo a payment that already succeeded."""
+    try:
+        from apps.risk.services.scoring import assess_order_risk
+
+        assess_order_risk(order=order)
+    except Exception:
+        logger.exception("Risk assessment failed for order %s", order.id)
 
 
 @transaction.atomic

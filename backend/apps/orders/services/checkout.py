@@ -14,6 +14,7 @@ from apps.orders.services.address_snapshot import build_address_snapshot
 from apps.orders.services.carts import _check_preorder_stock_limit
 from apps.orders.services.coupons import revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
+from apps.risk.services import blocklist, ip_blocklist
 
 
 def order_weight(order: SalesOrder) -> Decimal:
@@ -33,7 +34,9 @@ def _is_preorder_line(line) -> bool:
 
 
 @transaction.atomic
-def checkout(*, order: SalesOrder, shipping_address=None, carrier=None) -> SalesOrder:
+def checkout(
+    *, order: SalesOrder, shipping_address=None, carrier=None, ip_address: str = ""
+) -> SalesOrder:
     """Reserve stock for every line (Available -> Reserved, no ledger entry
     yet, per blueprint §5). Bundles reserve their components' stock. The
     order moves to "awaiting_payment", which freezes its lines and makes
@@ -47,7 +50,21 @@ def checkout(*, order: SalesOrder, shipping_address=None, carrier=None) -> Sales
 
     Pre-order lines skip real inventory stock reservation since the product
     may not be in stock yet.
+
+    Refuses a checkout out from a blocked IP, or to a phone number staff have
+    fully refused — both are standing merchant decisions, checked before any
+    stock is touched. Advance-only phone blocks are a payment-method decision,
+    not a checkout refusal, and are left to the payment step.
     """
+    if ip_address and ip_blocklist.is_blocked(ip_address):
+        raise BusinessRuleViolationError(
+            "This checkout could not be completed.", code="ip_blocked"
+        )
+    if shipping_address is not None and blocklist.is_blocked(shipping_address.phone):
+        raise BusinessRuleViolationError(
+            "This checkout could not be completed.", code="phone_blocked"
+        )
+
     lock_order(order)
     if order.status != SalesOrder.Status.PENDING:
         raise BusinessRuleViolationError(

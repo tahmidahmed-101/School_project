@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from django.core.cache import cache
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 
 from apps.orders.models import Shipment
 
 from .exceptions import CourierAuthError, CourierNotConfiguredError, CourierRejectedError
-from .http import HttpCourierGateway
+from .http import HttpCourierGateway, parse_courier_datetime
 from .recipient import (
     build_recipient,
     cod_amount,
@@ -179,6 +181,35 @@ class PathaoGateway(HttpCourierGateway):
             "API — cancel it from the Pathao merchant panel.",
             code="cancel_not_supported",
         )
+
+    def verify_webhook(self, headers: dict[str, str], query: dict[str, str], body: bytes) -> bool:
+        expected = self.carrier.webhook_secret
+        supplied = headers.get("X-PATHAO-Signature", "")
+        return bool(expected) and constant_time_compare(expected, supplied)
+
+    def webhook_ack(self) -> tuple[int, dict[str, str], dict[str, Any]]:
+        # Pathao's webhook setup handshake expects its own registered
+        # integration secret echoed back in this header — assigned per
+        # merchant in the Pathao portal, not something we choose.
+        integration_secret = self.config("webhook_integration_secret")
+        if integration_secret:
+            return 202, {"X-Pathao-Merchant-Webhook-Integration-Secret": integration_secret}, {}
+        return 202, {}, {}
+
+    def parse_webhook(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        event = str(payload.get("event", ""))
+        return [
+            {
+                "consignment_id": str(payload.get("consignment_id", "")),
+                "status": STATUS_MAP.get(normalise_status(event), ""),
+                "provider_status": event,
+                "occurred_at": (
+                    parse_courier_datetime(payload.get("timestamp"))
+                    or parse_courier_datetime(payload.get("updated_at"))
+                    or timezone.now()
+                ),
+            }
+        ]
 
     def list_stores(self) -> list[dict[str, Any]]:
         self._require_configured()

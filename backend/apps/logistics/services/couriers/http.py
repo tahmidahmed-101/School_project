@@ -5,7 +5,10 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
+
+from django.utils import timezone
 
 from .base import CourierGateway
 from .exceptions import (
@@ -22,6 +25,20 @@ if TYPE_CHECKING:
 DEFAULT_TIMEOUT = 15
 
 ALLOWED_SCHEMES = {"https"}
+
+
+def parse_courier_datetime(value: Any) -> datetime | None:
+    """Best-effort ISO-ish datetime parse for webhook timestamps. None rather
+    than raising: a courier sending a format we don't recognise must not stop
+    the event from being recorded, only leave `occurred_at` to fall back to
+    "now"."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).strip().replace(" ", "T"))
+    except ValueError:
+        return None
+    return timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
 
 
 def _assert_safe_base_url(url: str, *, carrier_name: str) -> None:

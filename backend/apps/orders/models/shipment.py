@@ -45,6 +45,10 @@ class Shipment(FullAuditModel):
     courier_status: models.CharField = models.CharField(max_length=100, blank=True)
     shipped_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
     delivered_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    # Denormalised (not read from order.shipping_address) so risk/fraud
+    # signals can query delivery history per phone in one indexed lookup
+    # instead of joining through the order and address on every shipment.
+    recipient_phone: models.CharField = models.CharField(max_length=20, blank=True, db_index=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

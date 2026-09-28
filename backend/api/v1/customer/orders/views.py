@@ -37,6 +37,7 @@ from apps.orders.services.coupons import apply_coupon, remove_coupon
 from apps.orders.services.orders import cancel_order
 from apps.orders.services.payments import capture_payment
 from apps.orders.services.returns import create_rma
+from apps.risk.request_ip import client_ip
 
 from .serializers import (
     AddLineSerializer,
@@ -184,7 +185,12 @@ class CheckoutView(APIView):
                 )
 
         try:
-            order = checkout(order=cart, shipping_address=shipping_address, carrier=carrier)
+            order = checkout(
+                order=cart,
+                shipping_address=shipping_address,
+                carrier=carrier,
+                ip_address=client_ip(request),
+            )
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})

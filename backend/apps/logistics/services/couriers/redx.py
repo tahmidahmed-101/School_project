@@ -3,10 +3,13 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare
+
 from apps.orders.models import Shipment
 
 from .exceptions import CourierNotConfiguredError, CourierRejectedError
-from .http import HttpCourierGateway
+from .http import HttpCourierGateway, parse_courier_datetime
 from .recipient import (
     build_recipient,
     cod_amount,
@@ -104,6 +107,24 @@ class RedXGateway(HttpCourierGateway):
             },
         )
         return True
+
+    def verify_webhook(self, headers: dict[str, str], query: dict[str, str], body: bytes) -> bool:
+        # RedX has no signature header: the shared secret rides in the
+        # callback URL's query string, which is why that URL must never be
+        # logged.
+        expected = self.carrier.webhook_secret
+        return bool(expected) and constant_time_compare(expected, query.get("token", ""))
+
+    def parse_webhook(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        provider_status = str(payload.get("status", ""))
+        return [
+            {
+                "consignment_id": str(payload.get("tracking_number", "")),
+                "status": STATUS_MAP.get(provider_status, ""),
+                "provider_status": provider_status,
+                "occurred_at": parse_courier_datetime(payload.get("timestamp")) or timezone.now(),
+            }
+        ]
 
     def list_areas(self, **filters) -> list[dict[str, Any]]:
         self._require_configured()

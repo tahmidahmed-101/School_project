@@ -24,6 +24,7 @@ from apps.logistics.selectors.rates import (
 from apps.logistics.services.rates import shipping_options, try_quote_shipping
 from apps.orders.services.coupons import preview_coupon
 from apps.orders.services.guest_checkout import guest_checkout, subtotal_for_items, weight_for_items
+from apps.risk.request_ip import client_ip
 
 from .serializers import (
     GuestCheckoutSerializer,
@@ -46,7 +47,7 @@ class GuestCheckoutView(APIView):
         data = dict(serializer.validated_data)
 
         try:
-            order = guest_checkout(**data)
+            order = guest_checkout(**data, ip_address=client_ip(request))
         except DomainError as exc:
             return error_from_exception(exc)
 
