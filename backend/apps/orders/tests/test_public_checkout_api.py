@@ -247,7 +247,9 @@ def test_public_shipping_options_never_leaks_carrier_secrets(api_client):
     variant = _stocked_variant(weight=Decimal("1.000"))
     zone = ShippingZoneFactory(country_codes=["dhaka"])
     carrier = CarrierFactory(api_key="secret-key", api_secret="secret-value")
-    ShippingRateFactory(zone=zone, carrier=carrier, base_weight=Decimal("50"), base_charge=Decimal("15.00"))
+    ShippingRateFactory(
+        zone=zone, carrier=carrier, base_weight=Decimal("50"), base_charge=Decimal("15.00")
+    )
 
     response = api_client.post(
         SHIPPING_OPTIONS_URL,

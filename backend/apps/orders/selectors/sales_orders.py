@@ -53,7 +53,9 @@ def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[Sale
 
 
 def _orders_with_related() -> QuerySet[SalesOrder]:
-    return SalesOrder.objects.select_related("customer", "shipping_address", "coupon").prefetch_related(
+    return SalesOrder.objects.select_related(
+        "customer", "shipping_address", "coupon"
+    ).prefetch_related(
         "lines__variant__product",
         "lines__variant__images",
         "lines__variant__product__images",

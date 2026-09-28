@@ -44,7 +44,11 @@ def get_stock_item(*, variant, warehouse=None) -> StockItem | None:
 
 
 def get_stock_item_by_id(stock_item_id: str | UUID) -> StockItem | None:
-    return StockItem.objects.select_related("variant__product", "warehouse").filter(id=stock_item_id).first()
+    return (
+        StockItem.objects.select_related("variant__product", "warehouse")
+        .filter(id=stock_item_id)
+        .first()
+    )
 
 
 def available_quantity_for_variant(variant, warehouse=None) -> int:
@@ -85,9 +89,9 @@ def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> 
 def ledger_entries_list(
     *, variant=None, warehouse=None, movement_type: str | None = None
 ) -> QuerySet[StockLedgerEntry]:
-    queryset = StockLedgerEntry.objects.select_related("variant__product", "warehouse").prefetch_related(
-        "variant__images", "variant__product__images"
-    )
+    queryset = StockLedgerEntry.objects.select_related(
+        "variant__product", "warehouse"
+    ).prefetch_related("variant__images", "variant__product__images")
     if variant is not None:
         queryset = queryset.filter(variant=variant)
     if warehouse is not None:

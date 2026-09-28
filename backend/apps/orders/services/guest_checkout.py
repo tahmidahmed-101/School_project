@@ -75,7 +75,9 @@ def _get_or_create_guest_user(
         return user
 
     if not email:
-        raise BusinessRuleViolationError("Email is required for guest checkout.", code="email_required")
+        raise BusinessRuleViolationError(
+            "Email is required for guest checkout.", code="email_required"
+        )
 
     from django.utils.crypto import get_random_string
     temp_password = get_random_string(32)
@@ -187,7 +189,8 @@ def guest_checkout(
         if variant.is_preorder_enabled and not variant.is_preorder_active:
             order.delete()
             raise BusinessRuleViolationError(
-                "This product is not available for pre-order at this time.", code="preorder_not_active"
+                "This product is not available for pre-order at this time.",
+                code="preorder_not_active",
             )
         if variant.is_preorder_active and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, quantity)

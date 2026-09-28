@@ -245,7 +245,8 @@ def create_variant(
         # Fallback for any other validation errors
         raise BusinessRuleViolationError(str(e), code="validation_error") from None
     variant.save()
-    if product.product_type == Product.ProductType.SIMPLE and product.variants.filter(deleted_at__isnull=True).count() > 1:
+    live_variant_count = product.variants.filter(deleted_at__isnull=True).count()
+    if product.product_type == Product.ProductType.SIMPLE and live_variant_count > 1:
         product.product_type = Product.ProductType.VARIANT
         product.save(update_fields=["product_type", "updated_at"])
     log_action(

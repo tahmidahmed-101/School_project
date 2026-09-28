@@ -12,7 +12,8 @@ from .base import *  # noqa: F403
 
 DEBUG = True
 
-# Allow all origins in local development so Vite dev server (port 5410) and direct browser requests work seamlessly
+# Allow all origins in local development so Vite dev server (port 5410) and
+# direct browser requests work seamlessly
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [

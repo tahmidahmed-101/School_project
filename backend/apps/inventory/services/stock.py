@@ -52,7 +52,9 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
         variants = variants.filter(pk=variant.pk)
 
     # Get variants that don't have a stock item for this warehouse
-    existing_variant_ids = StockItem.objects.filter(warehouse=warehouse).values_list("variant_id", flat=True)
+    existing_variant_ids = StockItem.objects.filter(warehouse=warehouse).values_list(
+        "variant_id", flat=True
+    )
     variants = variants.exclude(id__in=existing_variant_ids)
 
     rows = [StockItem(variant=v, warehouse=warehouse) for v in variants]
@@ -303,6 +305,9 @@ def delete_stock_item(*, stock_item: StockItem, actor=None) -> None:
         action="stock_item.deleted",
         target_type="StockItem",
         target_id=stock_item.id,
-        metadata={"variant_id": str(stock_item.variant_id), "warehouse_id": str(stock_item.warehouse_id)},
+        metadata={
+            "variant_id": str(stock_item.variant_id),
+            "warehouse_id": str(stock_item.warehouse_id),
+        },
     )
     stock_item.delete()

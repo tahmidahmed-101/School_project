@@ -51,7 +51,10 @@ def _ensure_draft(purchase_order: PurchaseOrder) -> None:
 def update_purchase_order(*, purchase_order: PurchaseOrder, data: dict) -> PurchaseOrder:
     target_status = data.get("status")
     if target_status and target_status != purchase_order.status:
-        if target_status == PurchaseOrder.Status.SUBMITTED and purchase_order.status == PurchaseOrder.Status.DRAFT:
+        if (
+            target_status == PurchaseOrder.Status.SUBMITTED
+            and purchase_order.status == PurchaseOrder.Status.DRAFT
+        ):
             purchase_order = submit_purchase_order(purchase_order=purchase_order)
         elif target_status == PurchaseOrder.Status.CANCELLED:
             purchase_order = cancel_purchase_order(purchase_order=purchase_order)

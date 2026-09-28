@@ -128,7 +128,9 @@ class PublicTrackOrderSerializer(serializers.Serializer):
                 timeline.append({
                     "status": "Shipped",
                     "timestamp": shipment.shipped_at or shipment.created_at,
-                    "description": f"Shipped via {shipment.carrier.name if shipment.carrier else 'carrier'}",
+                    "description": (
+                        f"Shipped via {shipment.carrier.name if shipment.carrier else 'carrier'}"
+                    ),
                     "tracking_number": shipment.tracking_number,
                 })
             elif shipment.status == Shipment.Status.IN_TRANSIT:
