@@ -28,27 +28,23 @@ def _active_variants_prefetch() -> Prefetch:
 SELLABLE_VARIANT_FILTER = Q(variants__deleted_at__isnull=True, variants__is_active=True)
 
 
-def products_list(
+def _filter_basic_product_fields(
+    queryset: QuerySet[Product],
     *,
-    category=None,
-    category_type: str | None = None,
-    search: str | None = None,
-    is_active: bool | None = True,
-    include_deleted: bool = False,
-    sellable_only: bool = False,
-    include_bundles: bool = True,
-    product_type: str | None = None,
-    preorder_only: bool = False,
-    preorder_active_only: bool = True,
-    preorder_status: str | None = None,
-    featured: bool | None = None,
-    trending: bool | None = None,
-    new_arrival: bool | None = None,
-    badge: str | None = None,
+    category,
+    category_type: str | None,
+    is_active: bool | None,
+    include_deleted: bool,
+    product_type: str | None,
+    include_bundles: bool,
+    featured: bool | None,
+    trending: bool | None,
+    new_arrival: bool | None,
+    badge: str | None,
 ) -> QuerySet[Product]:
-    queryset = Product.objects.select_related("category").prefetch_related(
-        _active_variants_prefetch(), "images"
-    )
+    """The plain equality/exclude filters on `products_list`, split out so the
+    surrounding function's own branching (preorder window, search,
+    sellable-only) stays under the project's McCabe complexity limit."""
     if product_type == Product.ProductType.BUNDLE:
         include_bundles = True
     if not include_bundles:
@@ -71,6 +67,43 @@ def products_list(
         queryset = queryset.filter(new_arrival=new_arrival)
     if badge:
         queryset = queryset.filter(badge=badge)
+    return queryset
+
+
+def products_list(
+    *,
+    category=None,
+    category_type: str | None = None,
+    search: str | None = None,
+    is_active: bool | None = True,
+    include_deleted: bool = False,
+    sellable_only: bool = False,
+    include_bundles: bool = True,
+    product_type: str | None = None,
+    preorder_only: bool = False,
+    preorder_active_only: bool = True,
+    preorder_status: str | None = None,
+    featured: bool | None = None,
+    trending: bool | None = None,
+    new_arrival: bool | None = None,
+    badge: str | None = None,
+) -> QuerySet[Product]:
+    queryset = Product.objects.select_related("category").prefetch_related(
+        _active_variants_prefetch(), "images"
+    )
+    queryset = _filter_basic_product_fields(
+        queryset,
+        category=category,
+        category_type=category_type,
+        is_active=is_active,
+        include_deleted=include_deleted,
+        product_type=product_type,
+        include_bundles=include_bundles,
+        featured=featured,
+        trending=trending,
+        new_arrival=new_arrival,
+        badge=badge,
+    )
     if sellable_only:
         # A product with no live variant has no price and no stock; showing it
         # in a storefront is a dead end, not a listing.
