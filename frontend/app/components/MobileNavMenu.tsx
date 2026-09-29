@@ -20,7 +20,9 @@ interface MobileNavMenuProps {
 export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
   const pathname = usePathname();
   const { lang, setLang, t, ui } = useLang();
-  const { categories } = useCatalog();
+  const { categories: allCategories } = useCatalog();
+  // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
+  const categories = allCategories.filter((category) => category.type === "stock");
 
   useOverlay(open, onClose);
 

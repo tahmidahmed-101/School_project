@@ -30,10 +30,15 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
     });
   }
   if (category) {
+    // A pre-order category only has products under `?type=preorder`; the plain URL shows none.
+    const path =
+      category.type === "preorder"
+        ? `/shop?category=${category.slug}&type=preorder`
+        : `/shop?category=${category.slug}`;
     return pageMetadata({
       title: `Shop ${category.name.en}`,
       description: `${category.description.en ? `${category.description.en}. ` : `${category.name.en} — `}Shop online at Kull Mart with delivery all across Bangladesh.`,
-      path: `/shop?category=${category.slug}`,
+      path,
       image: { url: photo(category.image), alt: category.name.en },
     });
   }
@@ -50,7 +55,17 @@ export default async function KullMartShopPage({ searchParams }: { searchParams:
   const trail = [
     { name: "Home", path: "/" },
     { name: "Shop", path: "/shop" },
-    ...(category ? [{ name: category.name.en, path: `/shop?category=${category.slug}` }] : []),
+    ...(category
+      ? [
+          {
+            name: category.name.en,
+            path:
+              category.type === "preorder"
+                ? `/shop?category=${category.slug}&type=preorder`
+                : `/shop?category=${category.slug}`,
+          },
+        ]
+      : []),
   ];
 
   return (

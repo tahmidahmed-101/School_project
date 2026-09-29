@@ -149,6 +149,7 @@ export function toCategoryInfo(
     image: withImage?.image ?? PLACEHOLDER_IMAGE,
     itemCount: inCategory.length,
     accent: ACCENTS[index % ACCENTS.length]!,
+    type: category.category_type,
   };
 }
 

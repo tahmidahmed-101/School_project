@@ -30,6 +30,8 @@ export interface ApiCategory {
   name: string;
   slug: string;
   parent_id: string | null;
+  /** A subcategory always shares its root ancestor's type. */
+  category_type: "stock" | "preorder";
 }
 
 interface ApiProductImage {

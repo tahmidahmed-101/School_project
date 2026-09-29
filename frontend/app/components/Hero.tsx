@@ -49,7 +49,7 @@ export function Hero({
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
           {/* Left: shop-by-category rail (desktop only; mobile shows just the banner) */}
           <ScrollReveal y={24} duration={0.85} className="hidden lg:order-1 lg:col-span-2 lg:block">
-            <HeroCategoryRail />
+            <HeroCategoryRail preorder={preorder} />
           </ScrollReveal>
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}

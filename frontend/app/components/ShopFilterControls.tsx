@@ -34,6 +34,11 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   const { categories, products } = useCatalog();
   const { min: minPrice, max: maxPrice } = priceBounds(products);
 
+  // The category list scopes to whichever stock/pre-order tree is selected; a category from the other
+  // tree can't match any product for that stockType anyway (see matchesFilters in lib/shop-filters).
+  const visibleCategories = categories.filter(
+    (c) => c.type === (filters.stockType === "preorder" ? "preorder" : "stock"),
+  );
   const selectedCategory = categories.find((c) => c.id === filters.category);
   const selectedCollection = COLLECTIONS.find((c) => c.id === filters.collection) ?? COLLECTIONS[0]!;
 
@@ -52,7 +57,15 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
               type="button"
               role="radio"
               aria-checked={checked}
-              onClick={() => onFilterChange("stockType", opt.id)}
+              onClick={() => {
+                onFilterChange("stockType", opt.id);
+                // Drop a category selection that doesn't exist in the tree we're switching to.
+                const nextType = opt.id === "preorder" ? "preorder" : "stock";
+                const stillValid =
+                  filters.category === "all" ||
+                  categories.some((c) => c.id === filters.category && c.type === nextType);
+                if (!stillValid) onFilterChange("category", "all");
+              }}
               className="flex w-full cursor-pointer select-none items-center gap-2.5 text-left"
             >
               <span
@@ -92,7 +105,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
           triggerLabel={t(selectedCategory?.name ?? ALL_ITEMS)}
           options={[
             { id: "all", label: ui("filterAllCollections") },
-            ...categories.map((cat) => ({ id: cat.id, label: t(cat.name) })),
+            ...visibleCategories.map((cat) => ({ id: cat.id, label: t(cat.name) })),
           ]}
           value={filters.category}
           onChange={(id) => onFilterChange("category", id)}

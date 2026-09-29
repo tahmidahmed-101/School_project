@@ -11,7 +11,9 @@ import { photo } from "../lib/photo";
 export function Footer() {
   const { t, ui, lang } = useLang();
   const BRAND_INFO = useBrand();
-  const { categories } = useCatalog();
+  const { categories: allCategories } = useCatalog();
+  // Pre-order has its own nav link and category rail; the footer covers the regular stock catalogue.
+  const categories = allCategories.filter((category) => category.type === "stock");
 
   return (
     <footer className="border-t border-brand-950 bg-brand-900 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] text-xs text-white/75 lg:pb-0">

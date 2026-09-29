@@ -16,6 +16,13 @@ paths:
       tags:
         - Public Catalog
       security: []
+      parameters:
+        - in: query
+          name: category_type
+          schema:
+            type: string
+            enum: [stock, preorder]
+          description: Filter by category type.
       responses:
         '200':
           description: OK
@@ -84,6 +91,12 @@ paths:
             type: string
             format: uuid
           description: Filter by category ID.
+        - in: query
+          name: category_type
+          schema:
+            type: string
+            enum: [stock, preorder]
+          description: Filter by category type.
         - in: query
           name: preorder_only
           schema:
@@ -509,6 +522,7 @@ components:
         - name
         - slug
         - parent_id
+        - category_type
       properties:
         id:
           type: string
@@ -522,6 +536,11 @@ components:
           type: string
           format: uuid
           nullable: true
+        category_type:
+          type: string
+          enum: [stock, preorder]
+          readOnly: true
+          description: A subcategory always shares its root ancestor's type.
 
     PublicProductImage:
       type: object

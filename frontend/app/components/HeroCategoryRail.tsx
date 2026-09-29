@@ -8,9 +8,11 @@ import { useLang } from "../lib/i18n";
 import { photo } from "../lib/photo";
 
 /** Vertical "Shop by Category" list shown on the left of the hero on desktop. */
-export function HeroCategoryRail() {
+export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
   const { t, ui } = useLang();
   const { categories } = useCatalog();
+  const type = preorder ? "preorder" : "stock";
+  const visibleCategories = categories.filter((category) => category.type === type);
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-ink-100 bg-white p-2.5 shadow-sm sm:rounded-[24px] sm:p-3">
@@ -18,10 +20,10 @@ export function HeroCategoryRail() {
         {ui("heroCategoriesTitle")}
       </h2>
       <nav className="flex flex-1 flex-col justify-between gap-0.5">
-        {categories.map((category) => (
+        {visibleCategories.map((category) => (
           <Link
             key={category.id}
-            href={`/shop?category=${category.slug}`}
+            href={preorder ? `/shop?category=${category.slug}&type=preorder` : `/shop?category=${category.slug}`}
             className="group flex flex-1 items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-gold-50/70"
           >
             <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-ink-100 sm:h-9 sm:w-9">

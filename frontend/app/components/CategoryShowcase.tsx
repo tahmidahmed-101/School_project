@@ -64,7 +64,9 @@ function CategoryTrack({
     setIsDragging(false);
   };
 
-  const { categories } = useCatalog();
+  const { categories: allCategories } = useCatalog();
+  // Pre-order has its own nav link and category rail; this showcase covers the regular stock catalogue.
+  const categories = allCategories.filter((category) => category.type === "stock");
   const categoriesWithCounts = categories.map((category) => ({
     ...category,
     imageFit: "cover" as const,

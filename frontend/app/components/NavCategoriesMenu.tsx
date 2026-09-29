@@ -11,7 +11,9 @@ import { WithActiveCategory } from "./WithActiveCategory";
 /** "Shop by Categories" pill in the desktop nav bar with its animated menu. */
 export function NavCategoriesMenu() {
   const { lang, t, ui, n } = useLang();
-  const { categories } = useCatalog();
+  const { categories: allCategories } = useCatalog();
+  // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
+  const categories = allCategories.filter((category) => category.type === "stock");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

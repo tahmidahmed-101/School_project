@@ -1,5 +1,6 @@
 "use client";
 
+import { Banknote, CreditCard, HandCoins, Landmark, Receipt, Smartphone, type LucideIcon } from "lucide-react";
 import { useLang } from "../lib/i18n";
 import { BD_DISTRICTS } from "../lib/districts";
 import type { FormErrors } from "../lib/checkout";
@@ -7,6 +8,18 @@ import type { OrderForm } from "../lib/types";
 import type { ApiPaymentMethod } from "../lib/api/types";
 import { Dropdown } from "./Dropdown";
 import { FormField, INPUT_CLASS, INPUT_ERROR_CLASS } from "./ui/FormField";
+
+/** Icon + accent colour per payment method key, purely decorative (lets a tile grid read at a glance). */
+const PAYMENT_STYLE: Record<string, { icon: LucideIcon; accent: string }> = {
+  cash: { icon: Banknote, accent: "bg-emerald-50 text-emerald-600" },
+  cod: { icon: HandCoins, accent: "bg-amber-50 text-amber-600" },
+  card: { icon: CreditCard, accent: "bg-blue-50 text-blue-600" },
+  bkash: { icon: Smartphone, accent: "bg-pink-50 text-pink-600" },
+  nagad: { icon: Smartphone, accent: "bg-orange-50 text-orange-600" },
+  rocket: { icon: Smartphone, accent: "bg-purple-50 text-purple-600" },
+  bank_transfer: { icon: Landmark, accent: "bg-sky-50 text-sky-600" },
+};
+const DEFAULT_PAYMENT_STYLE = { icon: Receipt, accent: "bg-ink-100 text-ink-600" };
 
 interface CheckoutFieldsProps {
   form: OrderForm;
@@ -148,15 +161,21 @@ export function CheckoutFields({
 
       <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-ink-900">{ui("checkoutPaymentMethod")}</h3>
-        <div role="radiogroup" aria-label={ui("checkoutPaymentMethod")} className="space-y-2">
+        {/* Compact icon tiles instead of full-width description cards, so N methods don't turn into N*80px of scroll. */}
+        <div
+          role="radiogroup"
+          aria-label={ui("checkoutPaymentMethod")}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+        >
           {paymentMethods.map((method) => {
             const selected = method.key === paymentMethod;
             const isCod = method.key === "cod";
+            const { icon: Icon, accent } = PAYMENT_STYLE[method.key] ?? DEFAULT_PAYMENT_STYLE;
             return (
               <label
                 key={method.key}
-                className={`block cursor-pointer rounded-xl border p-3.5 transition-colors ${
-                  selected ? "border-gold-500 bg-gold-50/80" : "border-ink-200 hover:border-gold-300"
+                className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors ${
+                  selected ? "border-gold-500 bg-gold-50/80 ring-1 ring-gold-400/40" : "border-ink-200 hover:border-gold-300"
                 }`}
               >
                 <input
@@ -167,14 +186,12 @@ export function CheckoutFields({
                   onChange={() => onPaymentMethodChange(method.key)}
                   className="sr-only"
                 />
-                <span className="block text-xs font-bold text-ink-900">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${accent}`}>
+                  <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span className="text-[11px] font-bold leading-tight text-ink-900">
                   {isCod ? ui("checkoutCodLabel") : method.label}
                 </span>
-                {(isCod || method.description) && (
-                  <span className="mt-0.5 block text-[11px] text-ink-600">
-                    {isCod ? ui("checkoutCodSub") : method.description}
-                  </span>
-                )}
               </label>
             );
           })}

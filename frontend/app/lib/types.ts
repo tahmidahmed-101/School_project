@@ -95,6 +95,8 @@ export interface CategoryInfo {
   image: string;
   itemCount: number;
   accent: string;
+  /** Stock vs pre-order category tree; a subcategory shares its root ancestor's type. */
+  type: "stock" | "preorder";
 }
 
 export interface CartItem {

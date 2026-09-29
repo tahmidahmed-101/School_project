@@ -16,9 +16,14 @@ export function PreOrderSections() {
   const { categories, preorderProducts } = useCatalog();
   const [activeCategory, setActiveCategory] = useState("all");
 
-  // Only offer tabs for categories that actually have pre-order stock right now.
+  // Only offer tabs for pre-order categories that actually have stock right now.
   const availableCategories = useMemo(
-    () => categories.filter((category) => preorderProducts.some((product) => product.category === category.id)),
+    () =>
+      categories.filter(
+        (category) =>
+          category.type === "preorder" &&
+          preorderProducts.some((product) => product.category === category.id),
+      ),
     [categories, preorderProducts],
   );
 
