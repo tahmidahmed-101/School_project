@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ProductDetailView } from "../../components/ProductDetailView";
-import { JsonLd } from "../../components/JsonLd";
-import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "../../lib/seo";
-import { getCatalog, getProductBySlug } from "../../lib/site-data";
-import { photo } from "../../lib/photo";
+import { ProductDetailView } from "@/modules/catalog";
+import { JsonLd } from "@/modules/seo";
+import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
+import { getCatalog, getProductBySlug } from "@/modules/catalog/server";
+import { photo } from "@/lib/photo";
 
 interface ProductPageProps {
   params: Promise<{
@@ -36,11 +36,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function KullMartProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, { products }] = await Promise.all([getProductBySlug(slug), getCatalog()]);
 
   if (!product) {
     notFound();
   }
+
+  const relatedProducts = products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
 
   return (
     <>
@@ -52,7 +54,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
           { name: product.name.en, path: `/product/${product.slug}` },
         ])}
       />
-      <ProductDetailView key={product.id} product={product} />
+      <ProductDetailView key={product.id} product={product} relatedProducts={relatedProducts} />
     </>
   );
 }

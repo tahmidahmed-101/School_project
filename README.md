@@ -35,7 +35,13 @@ Node 20+. From `frontend/`:
 cd frontend
 npm install
 npm run dev        # http://localhost:3002
+npm run verify     # typecheck, lint, format check, unit tests, production build
+npm test           # unit tests (Vitest)
+npm run test:e2e   # Playwright (npx playwright install chromium once)
 ```
+
+The storefront is organised as `app/` (routes), `modules/<feature>/`, `design-system/` and `lib/`; see
+`frontend/AGENTS.md` for the layering rules.
 
 The storefront reads the backend's public API through the `NEXT_PUBLIC_API_URL` variable
 (see `frontend/.env.example`, default `http://127.0.0.1:8000/api/v1/public`). The browser talks to

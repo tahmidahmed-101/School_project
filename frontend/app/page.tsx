@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { HomeSections } from "./components/HomeSections";
-import { SITE_DESCRIPTION, pageMetadata } from "./lib/seo";
+import { HomeSections } from "@/modules/storefront";
+import { ProductsProvider } from "@/modules/catalog";
+import { getCatalog } from "@/modules/catalog/server";
+import { SITE_DESCRIPTION, pageMetadata } from "@/modules/seo";
 
 // No title: the layout's default title is used as-is on the home page.
 export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: "/" });
 
-export default function KullMartHomePage() {
-  return <HomeSections />;
+export default async function KullMartHomePage() {
+  const { products } = await getCatalog();
+  return (
+    <ProductsProvider products={products}>
+      <HomeSections />
+    </ProductsProvider>
+  );
 }

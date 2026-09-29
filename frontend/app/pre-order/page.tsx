@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { PreOrderSections } from "../components/PreOrderSections";
-import { JsonLd } from "../components/JsonLd";
-import { breadcrumbJsonLd, pageMetadata } from "../lib/seo";
+import { PreOrderSections } from "@/modules/storefront";
+import { JsonLd } from "@/modules/seo";
+import { ProductsProvider } from "@/modules/catalog";
+import { getCatalog } from "@/modules/catalog/server";
+import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Pre-order Collection",
@@ -10,7 +12,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/pre-order",
 });
 
-export default function KullMartPreOrderPage() {
+export default async function KullMartPreOrderPage() {
+  const { products } = await getCatalog();
   return (
     <>
       <JsonLd
@@ -19,7 +22,9 @@ export default function KullMartPreOrderPage() {
           { name: "Pre-order Collection", path: "/pre-order" },
         ])}
       />
-      <PreOrderSections />
+      <ProductsProvider products={products}>
+        <PreOrderSections />
+      </ProductsProvider>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "./lib/seo";
+import { BACKGROUND_COLOR, THEME_COLOR } from "@/lib/theme-colors";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/modules/seo";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -12,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     lang: "en",
     categories: ["shopping"],
-    background_color: "#ffffff",
-    theme_color: "#1f4f1d",
+    background_color: BACKGROUND_COLOR,
+    theme_color: THEME_COLOR,
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

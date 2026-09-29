@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TrackOrderView } from "../components/TrackOrderView";
+import { TrackOrderView } from "@/modules/tracking";
 
 // Per-visitor lookup, no unique content to index (mirrors /checkout: robots.txt disallows it too).
 export const metadata: Metadata = {

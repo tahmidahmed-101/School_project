@@ -7,3 +7,6 @@ next-env.d.ts
 .DS_Store
 # Playwright MCP session output (screenshots / snapshots / console logs)
 .playwright-mcp
+# Test output
+playwright-report
+test-results

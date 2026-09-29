@@ -42,13 +42,13 @@ const nextConfig = {
         hostname: new URL(API_ORIGIN).hostname,
         ...(new URL(API_ORIGIN).port && { port: new URL(API_ORIGIN).port }),
       },
-      { protocol: "https", hostname: "picsum.photos" },
-      { protocol: "https", hostname: "fastly.picsum.photos" },
-      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    // A build renders every product page against the live API; retry a page that hit a transient network error
+    // instead of failing the whole build.
+    staticGenerationRetryCount: 2,
   },
   // The browser only ever talks to this origin (CSP connect-src 'self', no CORS): /api/public/* is proxied
   // to the LaunchCart API and /media/* to its uploaded files. Django routes end in "/", so it is re-added here.

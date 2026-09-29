@@ -1,8 +1,8 @@
-import { buildProductFeed } from "../lib/product-feed";
-import { getCatalog } from "../lib/site-data";
+import { buildProductFeed } from "@/modules/seo";
+import { getCatalog } from "@/modules/catalog/server";
 
 // Built from the live catalogue and refreshed at most once an hour.
-export const revalidate = 3600;
+export const revalidate = 3600; // CACHE_LIFE.seoFeeds in lib/cache.ts
 
 /** Google Merchant Center / Meta Catalog product feed, for Google Shopping and Facebook/Instagram shop ads. */
 export async function GET(): Promise<Response> {

@@ -1,32 +1,42 @@
+/*
+ * Semantic tokens: what a colour is FOR, mapped onto the primitive scales in globals.css (@theme).
+ * New UI should use the semantic utilities (bg-surface, text-fg-muted, bg-action, border-line, ...) instead of a
+ * raw scale step, so a rebrand or a dark theme only has to change the mapping below. Existing components still
+ * use the primitives and are migrated as they are touched.
+ */
 :root {
-  --ts-bg: #ffffff;
-  --ts-surface-1: #f6f9f5;
-  --ts-surface-2: #ecf2ea;
-  --ts-surface-3: #dbe4d8;
-  --ts-card: #ffffff;
-  --ts-card-hover: #f6f9f5;
-  --ts-border: rgba(0, 0, 0, 0.08);
-  --ts-border-strong: rgba(0, 0, 0, 0.16);
-  --ts-border-accent: rgba(229, 192, 76, 0.45);
+  --bg: #ffffff;
+  --surface: var(--color-ink-50);
+  --surface-muted: var(--color-ink-100);
+  --surface-strong: var(--color-ink-200);
+  --card: #ffffff;
+  --card-hover: var(--color-ink-50);
 
-  --ts-accent: #e5c04c;
-  --ts-accent-hover: #d4ad3b;
-  --ts-accent-glow: rgba(229, 192, 76, 0.22);
-  --ts-accent-subtle: rgba(229, 192, 76, 0.12);
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --line-accent: rgba(229, 192, 76, 0.45);
 
-  --ts-tech: #276325;
-  --ts-tech-subtle: rgba(39, 99, 37, 0.12);
-  --ts-success: #3a8036;
+  --fg: var(--color-ink-900);
+  --fg-muted: var(--color-ink-600);
+  --fg-subtle: var(--color-ink-500);
 
-  --ts-ink: #162114;
-  --ts-ink-dim: #46574a;
-  --ts-ink-subtle: #66756a;
+  --action: var(--color-brand-700);
+  --action-hover: var(--color-brand-800);
+  --action-fg: #ffffff;
+  --accent: var(--color-gold-500);
+  --accent-hover: var(--color-gold-400);
+  --accent-fg: var(--color-ink-950);
+  --success: var(--color-brand-500);
+
+  /* Third-party brand colours (contact buttons); not part of the Kull Mart palette. */
+  --facebook: #1877f2;
+  --whatsapp: #25d366;
 }
 
 .ts-font-scope,
 .ts-root {
-  background-color: var(--ts-bg);
-  color: var(--ts-ink);
+  background-color: var(--bg);
+  color: var(--fg);
   font-family:
     var(--font-ts-jost),
     "Jost",
@@ -55,11 +65,7 @@
 }
 
 .ts-display {
-  font-family:
-    var(--font-ts-jost),
-    "Jost",
-    var(--font-ts-bengali),
-    sans-serif !important;
+  font-family: var(--font-ts-jost), "Jost", var(--font-ts-bengali), sans-serif !important;
   letter-spacing: normal;
 }
 
@@ -101,14 +107,14 @@
 
 .ts-card-glow {
   box-shadow:
-    0 0 0 1px var(--ts-border),
+    0 0 0 1px var(--line),
     0 4px 16px -4px rgba(0, 0, 0, 0.08);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ts-card-glow:hover {
   box-shadow:
-    0 0 0 1px var(--ts-border-strong),
+    0 0 0 1px var(--line-strong),
     0 8px 24px -6px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }

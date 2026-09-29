@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CheckoutView } from "../components/CheckoutView";
+import { CheckoutView } from "@/modules/checkout";
 
 // Checkout is a private, per-visitor step: keep it out of search results (robots.txt disallows it as well).
 export const metadata: Metadata = {

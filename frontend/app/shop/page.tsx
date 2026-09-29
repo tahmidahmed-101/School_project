@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ShopCatalog } from "../components/ShopCatalog";
-import { Loader } from "../components/Loader";
-import { JsonLd } from "../components/JsonLd";
-import { getCatalog } from "../lib/site-data";
-import { breadcrumbJsonLd, pageMetadata } from "../lib/seo";
-import { photo } from "../lib/photo";
+import { ShopCatalog } from "@/modules/catalog";
+import { Loader } from "@/design-system/patterns/Loader";
+import { JsonLd } from "@/modules/seo";
+import { ProductsProvider } from "@/modules/catalog";
+import { getCatalog } from "@/modules/catalog/server";
+import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
+import { photo } from "@/lib/photo";
 
 type ShopSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -51,7 +52,7 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
 }
 
 export default async function KullMartShopPage({ searchParams }: { searchParams: ShopSearchParams }) {
-  const category = await categoryFrom(searchParams);
+  const [category, { products }] = await Promise.all([categoryFrom(searchParams), getCatalog()]);
   const trail = [
     { name: "Home", path: "/" },
     { name: "Shop", path: "/shop" },
@@ -72,7 +73,9 @@ export default async function KullMartShopPage({ searchParams }: { searchParams:
     <>
       <JsonLd data={breadcrumbJsonLd(trail)} />
       <Suspense fallback={<Loader variant="page" />}>
-        <ShopCatalog />
+        <ProductsProvider products={products}>
+          <ShopCatalog />
+        </ProductsProvider>
       </Suspense>
     </>
   );

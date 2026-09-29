@@ -1,0 +1,11 @@
+.next
+node_modules
+package-lock.json
+public
+app/fonts
+app/images
+tsconfig.tsbuildinfo
+next-env.d.ts
+playwright-report
+test-results
+docs/*.yaml

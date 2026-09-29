@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { RegisterView } from "../components/RegisterView";
+import { RegisterView } from "@/modules/auth";
 
 export const metadata: Metadata = {
   title: "Register",

@@ -2,25 +2,34 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./theme.css";
-import { LangProvider } from "./lib/i18n";
-import { CatalogProvider } from "./lib/catalog-context";
-import { getBrand, getCatalog } from "./lib/site-data";
-import { CartProvider } from "./lib/cart";
-import { WishlistProvider } from "./lib/wishlist";
-import { ClientShell } from "./components/ClientShell";
-import { JsonLd } from "./components/JsonLd";
-import { AnalyticsScripts } from "./components/AnalyticsScripts";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, organizationJsonLd, socialMetadata, websiteJsonLd } from "./lib/seo";
-import { SITE_URL } from "./lib/site-url";
+import { LangProvider } from "@/lib/i18n";
+import { CatalogProvider } from "@/modules/catalog";
+import { getCatalog } from "@/modules/catalog/server";
+import { getBrand } from "@/modules/business/server";
+import { CartProvider } from "@/modules/cart";
+import { WishlistProvider } from "@/modules/wishlist";
+import { ClientShell } from "@/modules/shell";
+import { JsonLd } from "@/modules/seo";
+import { AnalyticsScripts } from "@/modules/marketing";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  organizationJsonLd,
+  socialMetadata,
+  websiteJsonLd,
+} from "@/modules/seo";
+import { publicEnv } from "@/lib/env";
+import { THEME_COLOR } from "@/lib/theme-colors";
+import { SITE_URL } from "@/lib/site-url";
 
 export const viewport: Viewport = {
-  themeColor: "#1f4f1d",
+  themeColor: THEME_COLOR,
   width: "device-width",
   initialScale: 1,
 };
 
-const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
-const FB_DOMAIN_VERIFICATION = process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION;
+const { googleSiteVerification: GOOGLE_SITE_VERIFICATION, fbDomainVerification: FB_DOMAIN_VERIFICATION } = publicEnv;
 
 export const metadata: Metadata = {
   // Resolves every relative canonical / Open Graph URL below; skipped when no site URL is configured.
@@ -53,9 +62,10 @@ const bengaliFont = localFont({
   variable: "--font-ts-bengali",
 });
 
-// The catalogue and contact details come from the LaunchCart API. Pages are static but re-generated at most every
+// Categories and contact details come from the LaunchCart API. Pages are static but re-generated at most every
 // minute, so admin changes show up without a rebuild (and a backend outage at build time heals itself).
-export const revalidate = 60;
+// Only categories and brand go into the shell; pages that list products load them themselves (see ProductsProvider).
+export const revalidate = 60; // CACHE_LIFE.catalog in lib/cache.ts
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [catalog, brand] = await Promise.all([getCatalog(), getBrand()]);
@@ -69,12 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable}`}>
-          <CatalogProvider
-            products={catalog.products}
-            categories={catalog.categories}
-            failed={catalog.failed}
-            brand={brand}
-          >
+          <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
             <LangProvider>
               <CartProvider>
                 <WishlistProvider>

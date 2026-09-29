@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { PolicyView } from "../components/PolicyView";
-import { RETURN_POLICY } from "../lib/policy-content";
-import { pageMetadata } from "../lib/seo";
+import { PolicyView } from "@/modules/policies";
+import { RETURN_POLICY } from "@/modules/policies";
+import { pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Return Policy",

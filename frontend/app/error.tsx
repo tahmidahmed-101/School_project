@@ -15,9 +15,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <AlertTriangle className="h-7 w-7 text-gold-500" />
       </div>
       <div className="space-y-1.5">
-        <h1 className="ts-display text-xl font-bold text-ink-900 sm:text-2xl">
-          Something went wrong
-        </h1>
+        <h1 className="ts-display text-xl font-bold text-ink-900 sm:text-2xl">Something went wrong</h1>
         <p className="max-w-sm text-sm text-ink-600">
           An unexpected error occurred. You can try again or head back home.
         </p>
