@@ -55,7 +55,6 @@ def create_order(*, customer, created_by=None) -> SalesOrder:
 
 
 def get_preordered_quantity(variant) -> int:
-    """Get total pre-ordered quantity for a variant across all non-cancelled orders."""
     return (
         SalesOrderLine.objects.filter(
             variant=variant,
@@ -73,7 +72,6 @@ def get_preordered_quantity(variant) -> int:
 
 
 def get_preordered_quantities(variants) -> dict:
-    """Get pre-ordered quantities for multiple variants in one query."""
     variant_ids = [v.id for v in variants]
     if not variant_ids:
         return {}
@@ -98,7 +96,6 @@ def get_preordered_quantities(variants) -> dict:
 def _check_preorder_stock_limit(
     variant, requested_quantity: int, current_line_quantity: int = 0
 ) -> None:
-    """Check if adding requested_quantity would exceed pre-order stock limit."""
     if variant.preorder_stock_limit is None:
         return
     # Lock the variant row so two concurrent checkouts of the same variant

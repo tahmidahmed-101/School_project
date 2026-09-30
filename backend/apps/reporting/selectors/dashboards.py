@@ -23,9 +23,15 @@ from apps.orders.models import Payment, SalesOrder, SalesOrderLine
 # Pure read layer — every function here reuses selectors/models from the
 # phases already built rather than introducing new tables.
 
-# A "real order" is one that cleared checkout and was not cancelled. PENDING is
-# still an open cart, so counting it would divide revenue by abandoned carts.
-NON_ORDER_STATUSES = [SalesOrder.Status.PENDING, SalesOrder.Status.CANCELLED]
+# A "real order" is one that was paid for and was not cancelled. PENDING is
+# still an open cart, so counting it would divide revenue by abandoned carts;
+# AWAITING_PAYMENT cleared checkout but payment hasn't been captured yet, so
+# counting it would report unpaid orders as revenue.
+NON_ORDER_STATUSES = [
+    SalesOrder.Status.PENDING,
+    SalesOrder.Status.AWAITING_PAYMENT,
+    SalesOrder.Status.CANCELLED,
+]
 
 
 def real_orders(*, start: date | None = None, end: date | None = None) -> QuerySet[SalesOrder]:
@@ -241,6 +247,7 @@ def category_revenue(*, start: date, end: date) -> list[dict]:
 
 _STATUS_BADGE: dict[str, str] = {
     SalesOrder.Status.PENDING: "Pending",
+    SalesOrder.Status.AWAITING_PAYMENT: "Awaiting payment",
     SalesOrder.Status.CONFIRMED: "Processing",
     SalesOrder.Status.SHIPPED: "Fulfilled",
     SalesOrder.Status.DELIVERED: "Fulfilled",
@@ -289,8 +296,11 @@ def recent_orders(*, start: date, end: date, limit: int = 8) -> list[dict]:
                     for line in lines_by_order.get(order.id, [])
                 ],
                 "total_amount": str(order.grand_total),
+                # No fabricated fallback: an order with no captured payment
+                # (still pending/awaiting payment, or cancelled before one
+                # was taken) genuinely has no method to report.
                 "payment_method": (
-                    order_payment.method if order_payment and order_payment.method else "card"
+                    order_payment.method if order_payment and order_payment.method else "—"
                 ),
                 "status": _STATUS_BADGE.get(order.status, order.status),
                 "region": address.city if address else "—",

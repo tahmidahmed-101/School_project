@@ -45,6 +45,44 @@ def test_pathao_webhook_advances_status_and_is_idempotent():
     assert CourierWebhookEvent.objects.count() == 1
 
 
+def test_pathao_webhook_retries_an_event_that_died_before_finishing():
+    """A row already claimed but not yet terminal (RECEIVED, or FAILED —
+    which is deliberately excluded from TERMINAL_STATUSES) represents either
+    a redelivery of a still-in-flight event or a previous attempt that died
+    mid-processing. Either way a redelivery must resume it, not create a
+    second row or silently drop it."""
+    carrier = make_carrier(Carrier.Provider.PATHAO, webhook_secret="topsecret")
+    shipment = _shipment_for(carrier, "DL999", status=Shipment.Status.SHIPPED)
+    payload = {
+        "event": "delivered",
+        "consignment_id": "DL999",
+        "merchant_order_id": shipment.order.order_number,
+    }
+    headers = {"X-PATHAO-Signature": "topsecret"}
+
+    # Simulates another delivery's claim row: same event_id, still RECEIVED
+    # because nothing has processed it yet.
+    from apps.logistics.services.couriers.webhooks import _event_id
+
+    CourierWebhookEvent.objects.create(
+        carrier=carrier,
+        event_id=_event_id(carrier, "delivered", payload),
+        event_type="delivered",
+        payload=payload,
+        status=CourierWebhookEvent.Status.RECEIVED,
+    )
+
+    status_code, _, _ = handle_courier_webhook(
+        carrier, headers=headers, query={}, body=b"", payload=payload
+    )
+    shipment.refresh_from_db()
+
+    assert status_code == 202
+    assert shipment.status == Shipment.Status.DELIVERED
+    assert CourierWebhookEvent.objects.count() == 1
+    assert CourierWebhookEvent.objects.get().status == CourierWebhookEvent.Status.PROCESSED
+
+
 def test_pathao_webhook_rejects_bad_signature():
     carrier = make_carrier(Carrier.Provider.PATHAO, webhook_secret="topsecret")
     with pytest.raises(CourierAuthError):

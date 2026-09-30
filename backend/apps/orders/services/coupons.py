@@ -12,6 +12,7 @@ from apps.common.services.soft_delete import soft_delete_instance
 from apps.orders.models import Coupon, SalesOrder
 from apps.orders.selectors.coupons import get_active_coupon_by_code
 from apps.orders.services.carts import _ensure_pending
+from apps.orders.services.orders import lock_order
 
 
 @transaction.atomic
@@ -89,6 +90,13 @@ def preview_coupon(*, code: str, subtotal: Decimal) -> dict:
 
 @transaction.atomic
 def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
+    # Locks the order row too, not just the coupon: without it, two
+    # concurrent applies (different codes, or one apply racing a remove)
+    # could both read the same stale order.coupon_id, both take the "new
+    # apply" branch, and the second write silently overwrites the first —
+    # corrupting times_used (both coupons get incremented, but only one
+    # ends up attached) and losing whichever change lost the race.
+    lock_order(order)
     _ensure_pending(order)
     # Locks the row for the rest of the transaction so two concurrent applies
     # against a usage-limited coupon can't both read the same times_used and
@@ -102,13 +110,17 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
         raise DomainError("Coupon not found.", code="invalid_coupon")
     _check_coupon_eligible(coupon, order.subtotal)
 
-    if order.coupon_id and order.coupon_id != coupon.id:
-        _release_coupon(order.coupon_id)
+    # Only a genuine switch touches times_used: releasing the old coupon and
+    # counting a usage of the new one. Re-applying the coupon already on this
+    # order must not count as a second use of it.
+    if order.coupon_id != coupon.id:
+        if order.coupon_id:
+            _release_coupon(order.coupon_id)
+        Coupon.objects.filter(id=coupon.id).update(times_used=F("times_used") + 1)
 
     order.coupon = coupon
     order.discount_total = _compute_discount(coupon, order.subtotal)
     order.save(update_fields=["coupon", "discount_total", "updated_at"])
-    Coupon.objects.filter(id=coupon.id).update(times_used=F("times_used") + 1)
     order.recalculate_totals()
     order.refresh_from_db()
     log_action(
@@ -123,6 +135,7 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
 
 @transaction.atomic
 def remove_coupon(*, order: SalesOrder, actor=None) -> SalesOrder:
+    lock_order(order)
     _ensure_pending(order)
     if order.coupon_id and order.coupon is not None:
         coupon_code = order.coupon.code

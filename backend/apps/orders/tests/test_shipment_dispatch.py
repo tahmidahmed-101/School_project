@@ -116,6 +116,75 @@ def test_can_advance_shipment_status_blocks_regression():
     assert can_advance_shipment_status(forward.PENDING, forward.DELIVERED) is True
 
 
+def test_update_shipment_status_rejects_a_backward_transition():
+    """update_shipment_status enforces can_advance_shipment_status itself now,
+    so every caller — admin API included, not just the courier webhook path
+    that used to check it manually — gets the same forward-only rule."""
+    _, shipment = _ready_shipment()
+    update_shipment_status(shipment=shipment, status=Shipment.Status.OUT_FOR_DELIVERY)
+    shipment.refresh_from_db()
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        update_shipment_status(shipment=shipment, status=Shipment.Status.SHIPPED)
+
+    assert exc.value.code == "invalid_status_transition"
+    shipment.refresh_from_db()
+    assert shipment.status == Shipment.Status.OUT_FOR_DELIVERY
+
+
+def test_update_shipment_status_allows_a_forward_transition():
+    _, shipment = _ready_shipment()
+
+    updated = update_shipment_status(shipment=shipment, status=Shipment.Status.IN_TRANSIT)
+
+    assert updated.status == Shipment.Status.IN_TRANSIT
+
+
+def test_update_shipment_status_uses_the_locked_row_not_a_stale_in_memory_status():
+    """The row lock is only useful if the transition check reads the
+    just-locked row, not whatever the caller's Python object held before the
+    lock was acquired. This simulates two different webhook events for the
+    same shipment: one has already moved it on to OUT_FOR_DELIVERY by the
+    time a second, stale in-memory reference tries to apply IN_TRANSIT —
+    forward relative to what it still thinks is SHIPPED, but a regression
+    relative to the row's real, current state."""
+    _, shipment = _ready_shipment()
+    assert shipment.status == Shipment.Status.SHIPPED
+
+    stale = Shipment.objects.get(pk=shipment.pk)
+    # A concurrent webhook event moves the row on without touching `stale`'s
+    # in-memory copy.
+    Shipment.objects.filter(pk=shipment.pk).update(status=Shipment.Status.OUT_FOR_DELIVERY)
+    assert stale.status == Shipment.Status.SHIPPED
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        update_shipment_status(shipment=stale, status=Shipment.Status.IN_TRANSIT)
+
+    assert exc.value.code == "invalid_status_transition"
+    stale.refresh_from_db()
+    assert stale.status == Shipment.Status.OUT_FOR_DELIVERY
+
+
+def test_admin_shipment_status_update_rejects_a_backward_transition(api_client, admin_user):
+    """The admin endpoint used to call update_shipment_status with no
+    transition check at all — only the webhook path pre-checked it."""
+    _, shipment = _ready_shipment()
+    update_shipment_status(shipment=shipment, status=Shipment.Status.IN_TRANSIT)
+    shipment.refresh_from_db()
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.patch(
+        f"/api/v1/admin/orders/shipments/{shipment.id}/status/",
+        {"status": Shipment.Status.SHIPPED},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "invalid_status_transition"
+    shipment.refresh_from_db()
+    assert shipment.status == Shipment.Status.IN_TRANSIT
+
+
 def test_terminal_status_rebuilds_the_phone_risk_profile():
     _, shipment = _ready_shipment()
     assert shipment.recipient_phone

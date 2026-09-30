@@ -52,6 +52,30 @@ def test_sales_trend_sums_confirmed_orders_by_day():
     assert any(point["total"] == Decimal("40.00") for point in trend)
 
 
+def test_sales_trend_excludes_an_order_still_awaiting_payment():
+    """Checkout reserves stock and moves the order out of PENDING, but the
+    customer hasn't paid yet — grand_total must not show up as revenue until
+    capture_payment actually confirms the order."""
+    customer = CustomerUserFactory()
+    variant = ProductVariantFactory(price=Decimal("20.00"))
+    record_movement(
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=10,
+        unit_cost=Decimal("5.00"),
+    )
+
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=2)
+    checkout(order=cart)
+    assert cart.status == SalesOrder.Status.AWAITING_PAYMENT
+
+    today = date.today()
+    trend = sales_trend(start=today - timedelta(days=1), end=today + timedelta(days=1))
+
+    assert all(point["total"] == Decimal("0") for point in trend)
+
+
 def test_sales_trend_zero_fills_days_without_orders():
     today = date.today()
     start = today - timedelta(days=3)
@@ -130,6 +154,35 @@ def test_recent_orders_exposes_both_the_order_number_and_the_uuid():
 
     assert row["order_id"] == str(order.id)
     assert row["id"] != row["order_id"]
+
+
+def test_recent_orders_does_not_invent_a_payment_method_for_an_awaiting_payment_order():
+    """An order that cleared checkout but has no captured payment must not
+    be shown with a fabricated payment method — there is nothing to report."""
+    customer = CustomerUserFactory()
+    variant = ProductVariantFactory(price=Decimal("20.00"))
+    order = SalesOrderFactory(customer=customer, status=SalesOrder.Status.AWAITING_PAYMENT)
+    SalesOrderLineFactory(order=order, variant=variant, quantity=1, unit_price=Decimal("20"))
+    today = date.today()
+
+    row = recent_orders(start=today - timedelta(days=1), end=today + timedelta(days=1))[0]
+
+    assert row["payment_method"] == "—"
+    assert row["status"] == "Awaiting payment"
+
+
+def test_recent_orders_shows_the_real_payment_method_for_a_paid_order():
+    customer = CustomerUserFactory()
+    variant = ProductVariantFactory(price=Decimal("20.00"))
+    order = SalesOrderFactory(customer=customer, status=SalesOrder.Status.CONFIRMED)
+    SalesOrderLineFactory(order=order, variant=variant, quantity=1, unit_price=Decimal("20"))
+    PaymentFactory(order=order, amount=Decimal("20.00"), method="bkash")
+    today = date.today()
+
+    row = recent_orders(start=today - timedelta(days=1), end=today + timedelta(days=1))[0]
+
+    assert row["payment_method"] == "bkash"
+    assert row["status"] == "Processing"
 
 
 def test_low_stock_counts_are_authoritative_beyond_the_inventory_alert_limit():

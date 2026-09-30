@@ -23,6 +23,14 @@ class PaymentMethodSpec:
     description: str
     can_disable: bool = True
     locked_reason: str = ""
+    # This project has no live payment gateway — every method here is
+    # recorded by hand from something staff (or the customer, for COD)
+    # attests happened. For cash/COD/manual there is nothing to reference.
+    # For the rest, a reference (a bKash TrxID, a bank statement line, a
+    # card terminal slip number) is the only evidence the money actually
+    # moved, so capture_payment refuses to record one without it rather
+    # than silently pretending a gateway verified the payment.
+    requires_reference: bool = False
 
 
 # Source of truth for what a payment method is. `PaymentMethodSetting` records
@@ -42,26 +50,31 @@ PAYMENT_METHOD_REGISTRY: tuple[PaymentMethodSpec, ...] = (
         key=PaymentMethodKey.CARD,
         label="Card",
         description="Debit or credit card, taken on a terminal or gateway.",
+        requires_reference=True,
     ),
     PaymentMethodSpec(
         key=PaymentMethodKey.BKASH,
         label="bKash",
         description="Mobile financial service.",
+        requires_reference=True,
     ),
     PaymentMethodSpec(
         key=PaymentMethodKey.NAGAD,
         label="Nagad",
         description="Mobile financial service.",
+        requires_reference=True,
     ),
     PaymentMethodSpec(
         key=PaymentMethodKey.ROCKET,
         label="Rocket",
         description="Mobile financial service.",
+        requires_reference=True,
     ),
     PaymentMethodSpec(
         key=PaymentMethodKey.BANK_TRANSFER,
         label="Bank transfer",
         description="Direct deposit or online transfer.",
+        requires_reference=True,
     ),
     PaymentMethodSpec(
         key=PaymentMethodKey.MANUAL,

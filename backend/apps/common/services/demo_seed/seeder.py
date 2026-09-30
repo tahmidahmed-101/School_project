@@ -621,7 +621,12 @@ class DemoSeeder:
             return
 
         method = self.rng.choice(PAYMENT_METHODS)
-        payment = capture_payment(order=order, amount=order.grand_total, method=method)
+        # COD/cash/manual need no reference; everything else does — same
+        # style TRX reference _record_pending_payment already uses below.
+        reference = f"TRX{self.rng.randint(10**9, 10**10 - 1)}"
+        payment = capture_payment(
+            order=order, amount=order.grand_total, method=method, reference=reference
+        )
         self._bump("payments")
         order.refresh_from_db()
 

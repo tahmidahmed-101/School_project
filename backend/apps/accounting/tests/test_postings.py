@@ -15,8 +15,10 @@ from apps.accounts.factories import CustomerUserFactory
 from apps.catalog.factories import ProductVariantFactory
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
+from apps.orders.factories import CouponFactory
 from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.checkout import checkout
+from apps.orders.services.coupons import apply_coupon
 from apps.orders.services.payments import capture_payment, refund_payment
 from apps.orders.services.shipments import create_shipment
 from apps.procurement.factories import SupplierFactory
@@ -113,6 +115,150 @@ def test_shipment_revenue_posting_includes_shipping_charge():
 
     totals = JournalEntryLine.objects.aggregate(debit=Sum("debit"), credit=Sum("credit"))
     assert totals["debit"] == totals["credit"]
+
+
+def test_shipment_revenue_posting_uses_order_shipping_total_when_admin_omits_it():
+    """create_shipment's shipping_charge is an optional, per-shipment admin
+    field that defaults to 0 — the posting must fall back to the order's own
+    shipping_total (what the customer was actually charged) rather than
+    silently dropping shipping revenue whenever an admin leaves it unset."""
+    seed_chart_of_accounts()
+
+    variant = ProductVariantFactory()
+    record_movement(
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=10,
+        unit_cost=Decimal("5.00"),
+    )
+
+    customer = CustomerUserFactory()
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=1)
+    checkout(order=cart)
+    cart.shipping_total = Decimal("70.00")
+    cart.save(update_fields=["shipping_total"])
+    cart.recalculate_totals()
+    capture_payment(order=cart, amount=cart.grand_total)
+    order_line = cart.lines.get()
+
+    # Deliberately no shipping_charge kwarg — this is the common admin path.
+    create_shipment(order=cart, lines=[{"order_line": order_line, "quantity": 1}])
+
+    ar_balance = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["accounts_receivable"]
+    ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    assert (ar_balance["debit"] or Decimal("0")) == (ar_balance["credit"] or Decimal("0"))
+
+    revenue_credit = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["revenue"]
+    ).aggregate(credit=Sum("credit"))["credit"]
+    assert revenue_credit == cart.subtotal + cart.shipping_total
+
+
+def test_shipment_revenue_posting_for_a_normal_order():
+    """Baseline: an undiscounted order's shipment revenue equals the plain
+    line total — the discount-ratio math must be a no-op with no discount."""
+    seed_chart_of_accounts()
+
+    variant = ProductVariantFactory(price=Decimal("50.00"))
+    record_movement(
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=10,
+        unit_cost=Decimal("5.00"),
+    )
+    customer = CustomerUserFactory()
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=2)
+    checkout(order=cart)
+    capture_payment(order=cart, amount=cart.grand_total)
+    order_line = cart.lines.get()
+
+    create_shipment(order=cart, lines=[{"order_line": order_line, "quantity": 2}])
+
+    revenue_credit = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["revenue"]
+    ).aggregate(credit=Sum("credit"))["credit"]
+    assert revenue_credit == Decimal("100.00")  # 50.00 * 2, no discount
+
+
+def test_shipment_revenue_posting_on_a_discounted_order():
+    """An order-level coupon discounts the whole order, not any one line —
+    unit_price on the line stays the pre-discount price. Shipment revenue
+    must recognize the same discounted rate the customer actually paid,
+    not the full pre-discount line amount."""
+    seed_chart_of_accounts()
+
+    variant = ProductVariantFactory(price=Decimal("50.00"))
+    record_movement(
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=10,
+        unit_cost=Decimal("5.00"),
+    )
+    customer = CustomerUserFactory()
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=4)
+    coupon = CouponFactory()  # 10% off, per CouponFactory's default
+    apply_coupon(order=cart, code=coupon.code)
+    cart.refresh_from_db()
+    checkout(order=cart)
+    capture_payment(order=cart, amount=cart.grand_total)
+    order_line = cart.lines.get()
+
+    create_shipment(order=cart, lines=[{"order_line": order_line, "quantity": 4}])
+
+    revenue_credit = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["revenue"]
+    ).aggregate(credit=Sum("credit"))["credit"]
+    assert revenue_credit == Decimal("180.00")  # (50.00 * 4) less 10%
+
+    ar_balance = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["accounts_receivable"]
+    ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    assert (ar_balance["debit"] or Decimal("0")) == (ar_balance["credit"] or Decimal("0"))
+
+
+def test_shipment_revenue_posting_on_a_discounted_partial_shipment():
+    """A partial shipment of a discounted order recognizes revenue only for
+    the shipped share, at the same discounted rate the whole order was
+    charged — not the undiscounted rate, and not the full order's discount
+    applied against a partial quantity."""
+    seed_chart_of_accounts()
+
+    variant = ProductVariantFactory(price=Decimal("50.00"))
+    record_movement(
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=10,
+        unit_cost=Decimal("5.00"),
+    )
+    customer = CustomerUserFactory()
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=4)
+    coupon = CouponFactory()
+    apply_coupon(order=cart, code=coupon.code)
+    cart.refresh_from_db()
+    checkout(order=cart)
+    capture_payment(order=cart, amount=cart.grand_total)
+    order_line = cart.lines.get()
+
+    create_shipment(order=cart, lines=[{"order_line": order_line, "quantity": 2}])
+
+    revenue_credit = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["revenue"]
+    ).aggregate(credit=Sum("credit"))["credit"]
+    assert revenue_credit == Decimal("90.00")  # (50.00 * 2) less 10%
+
+    # AR only nets to zero once the whole order has shipped — capture_payment
+    # already credited AR for the full discounted grand_total, and only half
+    # the units have shipped, so a debit balance of 90.00 is still expected.
+    ar_balance = JournalEntryLine.objects.filter(
+        account__code=ACCOUNT_CODES["accounts_receivable"]
+    ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    outstanding = (ar_balance["credit"] or Decimal("0")) - (ar_balance["debit"] or Decimal("0"))
+    assert outstanding == Decimal("90.00")
 
 
 def test_customer_refund_posts_to_refund_payable():

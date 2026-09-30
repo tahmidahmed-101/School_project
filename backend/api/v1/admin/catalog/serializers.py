@@ -160,7 +160,6 @@ class ProductVariantCreateSerializer(serializers.Serializer):
         return attrs
 
     def _validate_preorder_fields(self, attrs: dict) -> None:
-        """Validate pre-order fields."""
         is_preorder_enabled = attrs.get("is_preorder_enabled", False)
         if not is_preorder_enabled:
             return
@@ -224,7 +223,6 @@ class ProductVariantUpdateSerializer(serializers.Serializer):
         return attrs
 
     def _validate_preorder_fields(self, attrs: dict) -> None:
-        """Validate pre-order fields."""
         is_preorder_enabled = attrs.get("is_preorder_enabled", False)
         if not is_preorder_enabled:
             return

@@ -69,7 +69,8 @@ def test_customer_can_add_to_cart_checkout_and_pay(api_client):
     assert response.status_code == 200
 
     response = api_client.post(
-        "/api/v1/customer/orders/cart/payment/", {"amount": "59.97", "method": "card"}
+        "/api/v1/customer/orders/cart/payment/",
+        {"amount": "59.97", "method": "card", "reference": "TRX-CARD-0001"},
     )
     assert response.status_code == 200
     assert response.data["data"]["status"] == "confirmed"
@@ -452,8 +453,6 @@ def test_admin_create_order_without_capture_awaits_payment(api_client):
 
 
 def test_admin_create_order_does_not_absorb_the_customers_own_cart(api_client):
-    """A staff-entered order must not adopt whatever the customer already has
-    sitting in their browser cart and bill them for it."""
     admin = create_user(email="order-admin-create-isolated@example.com", role=UserRole.ADMIN)
     customer = create_user(email="order-create-customer-isolated@example.com")
     variant = _stocked_variant(quantity=10)

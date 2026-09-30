@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from apps.accounting.services.money import quantize_money
 from apps.accounting.services.postings import post_customer_payment, post_customer_refund
@@ -19,12 +19,44 @@ logger = logging.getLogger(__name__)
 
 @transaction.atomic
 def capture_payment(
-    *, order: SalesOrder, amount: Decimal, method: str = PaymentMethodKey.MANUAL
+    *,
+    order: SalesOrder,
+    amount: Decimal,
+    method: str = PaymentMethodKey.MANUAL,
+    reference: str = "",
 ) -> Payment:
-    """Stubbed gateway capture — always succeeds and records the payment.
-    A real gateway integration is out of scope; this is the seam a future
-    one would plug into."""
+    """Manual/staff-attested capture — this project has no live payment
+    gateway integration. `cash`/`cod`/`manual` are attested by whoever is
+    physically present for the exchange, so they need no reference; every
+    other method requires one (`PaymentMethodSpec.requires_reference`),
+    since a reference — a bKash TrxID, a bank statement line, a card
+    terminal slip number — is the only evidence available that money
+    actually moved. Capturing one of those without a reference would be
+    pretending a gateway verified a payment that nothing here can verify.
+
+    Idempotent by (order, reference): a retried request carrying the same
+    reference for this order returns the payment already captured for it
+    instead of raising `invalid_order_status` or capturing a second time.
+    A reference already used on a *different* payment — another order, or a
+    non-captured row — is refused outright: one external transaction (a
+    bKash TrxID, a bank statement line) must never back two Payment rows
+    (enforced by `payment_gateway_reference_unique` as the last line of
+    defense against a genuine race, since the lock above only covers this
+    order, not every order that could race on the same reference).
+    """
     lock_order(order)
+    reference = (reference or "").strip()
+
+    if reference:
+        existing = Payment.objects.filter(gateway_reference=reference).first()
+        if existing is not None:
+            if existing.order_id == order.id and existing.status == Payment.Status.CAPTURED:
+                return existing
+            raise BusinessRuleViolationError(
+                "This payment reference has already been used for another payment.",
+                code="duplicate_gateway_reference",
+            )
+
     if order.status != SalesOrder.Status.AWAITING_PAYMENT:
         raise BusinessRuleViolationError(
             "Payment can only be captured for a checked-out order awaiting payment.",
@@ -48,10 +80,29 @@ def capture_payment(
         raise BusinessRuleViolationError(
             f"{spec.label} is switched off.", code="payment_method_disabled"
         )
+    if spec.requires_reference and not reference:
+        raise BusinessRuleViolationError(
+            f"{spec.label} has no live gateway integration — a payment reference "
+            "is required to capture it.",
+            code="payment_reference_required",
+        )
 
-    payment = Payment.objects.create(
-        order=order, amount=amount, method=method, status=Payment.Status.CAPTURED
-    )
+    try:
+        # Own savepoint: catching IntegrityError inside the outer atomic
+        # block would otherwise leave it unusable for the raise below.
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                order=order,
+                amount=amount,
+                method=method,
+                status=Payment.Status.CAPTURED,
+                gateway_reference=reference,
+            )
+    except IntegrityError:
+        raise BusinessRuleViolationError(
+            "This payment reference has already been used for another payment.",
+            code="duplicate_gateway_reference",
+        ) from None
     post_customer_payment(payment)
     order.status = SalesOrder.Status.CONFIRMED
     order.save(update_fields=["status"])
@@ -61,13 +112,23 @@ def capture_payment(
 
 def _assess_order_risk(order: SalesOrder) -> None:
     """Score the now-confirmed order for fraud risk. Never let a scoring bug
-    undo a payment that already succeeded."""
+    undo a payment that already succeeded — but a swallowed failure still
+    needs a durable, queryable trace rather than just a log line, or a
+    broken scorer silently stops flagging every order it touches with no
+    way to notice."""
     try:
         from apps.risk.services.scoring import assess_order_risk
 
         assess_order_risk(order=order)
-    except Exception:
+    except Exception as exc:
         logger.exception("Risk assessment failed for order %s", order.id)
+        log_action(
+            actor=None,
+            action="risk_assessment.failed",
+            target_type="SalesOrder",
+            target_id=order.id,
+            metadata={"error": str(exc)},
+        )
 
 
 @transaction.atomic

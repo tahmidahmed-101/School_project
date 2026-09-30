@@ -14,6 +14,7 @@ from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
 from apps.inventory.models import StockItem
 from apps.inventory.selectors.stock import get_stock_item
+from apps.orders.models import SalesOrder
 
 
 def _account(key: str) -> Account:
@@ -62,7 +63,6 @@ def post_vendor_bill(bill) -> JournalEntry:
 
 
 def post_vendor_payment(payment) -> JournalEntry:
-    """Dr Accounts Payable / Cr Bank."""
     return post_journal_entry(
         entry_date=payment.paid_at.date(),
         reference_type="vendor_payment",
@@ -102,13 +102,22 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
         for item in StockItem.objects.filter(variant_id__in=variant_ids)
     }
 
+    # An order-level coupon discounts the whole order, not any one line, so
+    # shipment revenue recognizes the same proportion of it as post_sales_return
+    # reverses — otherwise a discounted order would recognize more revenue
+    # than the customer was ever actually charged.
+    order = shipment.order
+    discount_ratio = order.discount_total / order.subtotal if order.subtotal else Decimal("0")
+
     revenue_total = Decimal("0")
     tax_total = Decimal("0")
     cogs_total = Decimal("0")
 
     for line in lines:
         order_line = line.order_line
-        revenue_total += quantize_money(order_line.unit_price * line.quantity)
+        line_revenue = order_line.unit_price * line.quantity
+        line_revenue -= line_revenue * discount_ratio
+        revenue_total += quantize_money(line_revenue)
         if order_line.quantity:
             # Quantize the shipped share of line tax before summing: the AR
             # debit below is revenue + tax, and it has to equal the two credits
@@ -121,8 +130,14 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
 
     entry_date = shipment.shipped_at.date() if shipment.shipped_at else timezone.now().date()
 
-    # capture_payment credits AR for grand_total (incl. shipping); include it here too.
-    revenue_total += shipment.shipping_charge
+    # capture_payment credits AR for grand_total (incl. shipping); include it
+    # here too. Shipping is recognized once per order, on whichever shipment
+    # completes it — using the order's own shipping_total (the amount the
+    # customer was actually charged at checkout), not shipment.shipping_charge
+    # (an optional, per-shipment admin field that defaults to 0 and would
+    # otherwise silently drop shipping revenue whenever it's left unset).
+    if shipment.order.status == SalesOrder.Status.SHIPPED:
+        revenue_total += shipment.order.shipping_total
     revenue_entry = post_journal_entry(
         entry_date=entry_date,
         reference_type="shipment_revenue",
@@ -168,11 +183,21 @@ def post_sales_return(rma) -> list[JournalEntry]:
         )
     )
 
+    # An order-level coupon discounts the whole order, not any one line, so
+    # a return reverses the same proportion of it as the revenue it's
+    # reversing — otherwise a discounted order's returns would credit back
+    # more than the customer was ever actually charged or that was
+    # originally recognized as revenue.
+    order = rma.order
+    discount_ratio = order.discount_total / order.subtotal if order.subtotal else Decimal("0")
+
     revenue_total = Decimal("0")
     tax_total = Decimal("0")
     for line in rma_lines:
         order_line = line.order_line
-        revenue_total += quantize_money(order_line.unit_price * line.quantity)
+        line_revenue = order_line.unit_price * line.quantity
+        line_revenue -= line_revenue * discount_ratio
+        revenue_total += quantize_money(line_revenue)
         if order_line.quantity:
             tax_total += quantize_money(order_line.tax_amount * line.quantity / order_line.quantity)
 
@@ -262,7 +287,6 @@ def post_sales_return(rma) -> list[JournalEntry]:
 
 
 def post_customer_payment(payment) -> JournalEntry:
-    """Dr Bank / Cr Accounts Receivable."""
     return post_journal_entry(
         entry_date=payment.created_at.date(),
         reference_type="customer_payment",

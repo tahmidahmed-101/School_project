@@ -21,3 +21,7 @@ class CapturePaymentSerializer(serializers.Serializer):
     method = serializers.ChoiceField(
         choices=PaymentMethodKey.choices, required=False, default=PaymentMethodKey.MANUAL
     )
+    # Required by capture_payment for any method without a live gateway
+    # integration (card/bKash/Nagad/Rocket/bank transfer) — a TrxID, slip
+    # number, or statement line proving the money actually moved.
+    reference = serializers.CharField(required=False, allow_blank=True, default="")

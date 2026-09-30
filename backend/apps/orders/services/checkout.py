@@ -28,7 +28,6 @@ def order_weight(order: SalesOrder) -> Decimal:
 
 
 def _is_preorder_line(line) -> bool:
-    """Check if an order line is a pre-order."""
     variant = line.variant
     return variant.is_preorder_enabled and variant.is_preorder_active
 

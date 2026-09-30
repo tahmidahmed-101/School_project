@@ -46,6 +46,16 @@ class Payment(TimeStampedModel):
                 & models.Q(refunded_amount__lte=models.F("amount")),
                 name="payment_refunded_within_amount",
             ),
+            # Blank is excluded, not just allowed to repeat: cash/COD/manual
+            # payments have no reference at all, and there's nothing to
+            # de-duplicate there. A non-blank reference is a real external
+            # transaction id (a bKash TrxID, a bank statement line), and one
+            # external transaction must never back two Payment rows.
+            models.UniqueConstraint(
+                fields=["gateway_reference"],
+                condition=models.Q(gateway_reference__gt=""),
+                name="payment_gateway_reference_unique",
+            ),
         ]
 
     def __str__(self) -> str:

@@ -12,8 +12,9 @@ from apps.catalog.factories import ProductVariantFactory
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
 from apps.orders.factories import CouponFactory
-from apps.orders.models import Coupon
+from apps.orders.models import Coupon, SalesOrder
 from apps.orders.services.carts import add_line, get_or_create_cart
+from apps.orders.services.coupons import apply_coupon
 
 pytestmark = pytest.mark.django_db
 
@@ -169,6 +170,54 @@ def test_reapplying_a_different_coupon_releases_the_previous_one(api_client):
     second.refresh_from_db()
     assert first.times_used == 0
     assert second.times_used == 1
+
+
+def test_reapplying_the_same_coupon_does_not_increment_times_used(api_client):
+    coupon = CouponFactory(code="SAME10", usage_limit=5)
+    customer = create_user(email="coupon-reapply@example.com")
+    api_client.force_authenticate(user=customer)
+    _cart_with_line(customer, price=Decimal("100.00"))
+
+    first = api_client.post(
+        "/api/v1/customer/orders/cart/coupon/", {"code": "SAME10"}, format="json"
+    )
+    second = api_client.post(
+        "/api/v1/customer/orders/cart/coupon/", {"code": "same10"}, format="json"
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    coupon.refresh_from_db()
+    assert coupon.times_used == 1
+
+
+def test_concurrent_coupon_applies_do_not_corrupt_times_used():
+    """apply_coupon locks the order row and refreshes before reading
+    coupon_id — otherwise two concurrent applies, each holding its own
+    stale in-memory order reference, could both see no coupon attached,
+    both take the 'brand new apply' branch, and the second write would
+    silently overwrite the first: both coupons' times_used go up, but only
+    one ends up attached to the order."""
+    customer = create_user(email="coupon-concurrent@example.com")
+    cart = _cart_with_line(customer, price=Decimal("100.00"))
+    first_coupon = CouponFactory(code="FIRSTCONC")
+    second_coupon = CouponFactory(code="SECONDCONC")
+
+    # Two independent, stale in-memory references to the same order — as if
+    # two concurrent requests had each fetched it before either wrote.
+    stale_a = SalesOrder.objects.get(pk=cart.pk)
+    stale_b = SalesOrder.objects.get(pk=cart.pk)
+
+    apply_coupon(order=stale_a, code=first_coupon.code)
+    apply_coupon(order=stale_b, code=second_coupon.code)
+
+    first_coupon.refresh_from_db()
+    second_coupon.refresh_from_db()
+    cart.refresh_from_db()
+
+    assert first_coupon.times_used == 0
+    assert second_coupon.times_used == 1
+    assert cart.coupon_id == second_coupon.id
 
 
 def test_admin_can_create_and_list_coupons(api_client):

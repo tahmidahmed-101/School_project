@@ -96,9 +96,15 @@ def test_capture_refuses_a_method_that_is_not_in_the_registry(checked_out_order)
 def test_capture_records_an_offered_method(checked_out_order):
     order, _ = checked_out_order
 
-    payment = capture_payment(order=order, amount=order.grand_total, method=PaymentMethodKey.BKASH)
+    payment = capture_payment(
+        order=order,
+        amount=order.grand_total,
+        method=PaymentMethodKey.BKASH,
+        reference="TRX123456",
+    )
 
     assert payment.method == PaymentMethodKey.BKASH
+    assert payment.gateway_reference == "TRX123456"
     assert payment.amount == Decimal(order.grand_total)
 
 

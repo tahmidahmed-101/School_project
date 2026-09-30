@@ -90,7 +90,6 @@ class PublicProductVariantSerializer(serializers.Serializer):
     preorder_remaining = serializers.SerializerMethodField()
 
     def get_wholesale_price(self, obj) -> str | None:
-        """Only expose wholesale price if show_wholesale_price is True."""
         if obj.show_wholesale_price and obj.wholesale_price is not None:
             return str(obj.wholesale_price)
         return None

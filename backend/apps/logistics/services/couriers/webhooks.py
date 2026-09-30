@@ -64,42 +64,45 @@ def handle_courier_webhook(
     event_type = _event_type(payload)
     event_id = _event_id(carrier, event_type, payload)
 
-    record = _claim(carrier, event_id, event_type, payload)
-    if record is None:
-        return ack_status, ack_headers, ack_body
-
-    try:
-        processed = _process(carrier, gateway, record, payload)
-    except Exception as exc:
-        logger.exception("Courier webhook processing failed", extra={"event_id": event_id})
-        _finish(record, Status.FAILED, error=str(exc))
-        raise
-
-    _finish(record, Status.PROCESSED if processed else Status.IGNORED)
-    return ack_status, ack_headers, ack_body
-
-
-def _claim(
-    carrier: Carrier, event_id: str, event_type: str, payload: dict[str, Any]
-) -> CourierWebhookEvent | None:
-    """Take ownership of this delivery, or None if it is a true duplicate."""
+    # Recorded in its own short transaction, committed immediately, before
+    # any interpretation — so a crash mid-processing still leaves a row a
+    # later redelivery can find and retry (IntegrityError just means an
+    # earlier delivery already recorded it).
     try:
         with transaction.atomic():
-            return CourierWebhookEvent.objects.create(
+            CourierWebhookEvent.objects.create(
                 carrier=carrier, event_id=event_id, event_type=event_type, payload=payload
             )
     except IntegrityError:
         pass
 
-    existing = CourierWebhookEvent.objects.filter(event_id=event_id).first()
-    if existing is None or existing.status in CourierWebhookEvent.TERMINAL_STATUSES:
-        return None
+    with transaction.atomic():
+        # Locks the row for the whole claim-and-process attempt. Two
+        # simultaneous deliveries of the same event both reach this point;
+        # the second blocks here until the first commits, then sees the
+        # now-terminal status below and returns without reprocessing —
+        # exactly one processing attempt regardless of how many redeliveries
+        # arrive concurrently.
+        record = CourierWebhookEvent.objects.select_for_update().get(event_id=event_id)
+        if record.status in CourierWebhookEvent.TERMINAL_STATUSES:
+            return ack_status, ack_headers, ack_body
+        if record.status != Status.RECEIVED:
+            # A previous attempt failed before finishing; retry rather than
+            # swallow it.
+            record.status = Status.RECEIVED
+            record.error_message = ""
+            record.save(update_fields=["status", "error_message", "updated_at"])
 
-    # A previous attempt died before finishing; retry rather than swallow it.
-    existing.status = Status.RECEIVED
-    existing.error_message = ""
-    existing.save(update_fields=["status", "error_message", "updated_at"])
-    return existing
+        try:
+            processed = _process(carrier, gateway, record, payload)
+        except Exception as exc:
+            logger.exception("Courier webhook processing failed", extra={"event_id": event_id})
+            _finish(record, Status.FAILED, error=str(exc))
+            raise
+
+        _finish(record, Status.PROCESSED if processed else Status.IGNORED)
+
+    return ack_status, ack_headers, ack_body
 
 
 def _process(

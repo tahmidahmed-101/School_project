@@ -58,7 +58,6 @@ def _stocked_variant(quantity: int = 20, unit_cost: Decimal = Decimal("5.00")):
 
 
 def _confirmed_order(quantity: int = 5, stock: int = 20):
-    """An order that has been checked out and paid, ready to ship."""
     customer = CustomerUserFactory()
     variant = _stocked_variant(quantity=stock)
     order = get_or_create_cart(customer)
@@ -363,6 +362,70 @@ def test_receiving_a_damaged_return_books_the_cost_as_shrinkage():
 
     shrinkage_debit, _ = _account_balance("inventory_shrinkage")
     assert shrinkage_debit == Decimal("5.00") * 2
+
+
+def _discounted_shipped_order(
+    quantity: int = 4, stock: int = 50, price: Decimal = Decimal("50.00")
+):
+    """A shipped order with a 10% order-level coupon applied, so its lines'
+    unit_price stays the pre-discount price — discount_total is the only
+    place the discount lives, matching how apply_coupon actually works."""
+    from apps.orders.factories import CouponFactory
+    from apps.orders.services.coupons import apply_coupon
+
+    customer = CustomerUserFactory()
+    variant = ProductVariantFactory(price=price)
+    record_movement(
+        variant=variant, movement_type=MovementType.PURCHASE_IN, quantity=stock,
+        unit_cost=Decimal("5.00"),
+    )
+    order = get_or_create_cart(customer)
+    add_line(order=order, variant=variant, quantity=quantity)
+    coupon = CouponFactory()
+    apply_coupon(order=order, code=coupon.code)
+    order.refresh_from_db()
+    checkout(order=order)
+    capture_payment(order=order, amount=order.grand_total)
+    order.refresh_from_db()
+    create_shipment(order=order, lines=[{"order_line": order.lines.get(), "quantity": quantity}])
+    order.refresh_from_db()
+    return order
+
+
+def test_full_return_on_a_discounted_order_reverses_the_discounted_amount():
+    """An order-level coupon discounts the whole order, not any one line —
+    unit_price on the line is still the pre-discount price. A return must
+    reverse revenue at the same discounted rate the customer actually paid,
+    not the full pre-discount line amount."""
+    order = _discounted_shipped_order(quantity=4)
+    line = order.lines.get()
+    assert order.discount_total == Decimal("20.00")  # 10% of 200.00
+
+    rma = create_rma(order=order, lines=[{"order_line": line, "quantity": 4}])
+    approve_rma(rma=rma)
+    grade_rma_line(line=rma.lines.get(), condition=ReturnRMALine.Condition.SELLABLE)
+    receive_rma(rma=rma)
+
+    returns_debit, _ = _account_balance("sales_returns")
+    assert returns_debit == Decimal("180.00")  # 200.00 line revenue less 10%
+    # A full return must not credit back more than the order's own discounted
+    # subtotal — reversing the undiscounted amount would exceed it.
+    assert returns_debit <= order.subtotal - order.discount_total
+
+
+def test_partial_return_on_a_discounted_order_reverses_only_its_share():
+    order = _discounted_shipped_order(quantity=4)
+    line = order.lines.get()
+
+    rma = create_rma(order=order, lines=[{"order_line": line, "quantity": 2}])
+    approve_rma(rma=rma)
+    grade_rma_line(line=rma.lines.get(), condition=ReturnRMALine.Condition.SELLABLE)
+    receive_rma(rma=rma)
+
+    returns_debit, _ = _account_balance("sales_returns")
+    # Half the units, at the same 10% discount rate: 100.00 less 10%.
+    assert returns_debit == Decimal("90.00")
+    assert returns_debit <= order.subtotal - order.discount_total
 
 
 def test_every_posted_journal_entry_balances_after_a_full_return_cycle():

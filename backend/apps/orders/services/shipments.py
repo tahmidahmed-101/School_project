@@ -147,8 +147,10 @@ _PROGRESSION_RANK: dict[str, int] = {
 
 
 def can_advance_shipment_status(current: str, new: str) -> bool:
-    """Whether a webhook-reported status is safe to apply given redelivery and
-    out-of-order arrival are both normal."""
+    """Whether a status change is safe to apply given redelivery and
+    out-of-order arrival are both normal. The single transition rule for
+    every caller — admin updates and courier webhooks alike — enforced by
+    `update_shipment_status` itself, not left to each caller to remember."""
     current_rank = _PROGRESSION_RANK.get(current)
     new_rank = _PROGRESSION_RANK.get(new)
     if current_rank is None or new_rank is None:
@@ -160,6 +162,15 @@ def can_advance_shipment_status(current: str, new: str) -> bool:
 def update_shipment_status(
     *, shipment: Shipment, status: str, actor=None, courier_status: str | None = None
 ) -> Shipment:
+    # Locks the row for the rest of the transaction — two different webhook
+    # events for the same shipment (or a webhook racing an admin update)
+    # could otherwise both read the same pre-update status, both pass the
+    # transition check below, and both write, applying conflicting updates.
+    # Refreshed in place rather than re-bound to a new instance, so the
+    # caller's object (and what it serializes afterward) stays in sync.
+    Shipment.objects.select_for_update().filter(pk=shipment.pk).exists()
+    shipment.refresh_from_db()
+
     if shipment.status in Shipment.TERMINAL_STATUSES:
         raise BusinessRuleViolationError(
             f"Shipment is already {shipment.get_status_display()} and cannot change status.",
@@ -167,6 +178,12 @@ def update_shipment_status(
         )
     if status not in Shipment.Status.values:
         raise BusinessRuleViolationError("Unknown shipment status.", code="invalid_status")
+    if not can_advance_shipment_status(shipment.status, status):
+        raise BusinessRuleViolationError(
+            f"Cannot move a shipment from {shipment.get_status_display()} back to "
+            f"{Shipment.Status(status).label}.",
+            code="invalid_status_transition",
+        )
 
     shipment.status = status
     update_fields = ["status", "updated_at"]
