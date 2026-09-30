@@ -76,7 +76,7 @@ def create_shipment(
     recipient_phone = ""
     if order.contact_phone:
         recipient_phone = local_bd_mobile(order.contact_phone)
-    elif order.shipping_address_id:
+    elif order.shipping_address is not None:
         recipient_phone = local_bd_mobile(order.shipping_address.phone)
 
     shipment = Shipment.objects.create(
@@ -135,7 +135,7 @@ def _mark_order_delivered_if_complete(order: SalesOrder) -> None:
 # DELIVERED/RETURNED/CANCELLED are handled by the terminal-status guard above;
 # FAILED is intentionally excluded, since a failed attempt can be retried and
 # move back into IN_TRANSIT.
-_PROGRESSION_RANK = {
+_PROGRESSION_RANK: dict[str, int] = {
     Shipment.Status.PENDING: 0,
     Shipment.Status.SHIPPED: 1,
     Shipment.Status.IN_TRANSIT: 2,
