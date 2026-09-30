@@ -103,6 +103,73 @@ def test_public_product_list_preorder_only_filter(api_client):
     assert regular_product.name not in names
 
 
+def test_public_product_detail_exposes_preorder_capacity(api_client):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.orders.factories import SalesOrderLineFactory
+
+    now = timezone.now()
+    product = ProductFactory(is_active=True)
+    variant = ProductVariantFactory(
+        product=product,
+        is_preorder_enabled=True,
+        preorder_start_date=now - timedelta(days=1),
+        preorder_end_date=now + timedelta(days=10),
+        preorder_stock_limit=10,
+    )
+    SalesOrderLineFactory(variant=variant, quantity=4, is_preorder=True)
+
+    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
+
+    assert response.status_code == 200
+    payload = response.data["data"]["variants"][0]
+    assert payload["preorder_stock_limit"] == 10
+    assert payload["preordered_quantity"] == 4
+    assert payload["preorder_remaining"] == 6
+
+
+def test_public_product_detail_preorder_remaining_is_null_when_unlimited(api_client):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.orders.factories import SalesOrderLineFactory
+
+    now = timezone.now()
+    product = ProductFactory(is_active=True)
+    variant = ProductVariantFactory(
+        product=product,
+        is_preorder_enabled=True,
+        preorder_start_date=now - timedelta(days=1),
+        preorder_end_date=now + timedelta(days=10),
+        preorder_stock_limit=None,
+    )
+    SalesOrderLineFactory(variant=variant, quantity=3, is_preorder=True)
+
+    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
+
+    assert response.status_code == 200
+    payload = response.data["data"]["variants"][0]
+    assert payload["preorder_stock_limit"] is None
+    assert payload["preordered_quantity"] == 3
+    assert payload["preorder_remaining"] is None
+
+
+def test_public_product_detail_regular_variant_reports_no_preorder_capacity(api_client):
+    product = ProductFactory(is_active=True)
+    ProductVariantFactory(product=product)
+
+    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
+
+    assert response.status_code == 200
+    payload = response.data["data"]["variants"][0]
+    assert payload["preorder_stock_limit"] is None
+    assert payload["preordered_quantity"] == 0
+    assert payload["preorder_remaining"] is None
+
+
 def test_public_product_detail_by_slug(api_client):
     product = ProductFactory()
     ProductVariantFactory(product=product, sku="DETAIL-1")

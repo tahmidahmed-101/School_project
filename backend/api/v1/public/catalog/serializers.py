@@ -6,8 +6,12 @@ from rest_framework import serializers
 
 from apps.catalog.selectors.bundles import bundle_available_quantities
 from apps.inventory.selectors.stock import available_quantities_for_variants
+from apps.orders.services.carts import get_preordered_quantities
 
 STOCK_CONTEXT_KEY = "stock_by_variant"
+# Same key the admin catalog API uses (api/v1/admin/catalog/variant_views.py)
+# for the same batch dict, so both surfaces share one naming convention.
+PREORDER_CONTEXT_KEY = "preordered_by_variant"
 
 
 def active_variants_of(product) -> list:
@@ -33,8 +37,14 @@ def stock_by_variant(variants) -> dict:
 
 
 def stock_context_for_products(products) -> dict:
+    """Batch context for a page of products: on-hand availability plus
+    pre-order capacity, each resolved in one query for the whole page rather
+    than once per variant."""
     variants = [variant for product in products for variant in active_variants_of(product)]
-    return {STOCK_CONTEXT_KEY: stock_by_variant(variants)}
+    return {
+        STOCK_CONTEXT_KEY: stock_by_variant(variants),
+        PREORDER_CONTEXT_KEY: get_preordered_quantities(variants),
+    }
 
 
 class PublicCategorySerializer(serializers.Serializer):
@@ -75,6 +85,9 @@ class PublicProductVariantSerializer(serializers.Serializer):
     release_date = serializers.DateTimeField(allow_null=True)
     is_preorder_active = serializers.SerializerMethodField()
     is_preorder_price_applied = serializers.SerializerMethodField()
+    preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
+    preordered_quantity = serializers.SerializerMethodField()
+    preorder_remaining = serializers.SerializerMethodField()
 
     def get_wholesale_price(self, obj) -> str | None:
         """Only expose wholesale price if show_wholesale_price is True."""
@@ -124,6 +137,20 @@ class PublicProductVariantSerializer(serializers.Serializer):
 
     def get_is_preorder_price_applied(self, obj) -> bool:
         return obj.is_preorder_price_applied
+
+    def get_preordered_quantity(self, obj) -> int:
+        # Same batch-context / per-instance-fallback pattern as the admin
+        # catalog API's get_can_preorder (api/v1/admin/catalog/serializers.py).
+        preordered_by_variant = self.context.get(PREORDER_CONTEXT_KEY)
+        if preordered_by_variant is not None:
+            return preordered_by_variant.get(obj.id, 0)
+        return obj._get_preordered_quantity()
+
+    def get_preorder_remaining(self, obj) -> int | None:
+        # No configured limit means no capacity ceiling to report against.
+        if obj.preorder_stock_limit is None:
+            return None
+        return max(obj.preorder_stock_limit - self.get_preordered_quantity(obj), 0)
 
     def get_components(self, obj) -> list[dict]:
         components = self._bundle_components(obj)

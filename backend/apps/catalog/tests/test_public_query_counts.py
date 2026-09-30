@@ -5,9 +5,12 @@ the batched behaviour so a future serializer change cannot quietly restore it.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 from apps.catalog.factories import CategoryFactory, ProductFactory, ProductVariantFactory
 from apps.catalog.models import Category
@@ -24,12 +27,43 @@ def _catalog(products: int, variants_per_product: int) -> None:
             ProductVariantFactory(product=product, size=SIZES[index])
 
 
+def _preorder_catalog(products: int, variants_per_product: int) -> None:
+    now = timezone.now()
+    for _ in range(products):
+        product = ProductFactory(is_active=True)
+        for index in range(variants_per_product):
+            ProductVariantFactory(
+                product=product,
+                size=SIZES[index],
+                is_preorder_enabled=True,
+                preorder_start_date=now - timedelta(days=1),
+                preorder_end_date=now + timedelta(days=10),
+                preorder_stock_limit=5,
+            )
+
+
 def test_product_list_query_count_does_not_grow_with_the_catalog(api_client):
     _catalog(products=2, variants_per_product=2)
     with CaptureQueriesContext(connection) as small:
         assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
 
     _catalog(products=6, variants_per_product=3)
+    with CaptureQueriesContext(connection) as large:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    assert len(large) == len(small)
+
+
+def test_product_list_query_count_does_not_grow_with_preorder_variants(api_client):
+    """Pre-order capacity (preorder_stock_limit/preordered_quantity/
+    preorder_remaining) is resolved via the same batched
+    get_preordered_quantities() call as stock availability — one query for
+    the page, not one per pre-order variant."""
+    _preorder_catalog(products=2, variants_per_product=2)
+    with CaptureQueriesContext(connection) as small:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    _preorder_catalog(products=6, variants_per_product=3)
     with CaptureQueriesContext(connection) as large:
         assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
 
