@@ -114,6 +114,28 @@ def test_public_product_detail_by_slug(api_client):
     assert response.data["data"]["variants"][0]["sku"] == "DETAIL-1"
 
 
+def test_public_product_detail_exposes_meta_keywords(api_client):
+    product = ProductFactory(meta_keywords="panjabi, eid collection, menswear")
+    ProductVariantFactory(product=product)
+
+    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
+
+    assert response.status_code == 200
+    assert response.data["data"]["meta_keywords"] == "panjabi, eid collection, menswear"
+
+
+def test_public_product_list_omits_meta_keywords(api_client):
+    """Meta keywords are per-product SEO metadata, only useful on the detail
+    page a search engine actually lands on — the list payload leaves it out."""
+    product = ProductFactory(meta_keywords="panjabi, eid collection, menswear")
+    ProductVariantFactory(product=product)
+
+    response = api_client.get("/api/v1/public/catalog/products/")
+
+    assert response.status_code == 200
+    assert "meta_keywords" not in response.data["data"]["results"][0]
+
+
 def test_admin_can_generate_variants(api_client):
     admin = create_user(email="catalog-generate-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)

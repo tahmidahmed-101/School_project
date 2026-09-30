@@ -240,6 +240,7 @@ class PublicProductListSerializer(serializers.Serializer):
 
 class PublicProductDetailSerializer(PublicProductListSerializer):
     description = serializers.CharField(allow_blank=True)
+    meta_keywords = serializers.CharField(read_only=True, allow_blank=True)
 
 
 class PublicProductReviewSerializer(serializers.Serializer):

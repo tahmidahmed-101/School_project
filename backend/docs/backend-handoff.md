@@ -418,13 +418,23 @@ product create/edit form," not the storefront):
   `test_admin_can_create_product_with_only_required_fields` now also asserts
   it defaults to `""` when omitted.
 
-**Not done** (out of scope for this ask, flag if wanted): the field is not
-exposed on the public catalog serializers
-(`api/v1/public/catalog/serializers.py`) or rendered into any `<meta
-keywords>` tag on the storefront — right now it's admin-only metadata with no
-public consumer. `create_quick_product()` (the Stock App's fast-add flow)
-also doesn't accept it, consistent with that flow skipping other optional
-product fields too.
+**Follow-up**: also exposed read-only on the public catalog API —
+`api/v1/public/catalog/serializers.py::PublicProductDetailSerializer` gained
+`meta_keywords = serializers.CharField(read_only=True, allow_blank=True)`,
+same placement as `description` (detail only, not the list serializer —
+per-product SEO metadata only matters on the page a search engine actually
+lands on). `GET /api/v1/public/catalog/products/<slug>/` now returns it;
+`GET /api/v1/public/catalog/products/` does not. Tests:
+`test_public_product_detail_exposes_meta_keywords`,
+`test_public_product_list_omits_meta_keywords`.
 
-Verified: `ruff`, `mypy` (still zero errors), `manage.py check`, full test
-suite (1581 tests) all green. Not yet committed/pushed.
+**Still not done** (out of scope unless asked): nothing renders it into an
+actual `<meta name="keywords">` tag — that's a frontend concern, and this
+repo's `frontend/` is the storefront, not the admin panel, so the admin
+create/edit form itself lives outside this repo too. `create_quick_product()`
+(the Stock App's fast-add flow) still doesn't accept it, consistent with that
+flow skipping other optional product fields.
+
+Verified: `ruff`, `mypy` (still zero errors — the one `api/v1/webhooks`
+error present project-wide predates all of this work and is unrelated),
+`manage.py check`, full test suite (1583 tests) all green.
