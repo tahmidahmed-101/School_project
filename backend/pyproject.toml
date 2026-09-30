@@ -140,6 +140,7 @@ module = [
     "api.v1.customer.*",
     "api.v1.admin.*",
     "api.v1.public.*",
+    "api.v1.webhooks.*",
 ]
 ignore_errors = true
 
