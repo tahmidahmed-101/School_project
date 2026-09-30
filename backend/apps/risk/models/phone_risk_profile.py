@@ -18,20 +18,20 @@ class PhoneRiskProfile(TimeStampedModel):
     shipment outcomes whenever one settles.
     """
 
-    phone_number: models.CharField = models.CharField(
+    phone_number = models.CharField(
         max_length=20, unique=True, db_index=True, validators=[validate_bd_mobile]
     )
-    total_orders: models.IntegerField = models.IntegerField(default=0)
-    delivered_count: models.IntegerField = models.IntegerField(default=0)
-    returned_count: models.IntegerField = models.IntegerField(default=0)
-    cancelled_count: models.IntegerField = models.IntegerField(default=0)
-    success_rate: models.DecimalField = models.DecimalField(
+    total_orders = models.IntegerField(default=0)
+    delivered_count = models.IntegerField(default=0)
+    returned_count = models.IntegerField(default=0)
+    cancelled_count = models.IntegerField(default=0)
+    success_rate = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("0.00")
     )
-    last_order_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
-    last_delivered_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
-    last_returned_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
-    recalculated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
+    last_order_at = models.DateTimeField(null=True, blank=True)
+    last_delivered_at = models.DateTimeField(null=True, blank=True)
+    last_returned_at = models.DateTimeField(null=True, blank=True)
+    recalculated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-recalculated_at"]

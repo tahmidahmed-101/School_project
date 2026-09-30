@@ -12,15 +12,15 @@ from .variant import ProductVariant
 
 
 class ProductImage(TimeStampedModel):
-    product: models.ForeignKey | None = models.ForeignKey(
+    product = models.ForeignKey(
         Product, on_delete=models.CASCADE, null=True, blank=True, related_name="images"
     )
-    variant: models.ForeignKey | None = models.ForeignKey(
+    variant = models.ForeignKey(
         ProductVariant, on_delete=models.CASCADE, null=True, blank=True, related_name="images"
     )
-    url: models.CharField = models.CharField(max_length=500)
-    alt_text: models.CharField = models.CharField(max_length=255, blank=True, default="")
-    sort_order: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+    url = models.CharField(max_length=500)
+    alt_text = models.CharField(max_length=255, blank=True, default="")
+    sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering: ClassVar[list] = ["sort_order"]

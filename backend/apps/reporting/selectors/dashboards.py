@@ -239,7 +239,7 @@ def category_revenue(*, start: date, end: date) -> list[dict]:
     ]
 
 
-_STATUS_BADGE = {
+_STATUS_BADGE: dict[str, str] = {
     SalesOrder.Status.PENDING: "Pending",
     SalesOrder.Status.CONFIRMED: "Processing",
     SalesOrder.Status.SHIPPED: "Fulfilled",

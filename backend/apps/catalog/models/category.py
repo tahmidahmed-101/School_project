@@ -17,19 +17,19 @@ class Category(FullAuditModel):
         STOCK = "stock", "Stock"
         PREORDER = "preorder", "Pre-order"
 
-    name: models.CharField = models.CharField(max_length=150)
-    slug: models.SlugField = models.SlugField(max_length=170, unique=True)
-    parent: models.ForeignKey = models.ForeignKey(
+    name = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=170, unique=True)
+    parent = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
     )
-    description: models.TextField = models.TextField(blank=True)
-    image: models.ImageField = models.ImageField(
+    description = models.TextField(blank=True)
+    image = models.ImageField(
         upload_to=_category_image_path, null=True, blank=True
     )
     # A subcategory always shares its parent's type (enforced in
     # apps.catalog.services.categories) — stored per row rather than derived by
     # walking the parent chain, so filtering by type stays a single indexed query.
-    category_type: models.CharField = models.CharField(
+    category_type = models.CharField(
         max_length=20, choices=CategoryType.choices, default=CategoryType.STOCK
     )
 

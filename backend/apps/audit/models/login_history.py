@@ -9,17 +9,17 @@ from apps.common.models import TimeStampedModel
 
 
 class LoginHistory(TimeStampedModel):
-    user: models.ForeignKey = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="login_history",
     )
-    email: models.CharField = models.CharField(max_length=254, blank=True)
-    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(null=True, blank=True)
-    user_agent: models.CharField = models.CharField(max_length=500, blank=True)
-    was_successful: models.BooleanField = models.BooleanField(default=False)
+    email = models.CharField(max_length=254, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    was_successful = models.BooleanField(default=False)
 
     class Meta:
         indexes: ClassVar[list] = [

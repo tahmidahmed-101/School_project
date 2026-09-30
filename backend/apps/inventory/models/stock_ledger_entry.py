@@ -16,23 +16,23 @@ class StockLedgerEntry(UUIDModel):
     """Append-only record of every stock movement. Nothing edits or deletes
     these rows — StockItem is a cache derived from summing this ledger."""
 
-    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
-    variant: models.ForeignKey = models.ForeignKey(
+    created_at = models.DateTimeField(auto_now_add=True)
+    variant = models.ForeignKey(
         ProductVariant, on_delete=models.PROTECT, related_name="ledger_entries"
     )
-    warehouse: models.ForeignKey = models.ForeignKey(
+    warehouse = models.ForeignKey(
         Warehouse, on_delete=models.PROTECT, related_name="ledger_entries"
     )
-    movement_type: models.CharField = models.CharField(max_length=20, choices=MovementType.choices)
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
-    unit_cost: models.DecimalField | None = models.DecimalField(
+    movement_type = models.CharField(max_length=20, choices=MovementType.choices)
+    quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(
         max_digits=12, decimal_places=4, null=True, blank=True
     )
-    balance_after: models.IntegerField = models.IntegerField()
-    reference_type: models.CharField = models.CharField(max_length=50, blank=True)
-    reference_id: models.UUIDField | None = models.UUIDField(null=True, blank=True)
-    notes: models.CharField = models.CharField(max_length=255, blank=True)
-    created_by: models.ForeignKey | None = models.ForeignKey(
+    balance_after = models.IntegerField()
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.UUIDField(null=True, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,

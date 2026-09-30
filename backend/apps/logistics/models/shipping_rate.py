@@ -15,16 +15,16 @@ class ShippingRate(TimeStampedModel):
     + ceil((weight - base_weight) / increment_weight) * increment_charge,
     floored at base_charge for weight <= base_weight."""
 
-    zone: models.ForeignKey = models.ForeignKey(
+    zone = models.ForeignKey(
         ShippingZone, on_delete=models.CASCADE, related_name="rates"
     )
-    carrier: models.ForeignKey = models.ForeignKey(
+    carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="rates"
     )
-    base_weight: models.DecimalField = models.DecimalField(max_digits=10, decimal_places=3)
-    base_charge: models.DecimalField = models.DecimalField(max_digits=10, decimal_places=2)
-    increment_weight: models.DecimalField = models.DecimalField(max_digits=10, decimal_places=3)
-    increment_charge: models.DecimalField = models.DecimalField(max_digits=10, decimal_places=2)
+    base_weight = models.DecimalField(max_digits=10, decimal_places=3)
+    base_charge = models.DecimalField(max_digits=10, decimal_places=2)
+    increment_weight = models.DecimalField(max_digits=10, decimal_places=3)
+    increment_charge = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
         ordering: ClassVar[list] = ["zone__name", "carrier__name"]

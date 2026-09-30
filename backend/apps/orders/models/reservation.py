@@ -21,17 +21,17 @@ class StockReservation(TimeStampedModel):
         ACTIVE = "active", "Active"
         RELEASED = "released", "Released"
 
-    order_line: models.ForeignKey = models.ForeignKey(
+    order_line = models.ForeignKey(
         SalesOrderLine, on_delete=models.CASCADE, related_name="reservations"
     )
-    variant: models.ForeignKey = models.ForeignKey(
+    variant = models.ForeignKey(
         "catalog.ProductVariant", on_delete=models.PROTECT, related_name="stock_reservations"
     )
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
-    status: models.CharField = models.CharField(
+    quantity = models.PositiveIntegerField()
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.ACTIVE
     )
-    expires_at: models.DateTimeField = models.DateTimeField(default=default_reservation_expiry)
+    expires_at = models.DateTimeField(default=default_reservation_expiry)
 
     class Meta:
         indexes: ClassVar[list] = [

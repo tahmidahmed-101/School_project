@@ -89,18 +89,18 @@ def replace_staff_permissions(
             "permission_code", flat=True
         )
     )
-    updates = [{"code": code, "is_enabled": True} for code in requested - current] + [
-        {"code": code, "is_enabled": False} for code in current - requested
+    updates: list[tuple[str, bool]] = [(code, True) for code in requested - current] + [
+        (code, False) for code in current - requested
     ]
 
     permissions = [
         set_staff_permission(
             staff_user=staff_user,
-            permission_code=update["code"],
-            is_enabled=update["is_enabled"],
+            permission_code=code,
+            is_enabled=is_enabled,
             granted_by=granted_by,
         )
-        for update in updates
+        for code, is_enabled in updates
     ]
     if updates:
         log_action(
@@ -108,7 +108,11 @@ def replace_staff_permissions(
             action="staff_permissions.updated",
             target_type="User",
             target_id=staff_user.id,
-            metadata={"updates": updates},
+            metadata={
+                "updates": [
+                    {"code": code, "is_enabled": is_enabled} for code, is_enabled in updates
+                ]
+            },
         )
     return permissions
 

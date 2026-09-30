@@ -12,17 +12,17 @@ from .product import Product
 
 
 class ProductReview(TimeStampedModel):
-    customer: models.ForeignKey = models.ForeignKey(
+    customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="product_reviews"
     )
-    product: models.ForeignKey = models.ForeignKey(
+    product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="reviews"
     )
-    rating: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+    rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
-    comment: models.TextField = models.TextField(blank=True)
-    is_verified_purchase: models.BooleanField = models.BooleanField(default=False)
+    comment = models.TextField(blank=True)
+    is_verified_purchase = models.BooleanField(default=False)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

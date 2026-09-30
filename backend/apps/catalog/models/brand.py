@@ -15,13 +15,13 @@ def _brand_image_path(instance: Brand, filename: str) -> str:
 
 
 class Brand(FullAuditModel):
-    name: models.CharField = models.CharField(max_length=150, unique=True)
-    slug: models.SlugField = models.SlugField(max_length=170, unique=True)
-    description: models.TextField = models.TextField(blank=True)
-    image: models.ImageField = models.ImageField(
+    name = models.CharField(max_length=150, unique=True)
+    slug = models.SlugField(max_length=170, unique=True)
+    description = models.TextField(blank=True)
+    image = models.ImageField(
         upload_to=_brand_image_path, null=True, blank=True
     )
-    categories: models.ManyToManyField = models.ManyToManyField(
+    categories = models.ManyToManyField(
         Category, related_name="brands", blank=True
     )
 

@@ -21,9 +21,9 @@ def expenses_list(
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     if category_id:
-        queryset = queryset.filter(category_id=category_id)
+        queryset = queryset.filter(category_id=UUID(str(category_id)))
     if account_id:
-        queryset = queryset.filter(expense_account_id=account_id)
+        queryset = queryset.filter(expense_account_id=UUID(str(account_id)))
     if start:
         queryset = queryset.filter(expense_date__gte=start)
     if end:

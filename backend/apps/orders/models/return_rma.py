@@ -17,14 +17,14 @@ class ReturnRMA(FullAuditModel):
         RECEIVED = "received", "Received"
         CLOSED = "closed", "Closed"
 
-    rma_number: models.CharField = models.CharField(max_length=32, unique=True)
-    order: models.ForeignKey = models.ForeignKey(
+    rma_number = models.CharField(max_length=32, unique=True)
+    order = models.ForeignKey(
         SalesOrder, on_delete=models.PROTECT, related_name="rmas"
     )
-    status: models.CharField = models.CharField(
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.REQUESTED
     )
-    reason: models.TextField = models.TextField(blank=True)
+    reason = models.TextField(blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]
@@ -41,14 +41,14 @@ class ReturnRMALine(TimeStampedModel):
         SELLABLE = "sellable", "Sellable"
         DAMAGED = "damaged", "Damaged"
 
-    rma: models.ForeignKey = models.ForeignKey(
+    rma = models.ForeignKey(
         ReturnRMA, on_delete=models.CASCADE, related_name="lines"
     )
-    order_line: models.ForeignKey = models.ForeignKey(
+    order_line = models.ForeignKey(
         SalesOrderLine, on_delete=models.PROTECT, related_name="rma_lines"
     )
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
-    condition: models.CharField = models.CharField(
+    quantity = models.PositiveIntegerField()
+    condition = models.CharField(
         max_length=20, choices=Condition.choices, blank=True
     )
 

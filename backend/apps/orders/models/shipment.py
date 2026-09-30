@@ -22,33 +22,33 @@ class Shipment(FullAuditModel):
 
     TERMINAL_STATUSES = (Status.DELIVERED, Status.RETURNED, Status.CANCELLED)
 
-    order: models.ForeignKey = models.ForeignKey(
+    order = models.ForeignKey(
         SalesOrder, on_delete=models.PROTECT, related_name="shipments"
     )
-    carrier: models.ForeignKey | None = models.ForeignKey(
+    carrier = models.ForeignKey(
         "logistics.Carrier",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="shipments",
     )
-    tracking_number: models.CharField = models.CharField(max_length=100, blank=True)
-    status: models.CharField = models.CharField(
+    tracking_number = models.CharField(max_length=100, blank=True)
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
-    shipping_charge: models.DecimalField = models.DecimalField(
+    shipping_charge = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
-    cod_amount: models.DecimalField = models.DecimalField(
+    cod_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
-    courier_status: models.CharField = models.CharField(max_length=100, blank=True)
-    shipped_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
-    delivered_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    courier_status = models.CharField(max_length=100, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     # Denormalised (not read from order.shipping_address) so risk/fraud
     # signals can query delivery history per phone in one indexed lookup
     # instead of joining through the order and address on every shipment.
-    recipient_phone: models.CharField = models.CharField(max_length=20, blank=True, db_index=True)
+    recipient_phone = models.CharField(max_length=20, blank=True, db_index=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]
@@ -62,13 +62,13 @@ class Shipment(FullAuditModel):
 
 
 class ShipmentLine(TimeStampedModel):
-    shipment: models.ForeignKey = models.ForeignKey(
+    shipment = models.ForeignKey(
         Shipment, on_delete=models.CASCADE, related_name="lines"
     )
-    order_line: models.ForeignKey = models.ForeignKey(
+    order_line = models.ForeignKey(
         SalesOrderLine, on_delete=models.PROTECT, related_name="shipment_lines"
     )
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField()
 
     def __str__(self) -> str:
         return f"{self.shipment_id}: {self.order_line_id} x{self.quantity}"

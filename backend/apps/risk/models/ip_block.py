@@ -17,18 +17,18 @@ class IPBlock(TimeStampedModel):
     ``expires_at`` null means indefinite.
     """
 
-    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(
+    ip_address = models.GenericIPAddressField(
         unique=True, db_index=True
     )
-    reason: models.TextField = models.TextField(help_text="Why. Shown to staff, never customers.")
-    created_by: models.ForeignKey | None = models.ForeignKey(
+    reason = models.TextField(help_text="Why. Shown to staff, never customers.")
+    created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="ip_blocks_created",
     )
-    expires_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

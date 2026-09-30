@@ -16,14 +16,14 @@ class GoodsReceiptNote(FullAuditModel):
         QC_PASS = "qc_pass", "QC pass"
         QC_REJECT = "qc_reject", "QC reject"
 
-    purchase_order: models.ForeignKey = models.ForeignKey(
+    purchase_order = models.ForeignKey(
         PurchaseOrder, on_delete=models.PROTECT, related_name="goods_receipts"
     )
-    received_date: models.DateField = models.DateField()
-    received_by: models.ForeignKey = models.ForeignKey(
+    received_date = models.DateField()
+    received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
-    status: models.CharField = models.CharField(
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
 
@@ -42,14 +42,14 @@ class GRNLine(TimeStampedModel):
         ACCEPTED = "accepted", "Accepted"
         REJECTED = "rejected", "Rejected"
 
-    goods_receipt: models.ForeignKey = models.ForeignKey(
+    goods_receipt = models.ForeignKey(
         GoodsReceiptNote, on_delete=models.CASCADE, related_name="lines"
     )
-    purchase_order_line: models.ForeignKey = models.ForeignKey(
+    purchase_order_line = models.ForeignKey(
         PurchaseOrderLine, on_delete=models.PROTECT, related_name="grn_lines"
     )
-    quantity_received: models.PositiveIntegerField = models.PositiveIntegerField()
-    condition: models.CharField = models.CharField(max_length=20, choices=Condition.choices)
+    quantity_received = models.PositiveIntegerField()
+    condition = models.CharField(max_length=20, choices=Condition.choices)
 
     def __str__(self) -> str:
         return f"{self.goods_receipt_id}: {self.purchase_order_line_id} x{self.quantity_received}"

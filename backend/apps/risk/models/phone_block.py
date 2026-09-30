@@ -28,38 +28,38 @@ class PhoneBlock(TimeStampedModel):
         MANUAL = "manual", "Added by staff"
         AUTOMATIC = "automatic", "Flagged by a rule"
 
-    phone_number: models.CharField = models.CharField(
+    phone_number = models.CharField(
         max_length=20,
         unique=True,
         db_index=True,
         help_text="Normalised: 01XXXXXXXXX",
         validators=[validate_bd_mobile],
     )
-    strength: models.CharField = models.CharField(
+    strength = models.CharField(
         max_length=20, choices=Strength.choices, default=Strength.ADVANCE_ONLY
     )
-    origin: models.CharField = models.CharField(
+    origin = models.CharField(
         max_length=20, choices=Origin.choices, default=Origin.MANUAL
     )
-    reason: models.TextField = models.TextField(help_text="Why. Shown to staff, never customers.")
-    created_by: models.ForeignKey | None = models.ForeignKey(
+    reason = models.TextField(help_text="Why. Shown to staff, never customers.")
+    created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="phone_blocks_created",
     )
-    lifted_at: models.DateTimeField | None = models.DateTimeField(
+    lifted_at = models.DateTimeField(
         null=True, blank=True, db_index=True
     )
-    lifted_by: models.ForeignKey | None = models.ForeignKey(
+    lifted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="phone_blocks_lifted",
     )
-    lift_reason: models.TextField = models.TextField(blank=True)
+    lift_reason = models.TextField(blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

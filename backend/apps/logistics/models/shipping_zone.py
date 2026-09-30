@@ -8,8 +8,8 @@ from apps.common.models import FullAuditModel
 
 
 class ShippingZone(FullAuditModel):
-    name: models.CharField = models.CharField(max_length=100, unique=True)
-    country_codes: models.JSONField = models.JSONField(default=list, blank=True)
+    name = models.CharField(max_length=100, unique=True)
+    country_codes = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["name"]

@@ -5,7 +5,7 @@ from django.contrib.auth.models import Group
 from apps.accounts.constants import UserRole
 from apps.accounts.models import User
 
-ROLE_GROUP_NAMES = {
+ROLE_GROUP_NAMES: dict[str, str] = {
     UserRole.ADMIN: "Admin",
     UserRole.STAFF: "Staff",
     UserRole.CUSTOMER: "Customer",

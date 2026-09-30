@@ -9,19 +9,19 @@ from apps.common.models import TimeStampedModel
 
 
 class AuditLog(TimeStampedModel):
-    actor: models.ForeignKey = models.ForeignKey(
+    actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="audit_logs",
     )
-    action: models.CharField = models.CharField(max_length=100)
-    target_type: models.CharField = models.CharField(max_length=100, blank=True)
-    target_id: models.CharField = models.CharField(max_length=64, blank=True)
-    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(null=True, blank=True)
-    user_agent: models.CharField = models.CharField(max_length=500, blank=True)
-    metadata: models.JSONField = models.JSONField(default=dict, blank=True)
+    action = models.CharField(max_length=100)
+    target_type = models.CharField(max_length=100, blank=True)
+    target_id = models.CharField(max_length=64, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
         indexes: ClassVar[list] = [

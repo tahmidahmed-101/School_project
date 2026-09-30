@@ -9,7 +9,7 @@ VENDOR_BILL_TEMPLATE = "pdf/vendor_bill.html"
 
 ZERO = Decimal("0.00")
 
-STATUS_CLASSES = {
+STATUS_CLASSES: dict[str, str] = {
     VendorBill.Status.PAID: "pill--settled",
     VendorBill.Status.VOID: "pill--void",
 }

@@ -13,45 +13,45 @@ from .product import Product
 
 
 class ProductVariant(FullAuditModel):
-    product: models.ForeignKey = models.ForeignKey(
+    product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="variants"
     )
-    sku: models.CharField = models.CharField(max_length=64, unique=True)
-    barcode: models.CharField = models.CharField(max_length=64, blank=True)
-    price: models.DecimalField = models.DecimalField(max_digits=12, decimal_places=2)
-    cost_price: models.DecimalField = models.DecimalField(
+    sku = models.CharField(max_length=64, unique=True)
+    barcode = models.CharField(max_length=64, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    cost_price = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
-    discount_price: models.DecimalField | None = models.DecimalField(
+    discount_price = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
-    weight: models.DecimalField | None = models.DecimalField(
+    weight = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )
-    color: models.CharField = models.CharField(max_length=50, blank=True)
-    size: models.CharField = models.CharField(max_length=50, blank=True)
+    color = models.CharField(max_length=50, blank=True)
+    size = models.CharField(max_length=50, blank=True)
 
     # Wholesale fields
-    wholesale_price: models.DecimalField | None = models.DecimalField(
+    wholesale_price = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
-    show_wholesale_price: models.BooleanField = models.BooleanField(default=False)
+    show_wholesale_price = models.BooleanField(default=False)
 
     # Pre-order fields
-    is_preorder_enabled: models.BooleanField = models.BooleanField(default=False)
-    preorder_price: models.DecimalField | None = models.DecimalField(
+    is_preorder_enabled = models.BooleanField(default=False)
+    preorder_price = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
-    preorder_start_date: models.DateTimeField | None = models.DateTimeField(
+    preorder_start_date = models.DateTimeField(
         null=True, blank=True
     )
-    preorder_end_date: models.DateTimeField | None = models.DateTimeField(
+    preorder_end_date = models.DateTimeField(
         null=True, blank=True
     )
-    release_date: models.DateTimeField | None = models.DateTimeField(
+    release_date = models.DateTimeField(
         null=True, blank=True
     )
-    preorder_stock_limit: models.PositiveIntegerField | None = models.PositiveIntegerField(
+    preorder_stock_limit = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Maximum quantity available for pre-order. Leave blank for no limit."
     )

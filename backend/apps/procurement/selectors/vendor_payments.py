@@ -18,7 +18,7 @@ def vendor_payments_list(
 ) -> QuerySet[VendorPayment]:
     queryset = VendorPayment.objects.select_related("vendor_bill")
     if vendor_bill_id is not None:
-        queryset = queryset.filter(vendor_bill_id=vendor_bill_id)
+        queryset = queryset.filter(vendor_bill_id=UUID(str(vendor_bill_id)))
     if method:
         queryset = queryset.filter(method=method)
     if start is not None:

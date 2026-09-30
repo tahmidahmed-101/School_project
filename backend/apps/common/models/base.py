@@ -8,15 +8,15 @@ from django.utils import timezone
 
 
 class UUIDModel(models.Model):
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Meta:
         abstract = True
 
 
 class TimeStampedModel(UUIDModel):
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, editable=False)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
@@ -31,7 +31,7 @@ class TimeStampedModel(UUIDModel):
 
 
 class SoftDeleteModel(TimeStampedModel):
-    deleted_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -52,7 +52,7 @@ class SoftDeleteModel(TimeStampedModel):
 class ActivatableModel(models.Model):
     """Adds an enable/disable flag independent of soft-delete."""
 
-    is_active: models.BooleanField = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
@@ -69,14 +69,14 @@ class ActivatableModel(models.Model):
 class UserStampedModel(models.Model):
     """Adds created_by/updated_by actor tracking. Combine with TimeStampedModel/SoftDeleteModel."""
 
-    created_by: models.ForeignKey = models.ForeignKey(
+    created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="+",
     )
-    updated_by: models.ForeignKey = models.ForeignKey(
+    updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
@@ -96,7 +96,7 @@ class FullAuditModel(UserStampedModel, ActivatableModel, SoftDeleteModel):
     domain model needs the complete audit trail out of the box.
     """
 
-    deleted_by: models.ForeignKey = models.ForeignKey(
+    deleted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
@@ -111,7 +111,11 @@ class FullAuditModel(UserStampedModel, ActivatableModel, SoftDeleteModel):
         self.deleted_at = timezone.now()
         update_fields = ["deleted_at", "updated_at"]
         if deleted_by is not None:
-            self.deleted_by = deleted_by
+            # `deleted_by` stays typed as the generic `Model` so this base class
+            # works for any project's user model; the FK itself resolves to the
+            # concrete AUTH_USER_MODEL, which is the same generic-vs-concrete
+            # friction `soft_delete_instance` documents.
+            self.deleted_by = deleted_by  # type: ignore[assignment]
             update_fields.append("deleted_by")
         self.save(update_fields=update_fields)
 

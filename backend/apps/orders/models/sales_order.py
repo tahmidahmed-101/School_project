@@ -29,36 +29,36 @@ class SalesOrder(FullAuditModel):
         CANCELLED = "cancelled", "Cancelled"
         CLOSED = "closed", "Closed"
 
-    order_number: models.CharField = models.CharField(max_length=32, unique=True)
-    customer: models.ForeignKey = models.ForeignKey(
+    order_number = models.CharField(max_length=32, unique=True)
+    customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sales_orders"
     )
-    shipping_address: models.ForeignKey | None = models.ForeignKey(
+    shipping_address = models.ForeignKey(
         "accounts.Address", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     # The FK is SET_NULL, so a deleted address would otherwise blank the ship-to
     # block on invoices that were already issued.
-    shipping_address_snapshot: models.JSONField = models.JSONField(default=dict, blank=True)
-    coupon: models.ForeignKey | None = models.ForeignKey(
+    shipping_address_snapshot = models.JSONField(default=dict, blank=True)
+    coupon = models.ForeignKey(
         "orders.Coupon", on_delete=models.SET_NULL, null=True, blank=True, related_name="orders"
     )
-    status: models.CharField = models.CharField(
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
-    notes: models.TextField = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
     # Order-level overrides. Blank means "use the customer account's value" —
     # correcting a typo on one order must not rewrite the customer's profile.
-    contact_email: models.EmailField = models.EmailField(blank=True, default="")
-    contact_phone: models.CharField = models.CharField(max_length=32, blank=True, default="")
-    subtotal: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    tax_total: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    shipping_total: models.DecimalField = models.DecimalField(
+    contact_email = models.EmailField(blank=True, default="")
+    contact_phone = models.CharField(max_length=32, blank=True, default="")
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    shipping_total = models.DecimalField(
         max_digits=14, decimal_places=2, default=0
     )
-    discount_total: models.DecimalField = models.DecimalField(
+    discount_total = models.DecimalField(
         max_digits=14, decimal_places=2, default=0
     )
-    grand_total: models.DecimalField = models.DecimalField(
+    grand_total = models.DecimalField(
         max_digits=14, decimal_places=2, default=0
     )
 
@@ -90,32 +90,32 @@ class SalesOrder(FullAuditModel):
 
 
 class SalesOrderLine(TimeStampedModel):
-    order: models.ForeignKey = models.ForeignKey(
+    order = models.ForeignKey(
         SalesOrder, on_delete=models.CASCADE, related_name="lines"
     )
-    variant: models.ForeignKey = models.ForeignKey(
+    variant = models.ForeignKey(
         "catalog.ProductVariant", on_delete=models.PROTECT, related_name="sales_order_lines"
     )
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField()
     # Snapshotted at add time: an invoice must keep saying what was sold, even
     # after the product is renamed or the SKU is reissued.
-    product_name: models.CharField = models.CharField(max_length=200, blank=True)
-    variant_sku: models.CharField = models.CharField(max_length=64, blank=True)
-    unit_price: models.DecimalField = models.DecimalField(max_digits=12, decimal_places=2)
-    tax_amount: models.DecimalField = models.DecimalField(
+    product_name = models.CharField(max_length=200, blank=True)
+    variant_sku = models.CharField(max_length=64, blank=True)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    tax_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
-    discount_amount: models.DecimalField = models.DecimalField(
+    discount_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
     # Pre-order tracking
-    is_preorder: models.BooleanField = models.BooleanField(default=False)
+    is_preorder = models.BooleanField(default=False)
     # Fulfillment counters. Denormalized rather than aggregated per call so
     # `create_shipment` / `create_rma` can lock the line row (select_for_update)
     # and check the remaining balance in the same statement, closing the
     # over-ship / over-return race.
-    shipped_quantity: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
-    returned_quantity: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+    shipped_quantity = models.PositiveIntegerField(default=0)
+    returned_quantity = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints: ClassVar[list] = [

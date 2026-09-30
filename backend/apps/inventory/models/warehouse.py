@@ -11,10 +11,10 @@ class Warehouse(FullAuditModel):
     """Physical or logical storage location. Each variant has a StockItem
     per warehouse, and all movements are scoped to a warehouse."""
 
-    name: models.CharField = models.CharField(max_length=150)
-    code: models.CharField = models.CharField(max_length=32, unique=True)
-    address: models.TextField = models.TextField(blank=True)
-    is_default: models.BooleanField = models.BooleanField(default=False)
+    name = models.CharField(max_length=150)
+    code = models.CharField(max_length=32, unique=True)
+    address = models.TextField(blank=True)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         ordering: ClassVar[list] = ["name"]

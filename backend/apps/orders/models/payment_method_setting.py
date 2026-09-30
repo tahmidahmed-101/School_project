@@ -13,10 +13,10 @@ class PaymentMethodSetting(TimeStampedModel):
     `apps.orders.constants` stays the source of truth for what a method is;
     this table records only the operator's choice."""
 
-    key: models.CharField = models.CharField(
+    key = models.CharField(
         max_length=32, unique=True, choices=PaymentMethodKey.choices
     )
-    is_enabled: models.BooleanField = models.BooleanField(default=True)
+    is_enabled = models.BooleanField(default=True)
 
     class Meta:
         ordering: ClassVar[list] = ["key"]

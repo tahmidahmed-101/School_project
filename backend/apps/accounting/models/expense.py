@@ -12,23 +12,23 @@ from .journal_entry import JournalEntry
 
 
 class Expense(FullAuditModel):
-    expense_date: models.DateField = models.DateField()
-    payee: models.CharField = models.CharField(max_length=150)
-    description: models.CharField = models.CharField(max_length=255, blank=True)
-    amount: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2)
-    expense_account: models.ForeignKey = models.ForeignKey(
+    expense_date = models.DateField()
+    payee = models.CharField(max_length=150)
+    description = models.CharField(max_length=255, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    expense_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, related_name="expenses"
     )
     # Simple mode's face of `expense_account`; never a replacement for it, the
     # ledger still needs the account.
-    category: models.ForeignKey | None = models.ForeignKey(
+    category = models.ForeignKey(
         ExpenseCategory, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses"
     )
-    payment_account: models.ForeignKey = models.ForeignKey(
+    payment_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, related_name="expense_payments"
     )
-    reference_number: models.CharField = models.CharField(max_length=50, blank=True)
-    journal_entry: models.ForeignKey | None = models.ForeignKey(
+    reference_number = models.CharField(max_length=50, blank=True)
+    journal_entry = models.ForeignKey(
         JournalEntry, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses"
     )
 

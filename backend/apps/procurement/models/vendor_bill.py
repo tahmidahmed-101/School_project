@@ -17,16 +17,16 @@ class VendorBill(FullAuditModel):
         OVERDUE = "overdue", "Overdue"
         VOID = "void", "Void"
 
-    bill_number: models.CharField = models.CharField(max_length=32, unique=True)
-    purchase_order: models.ForeignKey = models.ForeignKey(
+    bill_number = models.CharField(max_length=32, unique=True)
+    purchase_order = models.ForeignKey(
         PurchaseOrder, on_delete=models.PROTECT, related_name="vendor_bills"
     )
-    supplier: models.ForeignKey = models.ForeignKey(
+    supplier = models.ForeignKey(
         Supplier, on_delete=models.PROTECT, related_name="vendor_bills"
     )
-    amount: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2)
-    due_date: models.DateField = models.DateField()
-    status: models.CharField = models.CharField(
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    due_date = models.DateField()
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.UNPAID
     )
 
@@ -43,13 +43,13 @@ class VendorBill(FullAuditModel):
 
 
 class VendorPayment(TimeStampedModel):
-    vendor_bill: models.ForeignKey = models.ForeignKey(
+    vendor_bill = models.ForeignKey(
         VendorBill, on_delete=models.PROTECT, related_name="payments"
     )
-    amount: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2)
-    paid_at: models.DateTimeField = models.DateTimeField()
-    method: models.CharField = models.CharField(max_length=50, blank=True)
-    reference: models.CharField = models.CharField(max_length=100, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    paid_at = models.DateTimeField()
+    method = models.CharField(max_length=50, blank=True)
+    reference = models.CharField(max_length=100, blank=True)
 
     def __str__(self) -> str:
         return f"{self.vendor_bill.bill_number}: {self.amount}"

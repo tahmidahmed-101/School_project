@@ -13,9 +13,9 @@ class ExpenseCategory(FullAuditModel):
     """Simple-mode face of the chart of accounts: a flat named list that resolves
     to a real ledger account so the books still balance."""
 
-    name: models.CharField = models.CharField(max_length=100)
-    description: models.CharField = models.CharField(max_length=255, blank=True)
-    expense_account: models.ForeignKey = models.ForeignKey(
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=255, blank=True)
+    expense_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, related_name="expense_categories"
     )
 

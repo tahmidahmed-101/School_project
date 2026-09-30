@@ -21,28 +21,28 @@ class RiskAssessment(TimeStampedModel):
         REVIEW = "review", "Review"
         BLOCK = "block", "Block"
 
-    customer: models.ForeignKey | None = models.ForeignKey(
+    customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="risk_assessments",
     )
-    order: models.ForeignKey = models.ForeignKey(
+    order = models.ForeignKey(
         "orders.SalesOrder",
         on_delete=models.CASCADE,
         related_name="risk_assessments",
     )
-    risk_level: models.CharField = models.CharField(max_length=10, choices=RiskLevel.choices)
-    risk_score: models.DecimalField = models.DecimalField(
+    risk_level = models.CharField(max_length=10, choices=RiskLevel.choices)
+    risk_score = models.DecimalField(
         max_digits=5, decimal_places=2, help_text="0.00 to 100.00"
     )
-    risk_reasons: models.JSONField = models.JSONField(default=list, blank=True)
-    features_used: models.JSONField = models.JSONField(default=dict, blank=True)
-    recommended_action: models.CharField = models.CharField(
+    risk_reasons = models.JSONField(default=list, blank=True)
+    features_used = models.JSONField(default=dict, blank=True)
+    recommended_action = models.CharField(
         max_length=10, choices=RecommendedAction.choices
     )
-    auto_blocked: models.BooleanField = models.BooleanField(default=False)
+    auto_blocked = models.BooleanField(default=False)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

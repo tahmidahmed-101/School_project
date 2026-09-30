@@ -24,16 +24,16 @@ class UserOTP(TimeStampedModel):
         PHONE_VERIFICATION = "phone_verification", "Phone verification"
         PHONE_CHANGE = "phone_change", "Phone change"
 
-    user: models.ForeignKey = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="otps",
     )
-    purpose: models.CharField = models.CharField(max_length=32, choices=Purpose.choices)
-    code_hash: models.CharField = models.CharField(max_length=128)
-    expires_at: models.DateTimeField = models.DateTimeField()
-    consumed_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
-    attempts: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+    purpose = models.CharField(max_length=32, choices=Purpose.choices)
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes: ClassVar[list] = [

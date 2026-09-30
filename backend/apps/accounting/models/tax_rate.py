@@ -8,10 +8,10 @@ from apps.common.models import FullAuditModel
 
 
 class TaxRate(FullAuditModel):
-    name: models.CharField = models.CharField(max_length=100)
-    rate_percent: models.DecimalField = models.DecimalField(max_digits=5, decimal_places=2)
-    region: models.CharField = models.CharField(max_length=100, blank=True)
-    is_default: models.BooleanField = models.BooleanField(default=False)
+    name = models.CharField(max_length=100)
+    rate_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    region = models.CharField(max_length=100, blank=True)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         ordering: ClassVar[list] = ["name"]

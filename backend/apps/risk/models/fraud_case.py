@@ -16,42 +16,42 @@ class FraudCase(TimeStampedModel):
         UNDER_REVIEW = "under_review", "Under Review"
         RESOLVED = "resolved", "Resolved"
 
-    case_number: models.CharField = models.CharField(max_length=32, unique=True)
-    status: models.CharField = models.CharField(
+    case_number = models.CharField(max_length=32, unique=True)
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.NEW
     )
-    customer: models.ForeignKey | None = models.ForeignKey(
+    customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="fraud_cases",
     )
-    order: models.ForeignKey | None = models.ForeignKey(
+    order = models.ForeignKey(
         "orders.SalesOrder",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="fraud_cases",
     )
-    risk_assessment: models.ForeignKey | None = models.ForeignKey(
+    risk_assessment = models.ForeignKey(
         "risk.RiskAssessment",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="fraud_cases",
     )
-    description: models.TextField = models.TextField(blank=True)
-    assigned_to: models.ForeignKey | None = models.ForeignKey(
+    description = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="assigned_fraud_cases",
     )
-    resolution: models.CharField = models.CharField(max_length=50, blank=True)
-    resolution_notes: models.TextField = models.TextField(blank=True)
-    resolved_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    resolution = models.CharField(max_length=50, blank=True)
+    resolution_notes = models.TextField(blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

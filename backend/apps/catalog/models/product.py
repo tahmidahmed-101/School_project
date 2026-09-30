@@ -29,25 +29,25 @@ class Product(FullAuditModel):
         LIMITED = "limited", "Limited"
         EXCLUSIVE = "exclusive", "Exclusive"
 
-    category: models.ForeignKey = models.ForeignKey(
+    category = models.ForeignKey(
         Category, on_delete=models.PROTECT, related_name="products"
     )
-    name: models.CharField = models.CharField(max_length=200)
-    slug: models.SlugField = models.SlugField(max_length=220, unique=True)
-    description: models.TextField = models.TextField(blank=True)
-    tagline: models.CharField = models.CharField(max_length=300, blank=True, default="")
-    product_type: models.CharField = models.CharField(
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True)
+    description = models.TextField(blank=True)
+    tagline = models.CharField(max_length=300, blank=True, default="")
+    product_type = models.CharField(
         max_length=20, choices=ProductType.choices, default=ProductType.SIMPLE
     )
-    highlights: models.JSONField = models.JSONField(default=list, blank=True)
-    specs: models.JSONField = models.JSONField(default=dict, blank=True)
-    featured: models.BooleanField = models.BooleanField(default=False)
-    trending: models.BooleanField = models.BooleanField(default=False)
-    new_arrival: models.BooleanField = models.BooleanField(default=False)
-    badge: models.CharField = models.CharField(
+    highlights = models.JSONField(default=list, blank=True)
+    specs = models.JSONField(default=dict, blank=True)
+    featured = models.BooleanField(default=False)
+    trending = models.BooleanField(default=False)
+    new_arrival = models.BooleanField(default=False)
+    badge = models.CharField(
         max_length=20, choices=Badge.choices, default=Badge.NONE, blank=True
     )
-    image: models.ImageField = models.ImageField(
+    image = models.ImageField(
         upload_to=_product_image_path, null=True, blank=True
     )
 

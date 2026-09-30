@@ -13,35 +13,35 @@ class BusinessProfile(TimeStampedModel):
     """The owner-editable business identity. Exactly one row, pinned to
     `SINGLETON_ID` so concurrent first-access cannot race a second one in."""
 
-    name: models.CharField = models.CharField(max_length=200)
-    legal_name: models.CharField = models.CharField(max_length=200, blank=True)
-    tagline: models.CharField = models.CharField(max_length=200, blank=True)
-    logo_url: models.TextField = models.TextField(blank=True)
+    name = models.CharField(max_length=200)
+    legal_name = models.CharField(max_length=200, blank=True)
+    tagline = models.CharField(max_length=200, blank=True)
+    logo_url = models.TextField(blank=True)
 
-    phone: models.CharField = models.CharField(max_length=50, blank=True)
-    whatsapp: models.CharField = models.CharField(max_length=50, blank=True)
-    email: models.EmailField = models.EmailField(blank=True)
-    website: models.CharField = models.CharField(max_length=255, blank=True)
-    google_maps_url: models.URLField = models.URLField(max_length=500, blank=True)
-    opening_hours: models.CharField = models.CharField(max_length=200, blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    whatsapp = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    website = models.CharField(max_length=255, blank=True)
+    google_maps_url = models.URLField(max_length=500, blank=True)
+    opening_hours = models.CharField(max_length=200, blank=True)
 
-    address_line: models.CharField = models.CharField(max_length=255, blank=True)
-    district: models.CharField = models.CharField(max_length=100, blank=True)
-    thana: models.CharField = models.CharField(max_length=100, blank=True)
-    postcode: models.CharField = models.CharField(max_length=20, blank=True)
-    country: models.CharField = models.CharField(max_length=100, blank=True)
+    address_line = models.CharField(max_length=255, blank=True)
+    district = models.CharField(max_length=100, blank=True)
+    thana = models.CharField(max_length=100, blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=100, blank=True)
 
-    currency_code: models.CharField = models.CharField(max_length=3, default="BDT")
-    currency_symbol: models.CharField = models.CharField(max_length=8, default="৳")
+    currency_code = models.CharField(max_length=3, default="BDT")
+    currency_symbol = models.CharField(max_length=8, default="৳")
 
-    tax_id: models.CharField = models.CharField(max_length=50, blank=True)
-    trade_licence_no: models.CharField = models.CharField(max_length=50, blank=True)
+    tax_id = models.CharField(max_length=50, blank=True)
+    trade_licence_no = models.CharField(max_length=50, blank=True)
 
-    facebook_url: models.URLField = models.URLField(max_length=500, blank=True)
-    instagram_url: models.URLField = models.URLField(max_length=500, blank=True)
-    tiktok_url: models.URLField = models.URLField(max_length=500, blank=True)
-    youtube_url: models.URLField = models.URLField(max_length=500, blank=True)
-    linkedin_url: models.URLField = models.URLField(max_length=500, blank=True)
+    facebook_url = models.URLField(max_length=500, blank=True)
+    instagram_url = models.URLField(max_length=500, blank=True)
+    tiktok_url = models.URLField(max_length=500, blank=True)
+    youtube_url = models.URLField(max_length=500, blank=True)
+    linkedin_url = models.URLField(max_length=500, blank=True)
 
     class Meta:
         verbose_name = "Business profile"

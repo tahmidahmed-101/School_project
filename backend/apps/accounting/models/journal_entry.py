@@ -14,14 +14,14 @@ class JournalEntry(FullAuditModel):
         DRAFT = "draft", "Draft"
         POSTED = "posted", "Posted"
 
-    entry_date: models.DateField = models.DateField()
-    reference_type: models.CharField = models.CharField(max_length=50, blank=True)
-    reference_id: models.UUIDField | None = models.UUIDField(null=True, blank=True)
-    status: models.CharField = models.CharField(
+    entry_date = models.DateField()
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.UUIDField(null=True, blank=True)
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
     )
-    description: models.CharField = models.CharField(max_length=255, blank=True)
-    reverses: models.ForeignKey = models.ForeignKey(
+    description = models.CharField(max_length=255, blank=True)
+    reverses = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True, related_name="reversals"
     )
 
@@ -38,14 +38,14 @@ class JournalEntry(FullAuditModel):
 
 
 class JournalEntryLine(TimeStampedModel):
-    journal_entry: models.ForeignKey = models.ForeignKey(
+    journal_entry = models.ForeignKey(
         JournalEntry, on_delete=models.CASCADE, related_name="lines"
     )
-    account: models.ForeignKey = models.ForeignKey(
+    account = models.ForeignKey(
         Account, on_delete=models.PROTECT, related_name="lines"
     )
-    debit: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    credit: models.DecimalField = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    debit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
     class Meta:
         constraints: ClassVar[list] = [

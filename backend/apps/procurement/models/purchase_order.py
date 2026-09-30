@@ -16,15 +16,15 @@ class PurchaseOrder(FullAuditModel):
         RECEIVED = "received", "Received"
         CANCELLED = "cancelled", "Cancelled"
 
-    po_number: models.CharField = models.CharField(max_length=32, unique=True)
-    supplier: models.ForeignKey = models.ForeignKey(
+    po_number = models.CharField(max_length=32, unique=True)
+    supplier = models.ForeignKey(
         Supplier, on_delete=models.PROTECT, related_name="purchase_orders"
     )
-    status: models.CharField = models.CharField(
+    status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
     )
-    order_date: models.DateField = models.DateField()
-    notes: models.TextField = models.TextField(blank=True)
+    order_date = models.DateField()
+    notes = models.TextField(blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-order_date"]
@@ -39,15 +39,15 @@ class PurchaseOrder(FullAuditModel):
 
 
 class PurchaseOrderLine(TimeStampedModel):
-    purchase_order: models.ForeignKey = models.ForeignKey(
+    purchase_order = models.ForeignKey(
         PurchaseOrder, on_delete=models.CASCADE, related_name="lines"
     )
-    variant: models.ForeignKey = models.ForeignKey(
+    variant = models.ForeignKey(
         "catalog.ProductVariant", on_delete=models.PROTECT, related_name="purchase_order_lines"
     )
-    quantity_ordered: models.PositiveIntegerField = models.PositiveIntegerField()
-    quantity_received: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
-    unit_cost: models.DecimalField = models.DecimalField(max_digits=12, decimal_places=4)
+    quantity_ordered = models.PositiveIntegerField()
+    quantity_received = models.PositiveIntegerField(default=0)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=4)
 
     class Meta:
         constraints: ClassVar[list] = [

@@ -10,13 +10,13 @@ from .variant import ProductVariant
 
 
 class BundleItem(TimeStampedModel):
-    bundle_variant: models.ForeignKey = models.ForeignKey(
+    bundle_variant = models.ForeignKey(
         ProductVariant, on_delete=models.CASCADE, related_name="bundle_components"
     )
-    component_variant: models.ForeignKey = models.ForeignKey(
+    component_variant = models.ForeignKey(
         ProductVariant, on_delete=models.PROTECT, related_name="used_in_bundles"
     )
-    quantity: models.PositiveIntegerField = models.PositiveIntegerField(default=1)
+    quantity = models.PositiveIntegerField(default=1)
 
     class Meta:
         constraints: ClassVar[list] = [

@@ -17,17 +17,17 @@ class StockItem(TimeStampedModel):
     created lazily: record_movement() get_or_creates them, and the stock
     levels list materializes a zero row for any live variant that has none."""
 
-    variant: models.ForeignKey = models.ForeignKey(
+    variant = models.ForeignKey(
         ProductVariant, on_delete=models.CASCADE, related_name="stock_items"
     )
-    warehouse: models.ForeignKey = models.ForeignKey(
+    warehouse = models.ForeignKey(
         Warehouse, on_delete=models.CASCADE, related_name="stock_items"
     )
-    quantity_on_hand: models.IntegerField = models.IntegerField(default=0)
-    quantity_reserved: models.IntegerField = models.IntegerField(default=0)
-    avg_cost: models.DecimalField = models.DecimalField(max_digits=12, decimal_places=4, default=0)
-    reorder_point: models.IntegerField = models.IntegerField(default=10)
-    target_stock_level: models.IntegerField = models.IntegerField(default=0)
+    quantity_on_hand = models.IntegerField(default=0)
+    quantity_reserved = models.IntegerField(default=0)
+    avg_cost = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    reorder_point = models.IntegerField(default=10)
+    target_stock_level = models.IntegerField(default=0)
 
     class Meta:
         indexes: ClassVar[list] = [

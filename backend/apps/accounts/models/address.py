@@ -14,25 +14,25 @@ class Address(SoftDeleteModel):
         BILLING = "billing", "Billing"
         OTHER = "other", "Other"
 
-    user: models.ForeignKey = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses"
     )
-    address_type: models.CharField = models.CharField(
+    address_type = models.CharField(
         max_length=16,
         choices=AddressType.choices,
         default=AddressType.SHIPPING,
     )
-    full_name: models.CharField = models.CharField(max_length=150)
-    phone: models.CharField = models.CharField(max_length=32)
-    line1: models.CharField = models.CharField(max_length=255)
-    line2: models.CharField = models.CharField(max_length=255, blank=True)
+    full_name = models.CharField(max_length=150)
+    phone = models.CharField(max_length=32)
+    line1 = models.CharField(max_length=255)
+    line2 = models.CharField(max_length=255, blank=True)
     # Checkout collects a single free-text address line; city/state are kept
     # blank-able for the orders placed before district/thana were removed.
-    city: models.CharField = models.CharField(max_length=100, blank=True, default="")
-    state: models.CharField = models.CharField(max_length=100, blank=True)
-    postal_code: models.CharField = models.CharField(max_length=32)
-    country: models.CharField = models.CharField(max_length=100)
-    is_default: models.BooleanField = models.BooleanField(default=False)
+    city = models.CharField(max_length=100, blank=True, default="")
+    state = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=32)
+    country = models.CharField(max_length=100)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         indexes: ClassVar[list] = [

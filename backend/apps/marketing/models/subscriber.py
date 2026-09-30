@@ -8,9 +8,9 @@ from apps.common.models import TimeStampedModel
 
 
 class NewsletterSubscriber(TimeStampedModel):
-    email: models.EmailField = models.EmailField(unique=True)
-    is_active: models.BooleanField = models.BooleanField(default=True)
-    unsubscribed_at: models.DateTimeField | None = models.DateTimeField(null=True, blank=True)
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    unsubscribed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

@@ -10,7 +10,7 @@ PURCHASE_ORDER_TEMPLATE = "pdf/purchase_order.html"
 
 ZERO = Decimal("0.00")
 
-STATUS_CLASSES = {
+STATUS_CLASSES: dict[str, str] = {
     PurchaseOrder.Status.RECEIVED: "pill--settled",
     PurchaseOrder.Status.CANCELLED: "pill--void",
 }

@@ -15,10 +15,10 @@ class Account(FullAuditModel):
         REVENUE = "revenue", "Revenue"
         EXPENSE = "expense", "Expense"
 
-    code: models.CharField = models.CharField(max_length=20, unique=True)
-    name: models.CharField = models.CharField(max_length=150)
-    type: models.CharField = models.CharField(max_length=20, choices=Type.choices)
-    parent: models.ForeignKey | None = models.ForeignKey(
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=150)
+    type = models.CharField(max_length=20, choices=Type.choices)
+    parent = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True, related_name="children"
     )
 
