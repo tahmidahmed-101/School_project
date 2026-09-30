@@ -101,6 +101,13 @@ def _check_preorder_stock_limit(
     """Check if adding requested_quantity would exceed pre-order stock limit."""
     if variant.preorder_stock_limit is None:
         return
+    # Lock the variant row so two concurrent checkouts of the same variant
+    # serialize instead of both reading the same pre-lock preordered count
+    # and both passing the check. Deferred import: apps.catalog.models
+    # imports this module at load time, so a top-level import here would cycle.
+    from apps.catalog.models import ProductVariant
+
+    ProductVariant.objects.select_for_update().get(pk=variant.pk)
     preordered = get_preordered_quantity(variant)
     # Subtract current line quantity since we're replacing/adding to it
     available = variant.preorder_stock_limit - (preordered - current_line_quantity)
@@ -138,7 +145,7 @@ def add_line(
         _check_preorder_stock_limit(variant, quantity)
 
     unit_price = variant.effective_price
-    is_preorder = variant.is_preorder_active and variant.is_preorder_price_applied
+    is_preorder = variant.is_preorder_active
     tax_amount = compute_line_tax(unit_price=unit_price, quantity=quantity)
     line, created = SalesOrderLine.objects.get_or_create(
         order=order,

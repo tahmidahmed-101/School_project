@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
 from apps.accounting.models import TaxRate
 from apps.accounts.factories import AddressFactory, CustomerUserFactory
@@ -66,6 +68,42 @@ def test_full_order_lifecycle_reserves_ships_and_updates_stock():
     cart.refresh_from_db()
     assert cart.status == SalesOrder.Status.SHIPPED
     assert shipment.lines.count() == 1
+
+
+def test_preorder_line_ships_without_a_stock_reservation():
+    """checkout() skips reserve_stock/StockReservation for a pre-order line
+    (no real inventory to hold yet), so create_shipment must not try to
+    release a reservation or post a stock-out movement that was never made —
+    that would either crash on a variant with zero stock (insufficient_stock)
+    or, worse, silently release/deduct someone else's stock for the SKU."""
+    customer = CustomerUserFactory()
+    now = timezone.now()
+    variant = ProductVariantFactory(
+        is_preorder_enabled=True,
+        preorder_start_date=now - timedelta(days=1),
+        preorder_end_date=now + timedelta(days=1),
+    )
+    # Deliberately no record_movement — zero stock on hand, as a real
+    # not-yet-manufactured pre-order item would be.
+
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=3)
+    assert cart.lines.first().is_preorder is True
+
+    order = checkout(order=cart)
+    assert order.status == SalesOrder.Status.AWAITING_PAYMENT
+
+    capture_payment(order=order, amount=order.grand_total)
+    order.refresh_from_db()
+
+    order_line = order.lines.get()
+    shipment = create_shipment(order=order, lines=[{"order_line": order_line, "quantity": 3}])
+
+    order.refresh_from_db()
+    assert order.status == SalesOrder.Status.SHIPPED
+    assert shipment.lines.count() == 1
+    stock_item = get_stock_item(variant=variant)
+    assert stock_item is None or stock_item.quantity_on_hand == 0
 
 
 def test_checkout_rejects_empty_cart():

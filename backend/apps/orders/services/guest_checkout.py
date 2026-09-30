@@ -176,15 +176,24 @@ def guest_checkout(
         raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
 
     for item in items:
-        variant = get_variant_by_id(item["variant_id"])
+        if item["quantity"] <= 0:
+            order.delete()
+            raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+
+    # Combine repeated references to the same variant before validation —
+    # matching add_line's cart-side merge — so a duplicated variant can't
+    # validate each fragment against the pre-order limit separately and slip
+    # a combined quantity past it.
+    combined_items: dict[str, int] = {}
+    for item in items:
+        variant_id = str(item["variant_id"])
+        combined_items[variant_id] = combined_items.get(variant_id, 0) + item["quantity"]
+
+    for variant_id, quantity in combined_items.items():
+        variant = get_variant_by_id(variant_id)
         if variant is None:
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
-
-        quantity = item["quantity"]
-        if quantity <= 0:
-            order.delete()
-            raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
         if variant.is_preorder_enabled and not variant.is_preorder_active:
             order.delete()
@@ -196,7 +205,7 @@ def guest_checkout(
             _check_preorder_stock_limit(variant, quantity)
 
         unit_price = variant.effective_price
-        is_preorder = variant.is_preorder_active and variant.is_preorder_price_applied
+        is_preorder = variant.is_preorder_active
         tax_amount = compute_line_tax(unit_price=unit_price, quantity=quantity)
 
         SalesOrderLine.objects.create(

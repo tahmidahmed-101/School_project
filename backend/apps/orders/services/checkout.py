@@ -91,10 +91,16 @@ def checkout(
     revalidate_applied_coupon(order)
 
     for line in lines:
+        # Re-derive and persist is_preorder here, not just at cart-add time:
+        # this is the decision point for whether a reservation gets created,
+        # so the stored flag must match it exactly or shipment can't tell
+        # later whether a reservation exists to release.
+        is_preorder = _is_preorder_line(line)
+        if line.is_preorder != is_preorder:
+            line.is_preorder = is_preorder
+            line.save(update_fields=["is_preorder"])
         # Skip stock reservation for pre-order items (they don't need real inventory yet)
-        if _is_preorder_line(line):
-            # Still create StockReservation records for tracking, but with 0 quantity
-            # or skip them entirely. For now, skip reservation but keep the line.
+        if is_preorder:
             continue
         for component, component_qty in expand_variant(line.variant, line.quantity):
             reserve_stock(variant=component, quantity=component_qty)

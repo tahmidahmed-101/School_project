@@ -137,6 +137,34 @@ def test_guest_checkout_applies_a_valid_coupon(api_client):
     assert Decimal(response.data["data"]["discount_total"]) == Decimal("10.00")
 
 
+def test_guest_checkout_combines_duplicate_variants_before_preorder_limit_check(api_client):
+    """Two line entries for the same pre-order variant must be validated
+    against their combined quantity, not checked independently — otherwise a
+    payload split into fragments could slip a total past the configured
+    preorder_stock_limit."""
+    now = timezone.now()
+    variant = ProductVariantFactory(
+        is_preorder_enabled=True,
+        preorder_start_date=now - timedelta(days=1),
+        preorder_end_date=now + timedelta(days=1),
+        preorder_stock_limit=5,
+    )
+    _configured_delivery()
+
+    payload = _guest_payload(
+        variant,
+        items=[
+            {"variant_id": str(variant.id), "quantity": 3},
+            {"variant_id": str(variant.id), "quantity": 3},
+        ],
+    )
+    response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "preorder_stock_exceeded"
+    assert variant._get_preordered_quantity() == 0
+
+
 def test_coupon_validate_returns_discount_for_a_valid_code(api_client):
     variant = _stocked_variant(price=Decimal("50.00"))
     CouponFactory(code="SAVE20", discount_type="fixed", value=Decimal("20.00"))

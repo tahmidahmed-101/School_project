@@ -92,17 +92,20 @@ def create_shipment(
     for line_id, quantity in requested.items():
         order_line = locked_lines[line_id]
         ShipmentLine.objects.create(shipment=shipment, order_line=order_line, quantity=quantity)
-        for component, component_qty in expand_variant(order_line.variant, quantity):
-            # Release before the stock-out: the reverse order dips through a
-            # state where reserved exceeds on-hand, which the CHECK rejects.
-            release_reservation(variant=component, quantity=component_qty)
-            record_movement(
-                variant=component,
-                movement_type=MovementType.SALES_OUT,
-                quantity=component_qty,
-                reference_type="shipment",
-                reference_id=shipment.id,
-            )
+        # Pre-order lines never reserved stock at checkout (see checkout.py),
+        # so there is nothing to release and no on-hand stock to post out.
+        if not order_line.is_preorder:
+            for component, component_qty in expand_variant(order_line.variant, quantity):
+                # Release before the stock-out: the reverse order dips through a
+                # state where reserved exceeds on-hand, which the CHECK rejects.
+                release_reservation(variant=component, quantity=component_qty)
+                record_movement(
+                    variant=component,
+                    movement_type=MovementType.SALES_OUT,
+                    quantity=component_qty,
+                    reference_type="shipment",
+                    reference_id=shipment.id,
+                )
         order_line.shipped_quantity += quantity
         order_line.save(update_fields=["shipped_quantity", "updated_at"])
         if order_line.shippable_quantity == 0:

@@ -686,3 +686,96 @@ def test_preorder_checkout_works_with_zero_inventory_stock():
     order = checkout(order=cart)
     assert order.status == SalesOrder.Status.AWAITING_PAYMENT
     assert order.grand_total == Decimal("2700")  # 900 * 3
+
+
+def test_preorder_active_without_preorder_price():
+    """is_preorder_active — and the order line's is_preorder flag it drives —
+    must not depend on preorder_price being set. A variant with no discounted
+    pre-order price is still a pre-order while within its date window."""
+    product = ProductFactory()
+    now = timezone.now()
+
+    variant = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        is_preorder_enabled=True,
+        preorder_price=None,
+        preorder_start_date=now - timedelta(days=10),
+        preorder_end_date=now + timedelta(days=10),
+    )
+
+    assert variant.is_preorder_active is True
+    assert variant.is_preorder_price_applied is False
+    assert variant.effective_price == Decimal("1000")
+
+    customer = create_user(email="preorder-no-price@example.com", role=UserRole.CUSTOMER)
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=2)
+
+    assert cart.lines.first().is_preorder is True
+
+
+def test_preorder_checkout_succeeds_without_preorder_price():
+    """A pre-order with no discounted price still checks out normally, and
+    stays flagged as a pre-order line through checkout."""
+    product = ProductFactory()
+    now = timezone.now()
+
+    variant = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        is_preorder_enabled=True,
+        preorder_price=None,
+        preorder_start_date=now - timedelta(days=10),
+        preorder_end_date=now + timedelta(days=10),
+        preorder_stock_limit=100,
+    )
+
+    customer = create_user(email="preorder-checkout@example.com", role=UserRole.CUSTOMER)
+    cart = get_or_create_cart(customer)
+    add_line(order=cart, variant=variant, quantity=2)
+
+    order = checkout(order=cart)
+
+    assert order.status == SalesOrder.Status.AWAITING_PAYMENT
+    assert order.lines.get().is_preorder is True
+    assert order.grand_total == Decimal("2000")  # 1000 * 2, no preorder discount
+
+
+def test_preorder_stock_limit_enforced_across_separate_orders():
+    """Two different orders competing for the same limited pre-order capacity
+    must be checked against their combined total, not independently — the
+    second order's check has to see the first order's already-committed
+    quantity and refuse to push the total over preorder_stock_limit.
+
+    _check_preorder_stock_limit locks the variant row (select_for_update)
+    before reading the running total specifically so this holds under real
+    concurrent requests too, not just this sequential ordering — Postgres
+    (the production database) enforces that lock; SQLite (this test's
+    database) does not, so this test exercises the check's logic, not the
+    lock's concurrency guarantee itself.
+    """
+    product = ProductFactory()
+    now = timezone.now()
+
+    variant = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        is_preorder_enabled=True,
+        preorder_price=Decimal("900"),
+        preorder_start_date=now - timedelta(days=10),
+        preorder_end_date=now + timedelta(days=10),
+        preorder_stock_limit=5,
+    )
+
+    first_customer = create_user(email="preorder-race-1@example.com", role=UserRole.CUSTOMER)
+    first_cart = get_or_create_cart(first_customer)
+    add_line(order=first_cart, variant=variant, quantity=3)
+
+    second_customer = create_user(email="preorder-race-2@example.com", role=UserRole.CUSTOMER)
+    second_cart = get_or_create_cart(second_customer)
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        add_line(order=second_cart, variant=variant, quantity=3)  # 3 + 3 > 5
+
+    assert exc.value.code == "preorder_stock_exceeded"
+    assert variant._get_preordered_quantity() == 3
