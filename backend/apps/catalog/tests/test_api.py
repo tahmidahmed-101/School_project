@@ -552,6 +552,38 @@ def test_admin_can_create_product_with_only_required_fields(api_client):
     assert response.data["data"]["name"] == "Minimal Product"
     assert response.data["data"]["variants"] == []
     assert response.data["data"]["total_stock"] == 0
+    assert response.data["data"]["meta_keywords"] == ""
+
+
+def test_admin_can_set_product_meta_keywords_on_create_and_update(api_client):
+    admin = create_user(email="catalog-meta-keywords@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    category = CategoryFactory()
+
+    create_response = api_client.post(
+        "/api/v1/admin/catalog/products/",
+        {
+            "category_id": str(category.id),
+            "name": "SEO Product",
+            "meta_keywords": "panjabi, eid collection, menswear",
+        },
+        format="json",
+    )
+
+    assert create_response.status_code == 201, create_response.data
+    assert create_response.data["data"]["meta_keywords"] == "panjabi, eid collection, menswear"
+    product_id = create_response.data["data"]["id"]
+
+    update_response = api_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}/",
+        {"meta_keywords": "winter panjabi"},
+        format="json",
+    )
+
+    assert update_response.status_code == 200, update_response.data
+    assert update_response.data["data"]["meta_keywords"] == "winter panjabi"
+    product = Product.objects.get(id=product_id)
+    assert product.meta_keywords == "winter panjabi"
 
 
 def test_public_product_exposes_variant_level_images(api_client):

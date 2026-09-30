@@ -303,6 +303,7 @@ class ProductSerializer(serializers.Serializer):
     description = serializers.CharField(allow_blank=True)
     product_type = serializers.ChoiceField(choices=Product.ProductType.choices)
     highlights = serializers.ListField(child=serializers.CharField(), required=False)
+    meta_keywords = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField()
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
     variants = serializers.SerializerMethodField()
@@ -372,6 +373,7 @@ class ProductCreateSerializer(serializers.Serializer):
         choices=Product.ProductType.choices, default=Product.ProductType.SIMPLE
     )
     highlights = serializers.ListField(child=serializers.CharField(), required=False)
+    meta_keywords = serializers.CharField(required=False, allow_blank=True)
     # Supplying a price creates the product's single variant in the same call,
     # so a simple product is never left priceless and unsellable.
     price = serializers.DecimalField(
@@ -395,6 +397,7 @@ class ProductUpdateSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     product_type = serializers.ChoiceField(choices=Product.ProductType.choices, required=False)
     highlights = serializers.ListField(child=serializers.CharField(), required=False)
+    meta_keywords = serializers.CharField(required=False, allow_blank=True)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     discount_price = serializers.DecimalField(

@@ -48,6 +48,7 @@ def create_product(
     cost_price: Decimal = Decimal("0"),
     discount_price: Decimal | None = None,
     sku: str = "",
+    meta_keywords: str = "",
     actor=None,
 ) -> Product:
     _require_variations_for_type(product_type)
@@ -57,6 +58,7 @@ def create_product(
         description=description,
         product_type=product_type,
         highlights=highlights or [],
+        meta_keywords=meta_keywords,
         slug=unique_slug_for(model=Product, text=name),
     )
     product.save()
@@ -80,6 +82,7 @@ def update_product(*, product: Product, data: dict) -> Product:
         "description",
         "product_type",
         "highlights",
+        "meta_keywords",
         "is_active",
         "image",
     }
