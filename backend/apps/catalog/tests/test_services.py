@@ -309,7 +309,6 @@ def test_import_variants_reports_row_errors_without_aborting():
 
 
 def test_create_variant_with_preorder_fields():
-    """Test creating a variant with pre-order fields."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -331,7 +330,6 @@ def test_create_variant_with_preorder_fields():
 
 
 def test_create_variant_preorder_price_must_be_lower_than_normal_price():
-    """Test that preorder_price must be lower than normal price."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -350,7 +348,6 @@ def test_create_variant_preorder_price_must_be_lower_than_normal_price():
 
 
 def test_create_variant_preorder_dates_validation():
-    """Test pre-order date validation."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -370,7 +367,6 @@ def test_create_variant_preorder_dates_validation():
 
 
 def test_create_variant_release_date_before_preorder_end():
-    """Test that release_date must be on or after preorder_end_date."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -389,7 +385,6 @@ def test_create_variant_release_date_before_preorder_end():
 
 
 def test_preorder_not_active_when_dates_not_set():
-    """Test that pre-order is not active when dates are not set."""
     product = ProductFactory()
 
     variant = create_variant(
@@ -405,7 +400,6 @@ def test_preorder_not_active_when_dates_not_set():
 
 
 def test_preorder_not_active_when_dates_in_past():
-    """Test that pre-order is not active when dates are in the past."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -424,7 +418,6 @@ def test_preorder_not_active_when_dates_in_past():
 
 
 def test_preorder_not_active_when_dates_in_future():
-    """Test that pre-order is not active when dates are in the future."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -443,7 +436,6 @@ def test_preorder_not_active_when_dates_in_future():
 
 
 def test_preorder_active_when_within_date_range():
-    """Test that pre-order is active when within date range."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -462,7 +454,6 @@ def test_preorder_active_when_within_date_range():
 
 
 def test_effective_price_uses_preorder_price_when_active():
-    """Test that effective_price returns preorder_price when pre-order is active."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -481,7 +472,6 @@ def test_effective_price_uses_preorder_price_when_active():
 
 
 def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
-    """Test that effective_price falls back to discount_price when pre-order inactive."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -501,7 +491,6 @@ def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
 
 
 def test_can_preorder_checks_stock_limit():
-    """Test that can_preorder returns False when preorder stock limit reached."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -532,7 +521,6 @@ def test_can_preorder_checks_stock_limit():
 
 
 def test_preorder_stock_limit_enforced_at_cart():
-    """Test that pre-order stock limit is enforced when adding to cart."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -562,7 +550,6 @@ def test_preorder_stock_limit_enforced_at_cart():
 
 
 def test_preorder_not_available_when_disabled():
-    """Test that pre-order is not available when disabled."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -581,7 +568,6 @@ def test_preorder_not_available_when_disabled():
 
 
 def test_preorder_expired_rejected_at_checkout():
-    """Test that expired pre-order is rejected at checkout."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -606,7 +592,6 @@ def test_preorder_expired_rejected_at_checkout():
 
 
 def test_update_variant_preorder_fields():
-    """Test updating pre-order fields on existing variant."""
     product = ProductFactory()
     now = timezone.now()
 
@@ -632,7 +617,6 @@ def test_update_variant_preorder_fields():
 
 
 def test_normal_product_order_still_works():
-    """Test that normal product order (non-preorder) still works."""
     product = ProductFactory()
     variant = ProductVariantFactory(product=product, price=Decimal("1000"))
 
@@ -657,7 +641,6 @@ def test_normal_product_order_still_works():
 
 
 def test_preorder_checkout_works_with_zero_inventory_stock():
-    """Test that pre-order checkout works even when product has zero inventory stock."""
     from apps.orders.services.checkout import checkout
 
     product = ProductFactory()

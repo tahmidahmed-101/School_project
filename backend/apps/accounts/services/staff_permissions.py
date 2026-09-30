@@ -68,11 +68,6 @@ def replace_staff_permissions(
     permission_codes: list[str],
     granted_by: User | None = None,
 ) -> list[StaffPermission]:
-    """Make the staff user's enabled permissions exactly `permission_codes`.
-
-    Codes already enabled are left untouched; codes not present are disabled and
-    codes in the list are enabled, so the resulting set matches the request.
-    """
     if staff_user.role != UserRole.STAFF:
         raise BusinessRuleViolationError("Permissions can only be assigned to staff users.")
 

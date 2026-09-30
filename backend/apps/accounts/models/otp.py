@@ -51,7 +51,6 @@ class UserOTP(TimeStampedModel):
 
     @property
     def is_locked(self) -> bool:
-        """True once too many wrong codes have been submitted against it."""
         return self.attempts >= self.MAX_ATTEMPTS
 
     @property

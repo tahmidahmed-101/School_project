@@ -63,7 +63,6 @@ def test_admin_endpoints_reject_anonymous_callers(api_client, path):
 
 @pytest.mark.parametrize("path", ADMIN_PATHS)
 def test_admin_endpoints_reject_customers(api_client, path):
-    """A logged-in shopper must not reach the back office."""
     customer = create_user(email="sweep-customer@example.com", role=UserRole.CUSTOMER)
     api_client.force_authenticate(user=customer)
 

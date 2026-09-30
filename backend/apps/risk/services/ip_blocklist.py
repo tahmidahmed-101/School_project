@@ -1,5 +1,3 @@
-"""IP addresses refused at checkout. See IPBlock's docstring for scope."""
-
 from __future__ import annotations
 
 from django.db import transaction
@@ -12,8 +10,8 @@ from apps.risk.models import IPBlock
 
 @transaction.atomic
 def block_ip(raw_ip: str, *, reason: str, staff=None, expires_at=None) -> IPBlock:
-    """Add or refresh a block. Re-blocking an already-blocked address updates
-    its reason/expiry rather than erroring."""
+    """Re-blocking an already-blocked address updates its reason/expiry
+    rather than erroring."""
     ip = (raw_ip or "").strip()
     if not ip:
         raise BusinessRuleViolationError("An IP address is required.", code="ip_required")

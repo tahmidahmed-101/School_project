@@ -79,7 +79,6 @@ def test_login_is_rate_limited_per_account(api_client, settings):
 
 
 def test_public_catalog_is_not_held_to_the_tight_auth_limit(api_client, settings):
-    """The storefront must survive more than a handful of anonymous reads."""
     settings.REST_FRAMEWORK = {
         **settings.REST_FRAMEWORK,
         **_rates(auth="3/min", public_read="1000/hour"),

@@ -16,7 +16,6 @@ from apps.inventory.selectors.warehouse import get_default_warehouse, get_wareho
 
 
 def _get_warehouse(warehouse_id=None):
-    """Get warehouse by ID or default warehouse."""
     if isinstance(warehouse_id, Warehouse):
         return warehouse_id
     if warehouse_id:
@@ -28,7 +27,6 @@ def _get_warehouse(warehouse_id=None):
 
 
 def get_or_create_default_warehouse():
-    """Get the default warehouse, creating one if none exists."""
     default = get_default_warehouse()
     if default:
         return default

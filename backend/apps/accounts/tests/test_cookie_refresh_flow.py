@@ -1,7 +1,3 @@
-"""End-to-end check of the HttpOnly-cookie refresh flow: login sets the
-cookie and omits refresh from the body, refresh rotates it, logout clears it.
-"""
-
 from __future__ import annotations
 
 import pytest

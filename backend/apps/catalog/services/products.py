@@ -371,8 +371,7 @@ def create_quick_product(
     actor=None,
 ) -> ProductVariant:
     """Create a product plus its first variant in one atomic call — the Stock
-    App's "not found, create it" flow. Raises BusinessRuleViolationError if the SKU
-    is already taken."""
+    App's "not found, create it" flow."""
     product = create_product(category=category, name=name, description=description)
     return create_variant(
         product=product,

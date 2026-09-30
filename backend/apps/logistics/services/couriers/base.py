@@ -30,7 +30,7 @@ class CourierGateway(ABC):
 
     @abstractmethod
     def cancel_consignment(self, consignment_id: str) -> bool:
-        """Cancel a previously created consignment. Returns success."""
+        pass
 
     def verify_webhook(self, headers: dict[str, str], query: dict[str, str], body: bytes) -> bool:
         """Reject a delivery that does not carry this carrier's secret.

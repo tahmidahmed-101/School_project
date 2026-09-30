@@ -97,8 +97,6 @@ ReturnsManagePermission = require_staff_permission(StaffPermissionCode.RETURNS_M
 
 
 class OrdersPermissionMixin:
-    """GET needs only view access; creating an order needs manage access."""
-
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
             return [OrdersViewPermission()]

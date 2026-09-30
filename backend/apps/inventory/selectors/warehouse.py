@@ -29,7 +29,6 @@ def get_default_warehouse() -> Warehouse | None:
 
 
 def get_or_create_default_warehouse() -> Warehouse:
-    """Get the default warehouse, creating one if none exists."""
     default = get_default_warehouse()
     if default:
         return default

@@ -18,7 +18,6 @@ def _decimal(value: object) -> Decimal | None:
 
 @register.filter
 def money(value: object, places: int = 2) -> str:
-    """Grouped amount with the currency symbol, e.g. ৳1,234.50."""
     amount = _decimal(value)
     if amount is None:
         return "—"
@@ -29,6 +28,5 @@ def money(value: object, places: int = 2) -> str:
 
 @register.filter
 def amount(value: object, places: int = 2) -> str:
-    """Grouped amount without the symbol, for columns that carry it in the header."""
     parsed = _decimal(value)
     return "—" if parsed is None else f"{parsed:,.{places}f}"

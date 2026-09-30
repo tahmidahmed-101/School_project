@@ -18,7 +18,6 @@ FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def sanitize_cell(value: Any) -> Any:
-    """Neutralise spreadsheet formula injection in an exported cell."""
     if not isinstance(value, str):
         return value
     return f"'{value}" if value.startswith(FORMULA_PREFIXES) else value

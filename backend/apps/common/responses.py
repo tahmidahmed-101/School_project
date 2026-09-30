@@ -11,7 +11,6 @@ def error_response(
     fields: dict | None = None,
     status: int = http_status.HTTP_400_BAD_REQUEST,
 ) -> Response:
-    """Build the API-wide error envelope `{"error": {code, message, fields}}`."""
     return Response(
         {"error": {"code": code, "message": message, "fields": fields or {}}},
         status=status,

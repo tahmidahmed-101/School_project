@@ -47,9 +47,7 @@ def try_quote_shipping(
 
 
 def quote_shipping(*, zone: ShippingZone | None, weight: Decimal, carrier=None) -> Decimal:
-    """Quote shipping for a destination zone and shipment weight.
-
-    Refuses rather than returning None: a missing rate used to be coerced to
+    """Refuses rather than returning None: a missing rate used to be coerced to
     zero, which shipped orders free."""
     quote = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
     if quote is None:

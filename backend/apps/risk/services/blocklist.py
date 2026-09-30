@@ -37,11 +37,8 @@ def block_phone(
     staff=None,
     origin: str = PhoneBlock.Origin.MANUAL,
 ) -> PhoneBlock:
-    """Add or strengthen a block.
-
-    Re-blocking an already-blocked number keeps the stronger of the two
-    decisions and reopens a lifted one, rather than refusing the write.
-    """
+    """Re-blocking an already-blocked number keeps the stronger of the two
+    decisions and reopens a lifted one, rather than refusing the write."""
     phone = normalise_phone(raw_phone)
     if not phone:
         raise BusinessRuleViolationError("A phone number is required.", code="phone_required")
@@ -78,7 +75,6 @@ def block_phone(
 
 @transaction.atomic
 def lift_block(raw_phone: str, *, reason: str = "", staff=None) -> PhoneBlock:
-    """Stop enforcing a block, keeping the record that it existed."""
     phone = normalise_phone(raw_phone)
     block = PhoneBlock.objects.filter(phone_number=phone).first()
     if block is None:

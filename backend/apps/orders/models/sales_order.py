@@ -134,10 +134,8 @@ class SalesOrderLine(TimeStampedModel):
 
     @property
     def shippable_quantity(self) -> int:
-        """Units still awaiting a shipment on this line."""
         return self.quantity - self.shipped_quantity
 
     @property
     def returnable_quantity(self) -> int:
-        """Units already shipped that have not yet been returned."""
         return self.shipped_quantity - self.returned_quantity

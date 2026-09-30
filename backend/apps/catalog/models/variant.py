@@ -76,7 +76,6 @@ class ProductVariant(FullAuditModel):
 
     @property
     def is_preorder_active(self) -> bool:
-        """Check if pre-order is currently active for this variant."""
         if not self.is_preorder_enabled:
             return False
         if self.preorder_start_date is None or self.preorder_end_date is None:
@@ -90,7 +89,6 @@ class ProductVariant(FullAuditModel):
 
     @property
     def can_preorder(self) -> bool:
-        """Check if pre-order is available (active and has stock if limited)."""
         if not self.is_preorder_active:
             return False
         if self.preorder_stock_limit is not None:
@@ -121,7 +119,6 @@ class ProductVariant(FullAuditModel):
 
     @property
     def is_preorder_price_applied(self) -> bool:
-        """Check if the pre-order price is currently being applied."""
         return (
             self.is_preorder_active
             and self.preorder_price is not None
@@ -129,7 +126,6 @@ class ProductVariant(FullAuditModel):
         )
 
     def clean(self) -> None:
-        """Validate pre-order fields."""
         from django.core.exceptions import ValidationError
 
         super().clean()

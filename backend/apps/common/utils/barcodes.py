@@ -4,8 +4,6 @@ import io
 
 
 def generate_barcode(data: str, *, barcode_type: str = "code128") -> bytes:
-    """Return PNG bytes for a 1D barcode encoding `data`. Requires the
-    `python-barcode` package."""
     try:
         import barcode
         from barcode.writer import ImageWriter

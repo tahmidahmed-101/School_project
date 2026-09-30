@@ -7,7 +7,6 @@ from apps.common.exceptions import BusinessRuleViolationError
 
 
 def unique_upload_path(instance, filename: str, subdir: str = "uploads") -> str:
-    """Generate a collision-free upload path under the given subfolder."""
     ext = Path(filename).suffix.lower()
     return f"{subdir.strip('/')}/{uuid.uuid4().hex}{ext}"
 

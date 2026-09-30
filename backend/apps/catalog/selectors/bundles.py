@@ -10,8 +10,6 @@ from apps.inventory.selectors.stock import available_quantities_for_variants
 
 
 def bundle_variants_list(*, include_deleted: bool = False) -> QuerySet[ProductVariant]:
-    """All active bundle variants with their config and components
-    prefetched — the source for the admin bundle table."""
     queryset = (
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related(
@@ -44,7 +42,6 @@ def get_bundle_variant_by_id(
 
 
 def public_bundle_variants_list() -> QuerySet[ProductVariant]:
-    """Active, non-deleted bundle variants for the public storefront read API."""
     return (
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related(

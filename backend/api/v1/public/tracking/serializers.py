@@ -32,7 +32,6 @@ class PublicTrackOrderSerializer(serializers.Serializer):
     tracking_timeline = serializers.SerializerMethodField()
 
     def get_status(self, obj) -> str:
-        """Map backend order status to frontend tracking stages."""
         if obj.status == SalesOrder.Status.PENDING:
             return "Placed"
         if obj.status == SalesOrder.Status.AWAITING_PAYMENT:
@@ -80,7 +79,6 @@ class PublicTrackOrderSerializer(serializers.Serializer):
         }
 
     def get_tracking_timeline(self, obj) -> list[dict]:
-        """Build a tracking timeline from order status and shipments."""
         timeline = []
 
         # Order placed

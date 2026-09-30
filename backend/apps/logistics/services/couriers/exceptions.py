@@ -29,6 +29,4 @@ class CourierRateLimitedError(CourierError):
 
 
 class CourierRejectedError(CourierError):
-    """The courier answered, and said no."""
-
     default_code = "courier_rejected"

@@ -30,8 +30,6 @@ def _spa_index_html() -> str | None:
 
 
 def index(request):
-    """Serve the built React SPA at the site root when it's present;
-    fall back to the API docs otherwise."""
     html = _spa_index_html()
     if html is None:
         return redirect("swagger-ui")

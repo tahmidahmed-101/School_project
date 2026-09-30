@@ -12,8 +12,6 @@ CatalogViewPermission = require_any_staff_permission(
 
 
 class CatalogPermissionMixin:
-    """GET needs only view access; every other method needs manage access."""
-
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
             return [CatalogViewPermission()]

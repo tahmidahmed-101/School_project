@@ -4,7 +4,6 @@ import io
 
 
 def generate_qr_code(data: str) -> bytes:
-    """Return PNG bytes for a QR code encoding `data`. Requires the `qrcode` package."""
     try:
         import qrcode
     except ImportError as exc:  # pragma: no cover - exercised only if qrcode missing

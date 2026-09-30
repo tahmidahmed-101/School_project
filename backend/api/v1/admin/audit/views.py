@@ -76,8 +76,6 @@ class AuditLogExportView(APIView):
 
 @extend_schema(tags=["Audit"])
 class LoginHistoryListView(GenericListAPIView):
-    """Read-only login attempt history (successes and failures)."""
-
     permission_classes: ClassVar[list] = [IsAdmin]
     serializer_class = LoginHistorySerializer
     queryset_fn = staticmethod(all_login_history)
