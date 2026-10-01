@@ -210,52 +210,13 @@ MONTHLY_EXPENSES: list[tuple[str, str, str, str]] = [
     ("6400", "Khulna Stationers", "7500.00", "Office supplies and printing"),
 ]
 
-DEMO_COUPONS: list[dict] = [
-    {
-        "code": "EIDSALE25",
-        "description": "Eid collection — 25% off, capped at ৳3,000.",
-        "coupon_type": "percentage",
-        "value": "25.00",
-        "minimum_order_amount": "5000.00",
-        "maximum_discount_amount": "3000.00",
-        "expired": False,
-    },
-    {
-        "code": "IZPWELCOME",
-        "description": "৳500 off a customer's first order over ৳3,000.",
-        "coupon_type": "fixed_amount",
-        "value": "500.00",
-        "minimum_order_amount": "3000.00",
-        "maximum_discount_amount": None,
-        "expired": False,
-    },
-    {
-        "code": "WINTER1000",
-        "description": "৳1,000 off knitwear-season baskets over ৳8,000.",
-        "coupon_type": "fixed_amount",
-        "value": "1000.00",
-        "minimum_order_amount": "8000.00",
-        "maximum_discount_amount": None,
-        "expired": False,
-    },
-    {
-        "code": "BOISHAKH15",
-        "description": "Pohela Boishakh 15% off — campaign closed.",
-        "coupon_type": "percentage",
-        "value": "15.00",
-        "minimum_order_amount": "2000.00",
-        "maximum_discount_amount": "2000.00",
-        "expired": True,
-    },
-    {
-        "code": "FRIENDS300",
-        "description": "৳300 referral credit — campaign closed.",
-        "coupon_type": "fixed_amount",
-        "value": "300.00",
-        "minimum_order_amount": "1500.00",
-        "maximum_discount_amount": None,
-        "expired": True,
-    },
+# (code, discount_type, value, min_order_amount, usage_limit, expired) — discount_type and
+# the other field names match apps.orders.models.Coupon directly.
+DEMO_COUPONS: list[tuple[str, str, str, str, int | None, bool]] = [
+    ("EIDSALE25", "percentage", "25.00", "5000.00", 200, False),
+    ("IZPWELCOME", "fixed", "500.00", "3000.00", None, False),
+    ("WINTER1000", "fixed", "1000.00", "8000.00", 100, False),
+    ("BOISHAKH15", "percentage", "15.00", "2000.00", 150, True),
 ]
 
 DEMO_DISCOUNT_NAMES = (
@@ -263,3 +224,36 @@ DEMO_DISCOUNT_NAMES = (
     "Accessories Bundle Saver",
     "Pohela Boishakh Storewide",
 )
+
+# A few guest sign-ups for the newsletter block — (local part, still subscribed).
+NEWSLETTER_SIGNUPS: list[tuple[str, bool]] = [
+    ("priyo.deals", True),
+    ("eid.updates", True),
+    ("style.updates", True),
+    ("winter.collection", True),
+    ("vip.customer", True),
+    ("wishlist.alerts", False),
+    ("old.subscriber", False),
+    ("newsletter.test", True),
+]
+
+# TEST-NET-3 (RFC 5737) — reserved for documentation, never a real visitor's
+# address, so these rows are unmistakably demo data.
+DEMO_BLOCKED_IPS: list[tuple[str, str]] = [
+    ("203.0.113.42", "Checkout automation detected — repeated failed OTP attempts."),
+    ("203.0.113.77", "Known VPN exit node used for card-testing attempts."),
+]
+
+# (phone, reason, strength) — PhoneBlock.Strength values.
+DEMO_BLOCKED_PHONES: list[tuple[str, str, str]] = [
+    ("01799000011", "Refused COD delivery three times in one month.", "blocked"),
+    ("01799000022", "High return rate on COD orders.", "advance_only"),
+]
+
+AUDIT_MARKER = "izp_demo"
+AUDIT_IPS = ["203.0.113.50", "203.0.113.51", "203.0.113.52"]
+AUDIT_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 "
+    "Mobile Safari/604.1",
+]

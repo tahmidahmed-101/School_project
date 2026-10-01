@@ -18,17 +18,25 @@ from apps.accounts.constants import UserRole
 from apps.accounts.models import User
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import create_user
+from apps.audit.models import AuditLog, LoginHistory
+from apps.audit.services.audit import log_action, record_login_attempt
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.catalog.services.categories import create_category
 from apps.catalog.services.products import create_product, create_product_image, create_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.services.demo_seed.constants import (
+    AUDIT_IPS,
+    AUDIT_MARKER,
+    AUDIT_USER_AGENTS,
     BRAND,
     CARRIER_MARKER,
     CARRIERS,
     CATEGORIES,
     DELIVERY_AREAS,
     DELIVERY_NOTES,
+    DEMO_BLOCKED_IPS,
+    DEMO_BLOCKED_PHONES,
+    DEMO_COUPONS,
     DEMO_DOMAIN,
     DEMO_PASSWORD,
     EXPENSE_REF_PREFIX,
@@ -36,6 +44,7 @@ from apps.common.services.demo_seed.constants import (
     FIRST_NAMES,
     LAST_NAMES,
     MONTHLY_EXPENSES,
+    NEWSLETTER_SIGNUPS,
     OPENING_CAPITAL,
     OPENING_REFERENCE_TYPE,
     PAYMENT_METHODS,
@@ -53,8 +62,11 @@ from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.inventory.services.stock import post_adjustment, write_off_stock
 from apps.logistics.models import Carrier, ShippingRate, ShippingZone
 from apps.logistics.services.rates import create_carrier, create_rate
+from apps.marketing.models import NewsletterSubscriber
+from apps.marketing.services.subscribers import subscribe, unsubscribe
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
+    Coupon,
     Payment,
     ReturnRMA,
     ReturnRMALine,
@@ -66,6 +78,7 @@ from apps.orders.models import (
 )
 from apps.orders.services.carts import add_line, create_order
 from apps.orders.services.checkout import checkout
+from apps.orders.services.coupons import create_coupon
 from apps.orders.services.orders import cancel_order
 from apps.orders.services.payments import capture_payment, refund_payment
 from apps.orders.services.returns import (
@@ -85,6 +98,9 @@ from apps.procurement.services.purchase_orders import (
 )
 from apps.procurement.services.suppliers import create_supplier
 from apps.procurement.services.vendor_bills import create_vendor_bill, record_vendor_payment
+from apps.risk.models import IPBlock, PhoneBlock
+from apps.risk.services.blocklist import block_phone
+from apps.risk.services.ip_blocklist import block_ip
 
 COST_RATIO = Decimal("0.45")
 CENTS = Decimal("0.01")
@@ -120,10 +136,14 @@ class DemoSeeder:
         self.seed_suppliers()
         self.seed_customers()
         self.post_opening_capital()
+        self.seed_marketing()
+        self.seed_risk_controls()
+        self.seed_coupons()
         self.seed_procurement()
         self.seed_orders()
         self.seed_inventory_movements()
         self.seed_expenses()
+        self.seed_audit_trail()
         return self.counts
 
     # ---- helpers -------------------------------------------------------
@@ -335,6 +355,64 @@ class DemoSeeder:
             ],
         )
         self._bump("journal_entries")
+
+    # ---- marketing / risk / coupons -------------------------------------
+
+    def seed_marketing(self) -> None:
+        for offset, (local_part, is_active) in enumerate(NEWSLETTER_SIGNUPS):
+            email = f"{local_part}@{DEMO_DOMAIN}"
+            if NewsletterSubscriber.objects.filter(email=email).exists():
+                continue
+            subscriber = subscribe(email=email)
+            signed_up_at = self._moment(self.start_date + timedelta(days=offset))
+            unsubscribed_at = None
+            if not is_active:
+                unsubscribe(email=email)
+                unsubscribed_at = min(
+                    signed_up_at + timedelta(days=3), timezone.now() - timedelta(minutes=5)
+                )
+            NewsletterSubscriber.objects.filter(pk=subscriber.pk).update(
+                created_at=signed_up_at, unsubscribed_at=unsubscribed_at
+            )
+            self._bump("newsletter_subscribers")
+
+    def seed_risk_controls(self) -> None:
+        for index, (ip_address, reason) in enumerate(DEMO_BLOCKED_IPS):
+            is_new = not IPBlock.objects.filter(ip_address=ip_address).exists()
+            block = block_ip(ip_address, reason=reason, staff=self.actor)
+            if is_new:
+                stamp = self._moment(self.today - timedelta(days=14 + index * 3))
+                IPBlock.objects.filter(pk=block.pk).update(created_at=stamp)
+                self._bump("ip_blocks")
+
+        for index, (phone_number, reason, strength) in enumerate(DEMO_BLOCKED_PHONES):
+            is_new = not PhoneBlock.objects.filter(phone_number=phone_number).exists()
+            block = block_phone(phone_number, reason=reason, strength=strength, staff=self.actor)
+            if is_new:
+                stamp = self._moment(self.today - timedelta(days=20 + index * 5))
+                PhoneBlock.objects.filter(pk=block.pk).update(created_at=stamp)
+                self._bump("phone_blocks")
+
+    def seed_coupons(self) -> None:
+        for code, discount_type, value, min_order_amount, usage_limit, expired in DEMO_COUPONS:
+            if Coupon.objects.filter(code=code).exists():
+                continue
+            expiry_day = self.today - timedelta(days=5) if expired else self.today + timedelta(
+                days=45
+            )
+            coupon = create_coupon(
+                code=code,
+                discount_type=discount_type,
+                value=Decimal(value),
+                min_order_amount=Decimal(min_order_amount),
+                usage_limit=usage_limit,
+                expires_at=timezone.make_aware(datetime.combine(expiry_day, time(23, 59))),
+                is_active=not expired,
+            )
+            Coupon.objects.filter(pk=coupon.pk).update(
+                created_at=self._moment(self.start_date, hour=9)
+            )
+            self._bump("coupons")
 
     # ---- procurement ---------------------------------------------------
 
@@ -885,3 +963,95 @@ class DemoSeeder:
                     reference_number=reference,
                 )
                 self._bump("expenses")
+
+    # ---- audit trail -----------------------------------------------------
+
+    def seed_audit_trail(self) -> None:
+        self._seed_login_history()
+        self._seed_admin_audit_log()
+
+    def _seed_login_history(self) -> None:
+        sample = self.customers[: min(8, len(self.customers))]
+        if not sample or LoginHistory.objects.filter(user__in=sample).exists():
+            return
+        for index, user in enumerate(sample):
+            day = self.today - timedelta(days=(index + 1) * 2)
+            ip_address = AUDIT_IPS[index % len(AUDIT_IPS)]
+            user_agent = AUDIT_USER_AGENTS[index % len(AUDIT_USER_AGENTS)]
+            if index % 4 == 0:
+                failed = record_login_attempt(
+                    email=user.email,
+                    was_successful=False,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+                LoginHistory.objects.filter(pk=failed.pk).update(
+                    created_at=self._moment(day, hour=9)
+                )
+                self._bump("login_history")
+            success = record_login_attempt(
+                user=user,
+                email=user.email,
+                was_successful=True,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            LoginHistory.objects.filter(pk=success.pk).update(
+                created_at=self._moment(day, hour=10)
+            )
+            self._bump("login_history")
+
+    def _admin_audit_targets(self) -> list[tuple[str, str, object, dict]]:
+        targets: list[tuple[str, str, object, dict]] = []
+        product = Product.objects.filter(slug__startswith=SLUG_PREFIX).first()
+        if product is not None:
+            targets.append(
+                ("product.updated", "Product", product.id, {"field": "description"})
+            )
+        coupon = Coupon.objects.filter(code__in=[row[0] for row in DEMO_COUPONS]).first()
+        if coupon is not None:
+            targets.append(("coupon.created", "Coupon", coupon.id, {"code": coupon.code}))
+        order = self.paid_orders[0] if getattr(self, "paid_orders", None) else None
+        if order is not None:
+            targets.append(
+                ("order.status_changed", "SalesOrder", order.id, {"status": order.status})
+            )
+        ip_block = IPBlock.objects.filter(
+            ip_address__in=[ip for ip, _ in DEMO_BLOCKED_IPS]
+        ).first()
+        if ip_block is not None:
+            targets.append(
+                ("risk.ip_blocked", "IPBlock", ip_block.id, {"ip_address": ip_block.ip_address})
+            )
+        phone_block = PhoneBlock.objects.filter(
+            phone_number__in=[phone for phone, _, _ in DEMO_BLOCKED_PHONES]
+        ).first()
+        if phone_block is not None:
+            targets.append(
+                (
+                    "risk.phone_blocked",
+                    "PhoneBlock",
+                    phone_block.id,
+                    {"phone_number": phone_block.phone_number},
+                )
+            )
+        return targets
+
+    def _seed_admin_audit_log(self) -> None:
+        if AuditLog.objects.filter(metadata__seed=AUDIT_MARKER).exists():
+            return
+        for index, (action, target_type, target_id, extra) in enumerate(
+            self._admin_audit_targets()
+        ):
+            entry = log_action(
+                actor=self.actor,
+                action=action,
+                target_type=target_type,
+                target_id=target_id,
+                metadata={"seed": AUDIT_MARKER, **extra},
+                ip_address=AUDIT_IPS[index % len(AUDIT_IPS)],
+                user_agent=AUDIT_USER_AGENTS[index % len(AUDIT_USER_AGENTS)],
+            )
+            stamp = self._moment(self.today - timedelta(days=index + 1), hour=11)
+            AuditLog.objects.filter(pk=entry.pk).update(created_at=stamp)
+            self._bump("audit_logs")

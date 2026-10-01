@@ -4,12 +4,18 @@ from django.db import models, transaction
 
 from apps.accounting.models import Account, Expense, JournalEntry, TaxRate
 from apps.accounts.models import Address, User
+from apps.audit.models import AuditLog, LoginHistory
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.common.services.demo_seed.constants import (
+    AUDIT_MARKER,
     CARRIER_MARKER,
+    DEMO_BLOCKED_IPS,
+    DEMO_BLOCKED_PHONES,
+    DEMO_COUPONS,
     DEMO_DOMAIN,
     EXPENSE_REF_PREFIX,
     EXTRA_ACCOUNTS,
+    NEWSLETTER_SIGNUPS,
     OPENING_REFERENCE_TYPE,
     SKU_PREFIX,
     SLUG_PREFIX,
@@ -17,7 +23,9 @@ from apps.common.services.demo_seed.constants import (
 )
 from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.logistics.models import Carrier, ShippingRate
+from apps.marketing.models import NewsletterSubscriber
 from apps.orders.models import (
+    Coupon,
     Payment,
     ReturnRMA,
     ReturnRMALine,
@@ -34,6 +42,7 @@ from apps.procurement.models import (
     VendorBill,
     VendorPayment,
 )
+from apps.risk.models import IPBlock, PhoneBlock
 
 
 def _ids(queryset) -> list:
@@ -74,6 +83,22 @@ def _wipe_procurement(purchase_orders, suppliers) -> None:
     GoodsReceiptNote.objects.filter(purchase_order__in=purchase_orders).delete()
     purchase_orders.delete()
     suppliers.delete()
+
+
+def _wipe_marketing_risk_audit(*, users) -> None:
+    newsletter_emails = [f"{local_part}@{DEMO_DOMAIN}" for local_part, _ in NEWSLETTER_SIGNUPS]
+    NewsletterSubscriber.objects.filter(email__in=newsletter_emails).delete()
+    IPBlock.objects.filter(ip_address__in=[ip for ip, _ in DEMO_BLOCKED_IPS]).delete()
+    PhoneBlock.objects.filter(
+        phone_number__in=[phone for phone, _, _ in DEMO_BLOCKED_PHONES]
+    ).delete()
+    Coupon.objects.filter(code__in=[row[0] for row in DEMO_COUPONS]).delete()
+    AuditLog.objects.filter(metadata__seed=AUDIT_MARKER).delete()
+    # Failed attempts are recorded with user=None (nothing to attribute to yet),
+    # so the email domain is the only thing that still ties them to this run.
+    LoginHistory.objects.filter(
+        models.Q(user__in=users) | models.Q(email__endswith=f"@{DEMO_DOMAIN}")
+    ).delete()
 
 
 def _wipe_config() -> None:
@@ -125,6 +150,7 @@ def wipe_demo_data() -> dict[str, int]:
 
     _wipe_orders(orders)
     _wipe_procurement(purchase_orders, suppliers)
+    _wipe_marketing_risk_audit(users=users)
 
     StockLedgerEntry.objects.filter(variant__in=variants).delete()
     StockItem.objects.filter(variant__in=variants).delete()
