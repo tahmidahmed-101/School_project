@@ -3,7 +3,7 @@
 import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { m } from "framer-motion";
+import { SLIDE_EASE } from "@/design-system/patterns/usePresence";
 import { Home, Store, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useWishlist } from "@/modules/wishlist";
@@ -75,16 +75,10 @@ function MobileBottomBarInner() {
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
           {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
-          <m.div
+          <div
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden"
-            animate={{ x: `${Math.max(activeIndex, 0) * 100}%`, opacity: activeIndex === -1 ? 0 : 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 32,
-              mass: 0.8,
-            }}
+            className={`pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden transition-[transform,opacity] duration-300 ${SLIDE_EASE}`}
+            style={{ transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex === -1 ? 0 : 1 }}
           >
             {/* Top glowing bar flush with top border */}
             <div className="h-[3.5px] w-10 rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 shadow-[0_0_10px_rgba(229,192,76,0.7),0_0_20px_rgba(229,192,76,0.35)]" />
@@ -102,7 +96,7 @@ function MobileBottomBarInner() {
                 }}
               />
             </div>
-          </m.div>
+          </div>
 
           {/* 4 Interactive Tab Buttons */}
           {tabs.map((tab, idx) => {
@@ -110,17 +104,10 @@ function MobileBottomBarInner() {
             const isActive = activeIndex === idx;
 
             const content = (
-              <m.div
-                className="relative flex items-center justify-center"
-                animate={{
-                  scale: isActive ? 1.08 : 1,
-                  y: isActive ? -1 : 0,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 26,
-                }}
+              <div
+                className={`relative flex items-center justify-center transition-transform duration-200 ease-out ${
+                  isActive ? "-translate-y-px scale-[1.08]" : ""
+                }`}
               >
                 <Icon
                   className={`h-5 w-5 transition-colors duration-200 ${
@@ -142,7 +129,7 @@ function MobileBottomBarInner() {
                     {n(tab.badge)}
                   </span>
                 )}
-              </m.div>
+              </div>
             );
 
             if (tab.href) {

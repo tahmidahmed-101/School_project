@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, m } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { HERO_CTA_TEXT, HERO_SLIDES } from "../domain/hero-content";
 import { useLang } from "@/lib/i18n";
@@ -21,11 +20,13 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
   const [index, setIndex] = useState(0);
   // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
   const [mounted, setMounted] = useState(1);
+  const [rotated, setRotated] = useState(false);
   const slide = HERO_SLIDES[index];
 
   const go = useCallback((next: number) => {
     const target = (next + HERO_SLIDES.length) % HERO_SLIDES.length;
     setIndex(target);
+    setRotated(true);
     setMounted((m) => Math.max(m, target + 1));
   }, []);
 
@@ -79,30 +80,22 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
               />
 
               <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
-                <AnimatePresence mode="wait" initial={false}>
-                  <m.div
-                    key={index}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
-                      {badge[lang]}
-                    </span>
-                    <div className="flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
-                      <span className="sm:truncate">{slide.tag[lang]}</span>
-                    </div>
+                <div key={index} className={rotated ? "animate-[hero-caption_0.4s_ease-out]" : undefined}>
+                  <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
+                    {badge[lang]}
+                  </span>
+                  <div className="flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
+                    <span className="sm:truncate">{slide.tag[lang]}</span>
+                  </div>
 
-                    <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-[32px] xl:text-[38px]">
-                      {slide.title[lang].split("\n").map((line, i) => (
-                        <span key={i} className="block">
-                          {line}
-                        </span>
-                      ))}
-                    </h1>
-                  </m.div>
-                </AnimatePresence>
+                  <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-[32px] xl:text-[38px]">
+                    {slide.title[lang].split("\n").map((line, i) => (
+                      <span key={i} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </h1>
+                </div>
 
                 <Link
                   href={shopLink}

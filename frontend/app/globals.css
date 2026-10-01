@@ -84,6 +84,13 @@
   }
 }
 
+@keyframes hero-caption {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee-rtl {
     animation: none;

@@ -1,12 +1,12 @@
 "use client";
 
-import { m, AnimatePresence } from "framer-motion";
 import { X, Filter } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { countActiveFilters, type FilterChange, type FilterState } from "../domain/shop-filters";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { ShopFilterControls } from "./ShopFilterControls";
+import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 interface ShopFilterSidebarProps {
   filters: FilterState;
@@ -30,6 +30,8 @@ export function ShopFilterSidebar({
   useOverlay(isMobileOpen);
 
   const hasActiveFilters = countActiveFilters(filters) > 0;
+
+  const { mounted, shown } = usePresence(isMobileOpen, 300);
 
   return (
     <>
@@ -59,26 +61,18 @@ export function ShopFilterSidebar({
       </aside>
 
       {/* Mobile filter drawer */}
-      <AnimatePresence>
-        {isMobileOpen && (
+      <>
+        {mounted && (
           <div className="pointer-events-none fixed inset-0 z-50 flex justify-end lg:hidden">
-            <m.button
+            <button
               type="button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="pointer-events-auto backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/60"
+              className={`pointer-events-auto backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/60 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
               onClick={onMobileClose}
               aria-label="Close filters"
             />
 
-            <m.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="pointer-events-auto relative z-10 flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-w-md"
+            <div
+              className={`pointer-events-auto relative z-10 flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-w-md transition-transform duration-300 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
             >
               <div className="flex items-center justify-between border-b border-ink-200 bg-white p-5">
                 <div className="flex items-center gap-2">
@@ -115,10 +109,10 @@ export function ShopFilterSidebar({
                   {ui("showProducts")} ({n(productCount)})
                 </button>
               </div>
-            </m.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
+      </>
     </>
   );
 }

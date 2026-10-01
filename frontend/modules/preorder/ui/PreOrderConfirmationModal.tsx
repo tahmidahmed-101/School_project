@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { m } from "framer-motion";
 import { X, Calendar, Sparkles, AlertCircle } from "lucide-react";
 import { usePreOrderModal } from "../context";
 import { useLang } from "@/lib/i18n";
@@ -19,15 +18,11 @@ export function PreOrderConfirmationModal() {
   return (
     <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal">
       {/* Modal Dialog Card */}
-      <m.div
+      <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="preorder-modal-title"
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-ink-200 bg-white p-6 shadow-2xl"
+        className="relative z-10 w-full max-w-md translate-y-4 scale-95 rounded-2xl border border-ink-200 bg-white p-6 opacity-0 shadow-2xl transition duration-200 ease-out group-data-[shown=true]:translate-y-0 group-data-[shown=true]:scale-100 group-data-[shown=true]:opacity-100"
       >
         {/* Close Button */}
         <button
@@ -115,7 +110,7 @@ export function PreOrderConfirmationModal() {
             {ui("confirmPreOrderBtn")}
           </button>
         </div>
-      </m.div>
+      </div>
     </Modal>
   );
 }

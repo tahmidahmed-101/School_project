@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { Collapse } from "@/design-system/patterns/Collapse";
 import { ChevronDown } from "lucide-react";
 
 interface AccordionItemProps {
@@ -29,19 +29,7 @@ export function AccordionItem({ title, defaultOpen = false, children }: Accordio
           className={`h-4 w-4 text-fg-subtle transition-transform duration-300 ${open ? "rotate-180 text-fg" : ""}`}
         />
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <m.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            {children}
-          </m.div>
-        )}
-      </AnimatePresence>
+      <Collapse open={open}>{children}</Collapse>
     </div>
   );
 }

@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { m, AnimatePresence } from "framer-motion";
 import { X, Home, Store, Globe, Truck } from "lucide-react";
 import { useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { WithActiveCategory } from "@/modules/catalog";
+import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 const SHOP_PATH = "/shop";
 
@@ -26,28 +26,22 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
 
   useOverlay(open, onClose);
 
+  const { mounted, shown } = usePresence(open, 300);
+
   return (
-    <AnimatePresence>
-      {open && (
+    <>
+      {mounted && (
         <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
-          <m.button
+          <button
             type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
             onClick={onClose}
-            className="backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/50"
+            className={`backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/50 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
             aria-label={ui("closeMenu")}
           />
 
           <div className="pointer-events-none fixed inset-y-0 left-0 flex h-full w-full max-w-full justify-start">
-            <m.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-white/10 bg-brand-800 p-5 shadow-2xl"
+            <div
+              className={`pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-white/10 bg-brand-800 p-5 shadow-2xl transition-transform duration-300 ${SLIDE_EASE} ${shown ? "translate-x-0" : "-translate-x-full"}`}
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-base font-bold text-white">{ui("navMenu")}</h3>
@@ -136,10 +130,10 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                   <span>{lang === "en" ? "বাংলা" : "English"}</span>
                 </button>
               </div>
-            </m.div>
+            </div>
           </div>
         </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }
