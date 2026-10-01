@@ -91,7 +91,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 width={382}
                 height={282}
                 priority
-                className="h-6 w-auto shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-105 sm:h-10"
+                className="h-6 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
               <span className="text-sm font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
                 {lang === "bn" ? "কুল মার্ট" : "KULL MART"}

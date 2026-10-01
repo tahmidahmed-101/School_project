@@ -124,7 +124,7 @@ export function ProductActions({
       {!isOutOfStock && !(product.isPreOrder && isSoldOut) && (
         <div
           inert={ctaVisible}
-          className={`fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom,0px))] z-30 border-t border-ink-200 bg-white/95 px-4 py-2.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-sm transition-[transform,opacity] duration-200 lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom,0px))] z-30 border-t border-ink-200 bg-white/95 px-4 py-2.5 shadow-bar backdrop-blur-sm transition-[transform,opacity] duration-200 lg:hidden ${
             ctaVisible ? "pointer-events-none translate-y-full opacity-0" : "translate-y-0 opacity-100"
           }`}
         >

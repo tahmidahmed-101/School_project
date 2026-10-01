@@ -75,7 +75,7 @@ function MobileBottomBarInner() {
 
   return (
     <nav aria-label={ui("bottomNav")} className="fixed inset-x-0 bottom-0 z-40 block w-full lg:hidden">
-      <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-[0_-4px_24px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-bar pb-[env(safe-area-inset-bottom,0px)]">
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
           {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
@@ -85,7 +85,7 @@ function MobileBottomBarInner() {
             style={{ transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex === -1 ? 0 : 1 }}
           >
             {/* Top glowing bar flush with top border */}
-            <div className="h-[3.5px] w-10 rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 shadow-[0_0_10px_rgba(229,192,76,0.7),0_0_20px_rgba(229,192,76,0.35)]" />
+            <div className="h-[3.5px] w-10 rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 shadow-md shadow-gold-500/60" />
 
             {/* Downward light beam container */}
             <div className="relative flex h-full w-full items-center justify-center">
@@ -116,7 +116,7 @@ function MobileBottomBarInner() {
                   <Icon
                     aria-hidden="true"
                     className={`h-5 w-5 transition-colors duration-200 ${
-                      isActive ? "text-gold-300 drop-shadow-[0_1px_4px_rgba(229,192,76,0.35)]" : "text-white/70"
+                      isActive ? "text-gold-300 drop-shadow-sm drop-shadow-gold-500/35" : "text-white/70"
                     } ${
                       tab.id === "wishlist" && isActive
                         ? "fill-gold-300"

@@ -14,6 +14,9 @@
   --line: rgba(0, 0, 0, 0.08);
   --line-strong: rgba(0, 0, 0, 0.16);
 
+  /* Bars pinned to the viewport bottom cast upward; Tailwind's shadow scale only casts down. */
+  --bar-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+
   --fg: var(--color-ink-900);
   --fg-muted: var(--color-ink-600);
   --fg-subtle: var(--color-ink-500);
