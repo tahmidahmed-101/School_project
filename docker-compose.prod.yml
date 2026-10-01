@@ -1,0 +1,62 @@
+# Backend API on the shared edge VPS. Caddy reaches kull-mart-api by name over the external `edge`
+# network; the loopback port (pmo registry.json kull-mart:api) exists only for the deploy health check.
+name: kull-mart-api
+
+x-api: &api
+  build: ./backend
+  image: kull-mart-api:latest
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    DATABASE_URL: postgres://kullmart:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@kull-mart-db:5432/kullmart
+    MEDIA_ROOT: /app/media
+  volumes:
+    - media:/app/media
+  depends_on:
+    db:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kull-mart-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kullmart
+      POSTGRES_USER: kullmart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kullmart -d kullmart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  api:
+    <<: *api
+    container_name: kull-mart-api
+    ports:
+      - "127.0.0.1:4361:4361"
+    networks: [internal, edge]
+
+  # Off by default: see scripts/reservation_sweeper.sh before enabling (`--profile sweeper`).
+  sweeper:
+    <<: *api
+    container_name: kull-mart-sweeper
+    profiles: [sweeper]
+    command: ["./scripts/reservation_sweeper.sh"]
+    networks: [internal]
+
+volumes:
+  pgdata:
+  media:
+
+networks:
+  internal:
+  edge:
+    external: true
