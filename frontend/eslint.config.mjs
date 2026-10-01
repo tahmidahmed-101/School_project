@@ -34,7 +34,7 @@ const eslintConfig = [
   { files: ["modules/**"], rules: restrict(deepModuleImport, importsApp) },
   { files: ["design-system/**"], rules: restrict(deepModuleImport, importsApp, importsModules) },
   { files: ["lib/**"], rules: restrict(deepModuleImport, importsApp, importsModules, importsDesignSystem) },
-  { ignores: [".next/**", "node_modules/**", "next-env.d.ts", "playwright-report/**", "test-results/**"] },
+  { ignores: [".next/**", "node_modules/**", "admin/**", "next-env.d.ts", "playwright-report/**", "test-results/**"] },
 ];
 
 export default eslintConfig;

@@ -1,0 +1,10 @@
+{
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://yoyo-ecom-production-88e8.up.railway.app/api/$1"
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
