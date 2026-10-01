@@ -21,6 +21,9 @@ import { useCoupon, usePaymentMethods, useShippingQuote } from "./useCheckoutPri
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { buttonClass } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
@@ -115,10 +118,7 @@ export function CheckoutView() {
           </div>
           <p className="text-base font-bold text-ink-900">{ui("cartEmptyTitle")}</p>
           <p className="text-xs text-ink-600">{ui("cartEmptySubtitle")}</p>
-          <Link
-            href="/shop"
-            className="inline-block rounded-full bg-gold-500 px-6 py-2.5 text-xs font-bold text-ink-950 shadow-md transition-colors hover:bg-gold-400"
-          >
+          <Link href="/shop" className={buttonClass()}>
             {ui("cartStartShopping")}
           </Link>
         </div>
@@ -128,13 +128,8 @@ export function CheckoutView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Breadcrumbs className="mb-4" items={breadcrumbs} />
-        <div className="mb-8 flex items-center justify-between border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">
-            {ui("checkoutTitle")}
-          </h1>
-        </div>
+      <Container>
+        <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("checkoutTitle")} />
 
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-7">
@@ -163,7 +158,7 @@ export function CheckoutView() {
             />
           </div>
         </form>
-      </div>
+      </Container>
     </div>
   );
 }

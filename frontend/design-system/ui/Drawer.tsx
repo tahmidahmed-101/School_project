@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useOverlay } from "@/lib/useOverlay";
 import { photo } from "@/lib/photo";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
+import { Button } from "@/design-system/ui/Button";
 
 interface DrawerProps {
   open: boolean;
@@ -101,13 +102,9 @@ export function DrawerEmpty({
         <p className="text-sm font-bold text-fg">{title}</p>
         <p className={`text-xs text-fg-muted ${subtitleClassName}`}>{subtitle}</p>
       </div>
-      <button
-        type="button"
-        onClick={onAction}
-        className="cursor-pointer rounded-full bg-accent px-5 py-2 text-xs font-bold text-accent-fg shadow-md transition-all hover:bg-accent-hover"
-      >
+      <Button size="sm" onClick={onAction}>
         {actionLabel}
-      </button>
+      </Button>
     </div>
   );
 }

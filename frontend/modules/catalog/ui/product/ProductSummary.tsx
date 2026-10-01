@@ -22,9 +22,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
         <span className="text-xs font-bold uppercase tracking-widest text-gold-800">{t(product.categoryName)}</span>
         {product.isPreOrder && <PreOrderBadge status={product.preorderStatus || "available"} size="sm" />}
       </div>
-      <h1 className="mt-2.5 text-2xl font-extrabold uppercase tracking-tight text-ink-950 sm:text-3xl">
-        {t(product.name)}
-      </h1>
+      <h1 className="ts-display mt-2.5 text-2xl font-bold leading-tight text-ink-950 sm:text-3xl">{t(product.name)}</h1>
 
       {/* Price and availability share one line (they wrap only when the screen is too narrow) */}
       <div className="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2">

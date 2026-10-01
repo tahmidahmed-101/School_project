@@ -15,6 +15,7 @@ import { NavbarSearch } from "@/modules/catalog";
 import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
 import { WithActiveCategory } from "@/modules/catalog";
+import { containerClass } from "@/design-system/ui/Container";
 
 const SHOP_PATH = "/shop";
 
@@ -66,7 +67,12 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
     >
       {/* Tier 1: logo, live search, language / wishlist / cart */}
       <div className="border-b border-white/10 lg:border-b-0">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:gap-6 sm:px-6 sm:py-3.5 lg:gap-8 lg:px-8">
+        <div
+          className={containerClass(
+            "default",
+            "flex items-center justify-between gap-3 py-3 sm:gap-6 sm:py-3.5 lg:gap-8",
+          )}
+        >
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             <button
               type="button"
@@ -181,7 +187,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
 
       {/* Tier 2 (desktop): categories menu, nav links, address and hotline */}
       <div className="shadow-2xs hidden border-t border-white/10 bg-brand-900 text-white lg:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className={containerClass("default", "flex items-center justify-between")}>
           <div className="flex items-center gap-6 py-2">
             <NavCategoriesMenu />
 

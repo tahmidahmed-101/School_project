@@ -8,11 +8,9 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { getMaxOrderQuantity } from "@/lib/product";
+import { Button } from "@/design-system/ui/Button";
 
-const CTA_BASE =
-  "flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-xs font-bold uppercase tracking-wider shadow-md transition-all hover:shadow-lg sm:flex-1";
-const CTA_DARK = `${CTA_BASE} cursor-pointer bg-brand-700 text-white hover:bg-brand-800`;
-const CTA_AMBER = `${CTA_BASE} cursor-pointer bg-gold-500 text-ink-950 hover:bg-gold-400`;
+const CTA = { size: "lg", fullWidth: true, className: "sm:flex-1" } as const;
 
 interface ProductActionsProps {
   product: Product;
@@ -48,16 +46,20 @@ export function ProductActions({
   };
 
   const buyNowButton = (
-    <button type="button" onClick={buyNow} className={product.isPreOrder ? CTA_DARK : CTA_AMBER}>
-      <Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />
-      <span>{ui("buyNow")}</span>
-    </button>
+    <Button
+      {...CTA}
+      variant={product.isPreOrder ? "secondary" : "primary"}
+      onClick={buyNow}
+      leadingIcon={<Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />}
+    >
+      {ui("buyNow")}
+    </Button>
   );
 
   return (
     <>
       <div className="mt-7 flex items-center gap-3.5">
-        <div className="flex items-center rounded-lg border border-ink-200 bg-ink-50">
+        <div className="flex h-12 items-center rounded-full border border-ink-200 bg-ink-50">
           <button
             type="button"
             onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
@@ -80,7 +82,7 @@ export function ProductActions({
         <button
           type="button"
           onClick={() => toggleItem(product)}
-          className={`flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-all ${
+          className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
             isWishlisted
               ? "shadow-xs border-red-500 bg-red-50 text-red-600"
               : "border-ink-200 bg-white text-ink-700 hover:border-ink-900 hover:text-ink-950"
@@ -93,38 +95,33 @@ export function ProductActions({
 
       <div className="mt-4 flex flex-col gap-3.5 sm:flex-row">
         {isOutOfStock ? (
-          <button
-            type="button"
-            disabled
-            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-ink-200 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-ink-400 sm:flex-1"
-          >
-            <span>{ui("outOfStock")}</span>
-          </button>
+          <Button {...CTA} variant="outline" disabled>
+            {ui("outOfStock")}
+          </Button>
         ) : product.isPreOrder ? (
           isSoldOut ? (
-            <button
-              type="button"
-              disabled
-              className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-ink-200 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-ink-400 sm:flex-1"
-            >
-              <span>{ui("preOrderUnavailable")}</span>
-            </button>
+            <Button {...CTA} variant="outline" disabled>
+              {ui("preOrderUnavailable")}
+            </Button>
           ) : (
-            <button
-              type="button"
+            <Button
+              {...CTA}
               onClick={() => openPreOrderModal(product, quantity, selectedVariants)}
-              className={CTA_AMBER}
+              leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
             >
-              <Sparkles className="h-4 w-4 fill-current" />
-              <span>{ui("preOrderNow")}</span>
-            </button>
+              {ui("preOrderNow")}
+            </Button>
           )
         ) : (
           <>
-            <button type="button" onClick={() => addItem(product, quantity, selectedVariants)} className={CTA_DARK}>
-              <ShoppingCart className="h-4 w-4 text-gold-400" />
-              <span>{ui("addToCart")}</span>
-            </button>
+            <Button
+              {...CTA}
+              variant="secondary"
+              onClick={() => addItem(product, quantity, selectedVariants)}
+              leadingIcon={<ShoppingCart className="h-4 w-4 text-gold-400" />}
+            >
+              {ui("addToCart")}
+            </Button>
             {buyNowButton}
           </>
         )}

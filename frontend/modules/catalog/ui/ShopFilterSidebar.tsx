@@ -7,6 +7,7 @@ import { countActiveFilters, type FilterChange, type FilterState } from "../doma
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { ShopFilterControls } from "./ShopFilterControls";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
+import { Button } from "@/design-system/ui/Button";
 
 interface ShopFilterSidebarProps {
   filters: FilterState;
@@ -94,20 +95,12 @@ export function ShopFilterSidebar({
               </div>
 
               <div className="flex gap-3 border-t border-ink-200 bg-ink-50 p-4 sm:p-5">
-                <button
-                  type="button"
-                  onClick={onReset}
-                  className="flex-1 cursor-pointer rounded-full border border-ink-300 bg-white py-3 text-xs font-bold tracking-wider text-ink-800 transition-colors hover:bg-ink-100"
-                >
+                <Button variant="outline" className="flex-1" onClick={onReset}>
                   {ui("filterClearShort")}
-                </button>
-                <button
-                  type="button"
-                  onClick={onMobileClose}
-                  className="flex-1 cursor-pointer rounded-full bg-gold-500 py-3 text-xs font-bold tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400"
-                >
+                </Button>
+                <Button className="flex-1" onClick={onMobileClose}>
                   {ui("showProducts")} ({n(productCount)})
-                </button>
+                </Button>
               </div>
             </div>
           </div>

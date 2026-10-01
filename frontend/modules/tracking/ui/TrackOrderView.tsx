@@ -21,7 +21,9 @@ import { trackOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
-import { Loader } from "@/design-system/patterns/Loader";
+import { Button, buttonClass } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
 
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -95,14 +97,8 @@ export function TrackOrderView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-xl px-4 sm:px-6 lg:px-8">
-        <Breadcrumbs className="mb-4" items={breadcrumbs} />
-
-        <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">
-            {ui("trackOrderTitle")}
-          </h1>
-        </div>
+      <Container width="compact">
+        <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("trackOrderTitle")} />
 
         <form onSubmit={handleSubmit} className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5">
           {errorMsg && (
@@ -142,14 +138,9 @@ export function TrackOrderView() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gold-500 py-3 text-xs font-bold uppercase tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400 disabled:opacity-50"
-          >
-            {isLoading ? <Loader variant="inline" /> : <Search className="h-4 w-4" />}
-            <span>{ui("trackOrderSubmit")}</span>
-          </button>
+          <Button type="submit" size="lg" fullWidth loading={isLoading} leadingIcon={<Search className="h-4 w-4" />}>
+            {ui("trackOrderSubmit")}
+          </Button>
         </form>
 
         {!result && !errorMsg && !isNotFound && (
@@ -242,15 +233,12 @@ export function TrackOrderView() {
                 href={`https://wa.me/${BRAND_INFO.whatsapp}?text=${whatsappText}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-xs font-bold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-500"
+                className={buttonClass({ variant: "secondary", fullWidth: true })}
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>{ui("orderWhatsappConfirm")}</span>
               </a>
-              <a
-                href={`tel:${BRAND_INFO.phone}`}
-                className="shadow-xs flex w-full items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white py-3 text-xs font-semibold text-ink-800 transition-colors hover:bg-ink-50"
-              >
+              <a href={`tel:${BRAND_INFO.phone}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
                 <Phone className="h-4 w-4 text-gold-500" />
                 <span>
                   {ui("orderCallStore")} ({BRAND_INFO.phone})
@@ -259,7 +247,7 @@ export function TrackOrderView() {
             </div>
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 }

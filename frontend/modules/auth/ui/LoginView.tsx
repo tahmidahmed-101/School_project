@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { Button } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500";
@@ -31,13 +34,12 @@ export function LoginView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-md px-4 sm:px-6">
-        <Breadcrumbs className="mb-4" items={[{ label: ui("loginTitle") }]} />
-
-        <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">{ui("loginTitle")}</h1>
-          <p className="mt-1 text-sm text-ink-600">{ui("loginSubtitle")}</p>
-        </div>
+      <Container width="narrow">
+        <PageHeader
+          breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: ui("loginTitle") }]} />}
+          title={ui("loginTitle")}
+          subtitle={ui("loginSubtitle")}
+        />
 
         <form
           onSubmit={handleSubmit}
@@ -94,12 +96,9 @@ export function LoginView() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="w-full cursor-pointer rounded-xl bg-brand-800 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-900"
-          >
+          <Button type="submit" size="lg" fullWidth>
             {ui("loginSubmit")}
-          </button>
+          </Button>
 
           <p className="text-center text-xs font-semibold text-ink-600">{ui("loginForgot")}</p>
         </form>
@@ -107,7 +106,7 @@ export function LoginView() {
         <Link href="/register" className="mt-5 block text-center text-sm font-semibold text-brand-800 hover:underline">
           {ui("loginNoAccount")}
         </Link>
-      </div>
+      </Container>
     </div>
   );
 }

@@ -7,7 +7,9 @@ import { ApiError } from "@/lib/api/client";
 import { errorKey } from "@/lib/api/errors";
 import { subscribeToNewsletter } from "../data/mutations";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
-import { Loader } from "@/design-system/patterns/Loader";
+import { Button } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
 export function Newsletter() {
   const { ui } = useLang();
@@ -38,15 +40,12 @@ export function Newsletter() {
 
   return (
     <section className="relative overflow-hidden border-b border-ink-200 bg-gradient-to-b from-white via-gold-50/20 to-ink-50/40 py-14 sm:py-20">
-      <div className="relative z-10 mx-auto max-w-4xl space-y-6 px-4 text-center sm:px-6 lg:px-8">
-        <ScrollReveal className="space-y-3">
-          <h2 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-4xl">
-            {ui("newsletterTitle")}
-          </h2>
-          <p className="mx-auto max-w-xl text-sm leading-relaxed text-ink-600">{ui("newsletterSubtitle")}</p>
+      <Container className="relative z-10 space-y-6">
+        <ScrollReveal>
+          <SectionHeading title={ui("newsletterTitle")} subtitle={ui("newsletterSubtitle")} />
         </ScrollReveal>
 
-        <ScrollReveal delay={0.1} className="mx-auto max-w-md">
+        <ScrollReveal delay={0.1} className="max-w-md">
           {isSubmitted ? (
             <div className="shadow-xs flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-4 text-xs font-semibold text-brand-800">
               <Check className="h-4 w-4 text-brand-600" />
@@ -62,16 +61,16 @@ export function Newsletter() {
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={ui("newsletterPlaceholder")}
                 required
-                className="shadow-xs flex-1 rounded-full border border-ink-300 bg-white px-4 py-3 text-xs text-ink-900 placeholder-ink-400 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                className="shadow-xs flex-1 rounded-xl border border-ink-300 bg-white px-4 py-3 text-xs text-ink-900 placeholder-ink-400 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
               />
-              <button
+              <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-gold-500 px-5 py-3 text-xs font-bold text-ink-950 shadow-md shadow-gold-500/20 transition-all hover:bg-gold-400 disabled:opacity-50"
+                loading={isSubmitting}
+                className="shrink-0"
+                trailingIcon={!isSubmitting && <Send className="h-3.5 w-3.5" />}
               >
-                <span>{ui("newsletterButton")}</span>
-                {isSubmitting ? <Loader variant="inline" /> : <Send className="h-3 w-3" />}
-              </button>
+                {ui("newsletterButton")}
+              </Button>
               {errorMsg && (
                 <p role="alert" className="w-full text-left text-[11px] font-semibold text-red-600">
                   {errorMsg}
@@ -80,7 +79,7 @@ export function Newsletter() {
             </form>
           )}
         </ScrollReveal>
-      </div>
+      </Container>
     </section>
   );
 }

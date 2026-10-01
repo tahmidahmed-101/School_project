@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonClass } from "@/design-system/ui/Button";
+import { PAGE_TITLE_CLASS } from "@/design-system/ui/PageHeader";
 import { Compass } from "lucide-react";
 
 export default function NotFound() {
@@ -8,15 +10,12 @@ export default function NotFound() {
         <Compass className="h-7 w-7 text-gold-500" />
       </div>
       <div className="space-y-1.5">
-        <h1 className="ts-display text-xl font-bold text-ink-900 sm:text-2xl">Page not found</h1>
+        <h1 className={PAGE_TITLE_CLASS}>Page not found</h1>
         <p className="max-w-sm text-sm text-ink-600">
           The page you&apos;re looking for doesn&apos;t exist or may have been moved.
         </p>
       </div>
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-6 py-3 text-xs font-bold text-white shadow-md transition-colors hover:bg-brand-800"
-      >
+      <Link href="/" className={buttonClass()}>
         Back to home
       </Link>
     </div>

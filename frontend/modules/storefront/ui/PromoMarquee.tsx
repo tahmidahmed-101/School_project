@@ -3,6 +3,7 @@
 import { useLang } from "@/lib/i18n";
 import type { T } from "@/lib/types";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
+import { containerClass } from "@/design-system/ui/Container";
 
 const MARQUEE_ITEMS: T[] = [
   {
@@ -45,7 +46,7 @@ export function PromoMarquee() {
   );
 
   return (
-    <ScrollReveal y={16} duration={0.7} className="mx-auto max-w-7xl px-4 pb-3 pt-1 sm:px-6 sm:pb-4 sm:pt-1.5 lg:px-8">
+    <ScrollReveal y={16} duration={0.7} className={containerClass("default", "pb-3 pt-1 sm:pb-4 sm:pt-1.5")}>
       <div className="overflow-hidden rounded border border-gold-600/40 bg-gold-400 py-2 sm:rounded-md">
         <div className="sr-only">{MARQUEE_ITEMS.map((item) => item[lang]).join(" — ")}</div>
         <div className="flex w-max animate-marquee-rtl hover:[animation-play-state:paused]">

@@ -8,6 +8,8 @@ import { applyVariant, defaultVariant, resolveVariant, selectionFor } from "@/li
 import { ProductCardGrid } from "./ProductCardGrid";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
+import { Container } from "@/design-system/ui/Container";
+import { SectionHeading } from "@/design-system/ui/SectionHeading";
 import { PreOrderInfo } from "@/modules/preorder";
 import { ProductGallery } from "./product/ProductGallery";
 import { ProductSummary } from "./product/ProductSummary";
@@ -49,7 +51,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
 
   return (
     <div className="w-full bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container>
         <div className="mb-8 border-b border-ink-100 pb-4">
           <Breadcrumbs items={[{ label: ui("navShop"), href: "/shop" }, { label: t(product.name) }]} />
         </div>
@@ -96,7 +98,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
         {relatedProducts.length > 0 && (
           <div className="pt-6 sm:pt-12">
             <ScrollReveal>
-              <h3 className="mb-4 text-xl font-bold text-ink-950 sm:mb-8">{ui("relatedProducts")}</h3>
+              <SectionHeading className="mb-4 sm:mb-8" title={ui("relatedProducts")} />
             </ScrollReveal>
             <ProductCardGrid
               products={relatedProducts}
@@ -104,7 +106,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
             />
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 }

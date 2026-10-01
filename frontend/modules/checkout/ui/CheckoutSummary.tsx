@@ -9,7 +9,7 @@ import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
-import { Loader } from "@/design-system/patterns/Loader";
+import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { errorKey } from "@/lib/api/errors";
 import { ApiError } from "@/lib/api/client";
@@ -150,16 +150,17 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                   coupon.apply(couponInput);
                 }
               }}
-              className="min-w-0 flex-1 rounded-lg border border-ink-200 px-3 py-2 text-xs uppercase outline-none focus:border-gold-500"
+              className="min-w-0 flex-1 rounded-xl border border-ink-200 px-3 py-2 text-xs uppercase outline-none focus:border-gold-500"
             />
-            <button
-              type="button"
-              disabled={coupon.checking || !couponInput.trim()}
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!couponInput.trim()}
+              loading={coupon.checking}
               onClick={() => coupon.apply(couponInput)}
-              className="cursor-pointer rounded-lg bg-ink-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-ink-700 disabled:opacity-50"
             >
-              {coupon.checking ? <Loader variant="inline" /> : ui("checkoutCouponApply")}
-            </button>
+              {!coupon.checking && ui("checkoutCouponApply")}
+            </Button>
           </div>
         )}
         {couponError && <p className="text-[11px] font-medium text-red-600">{couponError}</p>}
@@ -210,14 +211,9 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
         <p className="text-[10.5px] leading-relaxed text-ink-500">{ui("checkoutTotalPending")}</p>
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gold-500 py-3.5 text-xs font-bold text-ink-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-400 active:scale-[0.99] disabled:opacity-50"
-      >
-        {isSubmitting && <Loader variant="inline" />}
-        <span>{isSubmitting ? ui("checkoutPlacing") : ui("checkoutPlaceOrderBtn")}</span>
-      </button>
+      <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+        {isSubmitting ? ui("checkoutPlacing") : ui("checkoutPlaceOrderBtn")}
+      </Button>
       <div className="flex items-center justify-center pt-2 text-center">
         <Link
           href="/shop"

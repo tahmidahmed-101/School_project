@@ -10,6 +10,7 @@ import { photo } from "@/lib/photo";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { HeroCategoryRail } from "./HeroCategoryRail";
 import { HeroWelcomePanel } from "./HeroWelcomePanel";
+import { containerClass } from "@/design-system/ui/Container";
 
 const AUTOPLAY_MS = 5000;
 
@@ -42,7 +43,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
     >
       <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-[700px] -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-500/10 via-gold-400/10 to-brand-400/10 blur-[100px]" />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className={containerClass("default", "relative z-10")}>
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
           {/* Left: shop-by-category rail (desktop only; mobile shows just the banner). Absolutely positioned so a long
               category list scrolls inside the rail instead of stretching the row past the banner's height. */}

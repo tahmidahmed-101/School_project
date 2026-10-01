@@ -6,6 +6,7 @@ import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
 import { CartItemRow } from "./CartItemRow";
 import { Drawer, DrawerBody, DrawerEmpty } from "@/design-system/ui/Drawer";
+import { buttonClass } from "@/design-system/ui/Button";
 
 export function CartDrawer() {
   const { items, isDrawerOpen, closeDrawer, subtotal, totalItems } = useCart();
@@ -59,11 +60,7 @@ export function CartDrawer() {
             </div>
           </div>
 
-          <Link
-            href="/checkout"
-            onClick={closeDrawer}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-500 py-3 text-center text-xs font-bold text-ink-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-400"
-          >
+          <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
             <span>{ui("cartProceedToCheckout")}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>

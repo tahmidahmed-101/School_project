@@ -16,6 +16,8 @@ import { useSearchParams } from "next/navigation";
 import { photo } from "@/lib/photo";
 import { useLang } from "@/lib/i18n";
 import { ScrollReveal, CardReveal } from "@/design-system/patterns/Reveal";
+import { Container } from "@/design-system/ui/Container";
+import { SectionHeading } from "@/design-system/ui/SectionHeading";
 import { useCatalog } from "../context";
 
 function CategoryTrack({
@@ -179,40 +181,41 @@ export function CategoryShowcase() {
 
   return (
     <section aria-label="Shop by Popular Categories" className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container>
         <ScrollReveal>
-          <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
-            <h2 className="ts-display text-xl font-extrabold tracking-tight text-gold-700 sm:text-2xl lg:text-3xl">
-              {ui("categoriesTitle")}
-            </h2>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => scrollTrack(-1)}
-                disabled={!canScrollLeft}
-                aria-label="Scroll categories left"
-                className={arrowClass}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollTrack(1)}
-                disabled={!canScrollRight}
-                aria-label="Scroll categories right"
-                className={arrowClass}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+          <SectionHeading
+            className="mb-3 sm:mb-5"
+            title={ui("categoriesTitle")}
+            action={
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => scrollTrack(-1)}
+                  disabled={!canScrollLeft}
+                  aria-label="Scroll categories left"
+                  className={arrowClass}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollTrack(1)}
+                  disabled={!canScrollRight}
+                  aria-label="Scroll categories right"
+                  className={arrowClass}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            }
+          />
         </ScrollReveal>
 
         {/* Horizontally scrollable category track: arrows, swipe on touch, drag or trackpad on desktop */}
         <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-ink-100" />}>
           <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} />
         </Suspense>
-      </div>
+      </Container>
     </section>
   );
 }

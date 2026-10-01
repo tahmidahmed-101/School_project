@@ -6,6 +6,7 @@ import { usePreOrderModal } from "../context";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { Modal } from "@/design-system/ui/Modal";
+import { Button } from "@/design-system/ui/Button";
 
 export function PreOrderConfirmationModal() {
   const { isOpen, product, quantity, selectedVariant, closePreOrderModal, confirmPreOrder } = usePreOrderModal();
@@ -94,21 +95,10 @@ export function PreOrderConfirmationModal() {
 
         {/* Action Buttons */}
         <div className="mt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={closePreOrderModal}
-            className="cursor-pointer rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition-colors hover:bg-ink-50 hover:text-ink-950"
-          >
+          <Button variant="outline" onClick={closePreOrderModal}>
             {ui("cancel")}
-          </button>
-
-          <button
-            type="button"
-            onClick={confirmPreOrder}
-            className="cursor-pointer rounded-xl bg-gold-500 px-5 py-2.5 text-xs font-bold text-ink-950 shadow-md transition-all hover:bg-gold-400 hover:shadow-lg active:scale-98"
-          >
-            {ui("confirmPreOrderBtn")}
-          </button>
+          </Button>
+          <Button onClick={confirmPreOrder}>{ui("confirmPreOrderBtn")}</Button>
         </div>
       </div>
     </Modal>

@@ -11,6 +11,7 @@ import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { FilterDropdown } from "./FilterDropdown";
 import { SearchField } from "./SearchField";
 import { EmptyState } from "@/design-system/patterns/EmptyState";
+import { Button } from "@/design-system/ui/Button";
 
 // Rendering every match made shop cost grow with the catalogue; filters still search the full list.
 const PAGE_SIZE = 24;
@@ -84,7 +85,7 @@ export function ShopProductGrid({
             <button
               type="button"
               onClick={onOpenMobileFilter}
-              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-ink-200 bg-ink-50 px-4 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 hover:text-gold-800"
+              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-ink-200 bg-ink-50 px-4 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 hover:text-gold-800"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-gold-600" />
               <span>
@@ -169,13 +170,9 @@ export function ShopProductGrid({
 
       {shown < products.length && (
         <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={() => setShown((n) => n + PAGE_SIZE)}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gold-500 px-7 py-3 text-xs font-bold tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400"
-          >
+          <Button size="lg" onClick={() => setShown((n) => n + PAGE_SIZE)}>
             {ui("loadMore")}
-          </button>
+          </Button>
         </div>
       )}
     </div>

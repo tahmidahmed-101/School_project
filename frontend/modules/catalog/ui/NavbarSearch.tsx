@@ -53,7 +53,7 @@ export function NavbarSearch() {
         </div>
         <button
           type="submit"
-          className="shadow-2xs absolute bottom-1.5 right-1.5 top-1.5 cursor-pointer rounded-full bg-gold-500 px-5 text-xs font-bold uppercase tracking-wider text-ink-950 transition-colors hover:bg-gold-400"
+          className="shadow-2xs absolute bottom-1.5 right-1.5 top-1.5 cursor-pointer rounded-full bg-gold-500 px-5 text-xs font-semibold text-ink-950 transition-colors hover:bg-gold-400"
         >
           {ui("navSearch")}
         </button>

@@ -7,6 +7,7 @@ import { FacebookIcon, WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { useBrand, useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
+import { containerClass } from "@/design-system/ui/Container";
 
 export function Footer() {
   const { t, ui, lang } = useLang();
@@ -17,7 +18,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-brand-950 bg-brand-900 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] text-xs text-white/75 lg:pb-0">
-      <div className="mx-auto max-w-7xl space-y-12 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className={containerClass("default", "space-y-12 py-12 sm:py-16")}>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-12 lg:gap-12">
           {/* Col 1: Brand & Bio (4 cols) */}
           <div className="space-y-4 lg:col-span-4">

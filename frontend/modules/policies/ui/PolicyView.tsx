@@ -5,6 +5,8 @@ import type { PolicyContent } from "../domain/policy-content";
 import { useBrand } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
 
 interface PolicyViewProps {
   policy: PolicyContent;
@@ -16,15 +18,12 @@ export function PolicyView({ policy }: PolicyViewProps) {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />
-
-        <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl lg:text-5xl">
-            {t(policy.title)}
-          </h1>
-          <p className="mt-1.5 text-xs text-ink-500 lg:text-sm">{t(policy.updated)}</p>
-        </div>
+      <Container>
+        <PageHeader
+          breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}
+          title={t(policy.title)}
+          subtitle={t(policy.updated)}
+        />
 
         <p className="max-w-3xl text-sm leading-relaxed text-ink-700 sm:text-base lg:max-w-4xl lg:text-lg">
           {t(policy.intro)}
@@ -60,7 +59,7 @@ export function PolicyView({ policy }: PolicyViewProps) {
             </a>
           </div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }
