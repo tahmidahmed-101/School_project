@@ -19,7 +19,7 @@ export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
       <h2 className="px-1.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
         {ui("heroCategoriesTitle")}
       </h2>
-      <nav className="flex flex-col gap-1">
+      <nav className="-mr-1.5 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain pr-1.5">
         {visibleCategories.map((category) => (
           <Link
             key={category.id}

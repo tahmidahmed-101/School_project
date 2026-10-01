@@ -39,9 +39,12 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
-          {/* Left: shop-by-category rail (desktop only; mobile shows just the banner) */}
-          <ScrollReveal y={24} duration={0.85} className="hidden lg:order-1 lg:col-span-2 lg:block">
-            <HeroCategoryRail preorder={preorder} />
+          {/* Left: shop-by-category rail (desktop only; mobile shows just the banner). Absolutely positioned so a long
+              category list scrolls inside the rail instead of stretching the row past the banner's height. */}
+          <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-2 lg:block">
+            <div className="absolute inset-0">
+              <HeroCategoryRail preorder={preorder} />
+            </div>
           </ScrollReveal>
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}

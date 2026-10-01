@@ -42,6 +42,8 @@ const nextConfig = {
         hostname: new URL(API_ORIGIN).hostname,
         ...(new URL(API_ORIGIN).port && { port: new URL(API_ORIGIN).port }),
       },
+      // Placeholder photos the backend's demo seeder (apps/common/services/demo_seed) assigns to every seeded product.
+      { protocol: "https", hostname: "picsum.photos", pathname: "/seed/**" },
     ],
   },
   experimental: {
