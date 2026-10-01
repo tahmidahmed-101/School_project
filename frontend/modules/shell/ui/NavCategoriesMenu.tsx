@@ -25,7 +25,7 @@ export function NavCategoriesMenu() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full cursor-pointer items-center justify-between rounded-full bg-gold-500 px-5 py-2.5 text-xs font-bold text-ink-950 shadow-sm transition-all duration-200 hover:bg-gold-400"
+        className="flex w-full cursor-pointer items-center justify-between rounded-full bg-accent px-5 py-2.5 text-xs font-bold text-ink-950 shadow-sm transition-all duration-200 hover:bg-accent-hover"
       >
         <div className="flex items-center gap-2.5">
           <Layers className="h-4 w-4" />
@@ -55,7 +55,7 @@ export function NavCategoriesMenu() {
                 }`}
               >
                 <span className="truncate">{t(category.name)}</span>
-                <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-400">
+                <span className="ml-2 shrink-0 text-2xs font-normal text-fg-muted">
                   {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
                 </span>
               </Link>
@@ -66,7 +66,7 @@ export function NavCategoriesMenu() {
           <Link
             href="/shop"
             onClick={close}
-            className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-600 hover:text-gold-700"
+            className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-800 hover:text-gold-900"
           >
             <span>{ui("browseAllCategories")}</span>
             <ArrowRight className="h-3.5 w-3.5" />

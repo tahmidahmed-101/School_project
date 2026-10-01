@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Collapse } from "@/design-system/patterns/Collapse";
 import { ChevronDown } from "lucide-react";
 
 interface AccordionItemProps {
@@ -22,26 +22,14 @@ export function AccordionItem({ title, defaultOpen = false, children }: Accordio
         aria-expanded={open}
         className="group flex w-full items-center justify-between text-left"
       >
-        <span className="text-xs font-bold uppercase tracking-wider text-fg transition-colors group-hover:text-gold-600">
+        <span className="text-xs font-bold uppercase tracking-wider text-fg transition-colors group-hover:text-gold-800">
           {title}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-fg-subtle transition-transform duration-300 ${open ? "rotate-180 text-fg" : ""}`}
+          className={`h-4 w-4 text-fg-subtle transition-transform duration-300 ${open ? "rotate-180" : ""}`}
         />
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Collapse open={open}>{children}</Collapse>
     </div>
   );
 }

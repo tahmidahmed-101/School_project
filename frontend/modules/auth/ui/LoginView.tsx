@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
-
-const INPUT_CLASS =
-  "w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500";
+import { Button } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
+import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 
 export function LoginView() {
   const { ui } = useLang();
@@ -31,34 +32,26 @@ export function LoginView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-md px-4 sm:px-6">
-        <Breadcrumbs className="mb-4" items={[{ label: ui("loginTitle") }]} />
-
-        <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">{ui("loginTitle")}</h1>
-          <p className="mt-1 text-sm text-ink-600">{ui("loginSubtitle")}</p>
-        </div>
+      <Container width="narrow">
+        <PageHeader
+          breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: ui("loginTitle") }]} />}
+          title={ui("loginTitle")}
+          subtitle={ui("loginSubtitle")}
+        />
 
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5"
+          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
         >
-          {errorMsg && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
           {infoMsg && (
-            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-ink-900">
+            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-fg">
               {infoMsg}
             </div>
           )}
 
-          <div>
-            <label htmlFor="login-identifier" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("loginIdentifierLabel")}
-            </label>
+          <FormField htmlFor="login-identifier" label={ui("loginIdentifierLabel")}>
             <input
               id="login-identifier"
               type="text"
@@ -68,12 +61,9 @@ export function LoginView() {
               placeholder={ui("loginIdentifierPlaceholder")}
               className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="login-password" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("loginPasswordLabel")}
-            </label>
+          <FormField htmlFor="login-password" label={ui("loginPasswordLabel")}>
             <div className="relative">
               <input
                 id="login-password"
@@ -87,27 +77,24 @@ export function LoginView() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? ui("loginHidePassword") : ui("loginShowPassword")}
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ink-500 transition-colors hover:text-ink-900"
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-          </div>
+          </FormField>
 
-          <button
-            type="submit"
-            className="w-full cursor-pointer rounded-xl bg-brand-800 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-900"
-          >
+          <Button type="submit" size="lg" fullWidth>
             {ui("loginSubmit")}
-          </button>
+          </Button>
 
-          <p className="text-center text-xs font-semibold text-ink-600">{ui("loginForgot")}</p>
+          <p className="text-center text-xs font-semibold text-fg-muted">{ui("loginForgot")}</p>
         </form>
 
         <Link href="/register" className="mt-5 block text-center text-sm font-semibold text-brand-800 hover:underline">
           {ui("loginNoAccount")}
         </Link>
-      </div>
+      </Container>
     </div>
   );
 }

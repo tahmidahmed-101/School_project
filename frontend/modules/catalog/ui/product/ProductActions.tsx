@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, Minus, ShoppingCart, Zap, Heart, Sparkles } from "lucide-react";
+import { ShoppingCart, Zap, Heart, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
@@ -8,11 +9,10 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { getMaxOrderQuantity } from "@/lib/product";
+import { Button } from "@/design-system/ui/Button";
+import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
-const CTA_BASE =
-  "flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-xs font-bold uppercase tracking-wider shadow-md transition-all hover:shadow-lg sm:flex-1";
-const CTA_DARK = `${CTA_BASE} cursor-pointer bg-brand-700 text-white hover:bg-brand-800`;
-const CTA_AMBER = `${CTA_BASE} cursor-pointer bg-gold-500 text-ink-950 hover:bg-gold-400`;
+const CTA = { size: "lg", fullWidth: true, className: "sm:flex-1" } as const;
 
 interface ProductActionsProps {
   product: Product;
@@ -33,7 +33,17 @@ export function ProductActions({
   isSoldOut,
   isOutOfStock = false,
 }: ProductActionsProps) {
-  const { ui, n } = useLang();
+  const { ui, money } = useLang();
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [ctaVisible, setCtaVisible] = useState(true);
+
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setCtaVisible(Boolean(entry?.isIntersecting)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const router = useRouter();
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
@@ -48,87 +58,105 @@ export function ProductActions({
   };
 
   const buyNowButton = (
-    <button type="button" onClick={buyNow} className={product.isPreOrder ? CTA_DARK : CTA_AMBER}>
-      <Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />
-      <span>{ui("buyNow")}</span>
-    </button>
+    <Button
+      {...CTA}
+      variant={product.isPreOrder ? "secondary" : "primary"}
+      onClick={buyNow}
+      leadingIcon={<Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />}
+    >
+      {ui("buyNow")}
+    </Button>
   );
 
   return (
     <>
       <div className="mt-7 flex items-center gap-3.5">
-        <div className="flex items-center rounded-lg border border-ink-200 bg-ink-50">
-          <button
-            type="button"
-            onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-            className="cursor-pointer p-3 text-ink-500 transition-colors hover:text-ink-900"
-            aria-label="Decrease quantity"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="w-10 text-center text-sm font-bold tabular-nums text-ink-900">{n(quantity)}</span>
-          <button
-            type="button"
-            onClick={() => onQuantityChange(Math.min(maxQuantity, quantity + 1))}
-            className="cursor-pointer p-3 text-ink-500 transition-colors hover:text-ink-900"
-            aria-label="Increase quantity"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
+        <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
 
         <button
           type="button"
           onClick={() => toggleItem(product)}
-          className={`flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-all ${
+          className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
             isWishlisted
               ? "shadow-xs border-red-500 bg-red-50 text-red-600"
               : "border-ink-200 bg-white text-ink-700 hover:border-ink-900 hover:text-ink-950"
           }`}
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={ui("navWishlist")}
+          aria-pressed={isWishlisted}
         >
           <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-red-500" : ""}`} />
         </button>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3.5 sm:flex-row">
+      <div ref={ctaRef} className="mt-4 flex flex-col gap-3.5 sm:flex-row">
         {isOutOfStock ? (
-          <button
-            type="button"
-            disabled
-            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-ink-200 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-ink-400 sm:flex-1"
-          >
-            <span>{ui("outOfStock")}</span>
-          </button>
+          <Button {...CTA} variant="outline" disabled>
+            {ui("outOfStock")}
+          </Button>
         ) : product.isPreOrder ? (
           isSoldOut ? (
-            <button
-              type="button"
-              disabled
-              className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-ink-200 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-ink-400 sm:flex-1"
-            >
-              <span>{ui("preOrderUnavailable")}</span>
-            </button>
+            <Button {...CTA} variant="outline" disabled>
+              {ui("preOrderUnavailable")}
+            </Button>
           ) : (
-            <button
-              type="button"
+            <Button
+              {...CTA}
               onClick={() => openPreOrderModal(product, quantity, selectedVariants)}
-              className={CTA_AMBER}
+              leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
             >
-              <Sparkles className="h-4 w-4 fill-current" />
-              <span>{ui("preOrderNow")}</span>
-            </button>
+              {ui("preOrderNow")}
+            </Button>
           )
         ) : (
           <>
-            <button type="button" onClick={() => addItem(product, quantity, selectedVariants)} className={CTA_DARK}>
-              <ShoppingCart className="h-4 w-4 text-gold-400" />
-              <span>{ui("addToCart")}</span>
-            </button>
+            <Button
+              {...CTA}
+              variant="secondary"
+              onClick={() => addItem(product, quantity, selectedVariants)}
+              leadingIcon={<ShoppingCart className="h-4 w-4 text-gold-400" />}
+            >
+              {ui("addToCart")}
+            </Button>
             {buyNowButton}
           </>
         )}
       </div>
+      {!isOutOfStock && !(product.isPreOrder && isSoldOut) && (
+        <div
+          inert={ctaVisible}
+          className={`fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom,0px))] z-30 border-t border-ink-200 bg-white/95 px-4 py-2.5 shadow-bar backdrop-blur-sm transition-[transform,opacity] duration-200 lg:hidden ${
+            ctaVisible ? "pointer-events-none translate-y-full opacity-0" : "translate-y-0 opacity-100"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="mr-auto shrink-0 text-base font-bold text-gold-800">{money(product.price)}</span>
+            {product.isPreOrder ? (
+              <Button
+                size="md"
+                onClick={() => openPreOrderModal(product, quantity, selectedVariants)}
+                leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
+              >
+                {ui("preOrderNow")}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="md"
+                  variant="secondary"
+                  onClick={() => addItem(product, quantity, selectedVariants)}
+                  aria-label={ui("addToCart")}
+                  className="w-11 px-0"
+                >
+                  <ShoppingCart className="h-5 w-5 shrink-0 text-gold-400" />
+                </Button>
+                <Button size="md" onClick={buyNow} leadingIcon={<Zap className="h-4 w-4 fill-current" />}>
+                  {ui("buyNow")}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

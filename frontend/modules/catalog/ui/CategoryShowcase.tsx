@@ -16,14 +16,18 @@ import { useSearchParams } from "next/navigation";
 import { photo } from "@/lib/photo";
 import { useLang } from "@/lib/i18n";
 import { ScrollReveal, CardReveal } from "@/design-system/patterns/Reveal";
+import { Container } from "@/design-system/ui/Container";
+import { SectionHeading } from "@/design-system/ui/SectionHeading";
 import { useCatalog } from "../context";
 
 function CategoryTrack({
   trackRef,
   onScrollChange,
+  fadeEnd,
 }: {
   trackRef: RefObject<HTMLDivElement | null>;
   onScrollChange: () => void;
+  fadeEnd: boolean;
 }) {
   const { lang, n } = useLang();
   const searchParams = useSearchParams();
@@ -92,9 +96,9 @@ function CategoryTrack({
           drag.current.moved = false;
         }
       }}
-      className={`scrollbar-none -mx-4 flex scroll-px-4 overflow-y-hidden overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:-mx-8 lg:scroll-px-8 lg:gap-4 lg:px-8 ${
+      className={`scrollbar-none -mx-4 flex scroll-px-4 overflow-y-hidden overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:mx-0 lg:scroll-px-0 lg:gap-4 lg:px-0 ${
         isDragging ? "cursor-grabbing select-none" : "snap-x snap-mandatory scroll-smooth"
-      }`}
+      } ${fadeEnd ? "lg:[mask-image:linear-gradient(to_right,#000_94%,transparent)]" : ""}`}
     >
       {categoriesWithCounts.map((cat, idx) => {
         const isActive = Boolean(activeSlug && activeSlug === cat.slug);
@@ -120,7 +124,7 @@ function CategoryTrack({
               aria-label={`${cat.name[lang] || cat.name.en} - ${countText}`}
             >
               {/* Circular Product Image (matches reference image.png) */}
-              <div className="sm:h-22 sm:w-22 relative mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-ink-50 p-1.5 ring-1 ring-ink-200/80 transition-all duration-300 group-hover:scale-105 group-hover:ring-gold-300 lg:h-24 lg:w-24">
+              <div className="sm:h-22 sm:w-22 relative mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface p-1.5 ring-1 ring-ink-200/80 transition-all duration-300 group-hover:scale-105 group-hover:ring-gold-300 lg:h-24 lg:w-24">
                 <div className="relative h-full w-full overflow-hidden rounded-full">
                   <Image
                     draggable={false}
@@ -135,13 +139,13 @@ function CategoryTrack({
 
               {/* Category Title */}
               <h3
-                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-600 sm:text-[15px] ${isActive ? "text-gold-800" : "text-ink-900"}`}
+                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 ${isActive ? "text-gold-800" : "text-fg"}`}
               >
                 {cat.name[lang] || cat.name.en}
               </h3>
 
               {/* Product Count (e.g. 28 Products) */}
-              <p className="mt-0.5 text-[11px] font-medium text-ink-400 sm:text-xs">{countText}</p>
+              <p className="mt-0.5 text-2xs font-medium text-fg-muted sm:text-xs">{countText}</p>
             </Link>
           </CardReveal>
         );
@@ -178,41 +182,42 @@ export function CategoryShowcase() {
     "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-white text-ink-700 shadow-2xs transition-colors hover:border-gold-500 hover:bg-gold-50 hover:text-gold-700 disabled:cursor-default disabled:opacity-40 disabled:hover:border-ink-200 disabled:hover:bg-white disabled:hover:text-ink-700";
 
   return (
-    <section aria-label="Shop by Popular Categories" className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section aria-label={ui("categoriesTitle")} className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
+      <Container>
         <ScrollReveal>
-          <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
-            <h2 className="ts-display text-xl font-extrabold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
-              {ui("categoriesTitle")}
-            </h2>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => scrollTrack(-1)}
-                disabled={!canScrollLeft}
-                aria-label="Scroll categories left"
-                className={arrowClass}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollTrack(1)}
-                disabled={!canScrollRight}
-                aria-label="Scroll categories right"
-                className={arrowClass}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+          <SectionHeading
+            className="mb-3 sm:mb-5"
+            title={ui("categoriesTitle")}
+            action={
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => scrollTrack(-1)}
+                  disabled={!canScrollLeft}
+                  aria-label={ui("scrollCategoriesLeft")}
+                  className={arrowClass}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollTrack(1)}
+                  disabled={!canScrollRight}
+                  aria-label={ui("scrollCategoriesRight")}
+                  className={arrowClass}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            }
+          />
         </ScrollReveal>
 
         {/* Horizontally scrollable category track: arrows, swipe on touch, drag or trackpad on desktop */}
-        <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-ink-100" />}>
-          <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} />
+        <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-surface-muted" />}>
+          <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} fadeEnd={canScrollRight} />
         </Suspense>
-      </div>
+      </Container>
     </section>
   );
 }

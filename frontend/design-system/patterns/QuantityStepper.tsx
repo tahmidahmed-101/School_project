@@ -6,30 +6,58 @@ import { useLang } from "@/lib/i18n";
 interface QuantityStepperProps {
   quantity: number;
   onChange: (quantity: number) => void;
+  /** "sm" for cart rows and the checkout summary, "lg" for the product page. */
+  size?: "sm" | "lg";
+  min?: number;
+  max?: number;
 }
 
-/** Compact − / count / + control shared by the cart drawer and the checkout summary. */
-export function QuantityStepper({ quantity, onChange }: QuantityStepperProps) {
-  const { n } = useLang();
+const STYLES = {
+  sm: {
+    wrap: "rounded-full p-0.5",
+    // The pseudo-element stretches the tap target to 40px without making the stepper itself bigger.
+    button: "h-8 w-8 rounded-full before:absolute before:-inset-1 before:content-['']",
+    icon: "h-3.5 w-3.5",
+    count: "min-w-[24px] px-1 text-xs",
+  },
+  lg: {
+    wrap: "h-12 rounded-full",
+    button: "h-12 w-11 rounded-full",
+    icon: "h-4 w-4",
+    count: "w-10 text-sm",
+  },
+} as const;
+
+/** − / count / + control shared by the cart drawer, checkout summary and product page. */
+export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: QuantityStepperProps) {
+  const { n, ui } = useLang();
+  const s = STYLES[size];
+  const atMin = min !== undefined && quantity <= min;
+  const atMax = max !== undefined && quantity >= max;
+  const buttonClass = `relative flex cursor-pointer items-center justify-center text-fg-muted transition-colors hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 ${s.button}`;
 
   return (
-    <div className="inline-flex items-center rounded-lg border border-ink-200 bg-white p-0.5">
+    <div className={`inline-flex items-center border border-ink-200 bg-white ${s.wrap}`}>
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
-        className="cursor-pointer p-1 text-ink-600 hover:text-ink-900"
-        aria-label="Decrease quantity"
+        disabled={atMin}
+        className={buttonClass}
+        aria-label={ui("decreaseQuantity")}
       >
-        <Minus className="h-3 w-3" />
+        <Minus className={s.icon} />
       </button>
-      <span className="min-w-[20px] px-2 text-center text-xs font-bold text-ink-900">{n(quantity)}</span>
+      <span className={`text-center font-bold tabular-nums text-fg ${s.count}`} aria-live="polite">
+        {n(quantity)}
+      </span>
       <button
         type="button"
         onClick={() => onChange(quantity + 1)}
-        className="cursor-pointer p-1 text-ink-600 hover:text-ink-900"
-        aria-label="Increase quantity"
+        disabled={atMax}
+        className={buttonClass}
+        aria-label={ui("increaseQuantity")}
       >
-        <Plus className="h-3 w-3" />
+        <Plus className={s.icon} />
       </button>
     </div>
   );

@@ -1,25 +1,35 @@
 "use client";
 
 import { Banknote, CreditCard, HandCoins, Landmark, Receipt, Smartphone, type LucideIcon } from "lucide-react";
-import { useLang } from "@/lib/i18n";
+import { useLang, type UiKey } from "@/lib/i18n";
 import { BD_DISTRICTS } from "../domain/districts";
 import type { FormErrors } from "../domain/checkout";
 import type { OrderForm } from "@/lib/types";
 import type { ApiPaymentMethod } from "@/lib/api/types";
 import { Dropdown } from "@/design-system/patterns/Dropdown";
-import { FormField, INPUT_CLASS, INPUT_ERROR_CLASS } from "@/design-system/ui/FormField";
+import { FormField, inputClass as fieldClass } from "@/design-system/ui/FormField";
 
-/** Icon + accent colour per payment method key, purely decorative (lets a tile grid read at a glance). */
-const PAYMENT_STYLE: Record<string, { icon: LucideIcon; accent: string }> = {
-  cash: { icon: Banknote, accent: "bg-emerald-50 text-emerald-600" },
-  cod: { icon: HandCoins, accent: "bg-amber-50 text-amber-600" },
-  card: { icon: CreditCard, accent: "bg-blue-50 text-blue-600" },
-  bkash: { icon: Smartphone, accent: "bg-pink-50 text-pink-600" },
-  nagad: { icon: Smartphone, accent: "bg-orange-50 text-orange-600" },
-  rocket: { icon: Smartphone, accent: "bg-purple-50 text-purple-600" },
-  bank_transfer: { icon: Landmark, accent: "bg-sky-50 text-sky-600" },
+const PAYMENT_ICON: Record<string, LucideIcon> = {
+  cash: Banknote,
+  cod: HandCoins,
+  card: CreditCard,
+  bkash: Smartphone,
+  nagad: Smartphone,
+  rocket: Smartphone,
+  bank_transfer: Landmark,
 };
-const DEFAULT_PAYMENT_STYLE = { icon: Receipt, accent: "bg-ink-100 text-ink-600" };
+
+// The API sends English labels; known keys are shown from the dictionary so Bangla mode stays Bangla.
+const PAYMENT_LABEL = {
+  cod: "checkoutCodLabel",
+  cash: "payCash",
+  card: "payCard",
+  bkash: "payBkash",
+  nagad: "payNagad",
+  rocket: "payRocket",
+  bank_transfer: "payBankTransfer",
+  manual: "payManual",
+} as const satisfies Record<string, UiKey>;
 
 interface CheckoutFieldsProps {
   form: OrderForm;
@@ -39,12 +49,12 @@ export function CheckoutFields({
   onPaymentMethodChange,
 }: CheckoutFieldsProps) {
   const { ui } = useLang();
-  const inputClass = (field: keyof OrderForm) => `${INPUT_CLASS} ${errors[field] ? INPUT_ERROR_CLASS : ""}`;
+  const inputClass = (field: keyof OrderForm) => fieldClass({ invalid: Boolean(errors[field]) });
 
   return (
     <>
       <div className="space-y-6 rounded-3xl border border-ink-200 bg-white p-6 shadow-sm sm:p-8">
-        <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-ink-900">{ui("checkoutContactInfo")}</h3>
+        <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-fg">{ui("checkoutContactInfo")}</h3>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -105,11 +115,13 @@ export function CheckoutFields({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField htmlFor="co-district" label={ui("checkoutCity")} required error={errors.district}>
               <Dropdown
+                id="co-district"
+                invalid={Boolean(errors.district)}
                 value={form.district}
                 onChange={(district) => onChange({ district })}
                 options={BD_DISTRICTS}
                 searchable
-                placeholder="Type to search district"
+                placeholder={ui("checkoutDistrictPlaceholder")}
               />
             </FormField>
 
@@ -150,14 +162,14 @@ export function CheckoutFields({
               placeholder={ui("checkoutDeliveryNotesPlaceholder")}
               value={form.notes}
               onChange={(e) => onChange({ notes: e.target.value })}
-              className={`${inputClass("notes")} resize-y`}
+              className={fieldClass({ invalid: Boolean(errors.notes), className: "resize-y" })}
             />
           </FormField>
         </div>
       </div>
 
       <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-bold text-ink-900">{ui("checkoutPaymentMethod")}</h3>
+        <h3 className="text-sm font-bold text-fg">{ui("checkoutPaymentMethod")}</h3>
         {/* Compact icon tiles instead of full-width description cards, so N methods don't turn into N*80px of scroll. */}
         <div
           role="radiogroup"
@@ -166,12 +178,11 @@ export function CheckoutFields({
         >
           {paymentMethods.map((method) => {
             const selected = method.key === paymentMethod;
-            const isCod = method.key === "cod";
-            const { icon: Icon, accent } = PAYMENT_STYLE[method.key] ?? DEFAULT_PAYMENT_STYLE;
+            const Icon = PAYMENT_ICON[method.key] ?? Receipt;
             return (
               <label
                 key={method.key}
-                className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors ${
+                className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold-500 ${
                   selected
                     ? "border-gold-500 bg-gold-50/80 ring-1 ring-gold-400/40"
                     : "border-ink-200 hover:border-gold-300"
@@ -185,11 +196,17 @@ export function CheckoutFields({
                   onChange={() => onPaymentMethodChange(method.key)}
                   className="sr-only"
                 />
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${accent}`}>
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    selected ? "bg-accent text-ink-950" : "bg-brand-50 text-brand-700"
+                  }`}
+                >
                   <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
                 </span>
-                <span className="text-[11px] font-bold leading-tight text-ink-900">
-                  {isCod ? ui("checkoutCodLabel") : method.label}
+                <span className="text-2xs font-bold leading-tight text-fg">
+                  {method.key in PAYMENT_LABEL
+                    ? ui(PAYMENT_LABEL[method.key as keyof typeof PAYMENT_LABEL])
+                    : method.label}
                 </span>
               </label>
             );

@@ -8,3 +8,4 @@ export { ProductGrid } from "./ui/ProductGrid";
 export { ShopCatalog } from "./ui/ShopCatalog";
 export { TrendingSection } from "./ui/TrendingSection";
 export { WithActiveCategory } from "./ui/WithActiveCategory";
+export { ProductDetailSkeleton, ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";

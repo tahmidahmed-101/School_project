@@ -35,6 +35,8 @@ const nextConfig = {
   poweredByHeader: false,
   env: { NEXT_PUBLIC_API_URL: API_URL },
   images: {
+    // Media URLs are absolute on the API origin (catalog/data/adapters.ts), which is loopback in local development.
+    dangerouslyAllowLocalIP: ["127.0.0.1", "localhost"].includes(new URL(API_ORIGIN).hostname),
     remotePatterns: [
       // Product photos uploaded through the LaunchCart admin are served from the backend's /media/.
       {

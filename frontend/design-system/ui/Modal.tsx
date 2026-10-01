@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { usePresence } from "@/design-system/patterns/usePresence";
 import { useOverlay } from "@/lib/useOverlay";
 
 interface ModalProps {
@@ -32,23 +32,21 @@ export function Modal({
   children,
 }: ModalProps) {
   useOverlay(open, onClose, lockScroll === undefined ? undefined : { lockScroll });
+  const { mounted, shown } = usePresence(open, 200);
 
+  // `data-shown` lets dialog content animate with `group-data-[shown=true]:` classes.
   return (
-    <AnimatePresence>
-      {open && (
-        <div className={`fixed inset-0 z-50 ${containerClassName}`}>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+    <>
+      {mounted && (
+        <div data-shown={shown} className={`group fixed inset-0 z-50 ${containerClassName}`}>
+          <div
             onClick={onClose}
-            className={`fixed inset-0 cursor-default ${backdropClassName}`}
+            className={`fixed inset-0 cursor-default transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"} ${backdropClassName}`}
             aria-label={label}
           />
           {children}
         </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

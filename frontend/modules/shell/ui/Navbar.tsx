@@ -15,6 +15,8 @@ import { NavbarSearch } from "@/modules/catalog";
 import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
 import { WithActiveCategory } from "@/modules/catalog";
+import { containerClass } from "@/design-system/ui/Container";
+import { CountBadge } from "@/design-system/ui/CountBadge";
 
 const SHOP_PATH = "/shop";
 
@@ -28,7 +30,7 @@ function buildNavLinks(pathname: string, activeCategory: string | null): NavLink
   const onShop = pathname === SHOP_PATH;
   return [
     { label: { en: "Home", bn: "হোম" }, href: "/", isActive: pathname === "/" },
-    { label: { en: "Stock Items", bn: "স্টক আইটেম" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
+    { label: { en: "Shop all", bn: "সব পণ্য" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
     {
       label: { en: "Pre-order", bn: "প্রি-অর্ডার" },
       href: "/pre-order",
@@ -66,7 +68,12 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
     >
       {/* Tier 1: logo, live search, language / wishlist / cart */}
       <div className="border-b border-white/10 lg:border-b-0">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:gap-6 sm:px-6 sm:py-3.5 lg:gap-8 lg:px-8">
+        <div
+          className={containerClass(
+            "default",
+            "flex items-center justify-between gap-3 py-3 sm:gap-6 sm:py-3.5 lg:gap-8",
+          )}
+        >
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             <button
               type="button"
@@ -84,7 +91,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 width={382}
                 height={282}
                 priority
-                className="h-6 w-auto shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-105 sm:h-10"
+                className="h-6 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
               <span className="text-sm font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
                 {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
@@ -112,7 +119,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               onClick={() => setLang(lang === "en" ? "bn" : "en")}
               className="hidden cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20 lg:flex sm:px-3"
-              aria-label="Switch language between English and Bangla"
+              aria-label={ui("switchLanguage")}
             >
               <Globe className="h-3.5 w-3.5 text-gold-300" />
               <span>{lang === "en" ? "বাংলা" : "EN"}</span>
@@ -147,28 +154,20 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               onClick={openWishlist}
               aria-label={ui("navWishlist")}
-              className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-rose-300 lg:flex"
+              className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:flex"
             >
-              <Heart className={`h-5 w-5 ${totalWishlistItems > 0 ? "fill-rose-400 text-rose-400" : ""}`} />
-              {totalWishlistItems > 0 && (
-                <span className="shadow-xs absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                  {n(totalWishlistItems)}
-                </span>
-              )}
+              <Heart className={`h-5 w-5 ${totalWishlistItems > 0 ? "fill-gold-300 text-gold-300" : ""}`} />
+              {totalWishlistItems > 0 && <CountBadge>{n(totalWishlistItems)}</CountBadge>}
             </button>
 
             <button
               type="button"
               onClick={openDrawer}
-              aria-label="Open cart drawer"
+              aria-label={ui("openCart")}
               className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
             >
               <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
-              {totalItems > 0 && (
-                <span className="shadow-xs absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-ink-950">
-                  {n(totalItems)}
-                </span>
-              )}
+              {totalItems > 0 && <CountBadge>{n(totalItems)}</CountBadge>}
             </button>
           </div>
         </div>
@@ -181,7 +180,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
 
       {/* Tier 2 (desktop): categories menu, nav links, address and hotline */}
       <div className="shadow-2xs hidden border-t border-white/10 bg-brand-900 text-white lg:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className={containerClass("default", "flex items-center justify-between")}>
           <div className="flex items-center gap-6 py-2">
             <NavCategoriesMenu />
 
@@ -209,7 +208,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-gold-300">
                 <MapPin className="h-3 w-3" />
               </div>
-              <span className="whitespace-nowrap text-[11px] font-medium text-white/85">
+              <span className="whitespace-nowrap text-2xs font-medium text-white/85">
                 {lang === "bn" ? "ঢাকা, বাংলাদেশ" : "Dhaka, Bangladesh"}
               </span>
             </div>

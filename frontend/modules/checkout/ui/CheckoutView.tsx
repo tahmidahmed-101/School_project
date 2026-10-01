@@ -21,6 +21,10 @@ import { useCoupon, usePaymentMethods, useShippingQuote } from "./useCheckoutPri
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { buttonClass } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
+import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
@@ -100,7 +104,7 @@ export function CheckoutView() {
     }
   };
 
-  const breadcrumbs = [{ label: ui("navShop"), href: "/shop" }, { label: ui("checkoutTitle") }];
+  const breadcrumbs = [{ label: ui("checkoutTitle") }];
 
   if (orderResult) {
     return <OrderSuccess orderResult={orderResult} />;
@@ -111,14 +115,11 @@ export function CheckoutView() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-white py-20">
         <div className="max-w-sm space-y-4 px-4 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold-50 ring-1 ring-gold-200">
-            <ShoppingCart className="h-9 w-9 text-gold-600" strokeWidth={1.75} aria-hidden="true" />
+            <ShoppingCart className="h-9 w-9 text-gold-700" strokeWidth={1.75} aria-hidden="true" />
           </div>
-          <p className="text-base font-bold text-ink-900">{ui("cartEmptyTitle")}</p>
-          <p className="text-xs text-ink-600">{ui("cartEmptySubtitle")}</p>
-          <Link
-            href="/shop"
-            className="inline-block rounded-full bg-gold-500 px-6 py-2.5 text-xs font-bold text-ink-950 shadow-md transition-colors hover:bg-gold-400"
-          >
+          <p className="text-base font-bold text-fg">{ui("cartEmptyTitle")}</p>
+          <p className="text-xs text-fg-muted">{ui("cartEmptySubtitle")}</p>
+          <Link href="/shop" className={buttonClass()}>
             {ui("cartStartShopping")}
           </Link>
         </div>
@@ -128,21 +129,12 @@ export function CheckoutView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Breadcrumbs className="mb-4" items={breadcrumbs} />
-        <div className="mb-8 flex items-center justify-between border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
-            {ui("checkoutTitle")}
-          </h1>
-        </div>
+      <Container>
+        <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("checkoutTitle")} />
 
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-7">
-            {errorMsg && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                {errorMsg}
-              </div>
-            )}
+            {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
             <CheckoutFields
               form={form}
               errors={fieldErrors}
@@ -163,7 +155,7 @@ export function CheckoutView() {
             />
           </div>
         </form>
-      </div>
+      </Container>
     </div>
   );
 }

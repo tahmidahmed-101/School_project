@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Home, Store, Globe, Truck } from "lucide-react";
+import { X, Home, Store, Globe, Truck, Sparkles } from "lucide-react";
 import { useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { WithActiveCategory } from "@/modules/catalog";
+import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 const SHOP_PATH = "/shop";
+
+const POLICY_LINKS = [
+  { href: "/return-policy", key: "footerReturnPolicy" },
+  { href: "/refund-policy", key: "footerRefundPolicy" },
+] as const;
 
 interface MobileNavMenuProps {
   open: boolean;
@@ -26,35 +31,29 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
 
   useOverlay(open, onClose);
 
+  const { mounted, shown } = usePresence(open, 300);
+
   return (
-    <AnimatePresence>
-      {open && (
+    <>
+      {mounted && (
         <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
-          <motion.button
+          <button
             type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
             onClick={onClose}
-            className="backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/50"
+            className={`backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/50 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
             aria-label={ui("closeMenu")}
           />
 
           <div className="pointer-events-none fixed inset-y-0 left-0 flex h-full w-full max-w-full justify-start">
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-white/10 bg-brand-800 p-5 shadow-2xl"
+            <div
+              className={`pointer-events-auto z-10 flex h-full w-full max-w-[300px] flex-col border-r border-white/10 bg-brand-800 p-5 shadow-2xl transition-transform duration-300 ${SLIDE_EASE} ${shown ? "translate-x-0" : "-translate-x-full"}`}
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-base font-bold text-white">{ui("navMenu")}</h3>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="cursor-pointer rounded-lg bg-white/10 p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+                  className="cursor-pointer rounded-full bg-white/10 p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
                   aria-label={ui("closeMenu")}
                 >
                   <X className="h-5 w-5" />
@@ -102,7 +101,20 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         <span>{ui("navTrackOrder")}</span>
                       </Link>
 
-                      <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-white/40">
+                      <Link
+                        href="/pre-order"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          pathname.startsWith("/pre-order")
+                            ? "bg-white/10 text-gold-300"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Sparkles className="h-4 w-4 shrink-0" />
+                        <span>{ui("navPreOrder")}</span>
+                      </Link>
+
+                      <div className="px-3 pb-1 pt-4 text-2xs font-bold uppercase tracking-wider text-white/40">
                         {ui("shopByCategories")}
                       </div>
 
@@ -123,6 +135,23 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                     </>
                   )}
                 </WithActiveCategory>
+
+                <ul className="mt-4 space-y-0.5 border-t border-white/10 pt-3">
+                  {POLICY_LINKS.map(({ href, key }) => (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        onClick={onClose}
+                        aria-current={pathname === href ? "page" : undefined}
+                        className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                          pathname === href ? "text-gold-300" : "text-white/60 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {ui(key)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </nav>
 
               <div className="border-t border-white/10 pt-4">
@@ -130,16 +159,16 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                   type="button"
                   onClick={() => setLang(lang === "en" ? "bn" : "en")}
                   className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-                  aria-label="Switch language between English and Bangla"
+                  aria-label={ui("switchLanguage")}
                 >
                   <Globe className="h-4 w-4 text-gold-300" />
                   <span>{lang === "en" ? "বাংলা" : "English"}</span>
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

@@ -50,7 +50,7 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
 
   test("checkout with an empty cart shows the empty state and is noindex", async ({ page }) => {
     await page.goto("/checkout");
-    await expect(page.getByText("Your cart is currently empty")).toBeVisible();
+    await expect(page.getByRole("main").getByText("Your cart is currently empty")).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   });
 
@@ -59,7 +59,7 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
     const form = page.locator("main form");
     await form.locator('input[type="password"]').fill("secret");
     await form.locator("input").first().fill("someone@example.com");
-    await form.getByRole("button", { name: "Log In" }).click();
+    await form.getByRole("button", { name: "Log in" }).click();
     await expect(form).toContainText(/coming soon/i);
   });
 });

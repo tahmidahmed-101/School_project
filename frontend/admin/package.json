@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf:deploy": "VITE_API_BASE_URL=https://api.kullmart.com/api/v1 npm run build && wrangler deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -51,6 +52,7 @@
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "wrangler": "^4.146.0"
   }
 }

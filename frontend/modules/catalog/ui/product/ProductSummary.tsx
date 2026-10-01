@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { getDiscountPercent } from "@/lib/product";
-import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
+import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
   product: Product;
@@ -13,31 +13,24 @@ interface ProductSummaryProps {
 
 /** Category, title, price, rating and availability line at the top of the details column. */
 export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
-  const { t, ui, money, n } = useLang();
+  const { t, money, n } = useLang();
   const discountPercent = getDiscountPercent(product);
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-gold-600">{t(product.categoryName)}</span>
-        {product.isPreOrder && <PreOrderBadge status={product.preorderStatus || "available"} size="sm" />}
+        <span className="text-xs font-bold uppercase tracking-widest text-gold-800">{t(product.categoryName)}</span>
       </div>
-      <h1 className="mt-2.5 text-2xl font-extrabold uppercase tracking-tight text-ink-950 sm:text-3xl">
-        {t(product.name)}
-      </h1>
+      <h1 className="ts-display mt-2.5 text-2xl font-bold leading-tight text-ink-950 sm:text-3xl">{t(product.name)}</h1>
 
       {/* Price and availability share one line (they wrap only when the screen is too narrow) */}
       <div className="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <span className="text-2xl font-extrabold text-ink-950 sm:text-3xl">{money(product.price)}</span>
         {discountPercent && product.compareAtPrice && (
-          <span className="text-base text-ink-400 line-through">{money(product.compareAtPrice)}</span>
+          <span className="text-base text-fg-subtle line-through">{money(product.compareAtPrice)}</span>
         )}
-        {discountPercent && (
-          <span className="rounded-md bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-600">
-            {n(discountPercent)}% {ui("off")}
-          </span>
-        )}
-        <span className="h-5 w-px bg-ink-200" aria-hidden="true" />
+        {discountPercent && <DiscountBadge percent={discountPercent} size="md" tone="soft" />}
+        <span className="h-5 w-px bg-surface-strong" aria-hidden="true" />
         <div className="text-xs">
           <Availability product={product} isSoldOut={isSoldOut} />
         </div>
@@ -55,7 +48,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
               />
             ))}
           </div>
-          <span className="font-medium text-ink-500">({n(product.reviewCount)})</span>
+          <span className="font-medium text-fg-subtle">({n(product.reviewCount)})</span>
         </div>
       )}
     </>
@@ -67,8 +60,8 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
 
   if (!product.isPreOrder && !product.inStock) {
     return (
-      <div className="flex items-center gap-1.5 font-semibold text-red-600">
-        <span className="h-2 w-2 rounded-full bg-red-500" />
+      <div className="flex items-center gap-1.5 font-semibold text-danger">
+        <span className="h-2 w-2 rounded-full bg-danger" />
         <span>{ui("outOfStock")}</span>
       </div>
     );
@@ -86,14 +79,14 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
   return (
     <div className="flex items-center gap-1.5 font-semibold">
       {isSoldOut ? (
-        <span className="flex items-center gap-1.5 text-red-600">
-          <span className="h-2 w-2 rounded-full bg-red-500" />
+        <span className="flex items-center gap-1.5 text-danger">
+          <span className="h-2 w-2 rounded-full bg-danger" />
           {ui("preOrderSoldOut")}
         </span>
       ) : (
-        <span className="flex items-center gap-1.5 text-gold-600">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-gold-500" />
-          {ui("preOrderClosingSoon")}
+        <span className="flex items-center gap-1.5 text-gold-800">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+          {ui(product.preorderStatus === "closing-soon" ? "preOrderClosingSoon" : "preOrderOpen")}
         </span>
       )}
     </div>

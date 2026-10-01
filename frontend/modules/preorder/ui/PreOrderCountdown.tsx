@@ -48,8 +48,8 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
 
   if (timeLeft.total <= 0) {
     return (
-      <div className={`inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 ${className}`}>
-        <Clock className="h-3.5 w-3.5 text-ink-400" />
+      <div className={`inline-flex items-center gap-1.5 text-xs font-semibold text-fg-subtle ${className}`}>
+        <Clock className="h-3.5 w-3.5 text-fg-subtle" />
         <span>{ui("preOrderCloses")}</span>
       </div>
     );
@@ -59,8 +59,8 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
 
   if (compact) {
     return (
-      <div className={`flex items-center gap-1.5 text-[11px] font-medium text-gold-700 ${className}`}>
-        <Clock className="h-3 w-3 shrink-0 text-gold-600" />
+      <div className={`flex items-center gap-1.5 text-2xs font-medium text-gold-800 ${className}`}>
+        <Clock className="h-3 w-3 shrink-0 text-gold-700" />
         <span>
           {ui("preOrderEndsIn")}:{" "}
           <strong className="font-bold tabular-nums">
@@ -76,7 +76,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
       className={`rounded-xl border border-gold-200/80 bg-gradient-to-r from-gold-50/90 via-gold-100/50 to-gold-50/90 p-3 sm:p-3.5 ${className}`}
     >
       <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold-900">
-        <Clock className="h-3.5 w-3.5 text-gold-600 animate-pulse" />
+        <Clock className="h-3.5 w-3.5 text-gold-700 animate-pulse" />
         <span>{ui("preOrderEndsIn")}</span>
       </div>
 
@@ -84,7 +84,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
         {/* Days */}
         <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
           <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">{n(pad(timeLeft.days))}</span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Days</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownDays")}</span>
         </div>
 
         <span className="font-bold text-gold-400">:</span>
@@ -94,7 +94,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
           <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">
             {n(pad(timeLeft.hours))}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Hours</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownHours")}</span>
         </div>
 
         <span className="font-bold text-gold-400">:</span>
@@ -104,17 +104,17 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
           <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">
             {n(pad(timeLeft.minutes))}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Mins</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownMins")}</span>
         </div>
 
         <span className="font-bold text-gold-400">:</span>
 
         {/* Seconds */}
         <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
-          <span className="text-base font-extrabold tabular-nums text-gold-600 sm:text-lg">
+          <span className="text-base font-extrabold tabular-nums text-gold-800 sm:text-lg">
             {n(pad(timeLeft.seconds))}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Secs</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownSecs")}</span>
         </div>
       </div>
     </div>

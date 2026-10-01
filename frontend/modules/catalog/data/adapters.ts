@@ -1,7 +1,7 @@
 import type { CategoryInfo, Product, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { publicEnv } from "@/lib/env";
-import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant } from "@/lib/variants";
+import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant, sortSizes } from "@/lib/variants";
 import type { ApiCategory, ApiProduct, ApiVariant } from "@/lib/api/types";
 
 /**
@@ -16,22 +16,17 @@ const plain = (value: string): T => ({ en: value, bn: value });
 const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
 
 /**
- * Photos come back as `/media/...` (served through the same-origin proxy) or as absolute URLs. An absolute URL that
- * points at the API's own media folder is reduced to its path so it also goes through the proxy.
+ * Photos come back as `/media/...` or as absolute URLs. Media paths are made absolute on the API origin: the Cloudflare
+ * image optimizer reads relative URLs from static assets only, so a proxied `/media/` path would 404 there.
  */
-function normalizeImageUrl(url: string): string {
+export function normalizeImageUrl(url: string): string {
   const trimmed = url.trim();
-  if (!trimmed) return "";
-  const media = trimmed.match(/^https?:\/\/[^/]+(\/media\/.*)$/i);
-  const apiOrigin = (() => {
-    try {
-      return new URL(publicEnv.apiUrl ?? "").origin;
-    } catch {
-      return "";
-    }
-  })();
-  if (media && apiOrigin && trimmed.startsWith(apiOrigin)) return media[1]!;
-  return trimmed;
+  if (!trimmed.startsWith("/media/")) return trimmed;
+  try {
+    return `${new URL(publicEnv.apiUrl ?? "").origin}${trimmed}`;
+  } catch {
+    return trimmed;
+  }
 }
 
 /** "17 Oct 2026" / "১৭ অক্টো ২০২৬": locale date formatting of a real API date, not a translation. */
@@ -84,8 +79,8 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
 /** Colour / Size option groups for the existing variant picker, built from the SKU list. */
 function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
   const groups: ProductVariant[] = [];
-  const build = (name: T, pick: (v: SkuVariant) => string) => {
-    const values = [...new Set(skus.map(pick).filter(Boolean))];
+  const build = (name: T, pick: (v: SkuVariant) => string, order: (values: string[]) => string[] = (v) => v) => {
+    const values = order([...new Set(skus.map(pick).filter(Boolean))]);
     // A single value is not a choice, so no picker is shown.
     if (values.length < 2) return;
     groups.push({
@@ -98,7 +93,7 @@ function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
     });
   };
   build({ en: COLOUR_GROUP, bn: "রং" }, (v) => v.color);
-  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size);
+  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size, sortSizes);
   return groups.length ? groups : undefined;
 }
 

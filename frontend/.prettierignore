@@ -9,3 +9,6 @@ next-env.d.ts
 playwright-report
 test-results
 docs/*.yaml
+admin
+.open-next
+.wrangler

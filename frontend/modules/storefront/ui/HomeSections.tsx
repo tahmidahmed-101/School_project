@@ -10,44 +10,46 @@ import { ProductGrid } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
+import { BRAND_INFO } from "@/lib/brand";
+
+import { bestSellers, categoryShelf, trending } from "../domain/home-products";
 
 export function HomeSections() {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
   const { stockProducts } = useProducts();
 
-  // Best-seller shelf: hand-picked (featured) products first, then the rest of the catalogue
-  const bestSellerProducts = useMemo(() => {
-    return [...stockProducts].sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))).slice(0, 8);
-  }, [stockProducts]);
+  const trendingProducts = useMemo(() => trending(stockProducts), [stockProducts]);
+  const bestSellerProducts = useMemo(() => bestSellers(stockProducts), [stockProducts]);
 
-  // One shelf per category, each showing every non-pre-order product in that category
+  // One shelf per category, each linking to the full category
   const categorySections = useMemo(() => {
     return categories
       .map((category) => ({
         category,
-        products: stockProducts.filter((p) => p.category === category.id),
+        products: categoryShelf(stockProducts, category.id),
       }))
       .filter((section) => section.products.length > 0);
   }, [categories, stockProducts]);
 
   return (
     <div>
-      <Hero />
+      <Hero heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`} />
       <PromoMarquee />
       <VoucherSection />
       <CategoryShowcase />
 
       {/* Trending Picks */}
-      <TrendingSection />
+      <TrendingSection products={trendingProducts} />
 
-      {/* Best Seller Showcase */}
-      <ProductGrid
-        products={bestSellerProducts}
-        title={ui("bestSellersTitle")}
-        viewAllLink="/shop"
-        viewAllText={ui("viewAllProducts")}
-      />
+      {bestSellerProducts.length > 0 && (
+        <ProductGrid
+          products={bestSellerProducts}
+          title={ui("bestSellersTitle")}
+          viewAllLink="/shop"
+          viewAllText={ui("viewAllProducts")}
+        />
+      )}
 
       {/* One shelf per category (Women's Fashion, Bags & Wallets, ...) */}
       {categorySections.map(({ category, products }) => (
@@ -61,7 +63,7 @@ export function HomeSections() {
       ))}
 
       {catalogFailed && (
-        <p role="status" className="mx-auto max-w-2xl px-4 py-10 text-center text-sm font-semibold text-ink-600">
+        <p role="status" className="mx-auto max-w-2xl px-4 py-10 text-center text-sm font-semibold text-fg-muted">
           {ui("catalogUnavailable")}
         </p>
       )}

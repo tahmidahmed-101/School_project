@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Package,
   PackageCheck,
-  PackageX,
   Phone,
   Search,
   Truck,
@@ -21,7 +20,10 @@ import { trackOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
-import { Loader } from "@/design-system/patterns/Loader";
+import { Button, buttonClass } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { PageHeader } from "@/design-system/ui/PageHeader";
+import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -42,7 +44,6 @@ export function TrackOrderView() {
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [isNotFound, setIsNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiTrackOrder | null>(null);
 
@@ -55,7 +56,6 @@ export function TrackOrderView() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    setIsNotFound(false);
     if (!orderNumber.trim() || !phone.trim()) {
       setErrorMsg(ui("trackOrderValidation"));
       setResult(null);
@@ -69,7 +69,6 @@ export function TrackOrderView() {
       setResult(null);
       if (error instanceof ApiError && error.status === 404) {
         // The API answers "not found" for both a wrong order number and a wrong phone, on purpose.
-        setIsNotFound(true);
         setErrorMsg(`${ui("trackOrderNotFound")}. ${ui("trackOrderNotFoundHelp")}`);
       } else if (error instanceof ApiError && error.status === 400 && error.message) {
         setErrorMsg(error.message);
@@ -95,90 +94,59 @@ export function TrackOrderView() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="mx-auto max-w-xl px-4 sm:px-6 lg:px-8">
-        <Breadcrumbs className="mb-4" items={breadcrumbs} />
+      <Container width="compact">
+        <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("trackOrderTitle")} />
 
-        <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
-            {ui("trackOrderTitle")}
-          </h1>
-        </div>
+        <form onSubmit={handleSubmit} className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5">
+          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
 
-        <form onSubmit={handleSubmit} className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5">
-          {errorMsg && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700"
-            >
-              {errorMsg}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="track-order-number" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("orderNumberLabel")}
-            </label>
+          <FormField htmlFor="track-order-number" label={ui("orderNumberLabel")}>
             <input
               id="track-order-number"
               type="text"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
               placeholder={ui("trackOrderNumberPlaceholder")}
-              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="track-order-phone" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("checkoutPhone")}
-            </label>
+          <FormField htmlFor="track-order-phone" label={ui("checkoutPhone")}>
             <input
               id="track-order-phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="01XXX-XXXXXX"
-              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gold-500 py-3 text-xs font-bold uppercase tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400 disabled:opacity-50"
-          >
-            {isLoading ? <Loader variant="inline" /> : <Search className="h-4 w-4" />}
-            <span>{ui("trackOrderSubmit")}</span>
-          </button>
+          <Button type="submit" size="lg" fullWidth loading={isLoading} leadingIcon={<Search className="h-4 w-4" />}>
+            {ui("trackOrderSubmit")}
+          </Button>
         </form>
-
-        {!result && !errorMsg && !isNotFound && (
-          <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-8 text-center">
-            <PackageX className="h-6 w-6 text-ink-300" />
-            <span className="text-sm font-semibold text-ink-400">{ui("trackOrderNotFound")}</span>
-          </div>
-        )}
 
         {result && (
           <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
               <div>
-                <span className="block text-[11px] font-semibold text-ink-500">{ui("orderNumberLabel")}</span>
-                <span className="font-mono text-sm font-bold text-gold-600">{result.order_number}</span>
-                <span className="mt-0.5 block text-[11px] text-ink-500">
+                <span className="block text-2xs font-semibold text-fg-subtle">{ui("orderNumberLabel")}</span>
+                <span className="font-mono text-sm font-bold text-gold-800">{result.order_number}</span>
+                <span className="mt-0.5 block text-2xs text-fg-subtle">
                   {ui("trackOrderPlacedOn")}: {formatDate(result.created_at)}
                 </span>
               </div>
               <div className="text-right">
-                <span className="block text-[11px] font-semibold text-ink-500">{ui("trackOrderCurrentStatus")}</span>
-                <span className={`text-sm font-bold ${isCancelled ? "text-red-600" : "text-ink-900"}`}>
+                <span className="block text-2xs font-semibold text-fg-subtle">{ui("trackOrderCurrentStatus")}</span>
+                <span className={`text-sm font-bold ${isCancelled ? "text-danger" : "text-fg"}`}>
                   {isCancelled ? ui("trackStageCancelled") : ui(STAGES[Math.max(currentStageIndex, 0)]!.labelKey)}
                 </span>
               </div>
             </div>
 
             {isCancelled ? (
-              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+              <div className="flex items-center gap-3 rounded-xl border border-danger-line bg-danger-surface p-4 text-sm font-bold text-danger">
                 <XCircle className="h-5 w-5 shrink-0" />
                 <span>{ui("trackStageCancelled")}</span>
               </div>
@@ -197,7 +165,7 @@ export function TrackOrderView() {
                         <span
                           aria-hidden="true"
                           className={`absolute left-[15px] top-8 h-full w-0.5 ${
-                            index < currentStageIndex ? "bg-brand-500" : "bg-ink-200"
+                            index < currentStageIndex ? "bg-brand-500" : "bg-surface-strong"
                           }`}
                         />
                       )}
@@ -211,17 +179,17 @@ export function TrackOrderView() {
                         <Icon className="h-4 w-4" />
                       </span>
                       <div className="pt-1">
-                        <span className={`block text-sm font-bold ${isComplete ? "text-ink-900" : "text-ink-400"}`}>
+                        <span className={`block text-sm font-bold ${isComplete ? "text-fg" : "text-fg-subtle"}`}>
                           {ui(stage.labelKey)}
                         </span>
                         {event && (
-                          <span className="mt-0.5 block text-[11px] text-ink-500">
+                          <span className="mt-0.5 block text-2xs text-fg-subtle">
                             {formatDate(event.timestamp)}
                             {event.tracking_number && ` · ${ui("trackOrderTrackingNo")} ${event.tracking_number}`}
                           </span>
                         )}
                         {isCurrent && (
-                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-700">
+                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-gold-800">
                             {ui("trackOrderCurrentStatus")}
                           </span>
                         )}
@@ -232,25 +200,22 @@ export function TrackOrderView() {
               </ol>
             )}
 
-            <p className="rounded-xl bg-ink-50 p-3 text-[11px] leading-relaxed text-ink-500">
+            <p className="rounded-xl bg-surface p-3 text-2xs leading-relaxed text-fg-subtle">
               {ui("trackOrderDisclaimer")}
             </p>
 
             <div className="space-y-3 border-t border-ink-200 pt-4">
-              <p className="text-xs font-bold text-ink-900">{ui("trackOrderHelpTitle")}</p>
+              <p className="text-xs font-bold text-fg">{ui("trackOrderHelpTitle")}</p>
               <a
                 href={`https://wa.me/${BRAND_INFO.whatsapp}?text=${whatsappText}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-xs font-bold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-500"
+                className={buttonClass({ variant: "secondary", fullWidth: true })}
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>{ui("orderWhatsappConfirm")}</span>
               </a>
-              <a
-                href={`tel:${BRAND_INFO.phone}`}
-                className="shadow-xs flex w-full items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white py-3 text-xs font-semibold text-ink-800 transition-colors hover:bg-ink-50"
-              >
+              <a href={`tel:${BRAND_INFO.phone}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
                 <Phone className="h-4 w-4 text-gold-500" />
                 <span>
                   {ui("orderCallStore")} ({BRAND_INFO.phone})
@@ -259,7 +224,7 @@ export function TrackOrderView() {
             </div>
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 }

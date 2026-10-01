@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct, makeSku } from "@/tests/fixtures";
-import { ORDER_QUANTITY_CAP, applyVariant, defaultVariant, resolveVariant, selectionFor } from "../variants";
+import { ORDER_QUANTITY_CAP, applyVariant, defaultVariant, resolveVariant, selectionFor, sortSizes } from "../variants";
 
 const skus = [
   makeSku({ id: "black-m", sku: "B-M", color: "Black", size: "M", price: 500 }),
@@ -56,5 +56,21 @@ describe("applyVariant", () => {
 
   it("returns the product unchanged without a variant", () => {
     expect(applyVariant(product, undefined)).toBe(product);
+  });
+});
+
+describe("sortSizes", () => {
+  it("orders letter sizes the way they are worn", () => {
+    expect(sortSizes(["L", "M", "S"])).toEqual(["S", "M", "L"]);
+    expect(sortSizes(["XXL", "xs", "XL", "2XL", "M"])).toEqual(["xs", "M", "XL", "XXL", "2XL"]);
+  });
+
+  it("orders numeric sizes ascending", () => {
+    expect(sortSizes(["42", "38", "40.5"])).toEqual(["38", "40.5", "42"]);
+  });
+
+  it("keeps the original order for mixed or unknown sizes", () => {
+    expect(sortSizes(["Free size", "M", "S"])).toEqual(["Free size", "M", "S"]);
+    expect(sortSizes(["32", "M"])).toEqual(["32", "M"]);
   });
 });

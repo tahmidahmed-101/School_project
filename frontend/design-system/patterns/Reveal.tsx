@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 interface RevealProps {
   children: ReactNode;
@@ -17,24 +16,50 @@ interface RevealBaseProps extends Required<Pick<RevealProps, "delay" | "duration
   viewport: { margin: string; amount?: number };
 }
 
-/** Fade-and-rise once when scrolled into view; renders a plain div for reduced-motion users. */
+/** Fade-and-rise once when scrolled into view. CSS transitions instead of framer-motion: dozens of these per page
+ * made the animation runtime the largest main-thread cost on mobile. */
 function RevealBase({ children, delay, duration, y, className, viewport }: RevealBaseProps) {
-  const shouldReduceMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  const { margin, amount = 0 } = viewport;
 
-  if (shouldReduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setShown(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: margin, threshold: amount },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [margin, amount]);
 
+  // Hidden-state styles live in globals.css under html.js, so content stays visible without JS.
   return (
-    <motion.div
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, ...viewport }}
-      transition={{ duration, delay, ease: [0.22, 1, 0.36, 1] }}
+    <div
+      ref={ref}
       className={className}
+      data-reveal=""
+      data-shown={shown ? "" : undefined}
+      style={
+        {
+          "--reveal-y": `${y}px`,
+          "--reveal-duration": `${duration}s`,
+          "--reveal-delay": `${delay}s`,
+        } as CSSProperties
+      }
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 

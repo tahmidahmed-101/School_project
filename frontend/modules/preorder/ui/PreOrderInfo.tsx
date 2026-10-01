@@ -48,8 +48,8 @@ export function PreOrderInfo({ product, className = "" }: PreOrderInfoProps) {
     <div
       className={`rounded-2xl border border-gold-200/80 bg-gradient-to-br from-gold-50/70 via-white to-gold-50/40 p-4 sm:p-5 shadow-2xs ${className}`}
     >
-      <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-900">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold-500 text-[11px] font-extrabold text-ink-950 shadow-2xs">
+      <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-fg">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-2xs font-extrabold text-ink-950 shadow-2xs">
           ✓
         </span>
         <span>{ui("preOrderInfoTitle")}</span>
