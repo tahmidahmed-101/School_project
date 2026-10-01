@@ -44,8 +44,10 @@ def customer_order_summary(customer) -> dict:
 
 
 def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[SalesOrder]:
-    queryset = SalesOrder.objects.prefetch_related("lines").filter(
-        customer=customer, deleted_at__isnull=True
+    queryset = (
+        SalesOrder.objects.select_related("coupon")
+        .prefetch_related("lines", "shipments__carrier")
+        .filter(customer=customer, deleted_at__isnull=True)
     )
     if status:
         queryset = queryset.filter(status=status)

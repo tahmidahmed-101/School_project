@@ -32,6 +32,7 @@ from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     reorder_points_for_variants,
 )
+from apps.orders.services.carts import get_preordered_quantities
 
 from .permissions import (
     CatalogManagePermission,
@@ -43,6 +44,19 @@ from .serializers import (
     ProductSerializer,
     ProductUpdateSerializer,
 )
+
+
+def _product_serializer_context(request, products) -> dict:
+    # One batch query per lookup for every variant on the page; without these
+    # keys ProductVariantSerializer falls back to a query per variant.
+    variants = [v for product in products for v in product.active_variants]
+    variant_ids = [v.id for v in variants]
+    return {
+        "request": request,
+        "stock_by_variant": available_quantities_for_variants(variant_ids),
+        "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
+        "preordered_by_variant": get_preordered_quantities(variants),
+    }
 
 
 class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, GenericListAPIView):
@@ -82,17 +96,8 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
         items = list(page if page is not None else queryset)
-        variant_ids = [v.id for product in items for v in product.active_variants]
-        stock_by_variant = available_quantities_for_variants(variant_ids)
-        reorder_point_by_variant = reorder_points_for_variants(variant_ids)
         serializer = self.serializer_class(
-            items,
-            many=True,
-            context={
-                "request": request,
-                "stock_by_variant": stock_by_variant,
-                "reorder_point_by_variant": reorder_point_by_variant,
-            },
+            items, many=True, context=_product_serializer_context(request, items)
         )
         return Response(
             {
@@ -140,9 +145,10 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
         product = get_product_by_id(product_id)
         if product is None:
             return not_found("product_not_found", "Product not found.")
+        context = _product_serializer_context(request, [product])
         return Response(
             {
-                "data": ProductSerializer(product, context={"request": request}).data,
+                "data": ProductSerializer(product, context=context).data,
                 "message": "Success",
             }
         )
