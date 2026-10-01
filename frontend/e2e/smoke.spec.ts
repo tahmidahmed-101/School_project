@@ -59,7 +59,7 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
     const form = page.locator("main form");
     await form.locator('input[type="password"]').fill("secret");
     await form.locator("input").first().fill("someone@example.com");
-    await form.getByRole("button", { name: "Log In" }).click();
+    await form.getByRole("button", { name: "Log in" }).click();
     await expect(form).toContainText(/coming soon/i);
   });
 });

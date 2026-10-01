@@ -109,7 +109,7 @@ export function CheckoutFields({
                 onChange={(district) => onChange({ district })}
                 options={BD_DISTRICTS}
                 searchable
-                placeholder="Type to search district"
+                placeholder={ui("checkoutDistrictPlaceholder")}
               />
             </FormField>
 

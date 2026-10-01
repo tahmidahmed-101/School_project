@@ -14,8 +14,8 @@ export function MobileSearchBar() {
       <form onSubmit={handleSubmit} className="relative flex w-full items-center">
         <input
           {...inputProps}
-          placeholder={ui("mobileSearchPlaceholder")}
-          aria-label="Search products"
+          placeholder={ui("searchPlaceholder")}
+          aria-label={ui("searchProducts")}
           className={`${HEADER_SEARCH_INPUT_CLASS} pl-4 pr-12`}
         />
         <button

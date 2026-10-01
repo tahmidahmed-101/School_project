@@ -74,7 +74,7 @@ function MobileBottomBarInner() {
   ];
 
   return (
-    <nav aria-label="Mobile bottom navigation" className="fixed inset-x-0 bottom-0 z-40 block w-full lg:hidden">
+    <nav aria-label={ui("bottomNav")} className="fixed inset-x-0 bottom-0 z-40 block w-full lg:hidden">
       <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-[0_-4px_24px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom,0px)]">
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">

@@ -66,7 +66,7 @@ export function ShopCatalog() {
     ? t(activeCategory.name)
     : filters.stockType === "preorder"
       ? ui("navPreOrder")
-      : ui("shopHeading");
+      : ui("navShop");
 
   return (
     <div className="min-h-screen w-full bg-ink-50/60">

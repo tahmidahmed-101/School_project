@@ -182,7 +182,7 @@ export function CategoryShowcase() {
     "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-white text-ink-700 shadow-2xs transition-colors hover:border-gold-500 hover:bg-gold-50 hover:text-gold-700 disabled:cursor-default disabled:opacity-40 disabled:hover:border-ink-200 disabled:hover:bg-white disabled:hover:text-ink-700";
 
   return (
-    <section aria-label="Shop by Popular Categories" className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
+    <section aria-label={ui("categoriesTitle")} className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
       <Container>
         <ScrollReveal>
           <SectionHeading
@@ -194,7 +194,7 @@ export function CategoryShowcase() {
                   type="button"
                   onClick={() => scrollTrack(-1)}
                   disabled={!canScrollLeft}
-                  aria-label="Scroll categories left"
+                  aria-label={ui("scrollCategoriesLeft")}
                   className={arrowClass}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -203,7 +203,7 @@ export function CategoryShowcase() {
                   type="button"
                   onClick={() => scrollTrack(1)}
                   disabled={!canScrollRight}
-                  aria-label="Scroll categories right"
+                  aria-label={ui("scrollCategoriesRight")}
                   className={arrowClass}
                 >
                   <ChevronRight className="h-5 w-5" />

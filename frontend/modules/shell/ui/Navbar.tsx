@@ -30,7 +30,7 @@ function buildNavLinks(pathname: string, activeCategory: string | null): NavLink
   const onShop = pathname === SHOP_PATH;
   return [
     { label: { en: "Home", bn: "হোম" }, href: "/", isActive: pathname === "/" },
-    { label: { en: "Stock Items", bn: "স্টক আইটেম" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
+    { label: { en: "Shop all", bn: "সব পণ্য" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
     {
       label: { en: "Pre-order", bn: "প্রি-অর্ডার" },
       href: "/pre-order",
@@ -119,7 +119,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               onClick={() => setLang(lang === "en" ? "bn" : "en")}
               className="hidden cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20 lg:flex sm:px-3"
-              aria-label="Switch language between English and Bangla"
+              aria-label={ui("switchLanguage")}
             >
               <Globe className="h-3.5 w-3.5 text-gold-300" />
               <span>{lang === "en" ? "বাংলা" : "EN"}</span>
@@ -163,7 +163,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
             <button
               type="button"
               onClick={openDrawer}
-              aria-label="Open cart drawer"
+              aria-label={ui("openCart")}
               className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
             >
               <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />

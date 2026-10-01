@@ -78,7 +78,7 @@ export function ShopProductGrid({
             className="w-full"
             value={filters.searchQuery}
             onChange={(value) => onFilterChange("searchQuery", value)}
-            placeholder={ui("searchPlaceholderShort")}
+            placeholder={ui("searchPlaceholder")}
           />
 
           <div className="flex items-center gap-2.5">
@@ -105,7 +105,7 @@ export function ShopProductGrid({
             className="max-w-lg flex-1"
             value={filters.searchQuery}
             onChange={(value) => onFilterChange("searchQuery", value)}
-            placeholder={ui("searchPlaceholderShort")}
+            placeholder={ui("searchPlaceholder")}
           />
 
           <div className="flex items-center gap-3 text-xs">
@@ -116,7 +116,7 @@ export function ShopProductGrid({
 
             <div
               role="group"
-              aria-label="View"
+              aria-label={ui("viewMode")}
               className="shadow-xs flex items-center rounded-xl border border-ink-200 bg-ink-50 p-0.5"
             >
               <button
@@ -124,8 +124,8 @@ export function ShopProductGrid({
                 onClick={() => setViewMode("grid")}
                 className={viewButtonClass(viewMode === "grid")}
                 aria-pressed={viewMode === "grid"}
-                aria-label="Grid view"
-                title="Grid view"
+                aria-label={ui("gridView")}
+                title={ui("gridView")}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -134,8 +134,8 @@ export function ShopProductGrid({
                 onClick={() => setViewMode("list")}
                 className={viewButtonClass(viewMode === "list")}
                 aria-pressed={viewMode === "list"}
-                aria-label="List view"
-                title="List view"
+                aria-label={ui("listView")}
+                title={ui("listView")}
               >
                 <List className="h-4 w-4" />
               </button>

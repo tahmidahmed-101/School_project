@@ -5,6 +5,7 @@ import { ChevronDown, Check, Search } from "lucide-react";
 import { usePresence } from "./usePresence";
 import { useClickOutside } from "@/lib/useClickOutside";
 import { inputClass } from "@/design-system/ui/FormField";
+import { useLang } from "@/lib/i18n";
 
 interface DropdownOption {
   value: string;
@@ -43,6 +44,7 @@ export function Dropdown({
   invalid = false,
   menuAlign = "stretch",
 }: DropdownProps) {
+  const { ui } = useLang();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export function Dropdown({
           }`}
         >
           {visibleOptions.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-ink-600">No matches found</p>
+            <p className="px-3 py-2 text-xs text-ink-600">{ui("noMatches")}</p>
           ) : (
             visibleOptions.map((option) => (
               <button

@@ -33,7 +33,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const isSoldOut = isPreOrderSoldOut(product);
   const isOutOfStock = !product.isPreOrder && !product.inStock;
 
-  const orderNow = () => {
+  const buyNow = () => {
     addItem(product);
     router.push("/checkout");
   };
@@ -153,11 +153,11 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <Button
                 size="xs"
                 className="flex-1"
-                onClick={orderNow}
-                aria-label={`${ui("orderNow")} - ${t(product.name)}`}
+                onClick={buyNow}
+                aria-label={`${ui("buyNow")} - ${t(product.name)}`}
                 leadingIcon={<Zap className="h-3.5 w-3.5 shrink-0 fill-current" />}
               >
-                {ui("orderNow")}
+                {ui("buyNow")}
               </Button>
             </div>
           )}

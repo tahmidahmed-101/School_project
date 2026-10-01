@@ -20,7 +20,7 @@ export function Breadcrumbs({ items, className = "", showHome = true }: Breadcru
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={ui("breadcrumb")}
       className={`flex flex-wrap items-center gap-1.5 text-xs font-medium text-ink-500 ${className}`}
     >
       <ol className="flex flex-wrap items-center gap-1.5">

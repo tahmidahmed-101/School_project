@@ -40,7 +40,7 @@ export function Footer() {
                 href={BRAND_INFO.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Kull Mart on Facebook"
+                aria-label={ui("facebookLink")}
                 title="Facebook"
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-gold-500 hover:text-brand-950"
               >
@@ -50,7 +50,7 @@ export function Footer() {
                 href={`https://wa.me/${BRAND_INFO.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Chat with Kull Mart on WhatsApp"
+                aria-label={ui("whatsappLink")}
                 title="WhatsApp"
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-gold-500 hover:text-brand-950"
               >

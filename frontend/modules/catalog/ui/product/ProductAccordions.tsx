@@ -49,16 +49,10 @@ export function ProductAccordions({ product }: { product: Product }) {
           </AccordionItem>
         )}
 
-        <AccordionItem title="Shipping & Returns">
+        <AccordionItem title={ui("shippingReturnsTitle")}>
           <div className="space-y-2 pb-3 pt-3 text-xs leading-relaxed text-ink-600">
-            <p>
-              Delivery all across Bangladesh. The shipping charge is calculated from your address when you place the
-              order. Wholesale and retail orders are both welcome.
-            </p>
-            <p>
-              Questions about size, colour or a product&apos;s details? Message us on WhatsApp or Facebook before you
-              order and we will help you choose.
-            </p>
+            <p>{ui("shippingReturnsDelivery")}</p>
+            <p>{ui("shippingReturnsHelp")}</p>
           </div>
         </AccordionItem>
       </div>

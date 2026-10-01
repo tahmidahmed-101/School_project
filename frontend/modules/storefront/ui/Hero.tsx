@@ -17,10 +17,10 @@ const AUTOPLAY_MS = 5000;
 
 /** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
 export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { shopLink?: string; preorder?: boolean }) {
-  const { lang } = useLang();
+  const { lang, ui, n } = useLang();
   const { categories } = useCatalog();
   const hasRail = categories.some((category) => category.type === (preorder ? "preorder" : "stock"));
-  const badge = preorder ? { en: "Pre Order", bn: "প্রি-অর্ডার" } : { en: "Stock", bn: "স্টক" };
+  const badge = preorder ? { en: "Pre-order", bn: "প্রি-অর্ডার" } : { en: "Stock", bn: "স্টক" };
   const [index, setIndex] = useState(0);
   // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
   const [mounted, setMounted] = useState(1);
@@ -41,7 +41,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
 
   return (
     <section
-      aria-label="Hero"
+      aria-label={ui("heroCarousel")}
       className="relative overflow-hidden bg-ink-50/70 pb-4 pt-2 sm:pb-5 sm:pt-3 lg:pb-6 lg:pt-4"
     >
       <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-[700px] -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-500/10 via-gold-400/10 to-brand-400/10 blur-[100px]" />
@@ -116,7 +116,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                 <button
                   type="button"
                   onClick={() => go(index - 1)}
-                  aria-label="Previous slide"
+                  aria-label={ui("previousSlide")}
                   className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -127,7 +127,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                       key={s.image}
                       type="button"
                       onClick={() => go(i)}
-                      aria-label={`Go to slide ${i + 1}`}
+                      aria-label={`${ui("slide")} ${n(i + 1)}`}
                       aria-current={i === index}
                       className={`relative h-2 cursor-pointer rounded-full transition-all before:absolute before:-inset-2 before:content-[''] ${
                         i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
@@ -138,7 +138,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                 <button
                   type="button"
                   onClick={() => go(index + 1)}
-                  aria-label="Next slide"
+                  aria-label={ui("nextSlide")}
                   className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
                 >
                   <ChevronRight className="h-4 w-4" />

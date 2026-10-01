@@ -30,7 +30,7 @@ export function PreOrderConfirmationModal() {
           type="button"
           onClick={closePreOrderModal}
           className="absolute right-4 top-4 rounded-full p-1.5 text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
-          aria-label="Close"
+          aria-label={ui("close")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -74,7 +74,7 @@ export function PreOrderConfirmationModal() {
         {/* Preorder Details Table */}
         <div className="mt-4 space-y-2.5 rounded-xl border border-gold-200/70 bg-gold-50/50 p-3.5 text-xs text-ink-700">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-ink-600">Price</span>
+            <span className="font-medium text-ink-600">{ui("price")}</span>
             <span className="font-bold text-ink-950">{money(product.price * quantity)}</span>
           </div>
 

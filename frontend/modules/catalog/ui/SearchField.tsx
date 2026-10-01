@@ -2,6 +2,7 @@
 
 import { Search, X } from "lucide-react";
 import { INPUT_SKIN } from "@/design-system/ui/FormField";
+import { useLang } from "@/lib/i18n";
 
 interface SearchFieldProps {
   value: string;
@@ -12,6 +13,7 @@ interface SearchFieldProps {
 
 /** Text input with a leading search icon and a clear button once there is a value. */
 export function SearchField({ value, onChange, placeholder, className = "" }: SearchFieldProps) {
+  const { ui } = useLang();
   return (
     <div className={`relative flex items-center ${className}`}>
       <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-ink-400" />
@@ -27,7 +29,7 @@ export function SearchField({ value, onChange, placeholder, className = "" }: Se
           type="button"
           onClick={() => onChange("")}
           className="absolute right-3 cursor-pointer p-1 text-ink-400 hover:text-ink-900"
-          aria-label="Clear search"
+          aria-label={ui("clearSearch")}
         >
           <X className="h-3.5 w-3.5" />
         </button>

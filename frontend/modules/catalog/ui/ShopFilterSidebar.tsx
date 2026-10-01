@@ -69,7 +69,7 @@ export function ShopFilterSidebar({
               type="button"
               className={`pointer-events-auto backdrop-blur-xs fixed inset-0 cursor-default bg-ink-900/60 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
               onClick={onMobileClose}
-              aria-label="Close filters"
+              aria-label={ui("closeFilters")}
             />
 
             <div
@@ -84,7 +84,7 @@ export function ShopFilterSidebar({
                   type="button"
                   onClick={onMobileClose}
                   className="cursor-pointer rounded-lg bg-ink-100 p-1.5 text-ink-500 transition-colors hover:text-ink-900"
-                  aria-label="Close filters"
+                  aria-label={ui("closeFilters")}
                 >
                   <X className="h-5 w-5" />
                 </button>

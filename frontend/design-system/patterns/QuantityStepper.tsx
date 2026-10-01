@@ -30,7 +30,7 @@ const STYLES = {
 
 /** − / count / + control shared by the cart drawer, checkout summary and product page. */
 export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: QuantityStepperProps) {
-  const { n } = useLang();
+  const { n, ui } = useLang();
   const s = STYLES[size];
   const atMin = min !== undefined && quantity <= min;
   const atMax = max !== undefined && quantity >= max;
@@ -43,7 +43,7 @@ export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: Q
         onClick={() => onChange(quantity - 1)}
         disabled={atMin}
         className={buttonClass}
-        aria-label="Decrease quantity"
+        aria-label={ui("decreaseQuantity")}
       >
         <Minus className={s.icon} />
       </button>
@@ -55,7 +55,7 @@ export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: Q
         onClick={() => onChange(quantity + 1)}
         disabled={atMax}
         className={buttonClass}
-        aria-label="Increase quantity"
+        aria-label={ui("increaseQuantity")}
       >
         <Plus className={s.icon} />
       </button>

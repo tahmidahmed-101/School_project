@@ -13,7 +13,7 @@ export interface PolicyContent {
 }
 
 export const RETURN_POLICY: PolicyContent = {
-  title: { en: "Return Policy", bn: "রিটার্ন নীতি" },
+  title: { en: "Return policy", bn: "রিটার্ন নীতি" },
   updated: { en: "Last updated: September 2026", bn: "সর্বশেষ হালনাগাদ: সেপ্টেম্বর ২০২৬" },
   intro: {
     en: "We want you to be happy with every order. If something isn't right, you can return it under the terms below.",
@@ -59,7 +59,7 @@ export const RETURN_POLICY: PolicyContent = {
 };
 
 export const REFUND_POLICY: PolicyContent = {
-  title: { en: "Refund Policy", bn: "রিফান্ড নীতি" },
+  title: { en: "Refund policy", bn: "রিফান্ড নীতি" },
   updated: { en: "Last updated: September 2026", bn: "সর্বশেষ হালনাগাদ: সেপ্টেম্বর ২০২৬" },
   intro: {
     en: "Once your return is received and inspected, here's how and when your refund is processed.",

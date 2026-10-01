@@ -159,7 +159,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                   type="button"
                   onClick={() => setLang(lang === "en" ? "bn" : "en")}
                   className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-                  aria-label="Switch language between English and Bangla"
+                  aria-label={ui("switchLanguage")}
                 >
                   <Globe className="h-4 w-4 text-gold-300" />
                   <span>{lang === "en" ? "বাংলা" : "English"}</span>

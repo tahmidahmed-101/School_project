@@ -16,8 +16,8 @@ export function NavbarSearch() {
         <div className="relative w-full">
           <input
             {...inputProps}
-            placeholder={ui("navSearchPlaceholder")}
-            aria-label="Search products"
+            placeholder={ui("searchPlaceholder")}
+            aria-label={ui("searchProducts")}
             className={`${HEADER_SEARCH_INPUT_CLASS} pl-11 pr-28`}
           />
           <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-ink-400" />

@@ -95,7 +95,7 @@ export function WishlistDrawer() {
             onClick={() => items.forEach((item) => addItem(item))}
             leadingIcon={<ShoppingCart className="h-4 w-4" />}
           >
-            Move all to cart
+            {ui("wishlistMoveAllToCart")}
           </Button>
         </DrawerFooter>
       )}

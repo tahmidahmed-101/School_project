@@ -8,7 +8,7 @@ export interface HeroSlide {
   title: T;
 }
 
-export const HERO_CTA_TEXT: T = { en: "Shop Now", bn: "কিনুন" };
+export const HERO_CTA_TEXT: T = { en: "Shop now", bn: "কিনুন" };
 
 export const HERO_SLIDES: HeroSlide[] = [
   {
@@ -16,7 +16,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     alt: "Kull Mart hero banner: phones, earbuds, laptop, headphones and everyday accessories",
     tag: { en: "NEW ARRIVALS · TECH & LIFESTYLE", bn: "নতুন সংগ্রহ · টেক ও লাইফস্টাইল" },
     title: {
-      en: "Everyday Essentials\nDelivered Fast",
+      en: "Everyday essentials\ndelivered fast",
       bn: "প্রয়োজনীয় পণ্য\nদ্রুত ডেলিভারিতে",
     },
   },
@@ -25,7 +25,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     alt: "Speaker, headphones, earbuds, smartwatch and power bank on a marble display",
     tag: { en: "GADGETS & AUDIO", bn: "গ্যাজেটস ও অডিও" },
     title: {
-      en: "Sound That Moves\nWith You",
+      en: "Sound that moves\nwith you",
       bn: "আপনার সঙ্গী\nসেরা সাউন্ড",
     },
   },
@@ -34,7 +34,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     alt: "Handbag, loafers, sunglasses, gold cuff and folded tops on a marble display",
     tag: { en: "WOMEN'S FASHION & ACCESSORIES", bn: "নারীদের ফ্যাশন ও অ্যাক্সেসরিজ" },
     title: {
-      en: "Style For Every\nOccasion",
+      en: "Style for every\noccasion",
       bn: "প্রতিটি উপলক্ষে\nআপনার স্টাইল",
     },
   },
@@ -43,7 +43,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     alt: "Flask, mini fan, tumbler, diffuser, sneakers and notebook on a marble display",
     tag: { en: "HOME & LIFESTYLE", bn: "হোম ও লাইফস্টাইল" },
     title: {
-      en: "Little Things That\nMake Life Better",
+      en: "Little things that\nmake life better",
       bn: "ছোট ছোট জিনিসে\nজীবন আরও সুন্দর",
     },
   },
@@ -52,7 +52,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     alt: "Phone, laptop, headphones, smartwatch and folded tops on a marble display",
     tag: { en: "TECH & FASHION", bn: "টেক ও ফ্যাশন" },
     title: {
-      en: "All You Love,\nOne Store",
+      en: "All you love,\none store",
       bn: "সব পছন্দ,\nএক দোকানে",
     },
   },
