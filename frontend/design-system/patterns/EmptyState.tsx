@@ -26,7 +26,7 @@ export function EmptyState({ icon, title, onReset, variant = "panel" }: EmptySta
         <button
           type="button"
           onClick={onReset}
-          className="mt-3 cursor-pointer text-xs font-bold text-gold-600 hover:underline"
+          className="mt-3 cursor-pointer text-xs font-bold text-gold-800 hover:underline"
         >
           {ui("resetFilters")}
         </button>

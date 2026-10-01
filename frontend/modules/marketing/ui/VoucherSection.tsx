@@ -20,7 +20,7 @@ export function VoucherSection() {
     <div className="mx-auto max-w-7xl px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4 lg:px-8">
       <section aria-label={ui("voucherTitle")}>
         <ScrollReveal className="mb-3">
-          <h2 className="ts-display text-xl font-bold tracking-tight text-gold-600 sm:text-2xl">
+          <h2 className="ts-display text-xl font-bold tracking-tight text-gold-700 sm:text-2xl">
             {ui("voucherTitle")}
           </h2>
         </ScrollReveal>
@@ -42,7 +42,7 @@ export function VoucherSection() {
                   </div>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-3 sm:gap-3 sm:px-3 lg:gap-2 lg:px-2.5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-gold-600 sm:text-base">{t(v.title)}</p>
+                      <p className="truncate text-sm font-extrabold text-gold-800 sm:text-base">{t(v.title)}</p>
                       <p className="truncate text-[10px] text-ink-500 sm:text-[11px]">{t(v.condition)}</p>
                     </div>
                     <button

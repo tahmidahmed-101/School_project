@@ -135,13 +135,13 @@ function CategoryTrack({
 
               {/* Category Title */}
               <h3
-                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-600 sm:text-[15px] ${isActive ? "text-gold-800" : "text-ink-900"}`}
+                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 sm:text-[15px] ${isActive ? "text-gold-800" : "text-ink-900"}`}
               >
                 {cat.name[lang] || cat.name.en}
               </h3>
 
               {/* Product Count (e.g. 28 Products) */}
-              <p className="mt-0.5 text-[11px] font-medium text-ink-400 sm:text-xs">{countText}</p>
+              <p className="mt-0.5 text-[11px] font-medium text-ink-600 sm:text-xs">{countText}</p>
             </Link>
           </CardReveal>
         );
@@ -182,7 +182,7 @@ export function CategoryShowcase() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <ScrollReveal>
           <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
-            <h2 className="ts-display text-xl font-extrabold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
+            <h2 className="ts-display text-xl font-extrabold tracking-tight text-gold-700 sm:text-2xl lg:text-3xl">
               {ui("categoriesTitle")}
             </h2>
             <div className="flex shrink-0 items-center gap-2">

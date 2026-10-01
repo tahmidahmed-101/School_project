@@ -22,7 +22,7 @@ export function AccordionItem({ title, defaultOpen = false, children }: Accordio
         aria-expanded={open}
         className="group flex w-full items-center justify-between text-left"
       >
-        <span className="text-xs font-bold uppercase tracking-wider text-fg transition-colors group-hover:text-gold-600">
+        <span className="text-xs font-bold uppercase tracking-wider text-fg transition-colors group-hover:text-gold-800">
           {title}
         </span>
         <ChevronDown

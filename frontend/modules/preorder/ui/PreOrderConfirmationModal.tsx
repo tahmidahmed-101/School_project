@@ -13,7 +13,7 @@ export function PreOrderConfirmationModal() {
 
   if (!product) return null;
 
-  const deliveryDate = product.expectedDelivery ? t(product.expectedDelivery) : "October 5–10, 2026";
+  const deliveryDate = product.expectedDelivery ? t(product.expectedDelivery) : ui("deliveryDateTbc");
 
   return (
     <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal">
@@ -63,7 +63,7 @@ export function PreOrderConfirmationModal() {
               </p>
             )}
             <div className="mt-1 flex items-center justify-between text-xs">
-              <span className="font-bold text-gold-600">
+              <span className="font-bold text-gold-800">
                 {money(product.price)} {quantity > 1 ? `× ${n(quantity)}` : ""}
               </span>
             </div>

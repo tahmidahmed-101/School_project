@@ -37,12 +37,12 @@ export function ProductListItem({ product }: { product: Product }) {
       </Link>
 
       <div className="w-full min-w-0 flex-1 space-y-1 text-left">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-gold-600">
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-gold-800">
           <span>{t(product.categoryName)}</span>
         </div>
 
         <Link href={href}>
-          <h4 className="ts-display text-base font-bold leading-snug text-ink-900 transition-colors group-hover:text-gold-600">
+          <h4 className="ts-display text-base font-bold leading-snug text-ink-900 transition-colors group-hover:text-gold-800">
             {t(product.name)}
           </h4>
         </Link>
@@ -54,9 +54,9 @@ export function ProductListItem({ product }: { product: Product }) {
 
       <div className="flex w-full shrink-0 items-center justify-between gap-3 border-t border-ink-100 pt-3 sm:w-auto sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
         <div className="text-right">
-          <span className="text-base font-bold text-gold-600 sm:text-lg">{money(product.price)}</span>
+          <span className="text-base font-bold text-gold-800 sm:text-lg">{money(product.price)}</span>
           {discountPercent && product.compareAtPrice && (
-            <span className="block text-xs text-ink-400 line-through">{money(product.compareAtPrice)}</span>
+            <span className="block text-xs text-ink-600 line-through">{money(product.compareAtPrice)}</span>
           )}
         </div>
         <button

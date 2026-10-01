@@ -28,7 +28,7 @@ export function Breadcrumbs({ items, className = "", showHome = true }: Breadcru
           <li className="inline-flex items-center">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-ink-500 transition-colors hover:text-gold-600"
+              className="inline-flex items-center gap-1 text-ink-500 transition-colors hover:text-gold-800"
             >
               <Home className="h-3.5 w-3.5 shrink-0" />
               <span>{ui("navHome")}</span>
@@ -45,7 +45,7 @@ export function Breadcrumbs({ items, className = "", showHome = true }: Breadcru
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="max-w-[140px] truncate text-ink-500 transition-colors hover:text-gold-600 sm:max-w-xs"
+                  className="max-w-[140px] truncate text-ink-500 transition-colors hover:text-gold-800 sm:max-w-xs"
                 >
                   {item.label}
                 </Link>

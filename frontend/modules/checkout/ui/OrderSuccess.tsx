@@ -44,7 +44,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
         <div className="shadow-xs space-y-3 rounded-2xl border border-ink-200 bg-ink-50 p-5 text-left text-xs">
           <div className="flex justify-between border-b border-ink-200 pb-2">
             <span className="text-ink-500">{ui("orderNumberLabel")}</span>
-            <span className="font-mono text-sm font-bold text-gold-600">{orderResult.orderNumber}</span>
+            <span className="font-mono text-sm font-bold text-gold-800">{orderResult.orderNumber}</span>
           </div>
           <div className="space-y-1.5 border-b border-ink-200 pb-2">
             {orderResult.lines.map((line) => (
@@ -113,7 +113,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
               {ui("orderCallStore")} ({BRAND_INFO.phone})
             </span>
           </a>
-          <Link href="/" className="inline-block pt-2 text-xs font-bold text-gold-600 hover:text-gold-700">
+          <Link href="/" className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900">
             {ui("orderContinueShopping")}
           </Link>
         </div>

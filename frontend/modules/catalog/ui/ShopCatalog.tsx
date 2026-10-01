@@ -78,7 +78,7 @@ export function ShopCatalog() {
                 : [{ label: ui("navShop") }]
             }
           />
-          <h1 className="ts-display text-3xl font-bold leading-tight tracking-tight text-gold-600 sm:text-4xl lg:text-5xl">
+          <h1 className="ts-display text-3xl font-bold leading-tight tracking-tight text-gold-700 sm:text-4xl lg:text-5xl">
             {activeCategoryTitle}
           </h1>
         </div>

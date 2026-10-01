@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 interface RevealProps {
   children: ReactNode;
@@ -15,8 +15,6 @@ interface RevealBaseProps extends Required<Pick<RevealProps, "delay" | "duration
   className: string;
   viewport: { margin: string; amount?: number };
 }
-
-const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /** Fade-and-rise once when scrolled into view. CSS transitions instead of framer-motion: dozens of these per page
  * made the animation runtime the largest main-thread cost on mobile. */
@@ -45,15 +43,20 @@ function RevealBase({ children, delay, duration, y, className, viewport }: Revea
     return () => observer.disconnect();
   }, [margin, amount]);
 
+  // Hidden-state styles live in globals.css under html.js, so content stays visible without JS.
   return (
     <div
       ref={ref}
       className={className}
-      style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? "none" : `translateY(${y}px)`,
-        transition: `opacity ${duration}s ${EASE} ${delay}s, transform ${duration}s ${EASE} ${delay}s`,
-      }}
+      data-reveal=""
+      data-shown={shown ? "" : undefined}
+      style={
+        {
+          "--reveal-y": `${y}px`,
+          "--reveal-duration": `${duration}s`,
+          "--reveal-delay": `${delay}s`,
+        } as CSSProperties
+      }
     >
       {children}
     </div>

@@ -101,7 +101,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 </button>
               </div>
               {product.isPreOrder && product.expectedDelivery && (
-                <div className="flex items-center gap-1 text-[10px] font-medium text-gold-700">
+                <div className="flex items-center gap-1 text-[10px] font-medium text-gold-800">
                   <Calendar className="h-2.5 w-2.5 shrink-0" />
                   <span>
                     {ui("expectedDelivery")}: {t(product.expectedDelivery)}
@@ -109,7 +109,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 </div>
               )}
             </div>
-            <div className="shrink-0 font-bold text-gold-600">{money(product.price * quantity)}</div>
+            <div className="shrink-0 font-bold text-gold-800">{money(product.price * quantity)}</div>
           </div>
         ))}
       </div>
@@ -205,7 +205,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
         )}
         <div className="flex justify-between border-t border-ink-200 pt-2 text-sm font-bold text-ink-900">
           <span>{ui("checkoutGrandTotal")}</span>
-          <span className="text-base text-gold-600">{money(total)}</span>
+          <span className="text-base text-gold-800">{money(total)}</span>
         </div>
         <p className="text-[10.5px] leading-relaxed text-ink-500">{ui("checkoutTotalPending")}</p>
       </div>
@@ -221,7 +221,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       <div className="flex items-center justify-center pt-2 text-center">
         <Link
           href="/shop"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-600"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>{ui("backToShopping")}</span>

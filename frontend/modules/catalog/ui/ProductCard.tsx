@@ -84,7 +84,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <div className="space-y-0.5">
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 min-h-[2.5em] text-xs font-bold leading-tight text-ink-900 transition-colors group-hover:text-gold-600 sm:text-sm"
+            className="line-clamp-2 min-h-[2.5em] text-xs font-bold leading-tight text-ink-900 transition-colors group-hover:text-gold-800 sm:text-sm"
             title={t(product.name)}
           >
             {t(product.name)}
@@ -100,7 +100,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {/* Pre-order Expected Delivery Info: short date only, wraps instead of overflowing */}
           {product.isPreOrder && product.expectedDelivery && (
             <div
-              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-[9px] font-medium leading-snug text-gold-700 sm:text-[10px]"
+              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-[9px] font-medium leading-snug text-gold-800 sm:text-[10px]"
               title={`${ui("expectedDelivery")}: ${t(product.expectedDelivery)}`}
             >
               <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-600" />
@@ -112,9 +112,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         {/* Price & Actions (centered, stacked) */}
         <div className="mt-2 flex w-full flex-col items-center gap-1.5 border-t border-ink-100 pt-2">
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
-            <span className="text-xs font-bold text-gold-600 sm:text-sm">{money(product.price)}</span>
+            <span className="text-xs font-bold text-gold-800 sm:text-sm">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (
-              <span className="text-[9.5px] font-medium text-ink-400 line-through sm:text-[10.5px]">
+              <span className="text-[9.5px] font-medium text-ink-600 line-through sm:text-[10.5px]">
                 {money(product.compareAtPrice)}
               </span>
             )}

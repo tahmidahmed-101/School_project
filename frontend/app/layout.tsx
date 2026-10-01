@@ -70,8 +70,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [catalog, brand] = await Promise.all([getCatalog(), getBrand()]);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         <JsonLd data={organizationJsonLd(brand)} />
         <JsonLd data={websiteJsonLd()} />
         <AnalyticsScripts />

@@ -61,7 +61,7 @@ export function NavbarSearch() {
 
       {isFocused && results.length > 0 && (
         <div className="animate-in fade-in slide-in-from-top-2 absolute left-0 right-0 top-full z-50 mt-2 divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-200 bg-white p-2 shadow-2xl">
-          <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-ink-400">
+          <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-ink-600">
             {ui("matchingProducts")} ({results.length})
           </div>
           {results.map((product) => (
@@ -76,7 +76,7 @@ export function NavbarSearch() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-ink-900">{t(product.name)}</p>
-                <p className="text-[11px] font-medium text-gold-600">{t(product.categoryName)}</p>
+                <p className="text-[11px] font-medium text-gold-800">{t(product.categoryName)}</p>
               </div>
               <span className="text-xs font-bold text-ink-900">{money(product.price)}</span>
             </Link>
@@ -85,7 +85,7 @@ export function NavbarSearch() {
             <Link
               href={`/shop?q=${encodeURIComponent(query)}`}
               onClick={closePopup}
-              className="flex cursor-pointer items-center justify-center gap-1 text-xs font-bold text-gold-600 hover:text-gold-700"
+              className="flex cursor-pointer items-center justify-center gap-1 text-xs font-bold text-gold-800 hover:text-gold-900"
             >
               <span>{ui("viewAllResults")}</span>
               <ArrowRight className="h-3.5 w-3.5" />

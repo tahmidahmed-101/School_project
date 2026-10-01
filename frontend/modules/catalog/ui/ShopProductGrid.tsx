@@ -84,7 +84,7 @@ export function ShopProductGrid({
             <button
               type="button"
               onClick={onOpenMobileFilter}
-              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-ink-200 bg-ink-50 px-4 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 hover:text-gold-600"
+              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-ink-200 bg-ink-50 px-4 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 hover:text-gold-800"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-gold-600" />
               <span>

@@ -99,7 +99,7 @@ export function TrackOrderView() {
         <Breadcrumbs className="mb-4" items={breadcrumbs} />
 
         <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
+          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">
             {ui("trackOrderTitle")}
           </h1>
         </div>
@@ -155,7 +155,7 @@ export function TrackOrderView() {
         {!result && !errorMsg && !isNotFound && (
           <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-8 text-center">
             <PackageX className="h-6 w-6 text-ink-300" />
-            <span className="text-sm font-semibold text-ink-400">{ui("trackOrderNotFound")}</span>
+            <span className="text-sm font-semibold text-ink-500">{ui("trackOrderNotFound")}</span>
           </div>
         )}
 
@@ -164,7 +164,7 @@ export function TrackOrderView() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
               <div>
                 <span className="block text-[11px] font-semibold text-ink-500">{ui("orderNumberLabel")}</span>
-                <span className="font-mono text-sm font-bold text-gold-600">{result.order_number}</span>
+                <span className="font-mono text-sm font-bold text-gold-800">{result.order_number}</span>
                 <span className="mt-0.5 block text-[11px] text-ink-500">
                   {ui("trackOrderPlacedOn")}: {formatDate(result.created_at)}
                 </span>
@@ -211,7 +211,7 @@ export function TrackOrderView() {
                         <Icon className="h-4 w-4" />
                       </span>
                       <div className="pt-1">
-                        <span className={`block text-sm font-bold ${isComplete ? "text-ink-900" : "text-ink-400"}`}>
+                        <span className={`block text-sm font-bold ${isComplete ? "text-ink-900" : "text-ink-500"}`}>
                           {ui(stage.labelKey)}
                         </span>
                         {event && (
@@ -221,7 +221,7 @@ export function TrackOrderView() {
                           </span>
                         )}
                         {isCurrent && (
-                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-700">
+                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-800">
                             {ui("trackOrderCurrentStatus")}
                           </span>
                         )}

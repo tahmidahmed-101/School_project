@@ -40,7 +40,7 @@ export function Newsletter() {
     <section className="relative overflow-hidden border-b border-ink-200 bg-gradient-to-b from-white via-gold-50/20 to-ink-50/40 py-14 sm:py-20">
       <div className="relative z-10 mx-auto max-w-4xl space-y-6 px-4 text-center sm:px-6 lg:px-8">
         <ScrollReveal className="space-y-3">
-          <h2 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-4xl">
+          <h2 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-4xl">
             {ui("newsletterTitle")}
           </h2>
           <p className="mx-auto max-w-xl text-sm leading-relaxed text-ink-600">{ui("newsletterSubtitle")}</p>

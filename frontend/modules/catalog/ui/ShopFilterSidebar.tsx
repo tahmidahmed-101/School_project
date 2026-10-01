@@ -48,7 +48,7 @@ export function ShopFilterSidebar({
                 <button
                   type="button"
                   onClick={onReset}
-                  className="cursor-pointer text-xs font-bold text-ink-500 transition-colors hover:text-gold-600"
+                  className="cursor-pointer text-xs font-bold text-ink-500 transition-colors hover:text-gold-800"
                 >
                   {ui("resetFilters")}
                 </button>

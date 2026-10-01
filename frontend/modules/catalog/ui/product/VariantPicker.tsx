@@ -19,7 +19,7 @@ export function VariantPicker({ variants, selected, onSelect }: VariantPickerPro
         <div key={v.name.en} className="mt-7 border-t border-ink-100 pt-6">
           <div className="mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-ink-900">
-              {t(v.name)}: <span className="font-normal text-gold-600">{selected[v.name.en]}</span>
+              {t(v.name)}: <span className="font-normal text-gold-800">{selected[v.name.en]}</span>
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">

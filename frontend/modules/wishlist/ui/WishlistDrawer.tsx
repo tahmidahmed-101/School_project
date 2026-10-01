@@ -57,11 +57,11 @@ export function WishlistDrawer() {
                 <Link
                   href={`/product/${item.slug}`}
                   onClick={closeWishlist}
-                  className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-600"
+                  className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-800"
                 >
                   {t(item.name)}
                 </Link>
-                <div className="text-xs font-bold text-gold-600">{money(item.price)}</div>
+                <div className="text-xs font-bold text-gold-800">{money(item.price)}</div>
 
                 <div className="flex items-center gap-2 pt-1">
                   <button

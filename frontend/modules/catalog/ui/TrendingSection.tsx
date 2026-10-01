@@ -36,7 +36,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
           }`}
         >
           <div className="min-w-0 flex-1">
-            <h2 className="ts-display truncate text-xl font-extrabold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
+            <h2 className="ts-display truncate text-xl font-extrabold tracking-tight text-gold-700 sm:text-2xl lg:text-3xl">
               {title ?? ui("featuredTitle")}
             </h2>
           </div>
@@ -44,7 +44,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
           {showViewAllLink && (
             <Link
               href="/shop"
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-600 transition-colors hover:text-gold-700 sm:text-sm"
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-800 transition-colors hover:text-gold-900 sm:text-sm"
             >
               <span>{ui("viewAllProducts")}</span>
               <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-1" />

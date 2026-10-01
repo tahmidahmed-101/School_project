@@ -19,7 +19,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-gold-600">{t(product.categoryName)}</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-gold-800">{t(product.categoryName)}</span>
         {product.isPreOrder && <PreOrderBadge status={product.preorderStatus || "available"} size="sm" />}
       </div>
       <h1 className="mt-2.5 text-2xl font-extrabold uppercase tracking-tight text-ink-950 sm:text-3xl">
@@ -30,7 +30,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
       <div className="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <span className="text-2xl font-extrabold text-ink-950 sm:text-3xl">{money(product.price)}</span>
         {discountPercent && product.compareAtPrice && (
-          <span className="text-base text-ink-400 line-through">{money(product.compareAtPrice)}</span>
+          <span className="text-base text-ink-500 line-through">{money(product.compareAtPrice)}</span>
         )}
         {discountPercent && (
           <span className="rounded-md bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-600">
@@ -91,7 +91,7 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
           {ui("preOrderSoldOut")}
         </span>
       ) : (
-        <span className="flex items-center gap-1.5 text-gold-600">
+        <span className="flex items-center gap-1.5 text-gold-800">
           <span className="h-2 w-2 animate-pulse rounded-full bg-gold-500" />
           {ui("preOrderClosingSoon")}
         </span>

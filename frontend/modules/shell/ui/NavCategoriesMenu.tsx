@@ -55,7 +55,7 @@ export function NavCategoriesMenu() {
                 }`}
               >
                 <span className="truncate">{t(category.name)}</span>
-                <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-400">
+                <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-600">
                   {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
                 </span>
               </Link>
@@ -66,7 +66,7 @@ export function NavCategoriesMenu() {
           <Link
             href="/shop"
             onClick={close}
-            className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-600 hover:text-gold-700"
+            className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-800 hover:text-gold-900"
           >
             <span>{ui("browseAllCategories")}</span>
             <ArrowRight className="h-3.5 w-3.5" />

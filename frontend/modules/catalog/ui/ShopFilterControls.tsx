@@ -49,7 +49,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   return (
     <div className="space-y-6 text-xs text-ink-900">
       <div role="radiogroup" aria-label={t(STOCK_TITLE)} className="space-y-2">
-        <h5 className="text-[11px] font-bold tracking-wider text-gold-700">{t(STOCK_TITLE)}</h5>
+        <h5 className="text-[11px] font-bold tracking-wider text-gold-800">{t(STOCK_TITLE)}</h5>
         {STOCK_OPTIONS.map((opt) => {
           const checked = filters.stockType === opt.id;
           return (
@@ -76,7 +76,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
               >
                 {checked && <Check className="h-3 w-3" strokeWidth={3} />}
               </span>
-              <span className={`text-xs font-semibold ${checked ? "text-gold-700" : "text-ink-800"}`}>
+              <span className={`text-xs font-semibold ${checked ? "text-gold-800" : "text-ink-800"}`}>
                 {t(opt.label)}
               </span>
             </button>
@@ -86,12 +86,12 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
       <div className="relative">
         <div className="mb-2 flex items-center justify-between">
-          <h5 className="text-[11px] font-bold tracking-wider text-gold-700">{ui("filterCategories")}</h5>
+          <h5 className="text-[11px] font-bold tracking-wider text-gold-800">{ui("filterCategories")}</h5>
           {filters.category !== "all" && (
             <button
               type="button"
               onClick={() => onFilterChange("category", "all")}
-              className="cursor-pointer text-[10px] text-ink-500 underline hover:text-gold-600"
+              className="cursor-pointer text-[10px] text-ink-500 underline hover:text-gold-800"
             >
               {ui("filterClearShort")}
             </button>
@@ -122,7 +122,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
       <div className="pt-1">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-xs font-bold tracking-wider text-ink-900">{ui("filterPriceRange")}</span>
-          <span className="text-xs font-bold text-gold-600">
+          <span className="text-xs font-bold text-gold-800">
             {!Number.isFinite(filters.maxPrice) ? ui("filterAny") : money(filters.maxPrice)}
           </span>
         </div>
@@ -139,7 +139,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
               const next = Number(e.target.value);
               onFilterChange("maxPrice", next >= maxPrice ? Number.POSITIVE_INFINITY : next);
             }}
-            className="h-2 w-full cursor-pointer appearance-none rounded-full accent-gold-500 focus:outline-none"
+            className="h-2 w-full cursor-pointer appearance-none rounded-full accent-gold-500"
             style={{
               background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pricePercentage}%, var(--surface-strong) ${pricePercentage}%, var(--surface-strong) 100%)`,
             }}

@@ -131,7 +131,7 @@ export function CheckoutView() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Breadcrumbs className="mb-4" items={breadcrumbs} />
         <div className="mb-8 flex items-center justify-between border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">
+          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">
             {ui("checkoutTitle")}
           </h1>
         </div>

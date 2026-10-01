@@ -20,7 +20,7 @@ export function PolicyView({ policy }: PolicyViewProps) {
         <Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />
 
         <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl lg:text-5xl">
+          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl lg:text-5xl">
             {t(policy.title)}
           </h1>
           <p className="mt-1.5 text-xs text-ink-500 lg:text-sm">{t(policy.updated)}</p>
@@ -46,14 +46,14 @@ export function PolicyView({ policy }: PolicyViewProps) {
               href={`https://wa.me/${BRAND_INFO.whatsapp}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-gold-600 transition-colors hover:text-gold-700 sm:text-base lg:text-lg"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-gold-800 transition-colors hover:text-gold-900 sm:text-base lg:text-lg"
             >
               <MessageCircle className="h-4 w-4 shrink-0 lg:h-5 lg:w-5" />
               <span>{ui("heroWhatsapp")}</span>
             </a>
             <a
               href={`tel:${BRAND_INFO.phoneTel}`}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-gold-600 transition-colors hover:text-gold-700 sm:text-base lg:text-lg"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-gold-800 transition-colors hover:text-gold-900 sm:text-base lg:text-lg"
             >
               <Phone className="h-4 w-4 shrink-0 lg:h-5 lg:w-5" />
               <span>{BRAND_INFO.phoneInternational}</span>

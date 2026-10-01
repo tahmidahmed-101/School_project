@@ -30,7 +30,7 @@ export function ProductGrid({ products, title, viewAllLink, viewAllText, columns
           <ScrollReveal className="mb-5 flex flex-nowrap items-center justify-between gap-2 sm:mb-8 sm:gap-4">
             <div className="min-w-0 flex-1">
               {title && (
-                <h2 className="ts-display truncate text-xl font-extrabold tracking-tight text-gold-600 sm:text-2xl lg:text-3xl">
+                <h2 className="ts-display truncate text-xl font-extrabold tracking-tight text-gold-700 sm:text-2xl lg:text-3xl">
                   {title}
                 </h2>
               )}
@@ -39,7 +39,7 @@ export function ProductGrid({ products, title, viewAllLink, viewAllText, columns
             {viewAllLink && (
               <Link
                 href={viewAllLink}
-                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-600 transition-colors hover:text-gold-700"
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-800 transition-colors hover:text-gold-900"
               >
                 <span>{viewAllText || ui("viewAllProducts")}</span>
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-1" />

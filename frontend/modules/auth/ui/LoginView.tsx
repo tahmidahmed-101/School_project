@@ -35,7 +35,7 @@ export function LoginView() {
         <Breadcrumbs className="mb-4" items={[{ label: ui("loginTitle") }]} />
 
         <div className="mb-6 border-b border-ink-200 pb-4">
-          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-600 sm:text-3xl">{ui("loginTitle")}</h1>
+          <h1 className="ts-display text-2xl font-bold tracking-tight text-gold-700 sm:text-3xl">{ui("loginTitle")}</h1>
           <p className="mt-1 text-sm text-ink-600">{ui("loginSubtitle")}</p>
         </div>
 

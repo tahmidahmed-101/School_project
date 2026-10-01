@@ -213,6 +213,7 @@ const DICT = {
     bn: "সাধারণ স্টক আসার আগেই পণ্যটি নিশ্চিত বুকিং করুন",
   },
   preOrderInfo2: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারির তারিখ" },
+  deliveryDateTbc: { en: "Date to be confirmed", bn: "তারিখ এখনো ঠিক হয়নি" },
   preOrderInfo3: { en: "We will contact you about your order", bn: "অর্ডার সম্পর্কে আমরা আপনার সাথে যোগাযোগ করব" },
   preOrderInfo4: {
     en: "Delivery dates may change depending on stock arrival",

@@ -23,7 +23,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
           <Link
             href={`/product/${product.slug}`}
             onClick={onNavigate}
-            className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-600"
+            className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-800"
           >
             {t(product.name)}
           </Link>
@@ -32,7 +32,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
           )}
         </div>
 
-        <div className="text-xs font-bold text-gold-600">{money(product.price)}</div>
+        <div className="text-xs font-bold text-gold-800">{money(product.price)}</div>
 
         {product.isPreOrder && (
           <div className="space-y-1 rounded-md border border-gold-200/80 bg-gold-50/70 p-2 text-[10px] text-gold-900">

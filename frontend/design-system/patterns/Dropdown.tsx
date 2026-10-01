@@ -105,7 +105,7 @@ export function Dropdown({
           }`}
         >
           {visibleOptions.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-ink-400">No matches found</p>
+            <p className="px-3 py-2 text-xs text-ink-600">No matches found</p>
           ) : (
             visibleOptions.map((option) => (
               <button
