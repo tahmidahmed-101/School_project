@@ -23,6 +23,7 @@ import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Button, buttonClass } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
+import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -97,42 +98,29 @@ export function TrackOrderView() {
         <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("trackOrderTitle")} />
 
         <form onSubmit={handleSubmit} className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5">
-          {errorMsg && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700"
-            >
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
 
-          <div>
-            <label htmlFor="track-order-number" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("orderNumberLabel")}
-            </label>
+          <FormField htmlFor="track-order-number" label={ui("orderNumberLabel")}>
             <input
               id="track-order-number"
               type="text"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
               placeholder={ui("trackOrderNumberPlaceholder")}
-              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="track-order-phone" className="mb-1.5 block text-xs font-bold text-ink-900">
-              {ui("checkoutPhone")}
-            </label>
+          <FormField htmlFor="track-order-phone" label={ui("checkoutPhone")}>
             <input
               id="track-order-phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="01XXX-XXXXXX"
-              className="w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
           <Button type="submit" size="lg" fullWidth loading={isLoading} leadingIcon={<Search className="h-4 w-4" />}>
             {ui("trackOrderSubmit")}
@@ -151,14 +139,14 @@ export function TrackOrderView() {
               </div>
               <div className="text-right">
                 <span className="block text-[11px] font-semibold text-ink-500">{ui("trackOrderCurrentStatus")}</span>
-                <span className={`text-sm font-bold ${isCancelled ? "text-red-600" : "text-ink-900"}`}>
+                <span className={`text-sm font-bold ${isCancelled ? "text-danger" : "text-ink-900"}`}>
                   {isCancelled ? ui("trackStageCancelled") : ui(STAGES[Math.max(currentStageIndex, 0)]!.labelKey)}
                 </span>
               </div>
             </div>
 
             {isCancelled ? (
-              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+              <div className="flex items-center gap-3 rounded-xl border border-danger-line bg-danger-surface p-4 text-sm font-bold text-danger">
                 <XCircle className="h-5 w-5 shrink-0" />
                 <span>{ui("trackStageCancelled")}</span>
               </div>

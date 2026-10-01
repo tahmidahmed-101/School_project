@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ChevronDown, Check, Search } from "lucide-react";
 import { usePresence } from "./usePresence";
 import { useClickOutside } from "@/lib/useClickOutside";
+import { inputClass } from "@/design-system/ui/FormField";
 
 interface DropdownOption {
   value: string;
@@ -18,15 +19,12 @@ interface DropdownProps {
   searchable?: boolean;
   placeholder?: string;
   triggerClassName?: string;
+  /** Lets a FormField label point at the trigger. */
+  id?: string;
+  invalid?: boolean;
   /** "stretch" spans the trigger's width; "right" hangs from its right edge with a min width. */
   menuAlign?: "stretch" | "right";
 }
-
-const defaultTriggerClass =
-  "flex w-full items-center justify-between rounded-xl border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-900 transition-colors hover:border-ink-300 focus:border-gold-500 focus:bg-white focus:outline-none";
-
-const searchInputClass =
-  "w-full rounded-xl border border-ink-200 bg-ink-50 py-3 pl-4 pr-9 text-sm text-ink-900 placeholder-ink-400 focus:border-gold-500 focus:bg-white focus:outline-none";
 
 const MENU_ALIGN = {
   stretch: "left-0 right-0 origin-top",
@@ -41,6 +39,8 @@ export function Dropdown({
   searchable = false,
   placeholder = "Select",
   triggerClassName,
+  id,
+  invalid = false,
   menuAlign = "stretch",
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,7 +78,9 @@ export function Dropdown({
             }}
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
-            className={triggerClassName ?? searchInputClass}
+            id={id}
+            aria-invalid={invalid || undefined}
+            className={triggerClassName ?? inputClass({ invalid, padding: "py-3 pl-4 pr-9" })}
           />
           <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
         </div>
@@ -87,7 +89,11 @@ export function Dropdown({
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
-          className={triggerClassName ?? defaultTriggerClass}
+          id={id}
+          className={
+            triggerClassName ??
+            inputClass({ invalid, className: "flex items-center justify-between text-left hover:border-ink-300" })
+          }
         >
           <span className="truncate">{selected?.label ?? placeholder}</span>
           <ChevronDown

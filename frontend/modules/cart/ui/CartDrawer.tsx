@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, ArrowRight, ArrowLeft, Info } from "lucide-react";
+import { ShoppingCart, ArrowRight, Info } from "lucide-react";
 import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
 import { CartItemRow } from "./CartItemRow";
-import { Drawer, DrawerBody, DrawerEmpty } from "@/design-system/ui/Drawer";
+import { Drawer, DrawerBody, DrawerEmpty, DrawerFooter } from "@/design-system/ui/Drawer";
 import { buttonClass } from "@/design-system/ui/Button";
 
 export function CartDrawer() {
@@ -20,7 +20,7 @@ export function CartDrawer() {
       onClose={closeDrawer}
       label={ui("cartTitle")}
       closeLabel="Close cart drawer"
-      icon={<ShoppingCart className="h-5 w-5 text-gold-500" />}
+      icon={<ShoppingCart className="h-5 w-5 text-gold-600" />}
       title={
         <>
           {ui("cartTitle")} ({n(totalItems)})
@@ -38,7 +38,6 @@ export function CartDrawer() {
         {items.length === 0 ? (
           <DrawerEmpty
             icon={<ShoppingCart className="h-8 w-8" />}
-            iconWrapClassName="bg-ink-100 text-ink-400"
             title={ui("cartEmptyTitle")}
             subtitle={ui("cartEmptySubtitle")}
             actionLabel={ui("cartStartShopping")}
@@ -52,30 +51,17 @@ export function CartDrawer() {
       </DrawerBody>
 
       {items.length > 0 && (
-        <div className="space-y-4 border-t border-ink-200 pt-4">
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-ink-700">
-              <span>{ui("cartSubtotal")}</span>
-              <span className="text-sm font-bold text-ink-900">{money(subtotal)}</span>
-            </div>
+        <DrawerFooter backLabel={ui("backToShopping")} onBack={closeDrawer}>
+          <div className="flex items-center justify-between text-xs text-ink-700">
+            <span>{ui("cartSubtotal")}</span>
+            <span className="text-sm font-bold text-ink-900">{money(subtotal)}</span>
           </div>
 
           <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
             <span>{ui("cartProceedToCheckout")}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
-
-          <div className="pt-1 text-center">
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-800"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>{ui("backToShopping")}</span>
-            </button>
-          </div>
-        </div>
+        </DrawerFooter>
       )}
     </Drawer>
   );

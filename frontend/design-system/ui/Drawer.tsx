@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { ArrowLeft, Trash2, X } from "lucide-react";
 import { useOverlay } from "@/lib/useOverlay";
 import { photo } from "@/lib/photo";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
@@ -78,33 +78,70 @@ export function DrawerBody({ children }: { children: ReactNode }) {
 
 interface DrawerEmptyProps {
   icon: ReactNode;
-  iconWrapClassName: string;
   title: string;
   subtitle: string;
-  subtitleClassName?: string;
   actionLabel: string;
   onAction: () => void;
 }
 
-export function DrawerEmpty({
-  icon,
-  iconWrapClassName,
-  title,
-  subtitle,
-  subtitleClassName = "",
-  actionLabel,
-  onAction,
-}: DrawerEmptyProps) {
+export function DrawerEmpty({ icon, title, subtitle, actionLabel, onAction }: DrawerEmptyProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center space-y-4 p-6 text-center">
-      <div className={`flex h-16 w-16 items-center justify-center rounded-full ${iconWrapClassName}`}>{icon}</div>
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-50 text-gold-600 ring-1 ring-gold-200">
+        {icon}
+      </div>
       <div className="space-y-1">
         <p className="text-sm font-bold text-fg">{title}</p>
-        <p className={`text-xs text-fg-muted ${subtitleClassName}`}>{subtitle}</p>
+        <p className="mx-auto max-w-xs text-xs text-fg-muted">{subtitle}</p>
       </div>
       <Button size="sm" onClick={onAction}>
         {actionLabel}
       </Button>
+    </div>
+  );
+}
+
+/** Line item card inside a drawer list (cart line, wishlist entry). */
+export function DrawerItem({ children }: { children: ReactNode }) {
+  return <div className="flex items-start gap-3 rounded-xl border border-ink-200/80 bg-ink-50 p-3">{children}</div>;
+}
+
+export function DrawerRemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative ml-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+      aria-label={label}
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  );
+}
+
+/** Pinned bottom block: primary action first, then a quiet "back to shopping" link. */
+export function DrawerFooter({
+  children,
+  backLabel,
+  onBack,
+}: {
+  children: ReactNode;
+  backLabel: string;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-4 border-t border-ink-200 pt-4">
+      {children}
+      <div className="pt-1 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-800"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>{backLabel}</span>
+        </button>
+      </div>
     </div>
   );
 }

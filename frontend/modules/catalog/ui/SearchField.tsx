@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { INPUT_SKIN } from "@/design-system/ui/FormField";
 
 interface SearchFieldProps {
   value: string;
@@ -19,7 +20,7 @@ export function SearchField({ value, onChange, placeholder, className = "" }: Se
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-ink-200 bg-ink-50 py-2.5 pl-10 pr-8 text-xs text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-gold-500 focus:bg-white"
+        className={`${INPUT_SKIN} py-2.5 pl-10 pr-9`}
       />
       {value && (
         <button

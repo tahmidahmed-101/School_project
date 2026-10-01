@@ -81,7 +81,8 @@ export function ProductActions({
               ? "shadow-xs border-red-500 bg-red-50 text-red-600"
               : "border-ink-200 bg-white text-ink-700 hover:border-ink-900 hover:text-ink-950"
           }`}
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={ui("navWishlist")}
+          aria-pressed={isWishlisted}
         >
           <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-red-500" : ""}`} />
         </button>

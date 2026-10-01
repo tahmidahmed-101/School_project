@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Trash2, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import type { CartItem } from "@/lib/types";
 import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
-import { DrawerItemImage } from "@/design-system/ui/Drawer";
+import { DrawerItem, DrawerItemImage, DrawerRemoveButton } from "@/design-system/ui/Drawer";
 
 export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: () => void }) {
   const { t, ui, money } = useLang();
@@ -15,7 +15,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
   const { product, quantity, selectedVariant } = item;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-ink-200/80 bg-ink-50 p-3">
+    <DrawerItem>
       <DrawerItemImage src={product.image} alt={t(product.name)} />
 
       <div className="min-w-0 flex-1 space-y-1">
@@ -49,16 +49,9 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
         <div className="flex items-center gap-2 pt-1">
           <QuantityStepper quantity={quantity} onChange={(next) => updateQuantity(product.id, next, selectedVariant)} />
 
-          <button
-            type="button"
-            onClick={() => removeItem(product.id, selectedVariant)}
-            className="ml-auto relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-red-50 hover:text-red-600"
-            aria-label={ui("cartRemove")}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(product.id, selectedVariant)} />
         </div>
       </div>
-    </div>
+    </DrawerItem>
   );
 }

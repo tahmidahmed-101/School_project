@@ -24,6 +24,7 @@ import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { buttonClass } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
+import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
@@ -103,7 +104,7 @@ export function CheckoutView() {
     }
   };
 
-  const breadcrumbs = [{ label: ui("navShop"), href: "/shop" }, { label: ui("checkoutTitle") }];
+  const breadcrumbs = [{ label: ui("checkoutTitle") }];
 
   if (orderResult) {
     return <OrderSuccess orderResult={orderResult} />;
@@ -133,11 +134,7 @@ export function CheckoutView() {
 
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-7">
-            {errorMsg && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                {errorMsg}
-              </div>
-            )}
+            {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
             <CheckoutFields
               form={form}
               errors={fieldErrors}

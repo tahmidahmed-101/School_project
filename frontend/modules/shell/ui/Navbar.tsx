@@ -16,6 +16,7 @@ import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
 import { WithActiveCategory } from "@/modules/catalog";
 import { containerClass } from "@/design-system/ui/Container";
+import { CountBadge } from "@/design-system/ui/CountBadge";
 
 const SHOP_PATH = "/shop";
 
@@ -153,14 +154,10 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               onClick={openWishlist}
               aria-label={ui("navWishlist")}
-              className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-rose-300 lg:flex"
+              className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:flex"
             >
-              <Heart className={`h-5 w-5 ${totalWishlistItems > 0 ? "fill-rose-400 text-rose-400" : ""}`} />
-              {totalWishlistItems > 0 && (
-                <span className="shadow-xs absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                  {n(totalWishlistItems)}
-                </span>
-              )}
+              <Heart className={`h-5 w-5 ${totalWishlistItems > 0 ? "fill-gold-300 text-gold-300" : ""}`} />
+              {totalWishlistItems > 0 && <CountBadge>{n(totalWishlistItems)}</CountBadge>}
             </button>
 
             <button
@@ -170,11 +167,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
             >
               <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
-              {totalItems > 0 && (
-                <span className="shadow-xs absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-ink-950">
-                  {n(totalItems)}
-                </span>
-              )}
+              {totalItems > 0 && <CountBadge>{n(totalItems)}</CountBadge>}
             </button>
           </div>
         </div>

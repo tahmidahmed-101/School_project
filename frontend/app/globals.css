@@ -65,6 +65,9 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
   --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-line: var(--danger-line);
   --color-facebook: var(--facebook);
   --color-whatsapp: var(--whatsapp);
 }

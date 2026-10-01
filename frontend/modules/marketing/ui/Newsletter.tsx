@@ -8,6 +8,7 @@ import { errorKey } from "@/lib/api/errors";
 import { subscribeToNewsletter } from "../data/mutations";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Button } from "@/design-system/ui/Button";
+import { FieldError, INPUT_CLASS } from "@/design-system/ui/FormField";
 import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
@@ -53,16 +54,18 @@ export function Newsletter() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-wrap gap-2">
-              <input
-                type="email"
-                autoComplete="email"
-                aria-label={ui("newsletterPlaceholder")}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={ui("newsletterPlaceholder")}
-                required
-                className="shadow-xs flex-1 rounded-xl border border-ink-300 bg-white px-4 py-3 text-xs text-ink-900 placeholder-ink-400 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
-              />
+              <div className="min-w-0 flex-1 basis-56">
+                <input
+                  type="email"
+                  autoComplete="email"
+                  aria-label={ui("newsletterPlaceholder")}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={ui("newsletterPlaceholder")}
+                  required
+                  className={INPUT_CLASS}
+                />
+              </div>
               <Button
                 type="submit"
                 loading={isSubmitting}
@@ -72,9 +75,9 @@ export function Newsletter() {
                 {ui("newsletterButton")}
               </Button>
               {errorMsg && (
-                <p role="alert" className="w-full text-left text-[11px] font-semibold text-red-600">
-                  {errorMsg}
-                </p>
+                <div className="w-full">
+                  <FieldError>{errorMsg}</FieldError>
+                </div>
               )}
             </form>
           )}

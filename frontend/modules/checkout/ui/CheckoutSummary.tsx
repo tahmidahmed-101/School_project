@@ -10,6 +10,7 @@ import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { Button } from "@/design-system/ui/Button";
+import { FieldError, INPUT_CLASS } from "@/design-system/ui/FormField";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { errorKey } from "@/lib/api/errors";
 import { ApiError } from "@/lib/api/client";
@@ -94,7 +95,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 <button
                   type="button"
                   onClick={() => removeItem(product.id, selectedVariant)}
-                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-red-50 hover:text-red-600"
+                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
                   aria-label={ui("cartRemove")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -115,7 +116,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       </div>
 
       <div className="space-y-1.5 border-t border-ink-200 pt-3">
-        <label htmlFor="co-coupon" className="text-xs font-semibold text-ink-700">
+        <label htmlFor="co-coupon" className="block text-xs font-semibold text-fg">
           {ui("checkoutCouponLabel")}
         </label>
         {coupon.applied ? (
@@ -129,33 +130,36 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 coupon.remove();
                 setCouponInput("");
               }}
-              className="cursor-pointer font-semibold text-ink-500 hover:text-red-600"
+              className="cursor-pointer font-semibold text-ink-500 hover:text-danger"
             >
               {ui("checkoutCouponRemove")}
             </button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <input
-              id="co-coupon"
-              type="text"
-              maxLength={32}
-              value={couponInput}
-              placeholder={ui("checkoutCouponPlaceholder")}
-              onChange={(e) => setCouponInput(e.target.value)}
-              onKeyDown={(e) => {
-                // Enter here must not submit the whole order form.
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  coupon.apply(couponInput);
-                }
-              }}
-              className="min-w-0 flex-1 rounded-xl border border-ink-200 px-3 py-2 text-xs uppercase outline-none focus:border-gold-500"
-            />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <input
+                id="co-coupon"
+                type="text"
+                maxLength={32}
+                value={couponInput}
+                placeholder={ui("checkoutCouponPlaceholder")}
+                onChange={(e) => setCouponInput(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter here must not submit the whole order form.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    coupon.apply(couponInput);
+                  }
+                }}
+                aria-invalid={Boolean(couponError) || undefined}
+                aria-describedby={couponError ? "co-coupon-error" : undefined}
+                className={INPUT_CLASS}
+              />
+            </div>
             <Button
               variant="secondary"
-              size="sm"
-              disabled={!couponInput.trim()}
+              className="shrink-0"
               loading={coupon.checking}
               onClick={() => coupon.apply(couponInput)}
             >
@@ -163,7 +167,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
             </Button>
           </div>
         )}
-        {couponError && <p className="text-[11px] font-medium text-red-600">{couponError}</p>}
+        {couponError && <FieldError id="co-coupon-error">{couponError}</FieldError>}
       </div>
 
       <div className="space-y-2 border-t border-ink-200 pt-3 text-xs">

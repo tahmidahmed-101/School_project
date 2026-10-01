@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Trash2, Heart, ShoppingCart, ArrowRight } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
 import { useWishlist } from "../context";
 import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
-import { Drawer, DrawerBody, DrawerEmpty, DrawerItemImage } from "@/design-system/ui/Drawer";
-import { Button, buttonClass } from "@/design-system/ui/Button";
+import {
+  Drawer,
+  DrawerBody,
+  DrawerEmpty,
+  DrawerFooter,
+  DrawerItem,
+  DrawerItemImage,
+  DrawerRemoveButton,
+} from "@/design-system/ui/Drawer";
+import { Button } from "@/design-system/ui/Button";
 
 export function WishlistDrawer() {
   const { items, isWishlistOpen, closeWishlist, removeItem, clearWishlist, totalWishlistItems } = useWishlist();
@@ -19,7 +27,7 @@ export function WishlistDrawer() {
       onClose={closeWishlist}
       label={ui("wishlistTitle")}
       closeLabel="Close wishlist drawer"
-      icon={<Heart className="h-5 w-5 fill-red-500 text-red-500" />}
+      icon={<Heart className="h-5 w-5 text-gold-600" />}
       title={
         <>
           {ui("wishlistTitle")} ({n(totalWishlistItems)})
@@ -30,7 +38,7 @@ export function WishlistDrawer() {
           <button
             type="button"
             onClick={clearWishlist}
-            className="cursor-pointer px-2 py-1 text-xs font-medium text-ink-500 transition-colors hover:text-red-600"
+            className="cursor-pointer px-2 py-1 text-xs font-medium text-ink-500 transition-colors hover:text-danger"
           >
             {ui("wishlistClear")}
           </button>
@@ -41,16 +49,14 @@ export function WishlistDrawer() {
         {items.length === 0 ? (
           <DrawerEmpty
             icon={<Heart className="h-8 w-8" />}
-            iconWrapClassName="bg-red-50 text-red-400"
             title={ui("wishlistEmptyTitle")}
             subtitle={ui("wishlistEmptySubtitle")}
-            subtitleClassName="max-w-xs"
             actionLabel={ui("cartStartShopping")}
             onAction={closeWishlist}
           />
         ) : (
           items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 rounded-xl border border-ink-200/80 bg-ink-50 p-3">
+            <DrawerItem key={item.id}>
               <DrawerItemImage src={item.image} alt={t(item.name)} />
 
               <div className="min-w-0 flex-1 space-y-1">
@@ -65,32 +71,24 @@ export function WishlistDrawer() {
                 <div className="text-xs font-bold text-gold-800">{money(item.price)}</div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
+                  <Button
+                    size="xs"
                     onClick={() => addItem(item)}
-                    className="shadow-xs inline-flex cursor-pointer items-center gap-1 rounded-full bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950 transition-all hover:bg-gold-400"
+                    leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
                   >
-                    <ShoppingCart className="h-3 w-3" />
-                    <span>{ui("wishlistMoveToCart")}</span>
-                  </button>
+                    {ui("wishlistMoveToCart")}
+                  </Button>
 
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    className="ml-auto relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-red-50 hover:text-red-600"
-                    aria-label="Remove from wishlist"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(item.id)} />
                 </div>
               </div>
-            </div>
+            </DrawerItem>
           ))
         )}
       </DrawerBody>
 
       {items.length > 0 && (
-        <div className="space-y-3 border-t border-ink-200 pt-4">
+        <DrawerFooter backLabel={ui("backToShopping")} onBack={closeWishlist}>
           <Button
             size="lg"
             fullWidth
@@ -99,11 +97,7 @@ export function WishlistDrawer() {
           >
             Move all to cart
           </Button>
-          <Link href="/shop" onClick={closeWishlist} className={buttonClass({ variant: "outline", fullWidth: true })}>
-            <span>Continue browsing</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
+        </DrawerFooter>
       )}
     </Drawer>
   );

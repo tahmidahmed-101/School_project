@@ -12,6 +12,8 @@ import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
 import { getDiscountPercent, isPreOrderSoldOut } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
+import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
+import { Button } from "@/design-system/ui/Button";
 
 interface ProductCardProps {
   product: Product;
@@ -56,11 +58,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {product.isPreOrder ? (
             <PreOrderBadge status={product.preorderStatus} size="sm" />
           ) : (
-            discountPercent && (
-              <span className="shadow-xs rounded-md bg-red-600 px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-white sm:text-[9px]">
-                {n(discountPercent)}% {ui("off")}
-              </span>
-            )
+            discountPercent && <DiscountBadge percent={discountPercent} />
           )}
         </div>
 
@@ -73,7 +71,8 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             toggleItem(product);
           }}
           className="absolute right-1 top-1 z-10 flex h-7 w-7 cursor-pointer before:absolute before:-inset-1.5 before:content-[''] items-center justify-center rounded-full border border-ink-200/80 bg-white/90 text-ink-700 shadow-2xs backdrop-blur-sm transition-all hover:scale-110 hover:bg-white hover:text-red-500 sm:h-8 sm:w-8"
-          aria-label="Toggle wishlist"
+          aria-label={`${ui("navWishlist")} - ${t(product.name)}`}
+          aria-pressed={isWishlisted}
         >
           <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
         </button>
@@ -121,33 +120,24 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           </div>
 
           {isOutOfStock ? (
-            <button
-              type="button"
-              disabled
-              className="flex w-full cursor-not-allowed items-center justify-center gap-1 whitespace-nowrap rounded-full bg-ink-200 px-2.5 py-2 text-[10px] font-bold text-ink-500 sm:text-xs"
-            >
-              <span>{ui("outOfStock")}</span>
-            </button>
+            <Button variant="muted" size="xs" fullWidth disabled>
+              {ui("outOfStock")}
+            </Button>
           ) : product.isPreOrder ? (
             isSoldOut ? (
-              <button
-                type="button"
-                disabled
-                className="flex w-full cursor-not-allowed items-center justify-center gap-1 whitespace-nowrap rounded-full bg-ink-200 px-2.5 py-2 text-[10px] font-bold text-ink-500 sm:text-xs"
-                title={ui("preOrderCapacityReached")}
-              >
-                <span>{ui("preOrderUnavailable")}</span>
-              </button>
+              <Button variant="muted" size="xs" fullWidth disabled title={ui("preOrderCapacityReached")}>
+                {ui("preOrderUnavailable")}
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                size="xs"
+                fullWidth
                 onClick={() => openPreOrderModal(product)}
-                className="shadow-xs flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full bg-gold-500 px-3 py-2 text-[10px] font-bold text-ink-950 transition-all hover:scale-[1.02] hover:bg-gold-400 active:scale-95 sm:text-xs"
                 aria-label={`${ui("preOrderNow")} - ${t(product.name)}`}
+                leadingIcon={<Sparkles className="h-3.5 w-3.5 shrink-0" />}
               >
-                <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                <span>{ui("preOrderNow")}</span>
-              </button>
+                {ui("preOrderNow")}
+              </Button>
             )
           ) : (
             <div className="flex w-full items-center gap-1.5">
@@ -160,15 +150,15 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               >
                 <ShoppingCart className="h-4 w-4" />
               </button>
-              <button
-                type="button"
+              <Button
+                size="xs"
+                className="flex-1"
                 onClick={orderNow}
-                className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full bg-gold-500 px-3 py-2 text-[10px] font-bold text-ink-950 transition-all hover:scale-[1.02] hover:bg-gold-400 active:scale-95 sm:text-xs"
                 aria-label={`${ui("orderNow")} - ${t(product.name)}`}
+                leadingIcon={<Zap className="h-3.5 w-3.5 shrink-0 fill-current" />}
               >
-                <Zap className="h-3.5 w-3.5 shrink-0 fill-current" />
-                <span>{ui("orderNow")}</span>
-              </button>
+                {ui("orderNow")}
+              </Button>
             </div>
           )}
         </div>

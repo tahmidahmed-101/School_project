@@ -7,9 +7,7 @@ import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Button } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
-
-const INPUT_CLASS =
-  "w-full rounded-xl border border-ink-300 bg-white px-4 py-2.5 text-sm text-ink-900 outline-none transition-colors focus:border-gold-500";
+import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 
 export function RegisterView() {
   const { ui } = useLang();
@@ -71,11 +69,7 @@ export function RegisterView() {
           noValidate
           className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5"
         >
-          {errorMsg && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
           {infoMsg && (
             <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-ink-900">
               {infoMsg}
@@ -83,10 +77,7 @@ export function RegisterView() {
           )}
 
           {fields.map((f) => (
-            <div key={f.id}>
-              <label htmlFor={f.id} className="mb-1.5 block text-xs font-bold text-ink-900">
-                {ui(f.label)}
-              </label>
+            <FormField key={f.id} htmlFor={f.id} label={ui(f.label)}>
               <input
                 id={f.id}
                 type={f.type}
@@ -95,7 +86,7 @@ export function RegisterView() {
                 onChange={(e) => f.set(e.target.value)}
                 className={INPUT_CLASS}
               />
-            </div>
+            </FormField>
           ))}
 
           <Button type="submit" size="lg" fullWidth>

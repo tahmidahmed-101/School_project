@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Loader } from "@/design-system/patterns/Loader";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "muted" | "danger";
+export type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 interface ButtonClassOptions {
   variant?: ButtonVariant;
@@ -19,10 +19,12 @@ const VARIANTS: Record<ButtonVariant, string> = {
   secondary: "bg-action text-action-fg shadow-sm hover:bg-action-hover",
   outline: "border border-ink-200 bg-white text-ink-900 hover:border-gold-500",
   ghost: "text-ink-700 hover:text-ink-950",
-  danger: "bg-red-600 text-white shadow-sm hover:bg-red-700",
+  muted: "bg-surface-strong text-fg-muted",
+  danger: "bg-danger text-white shadow-sm hover:bg-red-700",
 };
 
 const SIZES: Record<ButtonSize, string> = {
+  xs: "h-8 px-3 text-[10px] sm:text-xs",
   sm: "h-9 px-4 text-xs",
   md: "h-11 px-5 text-sm",
   lg: "h-12 px-6 text-sm",

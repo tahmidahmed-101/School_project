@@ -27,6 +27,9 @@
   --accent-hover: var(--color-gold-400);
   --accent-fg: var(--color-ink-950);
   --success: var(--color-brand-500);
+  --danger: var(--color-red-600);
+  --danger-surface: var(--color-red-50);
+  --danger-line: var(--color-red-200);
 
   /* Third-party brand colours (contact buttons); not part of the Kull Mart palette. */
   --facebook: #1877f2;

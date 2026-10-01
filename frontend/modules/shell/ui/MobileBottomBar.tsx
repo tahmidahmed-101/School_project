@@ -4,6 +4,7 @@ import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SLIDE_EASE } from "@/design-system/patterns/usePresence";
+import { CountBadge } from "@/design-system/ui/CountBadge";
 import { Home, Store, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useWishlist } from "@/modules/wishlist";
@@ -120,16 +121,12 @@ function MobileBottomBarInner() {
                       tab.id === "wishlist" && isActive
                         ? "fill-gold-300"
                         : tab.id === "wishlist" && tab.badge > 0
-                          ? "fill-rose-300/30 text-rose-300"
+                          ? "fill-gold-300/30 text-gold-300"
                           : ""
                     }`}
                   />
 
-                  {tab.badge > 0 && (
-                    <span className="shadow-xs absolute -right-2 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9.5px] font-bold text-white">
-                      {n(tab.badge)}
-                    </span>
-                  )}
+                  {tab.badge > 0 && <CountBadge className="-right-2 -top-1.5">{n(tab.badge)}</CountBadge>}
                 </span>
                 <span
                   className={`max-w-full truncate px-0.5 text-[10px] font-semibold leading-none transition-colors ${

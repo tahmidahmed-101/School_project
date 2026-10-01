@@ -5,6 +5,7 @@ import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { getDiscountPercent } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
+import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
   product: Product;
@@ -13,7 +14,7 @@ interface ProductSummaryProps {
 
 /** Category, title, price, rating and availability line at the top of the details column. */
 export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
-  const { t, ui, money, n } = useLang();
+  const { t, money, n } = useLang();
   const discountPercent = getDiscountPercent(product);
 
   return (
@@ -30,11 +31,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
         {discountPercent && product.compareAtPrice && (
           <span className="text-base text-ink-500 line-through">{money(product.compareAtPrice)}</span>
         )}
-        {discountPercent && (
-          <span className="rounded-md bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-600">
-            {n(discountPercent)}% {ui("off")}
-          </span>
-        )}
+        {discountPercent && <DiscountBadge percent={discountPercent} size="md" tone="soft" />}
         <span className="h-5 w-px bg-ink-200" aria-hidden="true" />
         <div className="text-xs">
           <Availability product={product} isSoldOut={isSoldOut} />
@@ -65,8 +62,8 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
 
   if (!product.isPreOrder && !product.inStock) {
     return (
-      <div className="flex items-center gap-1.5 font-semibold text-red-600">
-        <span className="h-2 w-2 rounded-full bg-red-500" />
+      <div className="flex items-center gap-1.5 font-semibold text-danger">
+        <span className="h-2 w-2 rounded-full bg-danger" />
         <span>{ui("outOfStock")}</span>
       </div>
     );
@@ -84,8 +81,8 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
   return (
     <div className="flex items-center gap-1.5 font-semibold">
       {isSoldOut ? (
-        <span className="flex items-center gap-1.5 text-red-600">
-          <span className="h-2 w-2 rounded-full bg-red-500" />
+        <span className="flex items-center gap-1.5 text-danger">
+          <span className="h-2 w-2 rounded-full bg-danger" />
           {ui("preOrderSoldOut")}
         </span>
       ) : (

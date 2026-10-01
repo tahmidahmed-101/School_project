@@ -114,11 +114,16 @@ export function ShopProductGrid({
               {sortDropdown("w-44")}
             </div>
 
-            <div className="shadow-xs flex items-center rounded-xl border border-ink-200 bg-ink-50 p-0.5">
+            <div
+              role="group"
+              aria-label="View"
+              className="shadow-xs flex items-center rounded-xl border border-ink-200 bg-ink-50 p-0.5"
+            >
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
                 className={viewButtonClass(viewMode === "grid")}
+                aria-pressed={viewMode === "grid"}
                 aria-label="Grid view"
                 title="Grid view"
               >
@@ -128,6 +133,7 @@ export function ShopProductGrid({
                 type="button"
                 onClick={() => setViewMode("list")}
                 className={viewButtonClass(viewMode === "list")}
+                aria-pressed={viewMode === "list"}
                 aria-label="List view"
                 title="List view"
               >

@@ -8,6 +8,8 @@ import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { getDiscountPercent } from "@/lib/product";
+import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
+import { Button } from "@/design-system/ui/Button";
 
 /** Horizontal product row used by the shop's list view. */
 export function ProductListItem({ product }: { product: Product }) {
@@ -29,11 +31,7 @@ export function ProductListItem({ product }: { product: Product }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="112px"
         />
-        {discountPercent && (
-          <span className="shadow-xs absolute left-2 top-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
-            {discountPercent}% {ui("off")}
-          </span>
-        )}
+        {discountPercent && <DiscountBadge percent={discountPercent} className="absolute left-2 top-2" />}
       </Link>
 
       <div className="w-full min-w-0 flex-1 space-y-1 text-left">
@@ -59,14 +57,14 @@ export function ProductListItem({ product }: { product: Product }) {
             <span className="block text-xs text-ink-600 line-through">{money(product.compareAtPrice)}</span>
           )}
         </div>
-        <button
-          type="button"
+        <Button
+          size="xs"
           onClick={() => addItem(product)}
-          className="shadow-xs flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-500 px-3.5 py-1.5 text-[11px] font-bold text-ink-950 transition-colors hover:bg-gold-400 sm:px-5 sm:py-2 sm:text-xs"
+          aria-label={`${ui("addToCart")} - ${t(product.name)}`}
+          leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
         >
-          <ShoppingCart className="h-3.5 w-3.5" />
-          <span>{ui("addToCart")}</span>
-        </button>
+          {ui("addToCart")}
+        </Button>
       </div>
     </div>
   );

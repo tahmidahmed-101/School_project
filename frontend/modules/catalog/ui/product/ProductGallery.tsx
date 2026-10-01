@@ -7,9 +7,10 @@ import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { getDiscountPercent } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
+import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 export function ProductGallery({ product }: { product: Product }) {
-  const { t, ui, n } = useLang();
+  const { t } = useLang();
   const [activeImage, setActiveImage] = useState(product.image);
   const discountPercent = getDiscountPercent(product);
 
@@ -57,11 +58,7 @@ export function ProductGallery({ product }: { product: Product }) {
                 {t(product.badge)}
               </span>
             ) : null}
-            {discountPercent && (
-              <span className="shadow-2xs rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white sm:text-xs">
-                {n(discountPercent)}% {ui("off")}
-              </span>
-            )}
+            {discountPercent && <DiscountBadge percent={discountPercent} size="md" />}
           </div>
         )}
       </div>
