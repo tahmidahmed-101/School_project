@@ -11,6 +11,8 @@ interface ProductCardGridProps {
   className: string;
   /** Delay added between each card's reveal within its row, in seconds. */
   stagger?: number;
+  /** Leading cards rendered visible with eager images, for grids that start above the fold. */
+  eagerCount?: number;
 }
 
 /** Tracks how many columns the grid is actually rendering right now, so each card's reveal
@@ -40,17 +42,23 @@ function useColumnCount(ref: React.RefObject<HTMLDivElement | null>) {
  * Grid of product cards where each row reveals itself, left to right, the moment that row
  * scrolls into view — rather than the whole grid animating in at once.
  */
-export function ProductCardGrid({ products, className, stagger = 0.08 }: ProductCardGridProps) {
+export function ProductCardGrid({ products, className, stagger = 0.08, eagerCount = 0 }: ProductCardGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const columns = useColumnCount(gridRef);
 
   return (
     <div ref={gridRef} className={className}>
-      {products.map((product, idx) => (
-        <CardReveal key={product.id} delay={(idx % columns) * stagger} className="h-full">
-          <ProductCard product={product} />
-        </CardReveal>
-      ))}
+      {products.map((product, idx) =>
+        idx < eagerCount ? (
+          <div key={product.id} className="h-full">
+            <ProductCard product={product} priority />
+          </div>
+        ) : (
+          <CardReveal key={product.id} delay={(idx % columns) * stagger} className="h-full">
+            <ProductCard product={product} />
+          </CardReveal>
+        ),
+      )}
     </div>
   );
 }

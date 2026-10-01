@@ -61,7 +61,7 @@ export function ShopProductGrid({
   return (
     <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
       {/* Mobile control card */}
-      <ScrollReveal y={16} duration={0.6} className="w-full lg:hidden">
+      <div className="w-full lg:hidden">
         <div className="shadow-xs w-full space-y-2.5 rounded-2xl border border-ink-200/80 bg-white p-3.5">
           <SearchField
             className="w-full"
@@ -85,10 +85,10 @@ export function ShopProductGrid({
             {sortDropdown("flex-[1.3]")}
           </div>
         </div>
-      </ScrollReveal>
+      </div>
 
       {/* Desktop control bar */}
-      <ScrollReveal y={16} duration={0.6} className="hidden w-full lg:block">
+      <div className="hidden w-full lg:block">
         <div className="shadow-xs flex w-full items-center justify-between gap-4 rounded-2xl border border-ink-200/80 bg-white p-4">
           <SearchField
             className="max-w-lg flex-1"
@@ -125,14 +125,14 @@ export function ShopProductGrid({
             </div>
           </div>
         </div>
-      </ScrollReveal>
+      </div>
 
-      <ScrollReveal y={12} duration={0.5} className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1">
         <span className="text-xs font-medium text-ink-500">
           {ui("filterShowing")} <strong className="text-sm font-bold text-ink-900">{n(products.length)}</strong>{" "}
           {ui("itemsFound")}
         </span>
-      </ScrollReveal>
+      </div>
 
       {products.length === 0 ? (
         <EmptyState
@@ -145,6 +145,7 @@ export function ShopProductGrid({
           products={products}
           className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
           stagger={0.05}
+          eagerCount={4}
         />
       ) : (
         <div className="space-y-3">

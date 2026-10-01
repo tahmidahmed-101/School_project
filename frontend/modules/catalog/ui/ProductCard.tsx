@@ -15,9 +15,10 @@ import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 
 interface ProductCardProps {
   product: Product;
+  priority?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const { t, ui, money, n } = useLang();
   const router = useRouter();
   const { addItem } = useCart();
@@ -44,6 +45,7 @@ export function ProductCard({ product }: ProductCardProps) {
             src={photo(product.image)}
             alt={t(product.name)}
             fill
+            priority={priority}
             sizes="(max-width: 640px) 30vw, (max-width: 1024px) 20vw, 180px"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />

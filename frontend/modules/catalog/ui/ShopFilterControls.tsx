@@ -130,6 +130,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
         <div className="relative flex items-center py-1">
           <input
             type="range"
+            aria-label={ui("filterPriceRange")}
             min={minPrice}
             max={maxPrice}
             step={PRICE_STEP}

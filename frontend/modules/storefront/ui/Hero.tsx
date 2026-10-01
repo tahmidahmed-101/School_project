@@ -73,7 +73,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
               />
 
               <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 14 }}
@@ -116,7 +116,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <div className="flex gap-1.5">
+                <div className="flex gap-4">
                   {HERO_SLIDES.map((s, i) => (
                     <button
                       key={s.image}
@@ -124,7 +124,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                       onClick={() => go(i)}
                       aria-label={`Go to slide ${i + 1}`}
                       aria-current={i === index}
-                      className={`h-2 cursor-pointer rounded-full transition-all ${
+                      className={`relative h-2 cursor-pointer rounded-full transition-all before:absolute before:-inset-2 before:content-[''] ${
                         i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
                       }`}
                     />

@@ -13,7 +13,6 @@ import {
 } from "../domain/shop-filters";
 import { ShopFilterSidebar } from "./ShopFilterSidebar";
 import { ShopProductGrid } from "./ShopProductGrid";
-import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 
 export function ShopCatalog() {
@@ -70,7 +69,7 @@ export function ShopCatalog() {
   return (
     <div className="min-h-screen w-full bg-ink-50/60">
       <div className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 sm:pt-10 lg:px-8">
-        <ScrollReveal className="mb-8 border-b border-ink-200 pb-6 sm:mb-10">
+        <div className="mb-8 border-b border-ink-200 pb-6 sm:mb-10">
           <Breadcrumbs
             className="mb-4"
             items={
@@ -82,7 +81,7 @@ export function ShopCatalog() {
           <h1 className="ts-display text-3xl font-bold leading-tight tracking-tight text-gold-600 sm:text-4xl lg:text-5xl">
             {activeCategoryTitle}
           </h1>
-        </ScrollReveal>
+        </div>
 
         <div className="flex flex-col items-start gap-8 lg:flex-row">
           <ShopFilterSidebar
