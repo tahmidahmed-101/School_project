@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { X, Calendar, Sparkles, AlertCircle } from "lucide-react";
 import { usePreOrderModal } from "../context";
 import { useLang } from "@/lib/i18n";
@@ -19,7 +19,7 @@ export function PreOrderConfirmationModal() {
   return (
     <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal">
       {/* Modal Dialog Card */}
-      <motion.div
+      <m.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="preorder-modal-title"
@@ -115,7 +115,7 @@ export function PreOrderConfirmationModal() {
             {ui("confirmPreOrderBtn")}
           </button>
         </div>
-      </motion.div>
+      </m.div>
     </Modal>
   );
 }

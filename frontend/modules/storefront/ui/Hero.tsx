@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { HERO_CTA_TEXT, HERO_SLIDES } from "../domain/hero-content";
 import { useLang } from "@/lib/i18n";
@@ -80,7 +80,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
 
               <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
                 <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
+                  <m.div
                     key={index}
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -101,7 +101,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                         </span>
                       ))}
                     </h1>
-                  </motion.div>
+                  </m.div>
                 </AnimatePresence>
 
                 <Link

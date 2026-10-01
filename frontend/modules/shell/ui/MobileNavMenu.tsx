@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, Home, Store, Globe, Truck } from "lucide-react";
 import { useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
@@ -30,7 +30,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
-          <motion.button
+          <m.button
             type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -42,7 +42,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
           />
 
           <div className="pointer-events-none fixed inset-y-0 left-0 flex h-full w-full max-w-full justify-start">
-            <motion.div
+            <m.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -136,7 +136,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                   <span>{lang === "en" ? "বাংলা" : "English"}</span>
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         </div>
       )}

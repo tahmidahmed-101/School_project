@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, Filter } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
@@ -62,7 +62,7 @@ export function ShopFilterSidebar({
       <AnimatePresence>
         {isMobileOpen && (
           <div className="pointer-events-none fixed inset-0 z-50 flex justify-end lg:hidden">
-            <motion.button
+            <m.button
               type="button"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -73,7 +73,7 @@ export function ShopFilterSidebar({
               aria-label="Close filters"
             />
 
-            <motion.div
+            <m.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -115,7 +115,7 @@ export function ShopFilterSidebar({
                   {ui("showProducts")} ({n(productCount)})
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

@@ -20,7 +20,7 @@ test.describe("shopping journey", () => {
       .first()
       .click();
     await page.goto("/checkout");
-    await expect(page.getByText("Complete your order")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Complete your order" })).toBeVisible();
     await expect(page.getByRole("button", { name: /confirm order/i })).toBeVisible();
   });
 

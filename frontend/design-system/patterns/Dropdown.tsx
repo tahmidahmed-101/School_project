@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ChevronDown, Check, Search } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useClickOutside } from "@/lib/useClickOutside";
 
 interface DropdownOption {
@@ -99,7 +99,7 @@ export function Dropdown({
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
@@ -127,7 +127,7 @@ export function Dropdown({
                 </button>
               ))
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

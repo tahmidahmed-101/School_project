@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useOverlay } from "@/lib/useOverlay";
 
 interface ModalProps {
@@ -37,7 +37,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <div className={`fixed inset-0 z-50 ${containerClassName}`}>
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

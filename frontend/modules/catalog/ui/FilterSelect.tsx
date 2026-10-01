@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown } from "lucide-react";
 
 interface FilterSelectProps {
@@ -44,7 +44,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
 
       <AnimatePresence initial={false}>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -71,7 +71,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
                 );
               })}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

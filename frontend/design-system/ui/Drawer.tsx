@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useOverlay } from "@/lib/useOverlay";
 import { photo } from "@/lib/photo";
@@ -29,7 +29,7 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          <motion.button
+          <m.button
             type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -41,7 +41,7 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
           />
 
           <div className="pointer-events-none fixed inset-y-0 right-0 flex w-full max-w-full justify-end">
-            <motion.div
+            <m.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -69,7 +69,7 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
               </div>
 
               {children}
-            </motion.div>
+            </m.div>
           </div>
         </div>
       )}

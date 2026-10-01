@@ -3,7 +3,7 @@
 import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Home, Store, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useWishlist } from "@/modules/wishlist";
@@ -75,7 +75,7 @@ function MobileBottomBarInner() {
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
           {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
-          <motion.div
+          <m.div
             aria-hidden="true"
             className="pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden"
             animate={{ x: `${Math.max(activeIndex, 0) * 100}%`, opacity: activeIndex === -1 ? 0 : 1 }}
@@ -102,7 +102,7 @@ function MobileBottomBarInner() {
                 }}
               />
             </div>
-          </motion.div>
+          </m.div>
 
           {/* 4 Interactive Tab Buttons */}
           {tabs.map((tab, idx) => {
@@ -110,7 +110,7 @@ function MobileBottomBarInner() {
             const isActive = activeIndex === idx;
 
             const content = (
-              <motion.div
+              <m.div
                 className="relative flex items-center justify-center"
                 animate={{
                   scale: isActive ? 1.08 : 1,
@@ -142,7 +142,7 @@ function MobileBottomBarInner() {
                     {n(tab.badge)}
                   </span>
                 )}
-              </motion.div>
+              </m.div>
             );
 
             if (tab.href) {

@@ -10,6 +10,7 @@ import { MobileNavMenu } from "./MobileNavMenu";
 import { FloatingContact } from "./FloatingContact";
 import { PreOrderModalProvider } from "@/modules/preorder";
 import { PreOrderConfirmationModal } from "@/modules/preorder";
+import { MotionProvider } from "@/design-system/patterns/MotionProvider";
 
 interface ClientShellProps {
   children: React.ReactNode;
@@ -19,18 +20,20 @@ export function ClientShell({ children }: ClientShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <PreOrderModalProvider>
-      <div className="ts-root flex min-h-screen flex-col">
-        <Navbar onOpenMenu={() => setIsMenuOpen(true)} />
-        <main className="flex-1 pb-28 lg:pb-0">{children}</main>
-        <Footer />
-        <CartDrawer />
-        <WishlistDrawer />
-        <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-        <MobileBottomBar />
-        <FloatingContact />
-        <PreOrderConfirmationModal />
-      </div>
-    </PreOrderModalProvider>
+    <MotionProvider>
+      <PreOrderModalProvider>
+        <div className="ts-root flex min-h-screen flex-col">
+          <Navbar onOpenMenu={() => setIsMenuOpen(true)} />
+          <main className="flex-1 pb-28 lg:pb-0">{children}</main>
+          <Footer />
+          <CartDrawer />
+          <WishlistDrawer />
+          <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+          <MobileBottomBar />
+          <FloatingContact />
+          <PreOrderConfirmationModal />
+        </div>
+      </PreOrderModalProvider>
+    </MotionProvider>
   );
 }
