@@ -11,6 +11,9 @@ import { Newsletter } from "@/modules/marketing";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 
+// Each shelf links to its full category; rendering every product made home cost grow with the catalogue.
+const CATEGORY_SHELF_SIZE = 8;
+
 export function HomeSections() {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
@@ -26,7 +29,7 @@ export function HomeSections() {
     return categories
       .map((category) => ({
         category,
-        products: stockProducts.filter((p) => p.category === category.id),
+        products: stockProducts.filter((p) => p.category === category.id).slice(0, CATEGORY_SHELF_SIZE),
       }))
       .filter((section) => section.products.length > 0);
   }, [categories, stockProducts]);

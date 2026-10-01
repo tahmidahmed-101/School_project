@@ -19,10 +19,14 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
   const { lang } = useLang();
   const badge = preorder ? { en: "Pre Order", bn: "প্রি-অর্ডার" } : { en: "Stock", bn: "স্টক" };
   const [index, setIndex] = useState(0);
+  // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
+  const [mounted, setMounted] = useState(1);
   const slide = HERO_SLIDES[index];
 
   const go = useCallback((next: number) => {
-    setIndex((next + HERO_SLIDES.length) % HERO_SLIDES.length);
+    const target = (next + HERO_SLIDES.length) % HERO_SLIDES.length;
+    setIndex(target);
+    setMounted((m) => Math.max(m, target + 1));
   }, []);
 
   useEffect(() => {
@@ -50,20 +54,22 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
           <div className="flex h-full flex-col lg:order-2 lg:col-span-8">
             <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-[28px] lg:min-h-[360px]">
-              {HERO_SLIDES.map((s, i) => (
-                <Image
-                  key={s.image}
-                  src={photo(s.image)}
-                  alt={s.alt}
-                  fill
-                  priority={i === 0}
-                  sizes="(max-width: 1024px) 100vw, 810px"
-                  aria-hidden={i !== index}
-                  className={`object-cover transition-opacity duration-700 ease-in-out ${
-                    i === index ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              ))}
+              {HERO_SLIDES.map((s, i) =>
+                i > mounted ? null : (
+                  <Image
+                    key={s.image}
+                    src={photo(s.image)}
+                    alt={s.alt}
+                    fill
+                    priority={i === 0}
+                    sizes="(max-width: 1024px) 100vw, 810px"
+                    aria-hidden={i !== index}
+                    className={`object-cover transition-opacity duration-700 ease-in-out ${
+                      i === index ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                ),
+              )}
               <div
                 className="pointer-events-none absolute inset-0"
                 style={{
