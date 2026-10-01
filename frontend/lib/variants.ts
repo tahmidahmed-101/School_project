@@ -64,3 +64,18 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     preorderStatus: variant.preorderStatus,
   };
 }
+
+const LETTER_SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"];
+const SIZE_ALIASES: Record<string, string> = { "2XL": "XXL", "3XL": "XXXL", "4XL": "XXXXL" };
+
+function letterRank(size: string): number {
+  const key = size.trim().toUpperCase();
+  return LETTER_SIZES.indexOf(SIZE_ALIASES[key] ?? key);
+}
+
+/** XS..XXL in wearing order, numeric sizes ascending; anything mixed or unknown keeps the API's order. */
+export function sortSizes(sizes: string[]): string[] {
+  if (sizes.every((s) => letterRank(s) >= 0)) return [...sizes].sort((a, b) => letterRank(a) - letterRank(b));
+  if (sizes.every((s) => /^\d+(\.\d+)?$/.test(s.trim()))) return [...sizes].sort((a, b) => Number(a) - Number(b));
+  return sizes;
+}

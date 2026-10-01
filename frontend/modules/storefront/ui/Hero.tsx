@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { HERO_CTA_TEXT, HERO_SLIDES } from "../domain/hero-content";
 import { useLang } from "@/lib/i18n";
+import { useCatalog } from "@/modules/catalog";
 import { photo } from "@/lib/photo";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { HeroCategoryRail } from "./HeroCategoryRail";
@@ -17,6 +18,8 @@ const AUTOPLAY_MS = 5000;
 /** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
 export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { shopLink?: string; preorder?: boolean }) {
   const { lang } = useLang();
+  const { categories } = useCatalog();
+  const hasRail = categories.some((category) => category.type === (preorder ? "preorder" : "stock"));
   const badge = preorder ? { en: "Pre Order", bn: "প্রি-অর্ডার" } : { en: "Stock", bn: "স্টক" };
   const [index, setIndex] = useState(0);
   // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
@@ -47,14 +50,16 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
           {/* Left: shop-by-category rail (desktop only; mobile shows just the banner). Absolutely positioned so a long
               category list scrolls inside the rail instead of stretching the row past the banner's height. */}
-          <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-2 lg:block">
-            <div className="absolute inset-0">
-              <HeroCategoryRail preorder={preorder} />
-            </div>
-          </ScrollReveal>
+          {hasRail && (
+            <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-2 lg:block">
+              <div className="absolute inset-0">
+                <HeroCategoryRail preorder={preorder} />
+              </div>
+            </ScrollReveal>
+          )}
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
-          <div className="flex h-full flex-col lg:order-2 lg:col-span-8">
+          <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-8" : "lg:col-span-10"}`}>
             <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-[28px] lg:min-h-[360px]">
               {HERO_SLIDES.map((s, i) =>
                 i > mounted ? null : (
@@ -112,7 +117,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                   type="button"
                   onClick={() => go(index - 1)}
                   aria-label="Previous slide"
-                  className="hidden h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -134,7 +139,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                   type="button"
                   onClick={() => go(index + 1)}
                   aria-label="Next slide"
-                  className="hidden h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-ink-900 shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>

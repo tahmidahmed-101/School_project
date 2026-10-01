@@ -24,7 +24,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
   const { stockProducts } = useProducts();
 
   // Default teaser: a handful of picks, not the full catalogue (that's what "View all" is for)
-  const sourceProducts = products ?? stockProducts.slice(0, 12);
+  const sourceProducts = products ?? stockProducts.slice(0, 10);
 
   return (
     <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
@@ -42,6 +42,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
         {/* Product Grid with CardReveal kinetic stagger */}
         <ProductCardGrid
           products={sourceProducts}
+          evenOnMobile
           className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
         />
       </Container>

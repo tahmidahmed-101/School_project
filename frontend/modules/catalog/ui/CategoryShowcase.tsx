@@ -23,9 +23,11 @@ import { useCatalog } from "../context";
 function CategoryTrack({
   trackRef,
   onScrollChange,
+  fadeEnd,
 }: {
   trackRef: RefObject<HTMLDivElement | null>;
   onScrollChange: () => void;
+  fadeEnd: boolean;
 }) {
   const { lang, n } = useLang();
   const searchParams = useSearchParams();
@@ -94,9 +96,9 @@ function CategoryTrack({
           drag.current.moved = false;
         }
       }}
-      className={`scrollbar-none -mx-4 flex scroll-px-4 overflow-y-hidden overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:-mx-8 lg:scroll-px-8 lg:gap-4 lg:px-8 ${
+      className={`scrollbar-none -mx-4 flex scroll-px-4 overflow-y-hidden overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 pt-2 sm:-mx-6 sm:scroll-px-6 sm:gap-3.5 sm:px-6 lg:mx-0 lg:scroll-px-0 lg:gap-4 lg:px-0 ${
         isDragging ? "cursor-grabbing select-none" : "snap-x snap-mandatory scroll-smooth"
-      }`}
+      } ${fadeEnd ? "lg:[mask-image:linear-gradient(to_right,#000_94%,transparent)]" : ""}`}
     >
       {categoriesWithCounts.map((cat, idx) => {
         const isActive = Boolean(activeSlug && activeSlug === cat.slug);
@@ -213,7 +215,7 @@ export function CategoryShowcase() {
 
         {/* Horizontally scrollable category track: arrows, swipe on touch, drag or trackpad on desktop */}
         <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-ink-100" />}>
-          <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} />
+          <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} fadeEnd={canScrollRight} />
         </Suspense>
       </Container>
     </section>

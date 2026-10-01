@@ -1,7 +1,7 @@
 import type { CategoryInfo, Product, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { publicEnv } from "@/lib/env";
-import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant } from "@/lib/variants";
+import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant, sortSizes } from "@/lib/variants";
 import type { ApiCategory, ApiProduct, ApiVariant } from "@/lib/api/types";
 
 /**
@@ -84,8 +84,8 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
 /** Colour / Size option groups for the existing variant picker, built from the SKU list. */
 function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
   const groups: ProductVariant[] = [];
-  const build = (name: T, pick: (v: SkuVariant) => string) => {
-    const values = [...new Set(skus.map(pick).filter(Boolean))];
+  const build = (name: T, pick: (v: SkuVariant) => string, order: (values: string[]) => string[] = (v) => v) => {
+    const values = order([...new Set(skus.map(pick).filter(Boolean))]);
     // A single value is not a choice, so no picker is shown.
     if (values.length < 2) return;
     groups.push({
@@ -98,7 +98,7 @@ function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
     });
   };
   build({ en: COLOUR_GROUP, bn: "রং" }, (v) => v.color);
-  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size);
+  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size, sortSizes);
   return groups.length ? groups : undefined;
 }
 

@@ -13,6 +13,8 @@ interface ProductCardGridProps {
   stagger?: number;
   /** Leading cards rendered visible with eager images, for grids that start above the fold. */
   eagerCount?: number;
+  /** Hide an odd trailing card on the 2-column mobile grid so no row ends with a lone card. */
+  evenOnMobile?: boolean;
 }
 
 /** Tracks how many columns the grid is actually rendering right now, so each card's reveal
@@ -42,19 +44,30 @@ function useColumnCount(ref: React.RefObject<HTMLDivElement | null>) {
  * Grid of product cards where each row reveals itself, left to right, the moment that row
  * scrolls into view — rather than the whole grid animating in at once.
  */
-export function ProductCardGrid({ products, className, stagger = 0.08, eagerCount = 0 }: ProductCardGridProps) {
+export function ProductCardGrid({
+  products,
+  className,
+  stagger = 0.08,
+  eagerCount = 0,
+  evenOnMobile = false,
+}: ProductCardGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const columns = useColumnCount(gridRef);
+  const orphanIdx = evenOnMobile && products.length > 1 && products.length % 2 === 1 ? products.length - 1 : -1;
 
   return (
     <div ref={gridRef} className={className}>
       {products.map((product, idx) =>
         idx < eagerCount ? (
-          <div key={product.id} className="h-full">
+          <div key={product.id} className={idx === orphanIdx ? "h-full max-sm:hidden" : "h-full"}>
             <ProductCard product={product} priority />
           </div>
         ) : (
-          <CardReveal key={product.id} delay={(idx % columns) * stagger} className="h-full">
+          <CardReveal
+            key={product.id}
+            delay={(idx % columns) * stagger}
+            className={idx === orphanIdx ? "h-full max-sm:hidden" : "h-full"}
+          >
             <ProductCard product={product} />
           </CardReveal>
         ),

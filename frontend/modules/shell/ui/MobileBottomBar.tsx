@@ -26,6 +26,9 @@ function MobileBottomBarInner() {
     return 0; // Default to Home
   }, [pathname, isWishlistOpen]);
 
+  // Checkout has its own submit button at the bottom of the form; the bar would sit on top of it.
+  if (pathname.startsWith("/checkout")) return null;
+
   const tabs = [
     {
       id: "home",
@@ -37,7 +40,7 @@ function MobileBottomBarInner() {
     },
     {
       id: "shop",
-      label: ui("navShop"),
+      label: ui("tabShop"),
       href: "/shop",
       icon: Store,
       badge: 0,
@@ -45,7 +48,7 @@ function MobileBottomBarInner() {
     },
     {
       id: "track",
-      label: ui("navTrackOrder"),
+      label: ui("tabTrack"),
       href: "/track-order",
       icon: Truck,
       badge: 0,
@@ -98,66 +101,60 @@ function MobileBottomBarInner() {
             </div>
           </div>
 
-          {/* 4 Interactive Tab Buttons */}
           {tabs.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeIndex === idx;
 
             const content = (
-              <div
-                className={`relative flex items-center justify-center transition-transform duration-200 ease-out ${
-                  isActive ? "-translate-y-px scale-[1.08]" : ""
-                }`}
-              >
-                <Icon
-                  className={`h-5 w-5 transition-colors duration-200 ${
-                    isActive
-                      ? "text-gold-300 drop-shadow-[0_1px_4px_rgba(229,192,76,0.35)]"
-                      : "text-white/70 hover:text-white"
-                  } ${
-                    tab.id === "wishlist" && isActive
-                      ? "fill-gold-300"
-                      : tab.id === "wishlist" && tab.badge > 0
-                        ? "fill-rose-300/30 text-rose-300"
-                        : ""
+              <>
+                <span
+                  className={`relative flex items-center justify-center transition-transform duration-200 ease-out ${
+                    isActive ? "-translate-y-px scale-[1.08]" : ""
                   }`}
-                />
+                >
+                  <Icon
+                    aria-hidden="true"
+                    className={`h-5 w-5 transition-colors duration-200 ${
+                      isActive ? "text-gold-300 drop-shadow-[0_1px_4px_rgba(229,192,76,0.35)]" : "text-white/70"
+                    } ${
+                      tab.id === "wishlist" && isActive
+                        ? "fill-gold-300"
+                        : tab.id === "wishlist" && tab.badge > 0
+                          ? "fill-rose-300/30 text-rose-300"
+                          : ""
+                    }`}
+                  />
 
-                {/* Badge indicator for Wishlist */}
-                {tab.badge > 0 && (
-                  <span className="shadow-xs absolute -right-2 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9.5px] font-bold text-white">
-                    {n(tab.badge)}
-                  </span>
-                )}
-              </div>
+                  {tab.badge > 0 && (
+                    <span className="shadow-xs absolute -right-2 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9.5px] font-bold text-white">
+                      {n(tab.badge)}
+                    </span>
+                  )}
+                </span>
+                <span
+                  className={`max-w-full truncate px-0.5 text-[10px] font-semibold leading-none transition-colors ${
+                    isActive ? "text-gold-300" : "text-white/75 group-hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </>
             );
+
+            const tabClass =
+              "group relative z-10 flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 active:scale-95";
 
             if (tab.href) {
               return (
-                <Link
-                  key={tab.id}
-                  href={tab.href}
-                  aria-label={tab.label}
-                  title={tab.label}
-                  className="relative z-10 flex h-full flex-1 cursor-pointer items-center justify-center active:scale-95"
-                >
+                <Link key={tab.id} href={tab.href} aria-current={isActive ? "page" : undefined} className={tabClass}>
                   {content}
-                  <span className="sr-only">{tab.label}</span>
                 </Link>
               );
             }
 
             return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={tab.onClick}
-                aria-label={tab.label}
-                title={tab.label}
-                className="relative z-10 flex h-full flex-1 cursor-pointer items-center justify-center active:scale-95"
-              >
+              <button key={tab.id} type="button" onClick={tab.onClick} aria-pressed={isActive} className={tabClass}>
                 {content}
-                <span className="sr-only">{tab.label}</span>
               </button>
             );
           })}

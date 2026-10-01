@@ -77,10 +77,10 @@ export function WishlistDrawer() {
                   <button
                     type="button"
                     onClick={() => removeItem(item.id)}
-                    className="ml-auto cursor-pointer p-1 text-ink-400 transition-colors hover:text-red-600"
+                    className="ml-auto relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-red-50 hover:text-red-600"
                     aria-label="Remove from wishlist"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>

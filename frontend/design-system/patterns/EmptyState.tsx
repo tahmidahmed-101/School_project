@@ -10,13 +10,15 @@ interface EmptyStateProps {
   /** Pre-styled icon element (size/color are the caller's, since they differ per variant). */
   icon: ReactNode;
   title: string;
-  onReset: () => void;
+  /** Shows the "Reset filters" button; pass `action` instead for any other call to action. */
+  onReset?: () => void;
+  action?: ReactNode;
   /** "panel" is the larger card used on the shop page; "inline" is the compact dashed-border block. */
   variant?: "panel" | "inline";
 }
 
 /** "No results" state shared by every filterable product list. */
-export function EmptyState({ icon, title, onReset, variant = "panel" }: EmptyStateProps) {
+export function EmptyState({ icon, title, onReset, action, variant = "panel" }: EmptyStateProps) {
   const { ui } = useLang();
 
   if (variant === "inline") {
@@ -24,13 +26,16 @@ export function EmptyState({ icon, title, onReset, variant = "panel" }: EmptySta
       <div className="rounded-2xl border border-dashed border-ink-200 py-12 text-center text-ink-500">
         {icon}
         <p className="mt-2 text-sm">{title}</p>
-        <button
-          type="button"
-          onClick={onReset}
-          className="mt-3 cursor-pointer text-xs font-bold text-gold-800 hover:underline"
-        >
-          {ui("resetFilters")}
-        </button>
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="mt-3 cursor-pointer text-xs font-bold text-gold-800 hover:underline"
+          >
+            {ui("resetFilters")}
+          </button>
+        )}
+        {action}
       </div>
     );
   }
@@ -40,9 +45,12 @@ export function EmptyState({ icon, title, onReset, variant = "panel" }: EmptySta
       <div className="shadow-xs my-4 rounded-2xl border border-ink-200/80 bg-white p-12 text-center sm:p-16">
         {icon}
         <h4 className="ts-display mb-2 text-lg font-bold text-ink-900 sm:text-xl">{title}</h4>
-        <Button onClick={onReset} leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}>
-          {ui("resetFilters")}
-        </Button>
+        {onReset && (
+          <Button onClick={onReset} leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}>
+            {ui("resetFilters")}
+          </Button>
+        )}
+        {action}
       </div>
     </ScrollReveal>
   );

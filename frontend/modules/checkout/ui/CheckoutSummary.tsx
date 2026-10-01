@@ -94,10 +94,10 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 <button
                   type="button"
                   onClick={() => removeItem(product.id, selectedVariant)}
-                  className="cursor-pointer p-1 text-ink-400 transition-colors hover:text-red-600"
+                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-red-50 hover:text-red-600"
                   aria-label={ui("cartRemove")}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
               {product.isPreOrder && product.expectedDelivery && (

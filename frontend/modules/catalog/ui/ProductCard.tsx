@@ -72,7 +72,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             e.stopPropagation();
             toggleItem(product);
           }}
-          className="absolute right-1 top-1 z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-ink-200/80 bg-white/90 text-ink-700 shadow-2xs backdrop-blur-sm transition-all hover:scale-110 hover:bg-white hover:text-red-500 sm:h-8 sm:w-8"
+          className="absolute right-1 top-1 z-10 flex h-7 w-7 cursor-pointer before:absolute before:-inset-1.5 before:content-[''] items-center justify-center rounded-full border border-ink-200/80 bg-white/90 text-ink-700 shadow-2xs backdrop-blur-sm transition-all hover:scale-110 hover:bg-white hover:text-red-500 sm:h-8 sm:w-8"
           aria-label="Toggle wishlist"
         >
           <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
@@ -80,11 +80,11 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       </div>
 
       {/* Product Info (centered) */}
-      <div className="flex flex-1 flex-col items-center justify-between text-center">
-        <div className="space-y-0.5">
+      <div className="flex flex-1 flex-col items-center text-center">
+        <div className="mb-1.5 space-y-0.5">
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 min-h-[2.5em] text-xs font-bold leading-tight text-ink-900 transition-colors group-hover:text-gold-800 sm:text-sm"
+            className="line-clamp-2 text-xs font-bold leading-tight text-ink-900 transition-colors group-hover:text-gold-800 sm:text-sm"
             title={t(product.name)}
           >
             {t(product.name)}
@@ -110,7 +110,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         </div>
 
         {/* Price & Actions (centered, stacked) */}
-        <div className="mt-2 flex w-full flex-col items-center gap-1.5 border-t border-ink-100 pt-2">
+        <div className="mt-auto flex w-full flex-col items-center gap-1.5 border-t border-ink-100 pt-1.5">
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
             <span className="text-xs font-bold text-gold-800 sm:text-sm">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (

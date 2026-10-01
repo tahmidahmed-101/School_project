@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, Store, Globe, Truck } from "lucide-react";
+import { X, Home, Store, Globe, Truck, Sparkles } from "lucide-react";
 import { useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
@@ -10,6 +10,11 @@ import { WithActiveCategory } from "@/modules/catalog";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 const SHOP_PATH = "/shop";
+
+const POLICY_LINKS = [
+  { href: "/return-policy", key: "footerReturnPolicy" },
+  { href: "/refund-policy", key: "footerRefundPolicy" },
+] as const;
 
 interface MobileNavMenuProps {
   open: boolean;
@@ -96,6 +101,19 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         <span>{ui("navTrackOrder")}</span>
                       </Link>
 
+                      <Link
+                        href="/pre-order"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          pathname.startsWith("/pre-order")
+                            ? "bg-white/10 text-gold-300"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Sparkles className="h-4 w-4 shrink-0" />
+                        <span>{ui("navPreOrder")}</span>
+                      </Link>
+
                       <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-white/40">
                         {ui("shopByCategories")}
                       </div>
@@ -117,6 +135,23 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                     </>
                   )}
                 </WithActiveCategory>
+
+                <ul className="mt-4 space-y-0.5 border-t border-white/10 pt-3">
+                  {POLICY_LINKS.map(({ href, key }) => (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        onClick={onClose}
+                        aria-current={pathname === href ? "page" : undefined}
+                        className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                          pathname === href ? "text-gold-300" : "text-white/60 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {ui(key)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </nav>
 
               <div className="border-t border-white/10 pt-4">

@@ -95,6 +95,9 @@ const DICT = {
   browseAllCategories: { en: "Browse All", bn: "সব ক্যাটাগরি দেখুন" },
   navWishlist: { en: "Wishlist", bn: "উইশলিস্ট" },
   navProfile: { en: "Profile", bn: "প্রোফাইল" },
+  tabShop: { en: "Shop", bn: "শপ" },
+  tabTrack: { en: "Track", bn: "ট্র্যাক" },
+  messageUs: { en: "Message us", bn: "মেসেজ করুন" },
   loginTitle: { en: "Log In", bn: "লগ ইন" },
   loginSubtitle: { en: "Welcome back to Kull Mart", bn: "কুল মার্টে আবার স্বাগতম" },
   loginIdentifierLabel: { en: "Phone or email", bn: "ফোন বা ইমেইল" },
@@ -196,6 +199,7 @@ const DICT = {
   relatedProducts: { en: "You may also like", bn: "সম্পর্কিত অন্যান্য পণ্য" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
+  preOrderEmpty: { en: "No pre-order products right now.", bn: "এখন কোনো প্রি-অর্ডার পণ্য নেই।" },
   preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "PRE-ORDER SOLD OUT", bn: "প্রি-অর্ডার স্টক শেষ" },

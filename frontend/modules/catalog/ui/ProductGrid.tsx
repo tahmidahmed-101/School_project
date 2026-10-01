@@ -36,7 +36,7 @@ export function ProductGrid({ products, title, viewAllLink, viewAllText, columns
           </ScrollReveal>
         )}
 
-        <ProductCardGrid products={products} className={`grid ${gridColsClass} gap-2.5 sm:gap-4`} />
+        <ProductCardGrid products={products} evenOnMobile className={`grid ${gridColsClass} gap-2.5 sm:gap-4`} />
       </Container>
     </section>
   );

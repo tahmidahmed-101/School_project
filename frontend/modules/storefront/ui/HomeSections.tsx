@@ -11,14 +11,14 @@ import { Newsletter } from "@/modules/marketing";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 
-import { CATEGORY_SHELF_SIZE, bestSellers } from "../domain/home-products";
+import { bestSellers, categoryShelf, trending } from "../domain/home-products";
 
 export function HomeSections() {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
   const { stockProducts } = useProducts();
 
-  // Best-seller shelf: hand-picked (featured) products first, then the rest of the catalogue
+  const trendingProducts = useMemo(() => trending(stockProducts), [stockProducts]);
   const bestSellerProducts = useMemo(() => bestSellers(stockProducts), [stockProducts]);
 
   // One shelf per category, each linking to the full category
@@ -26,7 +26,7 @@ export function HomeSections() {
     return categories
       .map((category) => ({
         category,
-        products: stockProducts.filter((p) => p.category === category.id).slice(0, CATEGORY_SHELF_SIZE),
+        products: categoryShelf(stockProducts, category.id),
       }))
       .filter((section) => section.products.length > 0);
   }, [categories, stockProducts]);
@@ -39,15 +39,16 @@ export function HomeSections() {
       <CategoryShowcase />
 
       {/* Trending Picks */}
-      <TrendingSection />
+      <TrendingSection products={trendingProducts} />
 
-      {/* Best Seller Showcase */}
-      <ProductGrid
-        products={bestSellerProducts}
-        title={ui("bestSellersTitle")}
-        viewAllLink="/shop"
-        viewAllText={ui("viewAllProducts")}
-      />
+      {bestSellerProducts.length > 0 && (
+        <ProductGrid
+          products={bestSellerProducts}
+          title={ui("bestSellersTitle")}
+          viewAllLink="/shop"
+          viewAllText={ui("viewAllProducts")}
+        />
+      )}
 
       {/* One shelf per category (Women's Fashion, Bags & Wallets, ...) */}
       {categorySections.map(({ category, products }) => (

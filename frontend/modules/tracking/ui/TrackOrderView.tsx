@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Package,
   PackageCheck,
-  PackageX,
   Phone,
   Search,
   Truck,
@@ -44,7 +43,6 @@ export function TrackOrderView() {
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [isNotFound, setIsNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiTrackOrder | null>(null);
 
@@ -57,7 +55,6 @@ export function TrackOrderView() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    setIsNotFound(false);
     if (!orderNumber.trim() || !phone.trim()) {
       setErrorMsg(ui("trackOrderValidation"));
       setResult(null);
@@ -71,7 +68,6 @@ export function TrackOrderView() {
       setResult(null);
       if (error instanceof ApiError && error.status === 404) {
         // The API answers "not found" for both a wrong order number and a wrong phone, on purpose.
-        setIsNotFound(true);
         setErrorMsg(`${ui("trackOrderNotFound")}. ${ui("trackOrderNotFoundHelp")}`);
       } else if (error instanceof ApiError && error.status === 400 && error.message) {
         setErrorMsg(error.message);
@@ -142,13 +138,6 @@ export function TrackOrderView() {
             {ui("trackOrderSubmit")}
           </Button>
         </form>
-
-        {!result && !errorMsg && !isNotFound && (
-          <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-8 text-center">
-            <PackageX className="h-6 w-6 text-ink-300" />
-            <span className="text-sm font-semibold text-ink-500">{ui("trackOrderNotFound")}</span>
-          </div>
-        )}
 
         {result && (
           <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-white p-5">

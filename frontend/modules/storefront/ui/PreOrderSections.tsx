@@ -9,6 +9,13 @@ import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
+import Link from "next/link";
+import { CalendarClock } from "lucide-react";
+import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { EmptyState } from "@/design-system/patterns/EmptyState";
+import { buttonClass } from "@/design-system/ui/Button";
+import { Container } from "@/design-system/ui/Container";
+import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
 /** Same layout as the home page (Hero, browsable grid, newsletter), scoped to pre-order stock only. */
 export function PreOrderSections() {
@@ -34,25 +41,46 @@ export function PreOrderSections() {
 
   return (
     <div>
+      <div className="bg-ink-50/70">
+        <Container className="pb-1 pt-3">
+          <Breadcrumbs items={[{ label: ui("navPreOrder") }]} />
+        </Container>
+      </div>
       <Hero shopLink="/shop?type=preorder" preorder />
       <PromoMarquee />
       <VoucherSection />
 
-      {/* Browsable pre-order picks */}
-      <TrendingSection
-        products={filteredProducts}
-        title={ui("navPreOrder")}
-        showViewAllLink={false}
-        filters={
-          availableCategories.length > 1 ? (
-            <PreOrderCategoryTabs
-              categories={availableCategories}
-              value={activeCategory}
-              onChange={setActiveCategory}
+      {preorderProducts.length === 0 ? (
+        <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
+          <Container>
+            <SectionHeading title={ui("navPreOrder")} />
+            <EmptyState
+              icon={<CalendarClock className="mx-auto mb-3 h-10 w-10 text-ink-300" />}
+              title={ui("preOrderEmpty")}
+              action={
+                <Link href="/shop" className={buttonClass()}>
+                  {ui("cartStartShopping")}
+                </Link>
+              }
             />
-          ) : undefined
-        }
-      />
+          </Container>
+        </section>
+      ) : (
+        <TrendingSection
+          products={filteredProducts}
+          title={ui("navPreOrder")}
+          showViewAllLink={false}
+          filters={
+            availableCategories.length > 1 ? (
+              <PreOrderCategoryTabs
+                categories={availableCategories}
+                value={activeCategory}
+                onChange={setActiveCategory}
+              />
+            ) : undefined
+          }
+        />
+      )}
 
       <Newsletter />
     </div>
