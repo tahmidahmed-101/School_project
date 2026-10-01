@@ -14,9 +14,9 @@ interface QuantityStepperProps {
 
 const STYLES = {
   sm: {
-    wrap: "rounded-lg p-0.5",
+    wrap: "rounded-full p-0.5",
     // The pseudo-element stretches the tap target to 40px without making the stepper itself bigger.
-    button: "h-8 w-8 rounded-md before:absolute before:-inset-1 before:content-['']",
+    button: "h-8 w-8 rounded-full before:absolute before:-inset-1 before:content-['']",
     icon: "h-3.5 w-3.5",
     count: "min-w-[24px] px-1 text-xs",
   },

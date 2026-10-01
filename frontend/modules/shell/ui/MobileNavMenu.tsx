@@ -53,7 +53,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="cursor-pointer rounded-lg bg-white/10 p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+                  className="cursor-pointer rounded-full bg-white/10 p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
                   aria-label={ui("closeMenu")}
                 >
                   <X className="h-5 w-5" />

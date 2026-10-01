@@ -77,7 +77,7 @@ export function LoginView() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? ui("loginHidePassword") : ui("loginShowPassword")}
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ink-500 transition-colors hover:text-ink-900"
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-500 transition-colors hover:text-ink-900"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

@@ -95,7 +95,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 <button
                   type="button"
                   onClick={() => removeItem(product.id, selectedVariant)}
-                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
                   aria-label={ui("cartRemove")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
           {ui("checkoutCouponLabel")}
         </label>
         {coupon.applied ? (
-          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs">
             <span className="font-bold text-emerald-800">
               {ui("checkoutCouponApplied")}: {coupon.applied.code}
             </span>
@@ -198,7 +198,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
           </span>
         </div>
         {preOrderItem && (
-          <div className="flex items-start justify-between rounded-lg border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
+          <div className="flex items-start justify-between rounded-xl border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
             <span className="flex items-center gap-1 font-medium">
               <Calendar className="h-3 w-3 text-gold-700" />
               {ui("expectedDelivery")}

@@ -28,7 +28,7 @@ export function VariantPicker({ variants, selected, onSelect }: VariantPickerPro
                 key={opt.value}
                 type="button"
                 onClick={() => onSelect(v.name.en, opt.value)}
-                className={`h-11 min-w-[44px] cursor-pointer rounded-lg border px-3 text-xs font-bold transition-all ${
+                className={`h-11 min-w-[44px] cursor-pointer rounded-full border px-3 text-xs font-bold transition-all ${
                   selected[v.name.en] === opt.value
                     ? "shadow-xs border-brand-700 bg-brand-700 text-white"
                     : "border-ink-200 bg-white text-ink-700 hover:border-ink-400"

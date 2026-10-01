@@ -26,7 +26,7 @@ interface ShopProductGridProps {
   onOpenMobileFilter: () => void;
 }
 
-const VIEW_BUTTON_BASE = "cursor-pointer rounded-lg p-2 transition-all";
+const VIEW_BUTTON_BASE = "cursor-pointer rounded-full p-2 transition-all";
 const viewButtonClass = (active: boolean) =>
   `${VIEW_BUTTON_BASE} ${active ? "shadow-xs bg-gold-500 font-bold text-ink-950" : "text-ink-500 hover:text-ink-900"}`;
 
@@ -117,7 +117,7 @@ export function ShopProductGrid({
             <div
               role="group"
               aria-label={ui("viewMode")}
-              className="shadow-xs flex items-center rounded-xl border border-ink-200 bg-ink-50 p-0.5"
+              className="shadow-xs flex items-center rounded-full border border-ink-200 bg-ink-50 p-0.5"
             >
               <button
                 type="button"

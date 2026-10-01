@@ -139,7 +139,7 @@ function CategoryTrack({
 
               {/* Category Title */}
               <h3
-                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 sm:text-[15px] ${isActive ? "text-gold-800" : "text-ink-900"}`}
+                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 ${isActive ? "text-gold-800" : "text-ink-900"}`}
               >
                 {cat.name[lang] || cat.name.en}
               </h3>

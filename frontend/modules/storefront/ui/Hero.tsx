@@ -60,7 +60,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
           <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-8" : "lg:col-span-10"}`}>
-            <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-[28px] lg:min-h-[360px]">
+            <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-3xl lg:min-h-[360px]">
               {HERO_SLIDES.map((s, i) =>
                 i > mounted ? null : (
                   <Image
@@ -94,7 +94,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                     <span className="sm:truncate">{slide.tag[lang]}</span>
                   </div>
 
-                  <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-[32px] xl:text-[38px]">
+                  <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-3xl xl:text-4xl">
                     {slide.title[lang].split("\n").map((line, i) => (
                       <span key={i} className="block">
                         {line}

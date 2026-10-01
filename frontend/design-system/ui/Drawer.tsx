@@ -53,7 +53,7 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
                     <button
                       type="button"
                       onClick={onClose}
-                      className="cursor-pointer rounded-lg bg-surface-muted p-1.5 text-fg-subtle transition-colors hover:bg-surface-strong hover:text-fg"
+                      className="cursor-pointer rounded-full bg-surface-muted p-1.5 text-fg-subtle transition-colors hover:bg-surface-strong hover:text-fg"
                       aria-label={closeLabel}
                     >
                       <X className="h-5 w-5" />
@@ -111,7 +111,7 @@ export function DrawerRemoveButton({ label, onClick }: { label: string; onClick:
     <button
       type="button"
       onClick={onClick}
-      className="relative ml-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+      className="relative ml-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
       aria-label={label}
     >
       <Trash2 className="h-4 w-4" />

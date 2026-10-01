@@ -83,7 +83,7 @@ export function ShopFilterSidebar({
                 <button
                   type="button"
                   onClick={onMobileClose}
-                  className="cursor-pointer rounded-lg bg-ink-100 p-1.5 text-ink-500 transition-colors hover:text-ink-900"
+                  className="cursor-pointer rounded-full bg-ink-100 p-1.5 text-ink-500 transition-colors hover:text-ink-900"
                   aria-label={ui("closeFilters")}
                 >
                   <X className="h-5 w-5" />

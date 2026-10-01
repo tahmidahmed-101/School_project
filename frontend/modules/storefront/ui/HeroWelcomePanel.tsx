@@ -40,14 +40,12 @@ export function HeroWelcomePanel() {
 
   return (
     <div className="flex h-full flex-col gap-2.5 sm:gap-3">
-      <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 p-3.5 text-center shadow-md sm:rounded-[20px] sm:p-4">
+      <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 p-3.5 text-center shadow-md sm:rounded-3xl sm:p-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm">
           <Store className="h-4 w-4 text-brand-700" />
         </span>
         <div>
-          <h2 className="ts-display text-[13px] font-extrabold leading-tight text-white sm:text-sm">
-            {ui("heroWelcomeTitle")}
-          </h2>
+          <h2 className="ts-display text-sm font-extrabold leading-tight text-white">{ui("heroWelcomeTitle")}</h2>
           <p className="mt-0.5 line-clamp-1 text-2xs text-white/70">{ui("heroWelcomeSubtitle")}</p>
         </div>
         <div className="flex w-full flex-col gap-1.5">
