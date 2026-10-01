@@ -16,7 +16,16 @@ import { containerClass } from "@/design-system/ui/Container";
 const AUTOPLAY_MS = 5000;
 
 /** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
-export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { shopLink?: string; preorder?: boolean }) {
+export function Hero({
+  heading,
+  shopLink = "/shop?type=normal",
+  preorder = false,
+}: {
+  /** The page's H1; slide titles rotate every few seconds, so they can't be it. */
+  heading: string;
+  shopLink?: string;
+  preorder?: boolean;
+}) {
   const { lang, ui, n } = useLang();
   const { categories } = useCatalog();
   const hasRail = categories.some((category) => category.type === (preorder ? "preorder" : "stock"));
@@ -44,6 +53,7 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
       aria-label={ui("heroCarousel")}
       className="relative overflow-hidden bg-ink-50/70 pb-4 pt-2 sm:pb-5 sm:pt-3 lg:pb-6 lg:pt-4"
     >
+      <h1 className="sr-only">{heading}</h1>
       <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-[700px] -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-500/10 via-gold-400/10 to-brand-400/10 blur-[100px]" />
 
       <div className={containerClass("default", "relative z-10")}>
@@ -94,13 +104,13 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
                     <span className="sm:truncate">{slide.tag[lang]}</span>
                   </div>
 
-                  <h1 className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-3xl xl:text-4xl">
+                  <p className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-3xl xl:text-4xl">
                     {slide.title[lang].split("\n").map((line, i) => (
                       <span key={i} className="block">
                         {line}
                       </span>
                     ))}
-                  </h1>
+                  </p>
                 </div>
 
                 <Link

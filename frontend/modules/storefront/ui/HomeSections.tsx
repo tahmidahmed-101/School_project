@@ -10,6 +10,7 @@ import { ProductGrid } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
+import { BRAND_INFO } from "@/lib/brand";
 
 import { bestSellers, categoryShelf, trending } from "../domain/home-products";
 
@@ -33,7 +34,7 @@ export function HomeSections() {
 
   return (
     <div>
-      <Hero />
+      <Hero heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`} />
       <PromoMarquee />
       <VoucherSection />
       <CategoryShowcase />

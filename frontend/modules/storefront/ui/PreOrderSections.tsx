@@ -9,6 +9,7 @@ import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
+import { BRAND_INFO } from "@/lib/brand";
 import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -46,7 +47,7 @@ export function PreOrderSections() {
           <Breadcrumbs items={[{ label: ui("navPreOrder") }]} />
         </Container>
       </div>
-      <Hero shopLink="/shop?type=preorder" preorder />
+      <Hero heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`} shopLink="/shop?type=preorder" preorder />
       <PromoMarquee />
       <VoucherSection />
 
