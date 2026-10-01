@@ -124,7 +124,7 @@ function CategoryTrack({
               aria-label={`${cat.name[lang] || cat.name.en} - ${countText}`}
             >
               {/* Circular Product Image (matches reference image.png) */}
-              <div className="sm:h-22 sm:w-22 relative mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-ink-50 p-1.5 ring-1 ring-ink-200/80 transition-all duration-300 group-hover:scale-105 group-hover:ring-gold-300 lg:h-24 lg:w-24">
+              <div className="sm:h-22 sm:w-22 relative mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface p-1.5 ring-1 ring-ink-200/80 transition-all duration-300 group-hover:scale-105 group-hover:ring-gold-300 lg:h-24 lg:w-24">
                 <div className="relative h-full w-full overflow-hidden rounded-full">
                   <Image
                     draggable={false}
@@ -139,13 +139,13 @@ function CategoryTrack({
 
               {/* Category Title */}
               <h3
-                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 ${isActive ? "text-gold-800" : "text-ink-900"}`}
+                className={`text-sm font-bold tracking-tight transition-colors group-hover:text-gold-800 ${isActive ? "text-gold-800" : "text-fg"}`}
               >
                 {cat.name[lang] || cat.name.en}
               </h3>
 
               {/* Product Count (e.g. 28 Products) */}
-              <p className="mt-0.5 text-2xs font-medium text-ink-600 sm:text-xs">{countText}</p>
+              <p className="mt-0.5 text-2xs font-medium text-fg-muted sm:text-xs">{countText}</p>
             </Link>
           </CardReveal>
         );
@@ -214,7 +214,7 @@ export function CategoryShowcase() {
         </ScrollReveal>
 
         {/* Horizontally scrollable category track: arrows, swipe on touch, drag or trackpad on desktop */}
-        <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-ink-100" />}>
+        <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-surface-muted" />}>
           <CategoryTrack trackRef={trackRef} onScrollChange={updateScrollState} fadeEnd={canScrollRight} />
         </Suspense>
       </Container>

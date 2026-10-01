@@ -33,12 +33,12 @@ export function PolicyView({ policy }: PolicyViewProps) {
           {policy.sections.map((section, i) => (
             <div key={i}>
               <h2 className="text-sm font-bold text-ink-950 sm:text-base lg:text-xl">{t(section.heading)}</h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-600 sm:text-base lg:text-lg">{t(section.body)}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-fg-muted sm:text-base lg:text-lg">{t(section.body)}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-10 max-w-3xl rounded-2xl border border-ink-200 bg-ink-50 p-5 sm:p-6 lg:max-w-4xl lg:p-8">
+        <div className="mt-10 max-w-3xl rounded-2xl border border-ink-200 bg-surface p-5 sm:p-6 lg:max-w-4xl lg:p-8">
           <h2 className="text-sm font-bold text-ink-950 sm:text-base lg:text-xl">{ui("footerContactUs")}</h2>
           <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-4">
             <a

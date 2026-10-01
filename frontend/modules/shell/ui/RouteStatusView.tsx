@@ -24,7 +24,7 @@ function StatusLayout({
       </div>
       <div className="space-y-1.5">
         <h1 className={PAGE_TITLE_CLASS}>{title}</h1>
-        <p className="max-w-sm text-sm text-ink-600">{text}</p>
+        <p className="max-w-sm text-sm text-fg-muted">{text}</p>
       </div>
       {children}
     </div>

@@ -21,7 +21,7 @@ export function MobileSearchBar() {
         <button
           type="submit"
           aria-label={ui("navSearch")}
-          className="absolute right-1 top-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-gold-500 text-ink-950 transition-colors hover:bg-gold-400"
+          className="absolute right-1 top-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-accent text-ink-950 transition-colors hover:bg-accent-hover"
         >
           <Search className="h-4 w-4" />
         </button>

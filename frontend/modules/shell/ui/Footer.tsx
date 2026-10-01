@@ -42,7 +42,7 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label={ui("facebookLink")}
                 title="Facebook"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-gold-500 hover:text-brand-950"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-accent hover:text-brand-950"
               >
                 <FacebookIcon className="h-5 w-5" />
               </a>
@@ -52,7 +52,7 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label={ui("whatsappLink")}
                 title="WhatsApp"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-gold-500 hover:text-brand-950"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-accent hover:text-brand-950"
               >
                 <WhatsAppIcon className="h-5 w-5" />
               </a>

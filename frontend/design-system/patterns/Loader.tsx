@@ -53,13 +53,13 @@ export function Loader({ variant = "page", label, className = "" }: LoaderProps)
         />
       </div>
 
-      <div className="flex items-center gap-1.5 text-sm font-semibold text-ink-600">
+      <div className="flex items-center gap-1.5 text-sm font-semibold text-fg-muted">
         <span>{text}</span>
         <span aria-hidden="true" className="flex items-end gap-0.5 pb-1">
           {[0, 150, 300].map((delay) => (
             <span
               key={delay}
-              className="h-1 w-1 animate-bounce rounded-full bg-gold-500"
+              className="h-1 w-1 animate-bounce rounded-full bg-accent"
               style={{ animationDelay: `${delay}ms` }}
             />
           ))}

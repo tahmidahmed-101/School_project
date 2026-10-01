@@ -12,7 +12,7 @@ const QUICK_LINKS = [
     titleKey: "heroFeaturedTitle",
     subtitleKey: "heroFeaturedSubtitle",
     tint: "bg-gold-50",
-    iconTint: "bg-gold-500 text-white",
+    iconTint: "bg-accent text-white",
   },
   {
     id: "preorder",
@@ -29,7 +29,7 @@ const QUICK_LINKS = [
     icon: Gift,
     titleKey: "heroPromotionTitle",
     subtitleKey: "heroPromotionSubtitle",
-    tint: "bg-ink-50",
+    tint: "bg-surface",
     iconTint: "bg-ink-900 text-white",
   },
 ] as const;
@@ -76,9 +76,9 @@ export function HeroWelcomePanel() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-2xs font-bold text-ink-950 sm:text-xs">{ui(titleKey)}</span>
-              <span className="block truncate text-2xs text-ink-500">{ui(subtitleKey)}</span>
+              <span className="block truncate text-2xs text-fg-subtle">{ui(subtitleKey)}</span>
             </span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-ink-600" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-fg-muted" />
           </Link>
         ))}
       </div>

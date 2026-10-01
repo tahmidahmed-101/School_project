@@ -22,7 +22,7 @@ export function ProductListItem({ product }: { product: Product }) {
     <div className="group flex flex-col items-center gap-4 rounded-2xl border border-ink-200/80 bg-white p-4 transition-all hover:border-gold-400/80 hover:shadow-lg sm:flex-row">
       <Link
         href={href}
-        className="relative block h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-ink-200 bg-ink-100"
+        className="relative block h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-ink-200 bg-surface-muted"
       >
         <Image
           src={photo(product.image)}
@@ -40,12 +40,12 @@ export function ProductListItem({ product }: { product: Product }) {
         </div>
 
         <Link href={href}>
-          <h4 className="ts-display text-base font-bold leading-snug text-ink-900 transition-colors group-hover:text-gold-800">
+          <h4 className="ts-display text-base font-bold leading-snug text-fg transition-colors group-hover:text-gold-800">
             {t(product.name)}
           </h4>
         </Link>
 
-        <p className="line-clamp-2 text-xs leading-relaxed text-ink-500">
+        <p className="line-clamp-2 text-xs leading-relaxed text-fg-subtle">
           {t(product.tagline.en ? product.tagline : product.description)}
         </p>
       </div>
@@ -54,7 +54,7 @@ export function ProductListItem({ product }: { product: Product }) {
         <div className="text-right">
           <span className="text-base font-bold text-gold-800 sm:text-lg">{money(product.price)}</span>
           {discountPercent && product.compareAtPrice && (
-            <span className="block text-xs text-ink-600 line-through">{money(product.compareAtPrice)}</span>
+            <span className="block text-xs text-fg-muted line-through">{money(product.compareAtPrice)}</span>
           )}
         </div>
         <Button

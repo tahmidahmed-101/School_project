@@ -103,7 +103,7 @@ export function DrawerEmpty({ icon, title, subtitle, actionLabel, onAction }: Dr
 
 /** Line item card inside a drawer list (cart line, wishlist entry). */
 export function DrawerItem({ children }: { children: ReactNode }) {
-  return <div className="flex items-start gap-3 rounded-xl border border-ink-200/80 bg-ink-50 p-3">{children}</div>;
+  return <div className="flex items-start gap-3 rounded-xl border border-ink-200/80 bg-surface p-3">{children}</div>;
 }
 
 export function DrawerRemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
@@ -111,7 +111,7 @@ export function DrawerRemoveButton({ label, onClick }: { label: string; onClick:
     <button
       type="button"
       onClick={onClick}
-      className="relative ml-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+      className="relative ml-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-fg-muted transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
       aria-label={label}
     >
       <Trash2 className="h-4 w-4" />
@@ -136,7 +136,7 @@ export function DrawerFooter({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-800"
+          className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-fg-subtle transition-colors hover:text-gold-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>{backLabel}</span>

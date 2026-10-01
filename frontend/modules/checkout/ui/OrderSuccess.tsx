@@ -31,7 +31,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
         </div>
         <div className="space-y-2">
           <h1 className={PAGE_TITLE_CLASS}>{ui("orderSuccessTitle")}</h1>
-          <p className="text-xs text-ink-600 sm:text-sm">{ui("orderSuccessSubtitle")}</p>
+          <p className="text-xs text-fg-muted sm:text-sm">{ui("orderSuccessSubtitle")}</p>
         </div>
 
         {hasPreOrder && (
@@ -44,14 +44,14 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
           </div>
         )}
 
-        <div className="shadow-xs space-y-3 rounded-2xl border border-ink-200 bg-ink-50 p-5 text-left text-xs">
+        <div className="shadow-xs space-y-3 rounded-2xl border border-ink-200 bg-surface p-5 text-left text-xs">
           <div className="flex justify-between border-b border-ink-200 pb-2">
-            <span className="text-ink-500">{ui("orderNumberLabel")}</span>
+            <span className="text-fg-subtle">{ui("orderNumberLabel")}</span>
             <span className="font-mono text-sm font-bold text-gold-800">{orderResult.orderNumber}</span>
           </div>
           <div className="space-y-1.5 border-b border-ink-200 pb-2">
             {orderResult.lines.map((line) => (
-              <div key={line.id} className="flex justify-between gap-3 text-ink-600">
+              <div key={line.id} className="flex justify-between gap-3 text-fg-muted">
                 <span className="min-w-0 truncate">
                   {line.name} × {n(line.quantity)}
                 </span>
@@ -59,7 +59,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
               </div>
             ))}
           </div>
-          <div className="space-y-1.5 border-b border-ink-200 pb-2 text-ink-600">
+          <div className="space-y-1.5 border-b border-ink-200 pb-2 text-fg-muted">
             <div className="flex justify-between">
               <span>{ui("checkoutItemsTotal")}</span>
               <span className="font-semibold text-ink-800">{money(orderResult.subtotal)}</span>
@@ -84,14 +84,14 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
             )}
           </div>
           <div className="flex justify-between border-b border-ink-200 pb-2">
-            <span className="text-ink-500">{ui("checkoutGrandTotal")}</span>
-            <span className="font-bold text-ink-900">{money(orderResult.total)}</span>
+            <span className="text-fg-subtle">{ui("checkoutGrandTotal")}</span>
+            <span className="font-bold text-fg">{money(orderResult.total)}</span>
           </div>
-          <div className="space-y-0.5 pt-1 text-ink-600">
-            <span className="block font-semibold text-ink-900">
+          <div className="space-y-0.5 pt-1 text-fg-muted">
+            <span className="block font-semibold text-fg">
               {orderResult.customerName} ({orderResult.phone})
             </span>
-            <span className="block text-ink-600">
+            <span className="block text-fg-muted">
               {orderResult.address}, {orderResult.district}
             </span>
           </div>

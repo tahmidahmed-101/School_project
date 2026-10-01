@@ -32,18 +32,16 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
       >
         <div className="flex min-w-0 items-center gap-2">
           {icon}
-          <span className="truncate text-xs font-bold text-ink-900">{triggerLabel}</span>
+          <span className="truncate text-xs font-bold text-fg">{triggerLabel}</span>
         </div>
 
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-ink-500 transition-transform duration-300 ${
-            isOpen ? "rotate-180 text-gold-700" : ""
-          }`}
+          className={`h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       <Collapse open={isOpen}>
-        <div className="mt-2 space-y-1 rounded-xl border border-ink-200 bg-ink-50 p-1.5 shadow-inner">
+        <div className="mt-2 space-y-1 rounded-xl border border-ink-200 bg-surface p-1.5 shadow-inner">
           {options.map((option) => {
             const isSelected = option.id === value;
             return (
@@ -53,7 +51,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
                 onClick={() => onChange(option.id)}
                 className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-all ${
                   isSelected
-                    ? "shadow-xs bg-gold-500 font-bold text-ink-950"
+                    ? "shadow-xs bg-accent font-bold text-ink-950"
                     : "text-ink-700 hover:bg-white hover:text-ink-950"
                 }`}
               >

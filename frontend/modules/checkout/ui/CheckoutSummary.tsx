@@ -54,7 +54,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
 
   return (
     <div className="space-y-4 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
-      <h3 className="border-b border-ink-200 pb-3 text-sm font-bold text-ink-900">
+      <h3 className="border-b border-ink-200 pb-3 text-sm font-bold text-fg">
         {ui("checkoutOrderSummary")} ({n(items.length)})
       </h3>
 
@@ -76,17 +76,17 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
         {items.map(({ product, quantity, selectedVariant }, idx) => (
           <div key={`${product.id}-${idx}`} className="flex items-start gap-3 text-xs">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-surface-muted">
               <Image src={photo(product.image)} alt={t(product.name)} fill sizes="48px" className="object-cover" />
             </div>
             <div className="min-w-0 flex-1 space-y-0.5">
               <div className="flex items-start justify-between gap-1">
-                <div className="truncate font-semibold text-ink-900">{t(product.name)}</div>
+                <div className="truncate font-semibold text-fg">{t(product.name)}</div>
                 {product.isPreOrder && (
                   <PreOrderBadge status={product.preorderStatus || "available"} size="sm" className="shrink-0" />
                 )}
               </div>
-              <div className="text-2xs font-medium text-ink-500">{money(product.price)}</div>
+              <div className="text-2xs font-medium text-fg-subtle">{money(product.price)}</div>
               <div className="flex items-center gap-2 pt-0.5">
                 <QuantityStepper
                   quantity={quantity}
@@ -95,7 +95,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 <button
                   type="button"
                   onClick={() => removeItem(product.id, selectedVariant)}
-                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-fg-muted transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
                   aria-label={ui("cartRemove")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -130,7 +130,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 coupon.remove();
                 setCouponInput("");
               }}
-              className="cursor-pointer font-semibold text-ink-500 hover:text-danger"
+              className="cursor-pointer font-semibold text-fg-subtle hover:text-danger"
             >
               {ui("checkoutCouponRemove")}
             </button>
@@ -171,9 +171,9 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       </div>
 
       <div className="space-y-2 border-t border-ink-200 pt-3 text-xs">
-        <div className="flex justify-between text-ink-600">
+        <div className="flex justify-between text-fg-muted">
           <span>{ui("checkoutItemsTotal")}</span>
-          <span className="font-bold text-ink-900">{money(subtotal)}</span>
+          <span className="font-bold text-fg">{money(subtotal)}</span>
         </div>
         {coupon.applied && (
           <div className="flex justify-between text-emerald-700">
@@ -183,9 +183,9 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
             <span className="font-bold">-{money(discount)}</span>
           </div>
         )}
-        <div className="flex justify-between text-ink-600">
+        <div className="flex justify-between text-fg-muted">
           <span>{ui("checkoutShippingFee")}</span>
-          <span className="text-right font-semibold text-ink-500">
+          <span className="text-right font-semibold text-fg-subtle">
             {shipping.status === "ok"
               ? shipping.fee === 0
                 ? ui("cartDeliveryFree")
@@ -208,11 +208,11 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
             </span>
           </div>
         )}
-        <div className="flex justify-between border-t border-ink-200 pt-2 text-sm font-bold text-ink-900">
+        <div className="flex justify-between border-t border-ink-200 pt-2 text-sm font-bold text-fg">
           <span>{ui("checkoutGrandTotal")}</span>
           <span className="text-base text-gold-800">{money(total)}</span>
         </div>
-        <p className="text-2xs leading-relaxed text-ink-500">{ui("checkoutTotalPending")}</p>
+        <p className="text-2xs leading-relaxed text-fg-subtle">{ui("checkoutTotalPending")}</p>
       </div>
 
       <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
@@ -221,7 +221,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       <div className="flex items-center justify-center pt-2 text-center">
         <Link
           href="/shop"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 transition-colors hover:text-gold-800"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-fg-subtle transition-colors hover:text-gold-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>{ui("backToShopping")}</span>

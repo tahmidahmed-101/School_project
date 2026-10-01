@@ -28,7 +28,7 @@ interface ShopProductGridProps {
 
 const VIEW_BUTTON_BASE = "cursor-pointer rounded-full p-2 transition-all";
 const viewButtonClass = (active: boolean) =>
-  `${VIEW_BUTTON_BASE} ${active ? "shadow-xs bg-gold-500 font-bold text-ink-950" : "text-ink-500 hover:text-ink-900"}`;
+  `${VIEW_BUTTON_BASE} ${active ? "shadow-xs bg-accent font-bold text-ink-950" : "text-fg-subtle hover:text-fg"}`;
 
 export function ShopProductGrid({
   products,
@@ -85,7 +85,7 @@ export function ShopProductGrid({
             <button
               type="button"
               onClick={onOpenMobileFilter}
-              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-ink-200 bg-ink-50 px-4 py-2.5 text-xs font-bold text-ink-900 transition-colors hover:border-gold-500 hover:text-gold-800"
+              className="shadow-xs flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-ink-200 bg-surface px-4 py-2.5 text-xs font-bold text-fg transition-colors hover:border-gold-500 hover:text-gold-800"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-gold-700" />
               <span>
@@ -110,14 +110,14 @@ export function ShopProductGrid({
 
           <div className="flex items-center gap-3 text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-ink-500">{ui("sortLabel")}:</span>
+              <span className="text-xs font-bold text-fg-subtle">{ui("sortLabel")}:</span>
               {sortDropdown("w-44")}
             </div>
 
             <div
               role="group"
               aria-label={ui("viewMode")}
-              className="shadow-xs flex items-center rounded-full border border-ink-200 bg-ink-50 p-0.5"
+              className="shadow-xs flex items-center rounded-full border border-ink-200 bg-surface p-0.5"
             >
               <button
                 type="button"
@@ -145,8 +145,8 @@ export function ShopProductGrid({
       </div>
 
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-medium text-ink-500">
-          {ui("filterShowing")} <strong className="text-sm font-bold text-ink-900">{n(products.length)}</strong>{" "}
+        <span className="text-xs font-medium text-fg-subtle">
+          {ui("filterShowing")} <strong className="text-sm font-bold text-fg">{n(products.length)}</strong>{" "}
           {ui("itemsFound")}
         </span>
       </div>

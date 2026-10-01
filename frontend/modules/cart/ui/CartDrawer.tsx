@@ -54,7 +54,7 @@ export function CartDrawer() {
         <DrawerFooter backLabel={ui("backToShopping")} onBack={closeDrawer}>
           <div className="flex items-center justify-between text-xs text-ink-700">
             <span>{ui("cartSubtotal")}</span>
-            <span className="text-sm font-bold text-ink-900">{money(subtotal)}</span>
+            <span className="text-sm font-bold text-fg">{money(subtotal)}</span>
           </div>
 
           <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>

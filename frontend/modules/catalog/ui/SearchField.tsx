@@ -16,7 +16,7 @@ export function SearchField({ value, onChange, placeholder, className = "" }: Se
   const { ui } = useLang();
   return (
     <div className={`relative flex items-center ${className}`}>
-      <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-ink-500" />
+      <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-fg-subtle" />
       <input
         type="text"
         value={value}
@@ -28,7 +28,7 @@ export function SearchField({ value, onChange, placeholder, className = "" }: Se
         <button
           type="button"
           onClick={() => onChange("")}
-          className="absolute right-3 cursor-pointer p-1 text-ink-600 hover:text-ink-900"
+          className="absolute right-3 cursor-pointer p-1 text-fg-muted hover:text-fg"
           aria-label={ui("clearSearch")}
         >
           <X className="h-3.5 w-3.5" />

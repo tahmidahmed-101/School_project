@@ -23,7 +23,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
           <Link
             href={`/product/${product.slug}`}
             onClick={onNavigate}
-            className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-800"
+            className="block truncate text-xs font-bold text-fg transition-colors hover:text-gold-800"
           >
             {t(product.name)}
           </Link>
@@ -42,7 +42,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
                 {ui("expectedDelivery")}: {product.expectedDelivery ? t(product.expectedDelivery) : "TBD"}
               </span>
             </div>
-            <p className="text-2xs text-ink-600">{ui("cartPreOrderNotice")}</p>
+            <p className="text-2xs text-fg-muted">{ui("cartPreOrderNotice")}</p>
           </div>
         )}
 

@@ -84,7 +84,7 @@ export function Dropdown({
             aria-invalid={invalid || undefined}
             className={triggerClassName ?? inputClass({ invalid, padding: "py-3 pl-4 pr-9" })}
           />
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
         </div>
       ) : (
         <button
@@ -99,7 +99,7 @@ export function Dropdown({
         >
           <span className="truncate">{selected?.label ?? placeholder}</span>
           <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 text-ink-500 transition-transform duration-200 ${
+            className={`h-3.5 w-3.5 shrink-0 text-fg-subtle transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           />
@@ -113,7 +113,7 @@ export function Dropdown({
           }`}
         >
           {visibleOptions.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-ink-600">{ui("noMatches")}</p>
+            <p className="px-3 py-2 text-xs text-fg-muted">{ui("noMatches")}</p>
           ) : (
             visibleOptions.map((option) => (
               <button
@@ -123,7 +123,7 @@ export function Dropdown({
                 className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
                   option.value === value
                     ? "bg-gold-50 font-semibold text-gold-900"
-                    : "text-ink-700 hover:bg-ink-100 hover:text-ink-950"
+                    : "text-ink-700 hover:bg-surface-muted hover:text-ink-950"
                 }`}
               >
                 <span className="truncate">{option.label}</span>

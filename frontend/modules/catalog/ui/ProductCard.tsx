@@ -41,7 +41,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   return (
     <div className="group relative flex h-full flex-col justify-between rounded-xl border border-ink-200/90 bg-white p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/70 hover:shadow-lg hover:shadow-ink-200/60 sm:p-2.5">
       {/* Top Image Area */}
-      <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-lg border border-ink-100 bg-ink-50 sm:mb-2">
+      <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-lg border border-ink-100 bg-surface sm:mb-2">
         <Link href={`/product/${product.slug}`} className="relative block h-full w-full">
           <Image
             src={photo(product.image)}
@@ -83,14 +83,14 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <div className="mb-1.5 space-y-0.5">
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 text-xs font-bold leading-tight text-ink-900 transition-colors group-hover:text-gold-800 sm:text-sm"
+            className="line-clamp-2 text-xs font-bold leading-tight text-fg transition-colors group-hover:text-gold-800 sm:text-sm"
             title={t(product.name)}
           >
             {t(product.name)}
           </Link>
 
           {product.productCode && (
-            <p className="text-2xs font-medium leading-tight text-ink-500">
+            <p className="text-2xs font-medium leading-tight text-fg-subtle">
               {ui("productCode")}: {n(product.productCode)}
               {product.productType && ` (${t(product.productType)})`}
             </p>
@@ -113,7 +113,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
             <span className="text-xs font-bold text-gold-800 sm:text-sm">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (
-              <span className="text-2xs font-medium text-ink-600 line-through">{money(product.compareAtPrice)}</span>
+              <span className="text-2xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
             )}
           </div>
 

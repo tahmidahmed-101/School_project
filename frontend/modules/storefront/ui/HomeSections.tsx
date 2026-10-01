@@ -62,7 +62,7 @@ export function HomeSections() {
       ))}
 
       {catalogFailed && (
-        <p role="status" className="mx-auto max-w-2xl px-4 py-10 text-center text-sm font-semibold text-ink-600">
+        <p role="status" className="mx-auto max-w-2xl px-4 py-10 text-center text-sm font-semibold text-fg-muted">
           {ui("catalogUnavailable")}
         </p>
       )}

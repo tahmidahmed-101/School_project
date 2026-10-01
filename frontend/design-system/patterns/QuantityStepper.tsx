@@ -21,7 +21,7 @@ const STYLES = {
     count: "min-w-[24px] px-1 text-xs",
   },
   lg: {
-    wrap: "h-12 rounded-full bg-ink-50",
+    wrap: "h-12 rounded-full",
     button: "h-12 w-11 rounded-full",
     icon: "h-4 w-4",
     count: "w-10 text-sm",
@@ -34,7 +34,7 @@ export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: Q
   const s = STYLES[size];
   const atMin = min !== undefined && quantity <= min;
   const atMax = max !== undefined && quantity >= max;
-  const buttonClass = `relative flex cursor-pointer items-center justify-center text-ink-600 transition-colors hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-40 ${s.button}`;
+  const buttonClass = `relative flex cursor-pointer items-center justify-center text-fg-muted transition-colors hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 ${s.button}`;
 
   return (
     <div className={`inline-flex items-center border border-ink-200 bg-white ${s.wrap}`}>
@@ -47,7 +47,7 @@ export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: Q
       >
         <Minus className={s.icon} />
       </button>
-      <span className={`text-center font-bold tabular-nums text-ink-900 ${s.count}`} aria-live="polite">
+      <span className={`text-center font-bold tabular-nums text-fg ${s.count}`} aria-live="polite">
         {n(quantity)}
       </span>
       <button

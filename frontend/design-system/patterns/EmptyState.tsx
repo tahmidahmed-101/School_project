@@ -23,7 +23,7 @@ export function EmptyState({ icon, title, onReset, action, variant = "panel" }: 
 
   if (variant === "inline") {
     return (
-      <div className="rounded-2xl border border-dashed border-ink-200 py-12 text-center text-ink-500">
+      <div className="rounded-2xl border border-dashed border-ink-200 py-12 text-center text-fg-subtle">
         {icon}
         <p className="mt-2 text-sm">{title}</p>
         {onReset && (
@@ -44,7 +44,7 @@ export function EmptyState({ icon, title, onReset, action, variant = "panel" }: 
     <ScrollReveal y={20} duration={0.6}>
       <div className="shadow-xs my-4 rounded-2xl border border-ink-200/80 bg-white p-12 text-center sm:p-16">
         {icon}
-        <h4 className="ts-display mb-2 text-lg font-bold text-ink-900 sm:text-xl">{title}</h4>
+        <h4 className="ts-display mb-2 text-lg font-bold text-fg sm:text-xl">{title}</h4>
         {onReset && (
           <Button onClick={onReset} leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}>
             {ui("resetFilters")}

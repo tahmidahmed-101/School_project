@@ -47,7 +47,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   const pricePercentage = Math.min(100, Math.max(0, ((sliderValue - minPrice) / (maxPrice - minPrice)) * 100));
 
   return (
-    <div className="space-y-6 text-xs text-ink-900">
+    <div className="space-y-6 text-xs text-fg">
       <div role="radiogroup" aria-label={t(STOCK_TITLE)} className="space-y-2">
         <h5 className="text-2xs font-bold tracking-wider text-gold-800">{t(STOCK_TITLE)}</h5>
         {STOCK_OPTIONS.map((opt) => {
@@ -71,7 +71,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
             >
               <span
                 className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                  checked ? "border-gold-500 bg-gold-500 text-white" : "border-ink-300 bg-white"
+                  checked ? "border-gold-500 bg-accent text-white" : "border-ink-300 bg-white"
                 }`}
               >
                 {checked && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -91,7 +91,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
             <button
               type="button"
               onClick={() => onFilterChange("category", "all")}
-              className="cursor-pointer text-2xs text-ink-500 underline hover:text-gold-800"
+              className="cursor-pointer text-2xs text-fg-subtle underline hover:text-gold-800"
             >
               {ui("filterClearShort")}
             </button>
@@ -121,7 +121,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
       <div className="pt-1">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-bold tracking-wider text-ink-900">{ui("filterPriceRange")}</span>
+          <span className="text-xs font-bold tracking-wider text-fg">{ui("filterPriceRange")}</span>
           <span className="text-xs font-bold text-gold-800">
             {!Number.isFinite(filters.maxPrice) ? ui("filterAny") : money(filters.maxPrice)}
           </span>
@@ -146,7 +146,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
           />
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between text-xs font-medium text-ink-500">
+        <div className="mt-2.5 flex items-center justify-between text-xs font-medium text-fg-subtle">
           <span>{money(minPrice)}</span>
           <span>{money(maxPrice)}</span>
         </div>

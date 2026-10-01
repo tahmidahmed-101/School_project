@@ -42,11 +42,11 @@ export function LoginView() {
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5"
+          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
         >
           {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
           {infoMsg && (
-            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-ink-900">
+            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-fg">
               {infoMsg}
             </div>
           )}
@@ -77,7 +77,7 @@ export function LoginView() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? ui("loginHidePassword") : ui("loginShowPassword")}
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-500 transition-colors hover:text-ink-900"
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -88,7 +88,7 @@ export function LoginView() {
             {ui("loginSubmit")}
           </Button>
 
-          <p className="text-center text-xs font-semibold text-ink-600">{ui("loginForgot")}</p>
+          <p className="text-center text-xs font-semibold text-fg-muted">{ui("loginForgot")}</p>
         </form>
 
         <Link href="/register" className="mt-5 block text-center text-sm font-semibold text-brand-800 hover:underline">

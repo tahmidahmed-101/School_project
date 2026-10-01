@@ -26,7 +26,7 @@ export function AccordionItem({ title, defaultOpen = false, children }: Accordio
           {title}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-fg-subtle transition-transform duration-300 ${open ? "rotate-180 text-fg" : ""}`}
+          className={`h-4 w-4 text-fg-subtle transition-transform duration-300 ${open ? "rotate-180" : ""}`}
         />
       </button>
       <Collapse open={open}>{children}</Collapse>

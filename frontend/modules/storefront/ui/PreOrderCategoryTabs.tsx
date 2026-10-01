@@ -11,7 +11,7 @@ interface PreOrderCategoryTabsProps {
 
 const tabClass = (active: boolean) =>
   `shrink-0 whitespace-nowrap border-b-2 py-2.5 text-xs font-bold tracking-wide transition-colors sm:text-sm ${
-    active ? "border-gold-600 text-gold-800" : "border-transparent text-ink-500 hover:text-ink-800"
+    active ? "border-gold-600 text-gold-800" : "border-transparent text-fg-subtle hover:text-ink-800"
   }`;
 
 /** Underline-style category filter under the pre-order section header; no fill on the tabs themselves. */

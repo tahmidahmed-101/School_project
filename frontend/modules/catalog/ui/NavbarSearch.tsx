@@ -20,7 +20,7 @@ export function NavbarSearch() {
             aria-label={ui("searchProducts")}
             className={`${HEADER_SEARCH_INPUT_CLASS} pl-11 pr-28`}
           />
-          <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-ink-500" />
+          <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-fg-subtle" />
         </div>
         <button type="submit" className={buttonClass({ size: "sm", className: "absolute right-1 top-1" })}>
           {ui("navSearch")}

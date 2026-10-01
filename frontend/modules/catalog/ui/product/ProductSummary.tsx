@@ -29,10 +29,10 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
       <div className="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <span className="text-2xl font-extrabold text-ink-950 sm:text-3xl">{money(product.price)}</span>
         {discountPercent && product.compareAtPrice && (
-          <span className="text-base text-ink-500 line-through">{money(product.compareAtPrice)}</span>
+          <span className="text-base text-fg-subtle line-through">{money(product.compareAtPrice)}</span>
         )}
         {discountPercent && <DiscountBadge percent={discountPercent} size="md" tone="soft" />}
-        <span className="h-5 w-px bg-ink-200" aria-hidden="true" />
+        <span className="h-5 w-px bg-surface-strong" aria-hidden="true" />
         <div className="text-xs">
           <Availability product={product} isSoldOut={isSoldOut} />
         </div>
@@ -50,7 +50,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
               />
             ))}
           </div>
-          <span className="font-medium text-ink-500">({n(product.reviewCount)})</span>
+          <span className="font-medium text-fg-subtle">({n(product.reviewCount)})</span>
         </div>
       )}
     </>
@@ -87,7 +87,7 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
         </span>
       ) : (
         <span className="flex items-center gap-1.5 text-gold-800">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-gold-500" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
           {ui("preOrderClosingSoon")}
         </span>
       )}

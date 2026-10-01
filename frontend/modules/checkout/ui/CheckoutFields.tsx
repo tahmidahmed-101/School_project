@@ -42,7 +42,7 @@ export function CheckoutFields({
   return (
     <>
       <div className="space-y-6 rounded-3xl border border-ink-200 bg-white p-6 shadow-sm sm:p-8">
-        <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-ink-900">{ui("checkoutContactInfo")}</h3>
+        <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-fg">{ui("checkoutContactInfo")}</h3>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -157,7 +157,7 @@ export function CheckoutFields({
       </div>
 
       <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-bold text-ink-900">{ui("checkoutPaymentMethod")}</h3>
+        <h3 className="text-sm font-bold text-fg">{ui("checkoutPaymentMethod")}</h3>
         {/* Compact icon tiles instead of full-width description cards, so N methods don't turn into N*80px of scroll. */}
         <div
           role="radiogroup"
@@ -187,12 +187,12 @@ export function CheckoutFields({
                 />
                 <span
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    selected ? "bg-gold-500 text-ink-950" : "bg-brand-50 text-brand-700"
+                    selected ? "bg-accent text-ink-950" : "bg-brand-50 text-brand-700"
                   }`}
                 >
                   <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
                 </span>
-                <span className="text-2xs font-bold leading-tight text-ink-900">
+                <span className="text-2xs font-bold leading-tight text-fg">
                   {isCod ? ui("checkoutCodLabel") : method.label}
                 </span>
               </label>

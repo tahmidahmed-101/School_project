@@ -67,11 +67,11 @@ export function RegisterView() {
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-ink-50 p-5"
+          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
         >
           {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
           {infoMsg && (
-            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-ink-900">
+            <div className="rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs font-semibold text-fg">
               {infoMsg}
             </div>
           )}

@@ -56,7 +56,7 @@ export function useHeaderSearch() {
 }
 
 export const HEADER_SEARCH_INPUT_CLASS =
-  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-white text-sm text-ink-900 transition-all placeholder:text-ink-500 focus:border-gold-500 focus:ring-gold-500/10";
+  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-white text-sm text-fg transition-all placeholder:text-fg-subtle focus:border-gold-500 focus:ring-gold-500/10";
 
 interface SearchSuggestionsProps {
   id: string;
@@ -76,7 +76,7 @@ export function SearchSuggestions({ id, open, query, results, onNavigate }: Sear
       id={id}
       className="animate-in fade-in slide-in-from-top-2 absolute left-0 right-0 top-full z-50 mt-2 divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-200 bg-white p-2 shadow-2xl"
     >
-      <div className="px-3 py-2 text-2xs font-bold uppercase tracking-wider text-ink-600">
+      <div className="px-3 py-2 text-2xs font-bold uppercase tracking-wider text-fg-muted">
         {ui("matchingProducts")} ({results.length})
       </div>
       {results.map((product) => (
@@ -84,16 +84,16 @@ export function SearchSuggestions({ id, open, query, results, onNavigate }: Sear
           key={product.id}
           href={`/product/${product.slug}`}
           onClick={onNavigate}
-          className="flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-ink-50"
+          className="flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-surface"
         >
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-surface-muted">
             <Image src={photo(product.image)} alt={t(product.name)} fill sizes="48px" className="object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-ink-900">{t(product.name)}</p>
+            <p className="truncate text-xs font-semibold text-fg">{t(product.name)}</p>
             <p className="text-2xs font-medium text-gold-800">{t(product.categoryName)}</p>
           </div>
-          <span className="text-xs font-bold text-ink-900">{money(product.price)}</span>
+          <span className="text-xs font-bold text-fg">{money(product.price)}</span>
         </Link>
       ))}
       <div className="px-3 pb-1 pt-2 text-center">

@@ -44,7 +44,7 @@ export function VoucherSection() {
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-3 sm:gap-3 sm:px-3 lg:gap-2 lg:px-2.5">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-extrabold text-gold-800 sm:text-base">{t(v.title)}</p>
-                      <p className="truncate text-2xs text-ink-500">{t(v.condition)}</p>
+                      <p className="truncate text-2xs text-fg-subtle">{t(v.condition)}</p>
                     </div>
                     <button
                       type="button"

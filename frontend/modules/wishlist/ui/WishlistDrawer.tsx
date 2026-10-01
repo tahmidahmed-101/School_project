@@ -38,7 +38,7 @@ export function WishlistDrawer() {
           <button
             type="button"
             onClick={clearWishlist}
-            className="cursor-pointer px-2 py-1 text-xs font-medium text-ink-500 transition-colors hover:text-danger"
+            className="cursor-pointer px-2 py-1 text-xs font-medium text-fg-subtle transition-colors hover:text-danger"
           >
             {ui("wishlistClear")}
           </button>
@@ -60,11 +60,11 @@ export function WishlistDrawer() {
               <DrawerItemImage src={item.image} alt={t(item.name)} />
 
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="text-2xs font-medium text-ink-500">{t(item.categoryName)}</div>
+                <div className="text-2xs font-medium text-fg-subtle">{t(item.categoryName)}</div>
                 <Link
                   href={`/product/${item.slug}`}
                   onClick={closeWishlist}
-                  className="block truncate text-xs font-bold text-ink-900 transition-colors hover:text-gold-800"
+                  className="block truncate text-xs font-bold text-fg transition-colors hover:text-gold-800"
                 >
                   {t(item.name)}
                 </Link>

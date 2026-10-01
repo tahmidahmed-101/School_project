@@ -117,8 +117,8 @@ export function CheckoutView() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold-50 ring-1 ring-gold-200">
             <ShoppingCart className="h-9 w-9 text-gold-700" strokeWidth={1.75} aria-hidden="true" />
           </div>
-          <p className="text-base font-bold text-ink-900">{ui("cartEmptyTitle")}</p>
-          <p className="text-xs text-ink-600">{ui("cartEmptySubtitle")}</p>
+          <p className="text-base font-bold text-fg">{ui("cartEmptyTitle")}</p>
+          <p className="text-xs text-fg-muted">{ui("cartEmptySubtitle")}</p>
           <Link href="/shop" className={buttonClass()}>
             {ui("cartStartShopping")}
           </Link>

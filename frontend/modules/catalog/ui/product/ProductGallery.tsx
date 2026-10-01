@@ -39,7 +39,7 @@ export function ProductGallery({ product }: { product: Product }) {
         </div>
       )}
 
-      <div className="relative aspect-[4/5] w-full flex-1 overflow-hidden rounded-xl border border-ink-200 bg-ink-50">
+      <div className="relative aspect-[4/5] w-full flex-1 overflow-hidden rounded-xl border border-ink-200 bg-surface">
         <Image
           src={photo(activeImage)}
           alt={t(product.name)}
@@ -54,7 +54,7 @@ export function ProductGallery({ product }: { product: Product }) {
             {product.isPreOrder ? (
               <PreOrderBadge status={product.preorderStatus || "available"} />
             ) : product.badge ? (
-              <span className="shadow-2xs rounded bg-gold-500 px-2 py-0.5 text-2xs font-bold tracking-wide text-ink-950 sm:text-xs">
+              <span className="shadow-2xs rounded bg-accent px-2 py-0.5 text-2xs font-bold tracking-wide text-ink-950 sm:text-xs">
                 {t(product.badge)}
               </span>
             ) : null}
