@@ -16,22 +16,17 @@ const plain = (value: string): T => ({ en: value, bn: value });
 const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
 
 /**
- * Photos come back as `/media/...` (served through the same-origin proxy) or as absolute URLs. An absolute URL that
- * points at the API's own media folder is reduced to its path so it also goes through the proxy.
+ * Photos come back as `/media/...` or as absolute URLs. Media paths are made absolute on the API origin: the Cloudflare
+ * image optimizer reads relative URLs from static assets only, so a proxied `/media/` path would 404 there.
  */
-function normalizeImageUrl(url: string): string {
+export function normalizeImageUrl(url: string): string {
   const trimmed = url.trim();
-  if (!trimmed) return "";
-  const media = trimmed.match(/^https?:\/\/[^/]+(\/media\/.*)$/i);
-  const apiOrigin = (() => {
-    try {
-      return new URL(publicEnv.apiUrl ?? "").origin;
-    } catch {
-      return "";
-    }
-  })();
-  if (media && apiOrigin && trimmed.startsWith(apiOrigin)) return media[1]!;
-  return trimmed;
+  if (!trimmed.startsWith("/media/")) return trimmed;
+  try {
+    return `${new URL(publicEnv.apiUrl ?? "").origin}${trimmed}`;
+  } catch {
+    return trimmed;
+  }
 }
 
 /** "17 Oct 2026" / "১৭ অক্টো ২০২৬": locale date formatting of a real API date, not a translation. */
