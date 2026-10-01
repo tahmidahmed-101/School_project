@@ -36,6 +36,14 @@ describe("pageMetadata", () => {
   it("omits the title on the home page so the layout default applies", () => {
     expect(pageMetadata({ description: "d", path: "/" })).not.toHaveProperty("title");
   });
+
+  it("splits comma-separated keywords and omits them when blank", () => {
+    expect(pageMetadata({ description: "d", path: "/", keywords: " watch, , smart watch " }).keywords).toEqual([
+      "watch",
+      "smart watch",
+    ]);
+    expect(pageMetadata({ description: "d", path: "/", keywords: "" })).not.toHaveProperty("keywords");
+  });
 });
 
 describe("breadcrumbJsonLd", () => {

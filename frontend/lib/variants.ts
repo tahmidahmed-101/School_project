@@ -59,6 +59,8 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     preorderEndDate: variant.preorderEndDate,
     expectedDelivery: variant.expectedDelivery,
     preorderCloses: variant.preorderCloses,
+    maxPreorderQuantity: variant.maxPreorderQuantity,
+    currentPreorderQuantity: variant.currentPreorderQuantity,
     preorderStatus: variant.preorderStatus,
   };
 }

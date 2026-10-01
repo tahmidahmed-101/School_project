@@ -16,21 +16,18 @@ export function getDiscountPercent(product: Product): number | null {
 /** True for a pre-order that is marked sold out or has reached its reservation cap. */
 export function isPreOrderSoldOut(product: Product): boolean {
   if (!product.isPreOrder) return false;
+  if (product.preorderStatus === "sold-out") return true;
+  // A cap of 0 or nothing reserved yet are real values, so compare against undefined rather than truthiness.
   return (
-    product.preorderStatus === "sold-out" ||
-    Boolean(
-      product.maxPreorderQuantity &&
-      product.currentPreorderQuantity &&
-      product.currentPreorderQuantity >= product.maxPreorderQuantity,
-    )
+    product.maxPreorderQuantity !== undefined && (product.currentPreorderQuantity ?? 0) >= product.maxPreorderQuantity
   );
 }
 
 /** Largest quantity a shopper can add for one order line. */
 export function getMaxOrderQuantity(product: Product): number {
   if (!product.isPreOrder) return product.stockCount;
-  if (product.maxPreorderQuantity && product.currentPreorderQuantity) {
-    return Math.max(1, product.maxPreorderQuantity - product.currentPreorderQuantity);
+  if (product.maxPreorderQuantity !== undefined) {
+    return Math.max(1, product.maxPreorderQuantity - (product.currentPreorderQuantity ?? 0));
   }
   return 10;
 }

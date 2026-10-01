@@ -66,7 +66,7 @@ export function ProductActions({
           >
             <Minus className="h-4 w-4" />
           </button>
-          <span className="px-4 text-sm font-bold text-ink-900">{n(quantity)}</span>
+          <span className="w-10 text-center text-sm font-bold tabular-nums text-ink-900">{n(quantity)}</span>
           <button
             type="button"
             onClick={() => onQuantityChange(Math.min(maxQuantity, quantity + 1))}

@@ -57,7 +57,8 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
   let preorderStatus: SkuVariant["preorderStatus"];
   if (isPreOrder) {
     const end = v.preorder_end_date ? new Date(v.preorder_end_date).getTime() : NaN;
-    preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
+    if (v.preorder_remaining === 0) preorderStatus = "sold-out";
+    else preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
   }
 
   return {
@@ -74,6 +75,8 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
     preorderEndDate: isPreOrder ? (v.preorder_end_date ?? undefined) : undefined,
     expectedDelivery: isPreOrder ? formatDate(v.release_date) : undefined,
     preorderCloses: isPreOrder ? formatDate(v.preorder_end_date) : undefined,
+    maxPreorderQuantity: isPreOrder ? (v.preorder_stock_limit ?? undefined) : undefined,
+    currentPreorderQuantity: isPreOrder ? v.preordered_quantity : undefined,
     preorderStatus,
   };
 }
@@ -178,6 +181,7 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     skuVariants: skus,
     defaultVariantId: preferred?.id,
     specs: toSpecs(api.specs),
+    metaKeywords: api.meta_keywords || undefined,
   };
   return applyVariant(base, preferred);
 }

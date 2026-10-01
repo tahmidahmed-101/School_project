@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     description: truncate(product.description.en || product.tagline.en || product.name.en),
     path: `/product/${product.slug}`,
     image: { url: photo(product.image), alt: product.name.en },
+    keywords: product.metaKeywords,
   });
 }
 

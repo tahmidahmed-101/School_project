@@ -31,6 +31,9 @@ export interface SkuVariant {
   preorderEndDate?: string;
   expectedDelivery?: T;
   preorderCloses?: T;
+  /** Pre-order cap; undefined when the pre-order has no limit. */
+  maxPreorderQuantity?: number;
+  currentPreorderQuantity?: number;
   preorderStatus?: "available" | "closing-soon" | "sold-out";
 }
 
@@ -72,6 +75,8 @@ export interface Product {
   defaultVariantId?: string;
   specs?: ProductSpec[];
   highlights?: T[];
+  /** SEO keywords from the product detail endpoint. */
+  metaKeywords?: string;
   // Pre-order attributes
   isPreOrder?: boolean;
   preorderEndDate?: string;

@@ -36,6 +36,15 @@ describe("isPreOrderSoldOut", () => {
       isPreOrderSoldOut(makeProduct({ isPreOrder: true, maxPreorderQuantity: 10, currentPreorderQuantity: 9 })),
     ).toBe(false);
   });
+
+  it("treats a zero cap as sold out and zero reservations as open", () => {
+    expect(
+      isPreOrderSoldOut(makeProduct({ isPreOrder: true, maxPreorderQuantity: 0, currentPreorderQuantity: 0 })),
+    ).toBe(true);
+    expect(
+      isPreOrderSoldOut(makeProduct({ isPreOrder: true, maxPreorderQuantity: 5, currentPreorderQuantity: 0 })),
+    ).toBe(false);
+  });
 });
 
 describe("getMaxOrderQuantity", () => {
@@ -51,6 +60,12 @@ describe("getMaxOrderQuantity", () => {
       getMaxOrderQuantity(makeProduct({ isPreOrder: true, maxPreorderQuantity: 20, currentPreorderQuantity: 40 })),
     ).toBe(1);
     expect(getMaxOrderQuantity(makeProduct({ isPreOrder: true }))).toBe(10);
+  });
+
+  it("uses the full cap when nothing is reserved yet", () => {
+    expect(
+      getMaxOrderQuantity(makeProduct({ isPreOrder: true, maxPreorderQuantity: 4, currentPreorderQuantity: 0 })),
+    ).toBe(4);
   });
 });
 

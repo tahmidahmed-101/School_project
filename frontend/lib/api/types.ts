@@ -67,6 +67,12 @@ export interface ApiVariant {
   release_date: string | null;
   is_preorder_active: boolean;
   is_preorder_price_applied: boolean;
+  /** Pre-order cap; null when the pre-order has no limit. */
+  preorder_stock_limit: number | null;
+  /** Quantity already committed on non-cancelled orders. */
+  preordered_quantity: number;
+  /** `max(limit - preordered_quantity, 0)`; null when there is no limit. */
+  preorder_remaining: number | null;
 }
 
 export interface ApiProduct {
@@ -85,6 +91,8 @@ export interface ApiProduct {
   images: ApiProductImage[];
   /** Present on the detail endpoint only. */
   description?: string;
+  /** SEO keywords, comma separated. Present on the detail endpoint only. */
+  meta_keywords?: string;
 }
 
 interface ApiReview {

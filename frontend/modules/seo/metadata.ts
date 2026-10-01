@@ -71,13 +71,20 @@ interface PageMetadataOptions {
   /** Canonical URL when it differs from `path` (e.g. a filtered view of a page that has its own URL). */
   canonical?: string;
   image?: SocialImage;
+  /** Comma-separated keywords, e.g. a product's `meta_keywords`. Blank entries are dropped. */
+  keywords?: string;
 }
 
 /** Title, description, canonical URL and social cards for an indexable page. */
-export function pageMetadata({ title, description, path, canonical, image }: PageMetadataOptions): Metadata {
+export function pageMetadata({ title, description, path, canonical, image, keywords }: PageMetadataOptions): Metadata {
+  const keywordList = (keywords ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
   return {
     ...(title ? { title } : {}),
     description,
+    ...(keywordList.length ? { keywords: keywordList } : {}),
     alternates: { canonical: canonical ?? path },
     ...socialMetadata({ title: title ? `${title} | ${SITE_NAME}` : SITE_TITLE, description, path, image }),
   };
