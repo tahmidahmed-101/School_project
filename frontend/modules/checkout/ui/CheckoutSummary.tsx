@@ -64,9 +64,9 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
             <Sparkles className="h-4 w-4 shrink-0 text-gold-600" />
             <span>{ui("checkoutPreOrderNotice")}</span>
           </div>
-          <p className="text-[11px] leading-relaxed text-gold-900">{ui("checkoutPreOrderShipping")}</p>
+          <p className="text-2xs leading-relaxed text-gold-900">{ui("checkoutPreOrderShipping")}</p>
           {hasMixed && (
-            <p className="border-t border-gold-200/80 pt-1.5 text-[10px] leading-relaxed text-ink-700">
+            <p className="border-t border-gold-200/80 pt-1.5 text-2xs leading-relaxed text-ink-700">
               {ui("cartMixedNotice")}
             </p>
           )}
@@ -86,7 +86,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                   <PreOrderBadge status={product.preorderStatus || "available"} size="sm" className="shrink-0" />
                 )}
               </div>
-              <div className="text-[11px] font-medium text-ink-500">{money(product.price)}</div>
+              <div className="text-2xs font-medium text-ink-500">{money(product.price)}</div>
               <div className="flex items-center gap-2 pt-0.5">
                 <QuantityStepper
                   quantity={quantity}
@@ -102,7 +102,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 </button>
               </div>
               {product.isPreOrder && product.expectedDelivery && (
-                <div className="flex items-center gap-1 text-[10px] font-medium text-gold-800">
+                <div className="flex items-center gap-1 text-2xs font-medium text-gold-800">
                   <Calendar className="h-2.5 w-2.5 shrink-0" />
                   <span>
                     {ui("expectedDelivery")}: {t(product.expectedDelivery)}
@@ -198,7 +198,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
           </span>
         </div>
         {preOrderItem && (
-          <div className="flex items-start justify-between rounded-lg border border-gold-200/80 bg-gold-50/70 p-2 text-[11px] text-gold-900">
+          <div className="flex items-start justify-between rounded-lg border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
             <span className="flex items-center gap-1 font-medium">
               <Calendar className="h-3 w-3 text-gold-600" />
               {ui("expectedDelivery")}
@@ -212,7 +212,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
           <span>{ui("checkoutGrandTotal")}</span>
           <span className="text-base text-gold-800">{money(total)}</span>
         </div>
-        <p className="text-[10.5px] leading-relaxed text-ink-500">{ui("checkoutTotalPending")}</p>
+        <p className="text-2xs leading-relaxed text-ink-500">{ui("checkoutTotalPending")}</p>
       </div>
 
       <Button type="submit" size="lg" fullWidth loading={isSubmitting}>

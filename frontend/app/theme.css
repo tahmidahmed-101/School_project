@@ -10,11 +10,9 @@
   --surface-muted: var(--color-ink-100);
   --surface-strong: var(--color-ink-200);
   --card: #ffffff;
-  --card-hover: var(--color-ink-50);
 
   --line: rgba(0, 0, 0, 0.08);
   --line-strong: rgba(0, 0, 0, 0.16);
-  --line-accent: rgba(229, 192, 76, 0.45);
 
   --fg: var(--color-ink-900);
   --fg-muted: var(--color-ink-600);
@@ -99,31 +97,4 @@
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Glass & Glow utilities */
-.ts-glass {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.ts-card-glow {
-  box-shadow:
-    0 0 0 1px var(--line),
-    0 4px 16px -4px rgba(0, 0, 0, 0.08);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.ts-card-glow:hover {
-  box-shadow:
-    0 0 0 1px var(--line-strong),
-    0 8px 24px -6px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
-
-/* Subtle dot mesh background for signature sections */
-.ts-dot-mesh {
-  background-image: radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
 }

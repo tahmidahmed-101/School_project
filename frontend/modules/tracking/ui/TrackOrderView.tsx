@@ -131,14 +131,14 @@ export function TrackOrderView() {
           <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
               <div>
-                <span className="block text-[11px] font-semibold text-ink-500">{ui("orderNumberLabel")}</span>
+                <span className="block text-2xs font-semibold text-ink-500">{ui("orderNumberLabel")}</span>
                 <span className="font-mono text-sm font-bold text-gold-800">{result.order_number}</span>
-                <span className="mt-0.5 block text-[11px] text-ink-500">
+                <span className="mt-0.5 block text-2xs text-ink-500">
                   {ui("trackOrderPlacedOn")}: {formatDate(result.created_at)}
                 </span>
               </div>
               <div className="text-right">
-                <span className="block text-[11px] font-semibold text-ink-500">{ui("trackOrderCurrentStatus")}</span>
+                <span className="block text-2xs font-semibold text-ink-500">{ui("trackOrderCurrentStatus")}</span>
                 <span className={`text-sm font-bold ${isCancelled ? "text-danger" : "text-ink-900"}`}>
                   {isCancelled ? ui("trackStageCancelled") : ui(STAGES[Math.max(currentStageIndex, 0)]!.labelKey)}
                 </span>
@@ -183,13 +183,13 @@ export function TrackOrderView() {
                           {ui(stage.labelKey)}
                         </span>
                         {event && (
-                          <span className="mt-0.5 block text-[11px] text-ink-500">
+                          <span className="mt-0.5 block text-2xs text-ink-500">
                             {formatDate(event.timestamp)}
                             {event.tracking_number && ` · ${ui("trackOrderTrackingNo")} ${event.tracking_number}`}
                           </span>
                         )}
                         {isCurrent && (
-                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-800">
+                          <span className="mt-0.5 inline-block rounded-full bg-gold-500/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-gold-800">
                             {ui("trackOrderCurrentStatus")}
                           </span>
                         )}
@@ -200,7 +200,7 @@ export function TrackOrderView() {
               </ol>
             )}
 
-            <p className="rounded-xl bg-ink-50 p-3 text-[11px] leading-relaxed text-ink-500">
+            <p className="rounded-xl bg-ink-50 p-3 text-2xs leading-relaxed text-ink-500">
               {ui("trackOrderDisclaimer")}
             </p>
 

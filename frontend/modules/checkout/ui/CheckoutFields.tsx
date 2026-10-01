@@ -192,7 +192,7 @@ export function CheckoutFields({
                 >
                   <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
                 </span>
-                <span className="text-[11px] font-bold leading-tight text-ink-900">
+                <span className="text-2xs font-bold leading-tight text-ink-900">
                   {isCod ? ui("checkoutCodLabel") : method.label}
                 </span>
               </label>

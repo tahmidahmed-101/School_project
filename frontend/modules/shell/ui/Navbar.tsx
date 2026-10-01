@@ -208,7 +208,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-gold-300">
                 <MapPin className="h-3 w-3" />
               </div>
-              <span className="whitespace-nowrap text-[11px] font-medium text-white/85">
+              <span className="whitespace-nowrap text-2xs font-medium text-white/85">
                 {lang === "bn" ? "ঢাকা, বাংলাদেশ" : "Dhaka, Bangladesh"}
               </span>
             </div>

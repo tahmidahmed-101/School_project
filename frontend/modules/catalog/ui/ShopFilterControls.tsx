@@ -49,7 +49,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   return (
     <div className="space-y-6 text-xs text-ink-900">
       <div role="radiogroup" aria-label={t(STOCK_TITLE)} className="space-y-2">
-        <h5 className="text-[11px] font-bold tracking-wider text-gold-800">{t(STOCK_TITLE)}</h5>
+        <h5 className="text-2xs font-bold tracking-wider text-gold-800">{t(STOCK_TITLE)}</h5>
         {STOCK_OPTIONS.map((opt) => {
           const checked = filters.stockType === opt.id;
           return (
@@ -86,12 +86,12 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
       <div className="relative">
         <div className="mb-2 flex items-center justify-between">
-          <h5 className="text-[11px] font-bold tracking-wider text-gold-800">{ui("filterCategories")}</h5>
+          <h5 className="text-2xs font-bold tracking-wider text-gold-800">{ui("filterCategories")}</h5>
           {filters.category !== "all" && (
             <button
               type="button"
               onClick={() => onFilterChange("category", "all")}
-              className="cursor-pointer text-[10px] text-ink-500 underline hover:text-gold-800"
+              className="cursor-pointer text-2xs text-ink-500 underline hover:text-gold-800"
             >
               {ui("filterClearShort")}
             </button>

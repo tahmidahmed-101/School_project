@@ -87,10 +87,10 @@ export function Hero({ shopLink = "/shop?type=normal", preorder = false }: { sho
 
               <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
                 <div key={index} className={rotated ? "animate-[hero-caption_0.4s_ease-out]" : undefined}>
-                  <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
+                  <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-2xs font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
                     {badge[lang]}
                   </span>
-                  <div className="flex items-start gap-1.5 text-[10px] font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
+                  <div className="flex items-start gap-1.5 text-2xs font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
                     <span className="sm:truncate">{slide.tag[lang]}</span>
                   </div>
 

@@ -129,7 +129,7 @@ function MobileBottomBarInner() {
                   {tab.badge > 0 && <CountBadge className="-right-2 -top-1.5">{n(tab.badge)}</CountBadge>}
                 </span>
                 <span
-                  className={`max-w-full truncate px-0.5 text-[10px] font-semibold leading-none transition-colors ${
+                  className={`max-w-full truncate px-0.5 text-2xs font-semibold leading-none transition-colors ${
                     isActive ? "text-gold-300" : "text-white/75 group-hover:text-white"
                   }`}
                 >

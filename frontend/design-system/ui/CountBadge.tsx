@@ -8,7 +8,7 @@ export function CountBadge({
 }) {
   return (
     <span
-      className={`shadow-xs absolute flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold leading-none text-ink-950 ${className}`}
+      className={`shadow-xs absolute flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-2xs font-bold leading-none text-ink-950 ${className}`}
     >
       {children}
     </span>

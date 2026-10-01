@@ -90,7 +90,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           </Link>
 
           {product.productCode && (
-            <p className="text-[9.5px] font-medium leading-tight text-ink-500 sm:text-[10.5px]">
+            <p className="text-2xs font-medium leading-tight text-ink-500">
               {ui("productCode")}: {n(product.productCode)}
               {product.productType && ` (${t(product.productType)})`}
             </p>
@@ -99,7 +99,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {/* Pre-order Expected Delivery Info: short date only, wraps instead of overflowing */}
           {product.isPreOrder && product.expectedDelivery && (
             <div
-              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-[9px] font-medium leading-snug text-gold-800 sm:text-[10px]"
+              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-2xs font-medium leading-snug text-gold-800"
               title={`${ui("expectedDelivery")}: ${t(product.expectedDelivery)}`}
             >
               <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-600" />
@@ -113,9 +113,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
             <span className="text-xs font-bold text-gold-800 sm:text-sm">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (
-              <span className="text-[9.5px] font-medium text-ink-600 line-through sm:text-[10.5px]">
-                {money(product.compareAtPrice)}
-              </span>
+              <span className="text-2xs font-medium text-ink-600 line-through">{money(product.compareAtPrice)}</span>
             )}
           </div>
 

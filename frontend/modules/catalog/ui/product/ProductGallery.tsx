@@ -54,7 +54,7 @@ export function ProductGallery({ product }: { product: Product }) {
             {product.isPreOrder ? (
               <PreOrderBadge status={product.preorderStatus || "available"} />
             ) : product.badge ? (
-              <span className="shadow-2xs rounded bg-gold-500 px-2 py-0.5 text-[10px] font-bold tracking-wide text-ink-950 sm:text-xs">
+              <span className="shadow-2xs rounded bg-gold-500 px-2 py-0.5 text-2xs font-bold tracking-wide text-ink-950 sm:text-xs">
                 {t(product.badge)}
               </span>
             ) : null}

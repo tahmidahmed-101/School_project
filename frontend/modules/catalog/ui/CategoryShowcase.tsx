@@ -145,7 +145,7 @@ function CategoryTrack({
               </h3>
 
               {/* Product Count (e.g. 28 Products) */}
-              <p className="mt-0.5 text-[11px] font-medium text-ink-600 sm:text-xs">{countText}</p>
+              <p className="mt-0.5 text-2xs font-medium text-ink-600 sm:text-xs">{countText}</p>
             </Link>
           </CardReveal>
         );

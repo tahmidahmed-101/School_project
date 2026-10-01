@@ -3,8 +3,8 @@
 import { useLang } from "@/lib/i18n";
 
 const SIZES = {
-  sm: "px-1.5 py-0.5 text-[9px]",
-  md: "px-2 py-0.5 text-[10px] sm:text-xs",
+  sm: "px-1.5 py-0.5 text-2xs",
+  md: "px-2 py-0.5 text-2xs sm:text-xs",
 } as const;
 
 const TONES = {

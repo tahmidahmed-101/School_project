@@ -36,20 +36,21 @@ export function VoucherSection() {
                 <div className="flex h-full items-stretch overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-sm">
                   <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 sm:w-20 lg:w-16">
                     <Ticket className="h-6 w-6" />
-                    <span className="whitespace-nowrap text-[9px] font-extrabold tracking-wider">
+                    {/* Decorative stamp in a 64px column; 10px is the largest size that fits "KULL MART". */}
+                    <span aria-hidden="true" className="whitespace-nowrap text-[10px] font-extrabold tracking-wide">
                       {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
                     </span>
                   </div>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-3 sm:gap-3 sm:px-3 lg:gap-2 lg:px-2.5">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-extrabold text-gold-800 sm:text-base">{t(v.title)}</p>
-                      <p className="truncate text-[10px] text-ink-500 sm:text-[11px]">{t(v.condition)}</p>
+                      <p className="truncate text-2xs text-ink-500">{t(v.condition)}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => collect(v.code)}
                       disabled={isCollected}
-                      className={`flex shrink-0 cursor-pointer whitespace-nowrap items-center gap-1 rounded-full px-2.5 py-2 text-[10px] sm:px-3 sm:text-[11px] font-bold transition-colors ${
+                      className={`flex shrink-0 cursor-pointer whitespace-nowrap items-center gap-1 rounded-full px-2.5 py-2 text-2xs sm:px-3 font-bold transition-colors ${
                         isCollected
                           ? "cursor-default bg-brand-100 text-brand-800"
                           : "bg-gold-400 text-ink-950 hover:bg-gold-300"

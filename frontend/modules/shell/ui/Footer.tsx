@@ -144,7 +144,7 @@ export function Footer() {
         </div>
 
         {/* Bottom Rights & Disclosures */}
-        <div className="flex flex-col items-center justify-between gap-4 border-t border-white/15 pt-8 text-[11px] text-white/60 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-white/15 pt-8 text-2xs text-white/60 sm:flex-row">
           <p>
             © {new Date().getFullYear()} {BRAND_INFO.name}. {ui("footerRights")}
           </p>

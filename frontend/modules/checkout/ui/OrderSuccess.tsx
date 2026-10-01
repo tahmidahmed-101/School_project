@@ -40,7 +40,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
               <Sparkles className="h-4 w-4 text-gold-600" />
               <span>{ui("checkoutPreOrderNotice")}</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-gold-800">{ui("checkoutPreOrderShipping")}</p>
+            <p className="text-2xs leading-relaxed text-gold-800">{ui("checkoutPreOrderShipping")}</p>
           </div>
         )}
 

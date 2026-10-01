@@ -55,7 +55,7 @@ export function NavCategoriesMenu() {
                 }`}
               >
                 <span className="truncate">{t(category.name)}</span>
-                <span className="ml-2 shrink-0 text-[10px] font-normal text-ink-600">
+                <span className="ml-2 shrink-0 text-2xs font-normal text-ink-600">
                   {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
                 </span>
               </Link>

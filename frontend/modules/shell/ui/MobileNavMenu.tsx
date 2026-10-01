@@ -114,7 +114,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         <span>{ui("navPreOrder")}</span>
                       </Link>
 
-                      <div className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-white/40">
+                      <div className="px-3 pb-1 pt-4 text-2xs font-bold uppercase tracking-wider text-white/40">
                         {ui("shopByCategories")}
                       </div>
 

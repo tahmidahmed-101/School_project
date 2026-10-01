@@ -60,7 +60,7 @@ export function WishlistDrawer() {
               <DrawerItemImage src={item.image} alt={t(item.name)} />
 
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="text-[11px] font-medium text-ink-500">{t(item.categoryName)}</div>
+                <div className="text-2xs font-medium text-ink-500">{t(item.categoryName)}</div>
                 <Link
                   href={`/product/${item.slug}`}
                   onClick={closeWishlist}

@@ -35,14 +35,14 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
         <div className="text-xs font-bold text-gold-800">{money(product.price)}</div>
 
         {product.isPreOrder && (
-          <div className="space-y-1 rounded-md border border-gold-200/80 bg-gold-50/70 p-2 text-[10px] text-gold-900">
+          <div className="space-y-1 rounded-md border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
             <div className="flex items-center gap-1 font-semibold text-gold-800">
               <Calendar className="h-3 w-3 shrink-0 text-gold-600" />
               <span>
                 {ui("expectedDelivery")}: {product.expectedDelivery ? t(product.expectedDelivery) : "TBD"}
               </span>
             </div>
-            <p className="text-[10px] text-ink-600">{ui("cartPreOrderNotice")}</p>
+            <p className="text-2xs text-ink-600">{ui("cartPreOrderNotice")}</p>
           </div>
         )}
 

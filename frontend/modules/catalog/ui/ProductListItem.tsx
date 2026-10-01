@@ -35,7 +35,7 @@ export function ProductListItem({ product }: { product: Product }) {
       </Link>
 
       <div className="w-full min-w-0 flex-1 space-y-1 text-left">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-gold-800">
+        <div className="flex items-center gap-2 text-2xs font-semibold text-gold-800">
           <span>{t(product.categoryName)}</span>
         </div>
 

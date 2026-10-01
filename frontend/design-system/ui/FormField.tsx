@@ -43,7 +43,7 @@ export function FormField({ htmlFor, label, required = false, error, children }:
 /** One-line validation message under a control. */
 export function FieldError({ id, children }: { id?: string; children: ReactNode }) {
   return (
-    <p id={id} role="alert" className="mt-1 text-[11px] font-semibold text-danger">
+    <p id={id} role="alert" className="mt-1 text-2xs font-semibold text-danger">
       {children}
     </p>
   );
