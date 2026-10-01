@@ -11,8 +11,7 @@ import { Newsletter } from "@/modules/marketing";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 
-// Each shelf links to its full category; rendering every product made home cost grow with the catalogue.
-const CATEGORY_SHELF_SIZE = 8;
+import { CATEGORY_SHELF_SIZE, bestSellers } from "../domain/home-products";
 
 export function HomeSections() {
   const { t, ui } = useLang();
@@ -20,11 +19,9 @@ export function HomeSections() {
   const { stockProducts } = useProducts();
 
   // Best-seller shelf: hand-picked (featured) products first, then the rest of the catalogue
-  const bestSellerProducts = useMemo(() => {
-    return [...stockProducts].sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))).slice(0, 8);
-  }, [stockProducts]);
+  const bestSellerProducts = useMemo(() => bestSellers(stockProducts), [stockProducts]);
 
-  // One shelf per category, each showing every non-pre-order product in that category
+  // One shelf per category, each linking to the full category
   const categorySections = useMemo(() => {
     return categories
       .map((category) => ({

@@ -156,6 +156,7 @@ const DICT = {
   bestSellersTitle: { en: "Best seller collection", bn: "সেরা বিক্রিত কালেকশন" },
   categoriesTitle: { en: "Browse by category", bn: "ক্যাটাগরি অনুযায়ী দেখুন" },
   viewAllProducts: { en: "View all", bn: "সব দেখুন" },
+  loadMore: { en: "Load more", bn: "আরও দেখুন" },
 
   // Shop Page
   shopHeading: { en: "Shop all collections", bn: "আমাদের সব কালেকশন" },

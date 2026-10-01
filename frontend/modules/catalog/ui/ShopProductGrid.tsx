@@ -12,6 +12,9 @@ import { FilterDropdown } from "./FilterDropdown";
 import { SearchField } from "./SearchField";
 import { EmptyState } from "@/design-system/patterns/EmptyState";
 
+// Rendering every match made shop cost grow with the catalogue; filters still search the full list.
+const PAGE_SIZE = 24;
+
 interface ShopProductGridProps {
   products: Product[];
   /** The catalogue could not be loaded (API unreachable): say so instead of "no results". */
@@ -36,6 +39,13 @@ export function ShopProductGrid({
 }: ShopProductGridProps) {
   const { ui, n } = useLang();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const [shownFor, setShownFor] = useState(products);
+  if (shownFor !== products) {
+    setShownFor(products);
+    setShown(PAGE_SIZE);
+  }
+  const visible = products.slice(0, shown);
 
   const activeFilterCount = countActiveFilters(filters);
 
@@ -142,18 +152,30 @@ export function ShopProductGrid({
         />
       ) : viewMode === "grid" ? (
         <ProductCardGrid
-          products={products}
+          products={visible}
           className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
           stagger={0.05}
           eagerCount={4}
         />
       ) : (
         <div className="space-y-3">
-          {products.map((product, idx) => (
+          {visible.map((product, idx) => (
             <ScrollReveal key={product.id} delay={Math.min((idx % 6) * 0.05, 0.25)} y={18} duration={0.6}>
               <ProductListItem product={product} />
             </ScrollReveal>
           ))}
+        </div>
+      )}
+
+      {shown < products.length && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + PAGE_SIZE)}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gold-500 px-7 py-3 text-xs font-bold tracking-wider text-ink-950 shadow-md transition-colors hover:bg-gold-400"
+          >
+            {ui("loadMore")}
+          </button>
         </div>
       )}
     </div>
