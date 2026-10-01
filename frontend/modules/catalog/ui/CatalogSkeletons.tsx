@@ -20,6 +20,17 @@ function ProductCardSkeleton() {
   );
 }
 
+/** The pre-order and trending product grid, used inside other route skeletons. */
+export function ProductGridSkeleton({ count = 10 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+      {Array.from({ length: count }, (_, i) => (
+        <ProductCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
 export function ShopSkeleton() {
   return (
     <div role="status" aria-live="polite" className="min-h-screen w-full bg-ink-50/60">
