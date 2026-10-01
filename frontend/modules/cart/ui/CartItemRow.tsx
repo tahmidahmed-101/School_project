@@ -37,7 +37,7 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
         {product.isPreOrder && (
           <div className="space-y-1 rounded-md border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
             <div className="flex items-center gap-1 font-semibold text-gold-800">
-              <Calendar className="h-3 w-3 shrink-0 text-gold-600" />
+              <Calendar className="h-3 w-3 shrink-0 text-gold-700" />
               <span>
                 {ui("expectedDelivery")}: {product.expectedDelivery ? t(product.expectedDelivery) : "TBD"}
               </span>

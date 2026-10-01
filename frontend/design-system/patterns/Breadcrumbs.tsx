@@ -41,7 +41,7 @@ export function Breadcrumbs({ items, className = "", showHome = true }: Breadcru
 
           return (
             <li key={`${item.label}-${index}`} className="inline-flex items-center gap-1.5">
-              {(showHome || index > 0) && <ChevronRight className="h-3 w-3 shrink-0 text-ink-400" aria-hidden="true" />}
+              {(showHome || index > 0) && <ChevronRight className="h-3 w-3 shrink-0 text-ink-500" aria-hidden="true" />}
               {item.href && !isLast ? (
                 <Link
                   href={item.href}

@@ -42,7 +42,7 @@ export function ShopFilterSidebar({
           <div className="shadow-xs max-h-[calc(100vh-165px)] space-y-6 overflow-y-auto rounded-2xl border border-ink-200/80 bg-white p-5 text-xs text-ink-900 sm:p-6">
             <div className="flex items-center justify-between border-b border-ink-200 pb-3.5">
               <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-gold-600" />
+                <Filter className="h-4 w-4 text-gold-700" />
                 <h4 className="ts-display text-sm font-bold tracking-wider text-ink-900">{ui("filterCatalog")}</h4>
               </div>
               {hasActiveFilters && (
@@ -77,7 +77,7 @@ export function ShopFilterSidebar({
             >
               <div className="flex items-center justify-between border-b border-ink-200 bg-white p-5">
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gold-600" />
+                  <Filter className="h-4 w-4 text-gold-700" />
                   <h3 className="ts-display text-base font-bold tracking-wider text-ink-900">{ui("filterCatalog")}</h3>
                 </div>
                 <button

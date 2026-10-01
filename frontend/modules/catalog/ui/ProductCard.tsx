@@ -102,7 +102,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-2xs font-medium leading-snug text-gold-800"
               title={`${ui("expectedDelivery")}: ${t(product.expectedDelivery)}`}
             >
-              <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-600" />
+              <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-700" />
               <span className="max-w-full break-words text-center">{t(product.expectedDelivery)}</span>
             </div>
           )}
@@ -142,7 +142,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <button
                 type="button"
                 onClick={() => addItem(product)}
-                className="shadow-xs flex h-8 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-ink-200 bg-white text-ink-700 transition-all hover:scale-[1.05] hover:border-gold-400 hover:text-gold-600 active:scale-95"
+                className="shadow-xs flex h-8 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-ink-200 bg-white text-ink-700 transition-all hover:scale-[1.05] hover:border-gold-400 hover:text-gold-700 active:scale-95"
                 aria-label={`${ui("addToCart")} - ${t(product.name)}`}
                 title={ui("addToCart")}
               >

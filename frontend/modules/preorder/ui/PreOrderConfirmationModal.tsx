@@ -29,7 +29,7 @@ export function PreOrderConfirmationModal() {
         <button
           type="button"
           onClick={closePreOrderModal}
-          className="absolute right-4 top-4 rounded-full p-1.5 text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-700"
           aria-label={ui("close")}
         >
           <X className="h-5 w-5" />
@@ -37,7 +37,7 @@ export function PreOrderConfirmationModal() {
 
         {/* Header */}
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-500/20 text-gold-600">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-500/20 text-gold-700">
             <Sparkles className="h-4 w-4" />
           </span>
           <h3 id="preorder-modal-title" className="text-base font-bold text-ink-950 sm:text-lg">
@@ -80,7 +80,7 @@ export function PreOrderConfirmationModal() {
 
           <div className="flex items-center justify-between border-t border-gold-200/50 pt-2">
             <span className="flex items-center gap-1.5 font-medium text-ink-600">
-              <Calendar className="h-3.5 w-3.5 text-gold-600" />
+              <Calendar className="h-3.5 w-3.5 text-gold-700" />
               <span>{ui("expectedDelivery")}</span>
             </span>
             <span className="font-bold text-ink-950">{deliveryDate}</span>
@@ -89,7 +89,7 @@ export function PreOrderConfirmationModal() {
 
         {/* Disclaimer Notice */}
         <div className="mt-4 flex items-start gap-2 rounded-xl bg-ink-50 p-3 text-xs leading-relaxed text-ink-600">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-gold-600" />
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-gold-700" />
           <p>{ui("confirmPreOrderNotice")}</p>
         </div>
 

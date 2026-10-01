@@ -61,7 +61,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       {hasPreOrder && (
         <div className="shadow-2xs space-y-1.5 rounded-xl border border-gold-300 bg-gold-50/90 p-3.5 text-xs text-gold-950">
           <div className="flex items-center gap-2 font-bold text-gold-900">
-            <Sparkles className="h-4 w-4 shrink-0 text-gold-600" />
+            <Sparkles className="h-4 w-4 shrink-0 text-gold-700" />
             <span>{ui("checkoutPreOrderNotice")}</span>
           </div>
           <p className="text-2xs leading-relaxed text-gold-900">{ui("checkoutPreOrderShipping")}</p>
@@ -95,7 +95,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                 <button
                   type="button"
                   onClick={() => removeItem(product.id, selectedVariant)}
-                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-400 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
+                  className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-600 transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
                   aria-label={ui("cartRemove")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -200,7 +200,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
         {preOrderItem && (
           <div className="flex items-start justify-between rounded-lg border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
             <span className="flex items-center gap-1 font-medium">
-              <Calendar className="h-3 w-3 text-gold-600" />
+              <Calendar className="h-3 w-3 text-gold-700" />
               {ui("expectedDelivery")}
             </span>
             <span className="text-right font-bold">

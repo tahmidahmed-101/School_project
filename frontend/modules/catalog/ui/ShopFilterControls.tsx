@@ -100,7 +100,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
         <FilterSelect
           defaultOpen
-          icon={<Layers className="h-4 w-4 shrink-0 text-gold-600" />}
+          icon={<Layers className="h-4 w-4 shrink-0 text-gold-700" />}
           triggerLabel={t(selectedCategory?.name ?? ALL_ITEMS)}
           options={[
             { id: "all", label: ui("filterAllCollections") },
@@ -112,7 +112,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
       </div>
 
       <FilterSelect
-        icon={<Sparkles className="h-4 w-4 shrink-0 text-gold-600" />}
+        icon={<Sparkles className="h-4 w-4 shrink-0 text-gold-700" />}
         triggerLabel={t(selectedCollection.label)}
         options={COLLECTIONS.map((c) => ({ id: c.id, label: t(c.label) }))}
         value={filters.collection}

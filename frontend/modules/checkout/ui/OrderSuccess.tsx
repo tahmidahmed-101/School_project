@@ -37,7 +37,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
         {hasPreOrder && (
           <div className="rounded-2xl border border-gold-300 bg-gold-50/90 p-4 text-left text-xs text-gold-950 shadow-2xs space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-gold-900">
-              <Sparkles className="h-4 w-4 text-gold-600" />
+              <Sparkles className="h-4 w-4 text-gold-700" />
               <span>{ui("checkoutPreOrderNotice")}</span>
             </div>
             <p className="text-2xs leading-relaxed text-gold-800">{ui("checkoutPreOrderShipping")}</p>

@@ -37,7 +37,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
 
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-ink-500 transition-transform duration-300 ${
-            isOpen ? "rotate-180 text-gold-600" : ""
+            isOpen ? "rotate-180 text-gold-700" : ""
           }`}
         />
       </button>

@@ -20,7 +20,7 @@ export function CartDrawer() {
       onClose={closeDrawer}
       label={ui("cartTitle")}
       closeLabel="Close cart drawer"
-      icon={<ShoppingCart className="h-5 w-5 text-gold-600" />}
+      icon={<ShoppingCart className="h-5 w-5 text-gold-700" />}
       title={
         <>
           {ui("cartTitle")} ({n(totalItems)})
@@ -30,7 +30,7 @@ export function CartDrawer() {
       <DrawerBody>
         {hasMixed && (
           <div className="shadow-2xs flex items-start gap-2.5 rounded-xl border border-gold-300 bg-gold-50 p-3 text-2xs leading-relaxed text-gold-900">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-gold-600" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-gold-700" />
             <span>{ui("cartMixedNotice")}</span>
           </div>
         )}

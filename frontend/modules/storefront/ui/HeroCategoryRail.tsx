@@ -32,7 +32,7 @@ export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
             <span className="line-clamp-2 flex-1 text-2xs leading-tight font-semibold text-ink-700 group-hover:text-ink-950">
               {t(category.name)}
             </span>
-            <ChevronRight className="h-3 w-3 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-600" />
+            <ChevronRight className="h-3 w-3 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-700" />
           </Link>
         ))}
       </nav>

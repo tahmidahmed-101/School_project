@@ -27,7 +27,7 @@ export function WishlistDrawer() {
       onClose={closeWishlist}
       label={ui("wishlistTitle")}
       closeLabel="Close wishlist drawer"
-      icon={<Heart className="h-5 w-5 text-gold-600" />}
+      icon={<Heart className="h-5 w-5 text-gold-700" />}
       title={
         <>
           {ui("wishlistTitle")} ({n(totalWishlistItems)})

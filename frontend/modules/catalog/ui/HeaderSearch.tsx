@@ -56,7 +56,7 @@ export function useHeaderSearch() {
 }
 
 export const HEADER_SEARCH_INPUT_CLASS =
-  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-white text-sm text-ink-900 transition-all placeholder:text-ink-400 focus:border-gold-500 focus:ring-gold-500/10";
+  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-white text-sm text-ink-900 transition-all placeholder:text-ink-500 focus:border-gold-500 focus:ring-gold-500/10";
 
 interface SearchSuggestionsProps {
   id: string;

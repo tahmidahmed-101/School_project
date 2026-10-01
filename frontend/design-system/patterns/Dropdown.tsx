@@ -84,7 +84,7 @@ export function Dropdown({
             aria-invalid={invalid || undefined}
             className={triggerClassName ?? inputClass({ invalid, padding: "py-3 pl-4 pr-9" })}
           />
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
         </div>
       ) : (
         <button
@@ -127,7 +127,7 @@ export function Dropdown({
                 }`}
               >
                 <span className="truncate">{option.label}</span>
-                {option.value === value && <Check className="h-3.5 w-3.5 shrink-0 text-gold-600" />}
+                {option.value === value && <Check className="h-3.5 w-3.5 shrink-0 text-gold-700" />}
               </button>
             ))
           )}

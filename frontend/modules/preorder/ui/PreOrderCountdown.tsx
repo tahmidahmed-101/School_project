@@ -49,7 +49,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
   if (timeLeft.total <= 0) {
     return (
       <div className={`inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 ${className}`}>
-        <Clock className="h-3.5 w-3.5 text-ink-400" />
+        <Clock className="h-3.5 w-3.5 text-ink-500" />
         <span>{ui("preOrderCloses")}</span>
       </div>
     );
@@ -60,7 +60,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
   if (compact) {
     return (
       <div className={`flex items-center gap-1.5 text-2xs font-medium text-gold-800 ${className}`}>
-        <Clock className="h-3 w-3 shrink-0 text-gold-600" />
+        <Clock className="h-3 w-3 shrink-0 text-gold-700" />
         <span>
           {ui("preOrderEndsIn")}:{" "}
           <strong className="font-bold tabular-nums">
@@ -76,7 +76,7 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
       className={`rounded-xl border border-gold-200/80 bg-gradient-to-r from-gold-50/90 via-gold-100/50 to-gold-50/90 p-3 sm:p-3.5 ${className}`}
     >
       <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold-900">
-        <Clock className="h-3.5 w-3.5 text-gold-600 animate-pulse" />
+        <Clock className="h-3.5 w-3.5 text-gold-700 animate-pulse" />
         <span>{ui("preOrderEndsIn")}</span>
       </div>
 
