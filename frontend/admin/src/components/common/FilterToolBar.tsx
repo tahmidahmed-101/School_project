@@ -86,6 +86,10 @@ const FilterToolbar = ({
   const inline = isWide ? controls.slice(0, inlineCount) : []
   const panel = isWide ? controls.slice(inlineCount) : controls
   const activeInPanel = panel.filter((c) => c.active).length
+  // Layout is search on the left, dropdowns on the right. Without a text search, a leading
+  // search-as-you-type picker (e.g. a variant picker) takes the search slot.
+  const lead = !hasSearch && inline[0]?.wide ? inline[0] : null
+  const rest = lead ? inline.slice(1) : inline
 
   const toggleLabel = inline.length > 0 ? "More filters" : "Filters"
 
@@ -108,7 +112,7 @@ const FilterToolbar = ({
       type="button"
       onClick={() => setPanelOpen((v) => !v)}
       aria-expanded={panelOpen}
-      className={cn(TOGGLE_CLASS, isDesktop && !inline.length && "ml-auto")}
+      className={cn(TOGGLE_CLASS, isDesktop && !rest.length && "ml-auto")}
     >
       <SlidersHorizontal className="size-4 text-muted-foreground" />
       {toggleLabel}
@@ -161,11 +165,13 @@ const FilterToolbar = ({
     <div className="mt-4 pt-4">
       {/* Always a single row; overflow lives in the animated panel below. */}
       <div className="flex items-center gap-3">
-        {hasSearch && <div className="min-w-0 flex-1 lg:max-w-[380px]">{searchInput}</div>}
+        {(hasSearch || lead) && (
+          <div className="min-w-0 flex-1 lg:max-w-[380px]">{hasSearch ? searchInput : lead?.component}</div>
+        )}
 
-        {inline.length > 0 && (
-          <div className={cn("flex shrink-0 items-center gap-3", hasSearch && "ml-auto")}>
-            {inline.map((c) => (
+        {rest.length > 0 && (
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            {rest.map((c) => (
               <div key={c.key} className={cn("shrink-0", c.auto ? "w-auto" : c.wide ? "w-64" : "w-44")}>
                 {c.component}
               </div>

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
-import { Controller, useForm, type FieldValues, type Path, type UseFormSetError } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { PageHeader } from "@/components/common/PageHeader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
@@ -22,9 +23,11 @@ import {
   updateStaffPermissions,
 } from "@/features/users/slices/staffSlice"
 import { displayNameOf, type AdminUser, type PermissionCodeInfo, type StaffCreatePayload } from "@/features/users/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 import { resolveDetailState } from "@/lib/detailState"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { isFullAccess } from "@/hooks/use-can"
 import { PermissionsEditor } from "./PermissionsEditor"
 import { ResetPasswordDialog } from "./ResetPasswordDialog"
 
@@ -45,18 +48,6 @@ const editSchema = z.object({
 
 type CreateFormValues = z.infer<typeof createSchema>
 type EditFormValues = z.infer<typeof editSchema>
-
-function applyFieldErrors<T extends FieldValues>(err: unknown, setError: UseFormSetError<T>, fields: string[]) {
-  const fieldErrors = getApiFieldErrors(err)
-  let mapped = false
-  for (const [field, message] of Object.entries(fieldErrors)) {
-    if (fields.includes(field)) {
-      setError(field as Path<T>, { message })
-      mapped = true
-    }
-  }
-  return mapped
-}
 
 const StaffForm = () => {
   const { id = "new" } = useParams<{ id: string }>()
@@ -145,9 +136,11 @@ const StaffForm = () => {
       toast.success(`${values.email} added`)
       navigate(`/staff_form/${created.id}`, { replace: true })
     } catch (err) {
-      if (!applyFieldErrors(err, createForm.setError, Object.keys(values))) {
-        toast.error(getApiErrorMessage(err, "Couldn't add this staff member"))
-      }
+      reportFormError(err, {
+        setError: createForm.setError,
+        fields: Object.keys(values),
+        fallback: "Couldn't add this staff member",
+      })
     }
   }
 
@@ -157,9 +150,11 @@ const StaffForm = () => {
       await dispatch(patchData({ id: existing.id, payload: values })).unwrap()
       toast.success("Staff details saved")
     } catch (err) {
-      if (!applyFieldErrors(err, editForm.setError, Object.keys(values))) {
-        toast.error(getApiErrorMessage(err, "Couldn't save staff details"))
-      }
+      reportFormError(err, {
+        setError: editForm.setError,
+        fields: Object.keys(values),
+        fallback: "Couldn't save staff details",
+      })
     }
   }
 
@@ -182,22 +177,12 @@ const StaffForm = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="back" size="icon" onClick={() => navigate("/staffs")} aria-label="Back to staff">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-              {isEditing ? "Edit Staff Member" : "Add Staff Member"}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {existing ? existing.email : "Create a dashboard account for a team member"}
-            </p>
-          </div>
-        </div>
-        {existing && <ResetPasswordDialog userId={existing.id} userLabel={displayNameOf(existing)} />}
-      </div>
+      <PageHeader
+        title={isEditing ? "Edit Staff Member" : "Add Staff Member"}
+        description={existing ? existing.email : "Create a dashboard account for a team member"}
+        back={{ to: "/staffs", label: "Back to staff" }}
+        actions={existing && <ResetPasswordDialog userId={existing.id} userLabel={displayNameOf(existing)} />}
+      />
 
       {existing ? (
         <form onSubmit={editForm.handleSubmit(handleUpdate)} noValidate>
@@ -298,7 +283,7 @@ const StaffForm = () => {
         <CardHeader>
           <CardTitle>Permissions</CardTitle>
           <CardDescription>
-            {existing?.permissions.includes("*")
+            {isFullAccess(existing?.permissions)
               ? "This account has full access."
               : "Choose what this staff member can see and do. Saving replaces their current permissions."}
           </CardDescription>

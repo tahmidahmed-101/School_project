@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
-import { Controller, useForm, type Path } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,12 +13,13 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { PageHeader } from "@/components/common/PageHeader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, patchData, postData } from "@/features/marketing/slices/couponSlice"
 import type { Coupon, CouponCreatePayload, CouponUpdatePayload } from "@/features/marketing/types"
-import { useCan } from "@/features/system/permissions"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { useCan } from "@/hooks/use-can"
+import { reportFormError } from "@/lib/forms"
 import { resolveDetailState } from "@/lib/detailState"
 import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/format"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -61,7 +62,7 @@ const CouponForm = () => {
   const { id = "new" } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = useCan()("orders.manage")
+  const canManage = useCan("orders.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((state) => state.coupons)
   const isEditing = id !== "new"
   const existing = isEditing && singleData?.id === id ? (singleData as Coupon) : null
@@ -141,10 +142,7 @@ const CouponForm = () => {
       }
       navigate("/coupons")
     } catch (err) {
-      const fieldErrors = getApiFieldErrors(err)
-      const known = Object.entries(fieldErrors).filter(([field]) => FORM_FIELDS.includes(field))
-      known.forEach(([field, message]) => setError(field as Path<CouponFormValues>, { message }))
-      if (!known.length) toast.error(getApiErrorMessage(err, "Couldn't save this coupon"))
+      reportFormError(err, { setError, fields: FORM_FIELDS, fallback: "Couldn't save this coupon" })
     }
   }
 
@@ -152,21 +150,17 @@ const CouponForm = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" onClick={() => navigate("/coupons")} aria-label="Back to coupons">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground text-sm">
-            {existing
-              ? `Used ${existing.times_used} time${existing.times_used === 1 ? "" : "s"}${
-                  existing.usage_limit != null ? ` of ${existing.usage_limit}` : ""
-                }`
-              : "Create a new discount code"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={title}
+        description={
+          existing
+            ? `Used ${existing.times_used} time${existing.times_used === 1 ? "" : "s"}${
+                existing.usage_limit != null ? ` of ${existing.usage_limit}` : ""
+              }`
+            : "Create a new discount code"
+        }
+        back={{ to: "/coupons", label: "Back to coupons" }}
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Card>

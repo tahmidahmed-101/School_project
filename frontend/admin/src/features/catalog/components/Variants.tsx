@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
@@ -13,21 +13,22 @@ import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { MoneyCell, ProductCell, TextCell } from "@/components/common/cells"
+import { SortSelect } from "@/components/common/SortSelect"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
+import type { Option } from "@/lib/types"
 
 import { fetchAll } from "../slices/variantSlice"
 import { downloadVariantsExport, importVariants } from "../api"
 import type { ProductVariant, VariantImportResult } from "../types"
-import { usePermission } from "../lib/usePermission"
-import { useDebounced } from "../lib/useDebounced"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 
-type Option = { label: string; value: string }
 const PAGE_SIZE = 25
 
 const stockOptions: Option[] = [
@@ -54,13 +55,10 @@ const orderingOptions: Option[] = [
 const Variants = () => {
   useDocumentTitle("Variants")
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
-  const { data: variants, isFetchingList, error, totalItems } = useAppSelector((s) => s.variants)
+  const canManage = useCan("catalog.manage")
+  const variantState = useAppSelector((s) => s.variants)
   const { options: categoryOptions } = useCategoryOptions()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search)
   const [category, setCategory] = useState<Option | null>(null)
   const [stock, setStock] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
@@ -69,37 +67,26 @@ const Variants = () => {
   const [exporting, setExporting] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 
-  const params = useMemo(
-    () => ({
-      page,
-      page_size: PAGE_SIZE,
-      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
-      ...(category ? { category_id: category.value } : {}),
-      ...(stock ? { stock_status: stock.value } : {}),
-      ...(status ? { is_active: status.value } : {}),
-      ...(preorder ? { preorder_only: true, ...(preorder.value !== "any" ? { preorder_status: preorder.value } : {}) } : {}),
-      ...(ordering ? { ordering: ordering.value } : {}),
-    }),
-    [page, debouncedSearch, category, stock, status, preorder, ordering]
-  )
-  const load = useCallback(() => {
-    dispatch(fetchAll(params))
-  }, [dispatch, params])
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const setFilter = <T,>(setter: (v: T) => void) => (v: T) => {
-    setter(v)
-    setPage(1)
-  }
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state: variantState,
+    pageSize: PAGE_SIZE,
+    params: {
+      category_id: category?.value,
+      stock_status: stock?.value,
+      is_active: status?.value,
+      preorder_only: preorder ? true : undefined,
+      preorder_status: preorder && preorder.value !== "any" ? preorder.value : undefined,
+      ordering: ordering?.value,
+    },
+  })
 
   const runExport = async (fmt: "csv" | "xlsx") => {
     setExporting(true)
     try {
       // The export endpoint honours search + category only (not stock/status filters).
       await downloadVariantsExport(fmt, {
-        ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
+        ...(list.debouncedSearch ? { search: list.debouncedSearch } : {}),
         ...(category ? { category_id: category.value } : {}),
       })
     } catch (err) {
@@ -122,10 +109,7 @@ const Variants = () => {
               <Package className="size-4 text-muted-foreground" />
             )}
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{row.original.product_name}</div>
-            <div className="truncate font-mono text-xs text-muted-foreground">{row.original.sku}</div>
-          </div>
+          <ProductCell name={row.original.product_name} sku={row.original.sku} />
         </div>
       ),
     },
@@ -133,7 +117,7 @@ const Variants = () => {
       id: "options",
       header: "OPTIONS",
       cell: ({ row }) => (
-        <span className="text-sm">{[row.original.color, row.original.size].filter(Boolean).join(" / ") || "—"}</span>
+        <TextCell value={[row.original.color, row.original.size].filter(Boolean).join(" / ")} />
       ),
     },
     {
@@ -144,7 +128,7 @@ const Variants = () => {
     {
       id: "price",
       header: "PRICE",
-      cell: ({ row }) => <span className="text-sm font-semibold">{formatCurrency(row.original.effective_price)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.effective_price} emphasis />,
     },
     {
       accessorKey: "stock",
@@ -188,32 +172,35 @@ const Variants = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Variants" description="Every sellable SKU across the catalog, with live availability" />
-        <div className="flex flex-wrap gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="primary" size="action" disabled={exporting}>
-                {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export
+      <PageHeader
+        title="Variants"
+        description="Every sellable SKU across the catalog, with live availability"
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="primary" size="action" disabled={exporting}>
+                  {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => void runExport("csv")}>CSV (.csv)</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void runExport("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {canManage && (
+              <Button size="action" onClick={() => setImportOpen(true)}>
+                <UploadIcon className="size-5" /> Import
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => void runExport("csv")}>CSV (.csv)</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void runExport("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {canManage && (
-            <Button size="action" onClick={() => setImportOpen(true)}>
-              <UploadIcon className="size-5" /> Import
-            </Button>
-          )}
-        </div>
-      </div>
+            )}
+          </>
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search SKU, barcode or product…"
-        searchValue={search}
-        onSearchChange={setFilter(setSearch)}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -221,18 +208,18 @@ const Variants = () => {
                 placeholder="Category"
                 frameworks={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
                 value={category}
-                onValueChange={setFilter(setCategory)}
+                onValueChange={setCategory}
               />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems placeholder="Stock" frameworks={stockOptions} value={stock} onValueChange={setFilter(setStock)} />
+              <ExampleComboboxCustomItems placeholder="Stock" frameworks={stockOptions} value={stock} onValueChange={setStock} />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems placeholder="Status" frameworks={statusOptions} value={status} onValueChange={setFilter(setStatus)} />
+              <ExampleComboboxCustomItems placeholder="Status" frameworks={statusOptions} value={status} onValueChange={setStatus} />
             ),
           },
           {
@@ -241,13 +228,13 @@ const Variants = () => {
                 placeholder="Pre-order"
                 frameworks={preorderOptions}
                 value={preorder}
-                onValueChange={setFilter(setPreorder)}
+                onValueChange={setPreorder}
               />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems placeholder="Sort" frameworks={orderingOptions} value={ordering} onValueChange={setFilter(setOrdering)} />
+              <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} />
             ),
           },
         ]}
@@ -255,16 +242,8 @@ const Variants = () => {
 
       <DataTable
         columns={columns}
-        data={variants}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
-        totalCount={totalItems}
-        onPageChange={(i) => setPage(i + 1)}
+        data={variantState.data}
+        {...list.tableProps}
         getRowLink={(v) => `/product_detail/${v.product_id}`}
         emptyIcon={Layers}
         emptyTitle="No variants found"
@@ -272,7 +251,7 @@ const Variants = () => {
         columnWidths={["280px", "130px", "150px", "120px", "100px", "160px", "90px"]}
       />
 
-      {canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={load} />}
+      {canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={list.reload} />}
     </div>
   )
 }

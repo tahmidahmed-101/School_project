@@ -1,5 +1,7 @@
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem, unwrapList } from "@/lib/api/envelope"
+import { api, apiCall, extractApiError } from "@/lib/api/client"
+import { unwrapList } from "@/lib/api/envelope"
+import { fetchAllPages } from "@/lib/api/fetchAll"
+import { blobErrorToJson, saveBlob } from "@/lib/download"
 import type {
   Brand,
   BrandPayload,
@@ -23,14 +25,6 @@ import type {
  * everything here throws a normalised ApiError (see extractApiError) on failure, so callers
  * can use getApiErrorMessage / getApiFieldErrors on the caught value.
  */
-async function call<T>(fn: () => Promise<{ data: unknown }>): Promise<T> {
-  try {
-    const res = await fn()
-    return unwrapItem<T>(res.data)
-  } catch (err) {
-    throw extractApiError(err)
-  }
-}
 
 const C = "/admin/catalog"
 
@@ -39,19 +33,19 @@ const C = "/admin/catalog"
 export async function uploadMedia(file: File): Promise<string> {
   const form = new FormData()
   form.append("file", file)
-  const data = await call<{ url: string; path: string }>(() => api.post("/admin/media/uploads/", form))
+  const data = await apiCall<{ url: string; path: string }>(() => api.post("/admin/media/uploads/", form))
   return data.url
 }
 
 // ---- products ----
 export const createProduct = (payload: ProductPayload) =>
-  call<Product>(() => api.post(`${C}/products/`, payload))
+  apiCall<Product>(() => api.post(`${C}/products/`, payload))
 export const updateProduct = (id: string, payload: ProductPayload) =>
-  call<Product>(() => api.patch(`${C}/products/${id}/`, payload))
+  apiCall<Product>(() => api.patch(`${C}/products/${id}/`, payload))
 export const restoreProduct = (id: string) =>
-  call<Product>(() => api.post(`${C}/products/${id}/restore/`))
+  apiCall<Product>(() => api.post(`${C}/products/${id}/restore/`))
 export const bulkProductStatus = (ids: string[], is_active: boolean) =>
-  call<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
+  apiCall<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
 
 // ---- product images ----
 export async function listProductImages(productId: string): Promise<ProductImage[]> {
@@ -65,12 +59,12 @@ export async function listProductImages(productId: string): Promise<ProductImage
 export const createProductImage = (
   productId: string,
   payload: { url: string; alt_text?: string; sort_order?: number; variant_id?: string | null }
-) => call<ProductImage>(() => api.post(`${C}/products/${productId}/images/`, payload))
+) => apiCall<ProductImage>(() => api.post(`${C}/products/${productId}/images/`, payload))
 export const updateProductImage = (
   id: string,
   payload: { url?: string; alt_text?: string; sort_order?: number }
-) => call<ProductImage>(() => api.patch(`${C}/images/${id}/`, payload))
-export const deleteProductImage = (id: string) => call<unknown>(() => api.delete(`${C}/images/${id}/`))
+) => apiCall<ProductImage>(() => api.patch(`${C}/images/${id}/`, payload))
+export const deleteProductImage = (id: string) => apiCall<unknown>(() => api.delete(`${C}/images/${id}/`))
 
 // ---- variants ----
 export async function listProductVariants(
@@ -88,12 +82,12 @@ export async function listProductVariants(
   }
 }
 export const createVariant = (productId: string, payload: ProductVariantPayload) =>
-  call<ProductVariant>(() => api.post(`${C}/products/${productId}/variants/`, payload))
+  apiCall<ProductVariant>(() => api.post(`${C}/products/${productId}/variants/`, payload))
 export const updateVariant = (id: string, payload: ProductVariantPayload) =>
-  call<ProductVariant>(() => api.patch(`${C}/variants/${id}/`, payload))
-export const deleteVariant = (id: string) => call<unknown>(() => api.delete(`${C}/variants/${id}/`))
+  apiCall<ProductVariant>(() => api.patch(`${C}/variants/${id}/`, payload))
+export const deleteVariant = (id: string) => apiCall<unknown>(() => api.delete(`${C}/variants/${id}/`))
 export const generateVariants = (productId: string, payload: VariantGeneratePayload) =>
-  call<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
+  apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
 
 /** Search variants across the catalog (for pickers). */
 export async function searchVariants(search: string, extra: Record<string, unknown> = {}) {
@@ -124,82 +118,48 @@ export async function downloadVariantsExport(
 export async function importVariants(file: File, fileFormat: "csv" | "xlsx") {
   const form = new FormData()
   form.append("file", file)
-  return call<VariantImportResult>(() =>
+  return apiCall<VariantImportResult>(() =>
     api.post(`${C}/variants/import/`, form, { params: { file_format: fileFormat } })
   )
 }
 
 // ---- categories ----
 /** Every category (all pages; page_size is capped at 100 server-side). */
-export async function fetchAllCategories(params: { include_deleted?: boolean } = {}): Promise<Category[]> {
-  const out: Category[] = []
-  try {
-    for (let page = 1; page < 50; page++) {
-      const res = await api.get(`${C}/categories/`, {
-        params: { page, page_size: 100, ordering: "name", ...(params.include_deleted ? { include_deleted: true } : {}) },
-      })
-      const { items, meta } = unwrapList<Category>(res.data, page, 100)
-      out.push(...items)
-      if (out.length >= meta.count || items.length === 0) break
-    }
-  } catch (err) {
-    throw extractApiError(err)
-  }
-  return out
-}
+export const CATEGORIES_ENDPOINT = `${C}/categories/`
+export const categoryListParams = (includeDeleted = false) => ({
+  ordering: "name",
+  ...(includeDeleted ? { include_deleted: true } : {}),
+})
+export const fetchAllCategories = (params: { include_deleted?: boolean } = {}) =>
+  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(params.include_deleted))
 export const createCategory = (payload: CategoryPayload) =>
-  call<Category>(() => api.post(`${C}/categories/`, payload))
+  apiCall<Category>(() => api.post(`${C}/categories/`, payload))
 export const updateCategory = (id: string, payload: CategoryPayload) =>
-  call<Category>(() => api.patch(`${C}/categories/${id}/`, payload))
+  apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, payload))
 export const uploadCategoryImage = (id: string, file: File) => {
   const form = new FormData()
   form.append("image", file)
-  return call<Category>(() => api.patch(`${C}/categories/${id}/`, form))
+  return apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, form))
 }
-export const deleteCategory = (id: string) => call<unknown>(() => api.delete(`${C}/categories/${id}/`))
+export const deleteCategory = (id: string) => apiCall<unknown>(() => api.delete(`${C}/categories/${id}/`))
 export const restoreCategory = (id: string) =>
-  call<Category>(() => api.post(`${C}/categories/${id}/restore/`))
+  apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`))
 
 // ---- brands ----
-export const createBrand = (payload: BrandPayload) => call<Brand>(() => api.post(`${C}/brands/`, payload))
+export const createBrand = (payload: BrandPayload) => apiCall<Brand>(() => api.post(`${C}/brands/`, payload))
 export const updateBrand = (id: string, payload: BrandPayload) =>
-  call<Brand>(() => api.patch(`${C}/brands/${id}/`, payload))
+  apiCall<Brand>(() => api.patch(`${C}/brands/${id}/`, payload))
 export const uploadBrandImage = (id: string, file: File) => {
   const form = new FormData()
   form.append("image", file)
-  return call<Brand>(() => api.patch(`${C}/brands/${id}/`, form))
+  return apiCall<Brand>(() => api.patch(`${C}/brands/${id}/`, form))
 }
-export const restoreBrand = (id: string) => call<Brand>(() => api.post(`${C}/brands/${id}/restore/`))
+export const restoreBrand = (id: string) => apiCall<Brand>(() => api.post(`${C}/brands/${id}/restore/`))
 export const bulkBrandStatus = (ids: string[], is_active: boolean) =>
-  call<BulkActionResult>(() => api.post(`${C}/brands/bulk-status/`, { ids, is_active }))
+  apiCall<BulkActionResult>(() => api.post(`${C}/brands/bulk-status/`, { ids, is_active }))
 
 // ---- bundles ----
-export const createBundle = (payload: BundlePayload) => call<Bundle>(() => api.post(`${C}/bundles/`, payload))
+export const createBundle = (payload: BundlePayload) => apiCall<Bundle>(() => api.post(`${C}/bundles/`, payload))
 export const updateBundle = (id: string, payload: BundlePayload) =>
-  call<Bundle>(() => api.patch(`${C}/bundles/${id}/`, payload))
-export const restoreBundle = (id: string) => call<Bundle>(() => api.post(`${C}/bundles/${id}/restore/`))
-
-// ---- helpers ----
-export function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-/** A failed `responseType: "blob"` request carries its JSON error body as a Blob; parse it back. */
-export async function blobErrorToJson(err: unknown): Promise<unknown> {
-  const e = err as { response?: { data?: unknown } }
-  if (e?.response?.data instanceof Blob) {
-    try {
-      e.response.data = JSON.parse(await e.response.data.text())
-    } catch {
-      // leave as-is
-    }
-  }
-  return err
-}
+  apiCall<Bundle>(() => api.patch(`${C}/bundles/${id}/`, payload))
+export const restoreBundle = (id: string) => apiCall<Bundle>(() => api.post(`${C}/bundles/${id}/restore/`))

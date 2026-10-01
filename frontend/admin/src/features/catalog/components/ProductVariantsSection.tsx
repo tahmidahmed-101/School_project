@@ -2,18 +2,20 @@ import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { History, Layers, Loader2, PlusIcon, Wand2 } from "lucide-react"
+import { History, Layers, PlusIcon, Wand2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
+import { MoneyCell, TextCell } from "@/components/common/cells"
+import { FormDialog } from "@/components/common/FormDialog"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
+import { splitList } from "@/lib/importLookup"
 
 import { deleteVariant, generateVariants, listProductVariants } from "../api"
 import type { ProductVariant } from "../types"
@@ -89,9 +91,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
       id: "options",
       header: "OPTIONS",
       cell: ({ row }) => (
-        <span className="text-sm">
-          {[row.original.color, row.original.size].filter(Boolean).join(" / ") || "—"}
-        </span>
+        <TextCell value={[row.original.color, row.original.size].filter(Boolean).join(" / ")} />
       ),
     },
     {
@@ -111,7 +111,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
     {
       accessorKey: "cost_price",
       header: "COST",
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatCurrency(row.original.cost_price)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.cost_price} className="text-muted-foreground" />,
     },
     {
       accessorKey: "stock",
@@ -143,7 +143,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => (
         <div className="flex items-center gap-1" data-no-row-click>
           {canViewInventory && (
@@ -249,12 +249,6 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
   )
 }
 
-const splitList = (raw: string) =>
-  raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-
 function GenerateVariantsDialog({
   open,
   onOpenChange,
@@ -272,8 +266,8 @@ function GenerateVariantsDialog({
   const [costPrice, setCostPrice] = useState("")
   const [busy, setBusy] = useState(false)
 
-  const colorList = splitList(colors)
-  const sizeList = splitList(sizes)
+  const colorList = splitList(colors, true)
+  const sizeList = splitList(sizes, true)
   const combos = Math.max(colorList.length, 1) * Math.max(sizeList.length, 1)
   const priceValid = /^\d+(\.\d{1,2})?$/.test(price.trim())
   const costValid = costPrice.trim() === "" || /^\d+(\.\d{1,2})?$/.test(costPrice.trim())
@@ -304,60 +298,53 @@ function GenerateVariantsDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Generate variants</DialogTitle>
-          <DialogDescription>
-            Creates one SKU for every colour × size combination. Existing combinations are skipped.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4">
-          <Field>
-            <FieldLabel htmlFor="gen-colors">Colours</FieldLabel>
-            <FieldContent>
-              <Input id="gen-colors" value={colors} onChange={(e) => setColors(e.target.value)} placeholder="Black, White, Navy" />
-              <FieldDescription>Comma separated.</FieldDescription>
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="gen-sizes">Sizes</FieldLabel>
-            <FieldContent>
-              <Input id="gen-sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" />
-              <FieldDescription>Comma separated.</FieldDescription>
-            </FieldContent>
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="gen-price">Price (BDT)</FieldLabel>
-              <FieldContent>
-                <Input id="gen-price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="gen-cost">Cost price</FieldLabel>
-              <FieldContent>
-                <Input id="gen-cost" inputMode="decimal" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="0.00" />
-              </FieldContent>
-            </Field>
-          </div>
-          {(colorList.length > 0 || sizeList.length > 0) && (
-            <p className="text-sm text-muted-foreground">
-              Up to <span className="font-medium text-foreground">{combos}</span> variant{combos === 1 ? "" : "s"} will be
-              generated.
-            </p>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {busy && <Loader2 className="size-4 animate-spin" />}
-            Generate
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Generate variants"
+      description="Creates one SKU for every colour × size combination. Existing combinations are skipped."
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (canSubmit) void submit()
+      }}
+      submitting={busy}
+      submitLabel="Generate"
+      submitDisabled={!canSubmit}
+    >
+      <Field>
+        <FieldLabel htmlFor="gen-colors">Colours</FieldLabel>
+        <FieldContent>
+          <Input id="gen-colors" value={colors} onChange={(e) => setColors(e.target.value)} placeholder="Black, White, Navy" />
+          <FieldDescription>Comma separated.</FieldDescription>
+        </FieldContent>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="gen-sizes">Sizes</FieldLabel>
+        <FieldContent>
+          <Input id="gen-sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" />
+          <FieldDescription>Comma separated.</FieldDescription>
+        </FieldContent>
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="gen-price">Price (BDT)</FieldLabel>
+          <FieldContent>
+            <Input id="gen-price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="gen-cost">Cost price</FieldLabel>
+          <FieldContent>
+            <Input id="gen-cost" inputMode="decimal" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="0.00" />
+          </FieldContent>
+        </Field>
+      </div>
+      {(colorList.length > 0 || sizeList.length > 0) && (
+        <p className="text-sm text-muted-foreground">
+          Up to <span className="font-medium text-foreground">{combos}</span> variant{combos === 1 ? "" : "s"} will be
+          generated.
+        </p>
+      )}
+    </FormDialog>
   )
 }

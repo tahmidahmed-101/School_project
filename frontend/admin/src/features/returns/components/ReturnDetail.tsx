@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Check, PackageCheck, RotateCcw, X } from "lucide-react"
+import { Check, PackageCheck, RotateCcw, X } from "lucide-react"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchReturn, gradeReturnLine, runReturnAction, type RmaAction } from "@/features/returns/slices/returnSlice"
@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { ConfirmAction } from "@/features/sales/shared/ConfirmAction"
-import { useCan } from "@/features/sales/shared/useCan"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ProductCell } from "@/components/common/cells"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -28,7 +30,6 @@ const ACTION_COPY: Record<RmaAction, { done: string; failed: string }> = {
 
 const ReturnDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("returns.manage")
 
@@ -105,73 +106,68 @@ const ReturnDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="back" size="icon" onClick={() => navigate("/returns")} aria-label="Back to returns">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{rma.rma_number}</h1>
-              <StatusBadge status={rma.status} />
-            </div>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              Return for{" "}
-              <Link to={`/order_detail/${rma.order_id}`} className="text-primary hover:underline">
-                {order?.order_number ?? "order"}
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {canManage && (
-          <div className="flex flex-wrap gap-2">
-            {isRequested && (
-              <>
-                <ConfirmAction
-                  title="Approve this return?"
-                  description="The customer can send the items back. Grade each line when it arrives."
-                  confirmLabel="Approve"
-                  onConfirm={() => act("approve")}
+      <PageHeader
+        back={{ to: "/returns", label: "Back to returns" }}
+        title={rma.rma_number}
+        badges={<StatusBadge status={rma.status} />}
+        description={
+          <>
+            Return for{" "}
+            <Link to={`/order_detail/${rma.order_id}`} className="text-primary hover:underline">
+              {order?.order_number ?? "order"}
+            </Link>
+          </>
+        }
+        actions={
+          canManage && (isRequested || isApproved) && (
+            <>
+              {isRequested && (
+                <>
+                  <ConfirmDialog
+                    title="Approve this return?"
+                    description="The customer can send the items back. Grade each line when it arrives."
+                    confirmLabel="Approve"
+                    onConfirm={() => act("approve")}
+                    trigger={
+                      <Button disabled={busy}>
+                        <Check className="size-4" />
+                        Approve
+                      </Button>
+                    }
+                  />
+                  <ConfirmDialog
+                    destructive
+                    title="Reject this return?"
+                    description="The claimed units become returnable again under a later return."
+                    confirmLabel="Reject"
+                    onConfirm={() => act("reject")}
+                    trigger={
+                      <Button variant="outline" className="text-destructive" disabled={busy}>
+                        <X className="size-4" />
+                        Reject
+                      </Button>
+                    }
+                  />
+                </>
+              )}
+              {isApproved && (
+                <ConfirmDialog
+                  title="Book the return as received?"
+                  description="Sellable units go back into stock; damaged units are scrapped. The ledger is reversed either way."
+                  confirmLabel="Receive"
+                  onConfirm={() => act("receive")}
                   trigger={
-                    <Button disabled={busy}>
-                      <Check className="size-4" />
-                      Approve
+                    <Button disabled={busy || !allGraded} title={allGraded ? undefined : "Grade every line first"}>
+                      <PackageCheck className="size-4" />
+                      Receive
                     </Button>
                   }
                 />
-                <ConfirmAction
-                  destructive
-                  title="Reject this return?"
-                  description="The claimed units become returnable again under a later return."
-                  confirmLabel="Reject"
-                  onConfirm={() => act("reject")}
-                  trigger={
-                    <Button variant="outline" className="text-destructive" disabled={busy}>
-                      <X className="size-4" />
-                      Reject
-                    </Button>
-                  }
-                />
-              </>
-            )}
-            {isApproved && (
-              <ConfirmAction
-                title="Book the return as received?"
-                description="Sellable units go back into stock; damaged units are scrapped. The ledger is reversed either way."
-                confirmLabel="Receive"
-                onConfirm={() => act("receive")}
-                trigger={
-                  <Button disabled={busy || !allGraded} title={allGraded ? undefined : "Grade every line first"}>
-                    <PackageCheck className="size-4" />
-                    Receive
-                  </Button>
-                }
-              />
-            )}
-          </div>
-        )}
-      </div>
+              )}
+            </>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="shadow-sm">
@@ -208,10 +204,10 @@ const ReturnDetail = () => {
                   return (
                     <TableRow key={line.id}>
                       <TableCell>
-                        <p className="text-sm font-medium">{orderLine?.product_name ?? "Order line"}</p>
-                        <p className="font-mono text-xs uppercase text-muted-foreground">
-                          {orderLine?.variant_sku ?? line.order_line_id.slice(0, 8)}
-                        </p>
+                        <ProductCell
+                          name={orderLine?.product_name ?? "Order line"}
+                          sku={orderLine?.variant_sku ?? line.order_line_id.slice(0, 8)}
+                        />
                       </TableCell>
                       <TableCell className="text-center font-semibold">{line.quantity}</TableCell>
                       <TableCell>

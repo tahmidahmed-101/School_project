@@ -1,23 +1,7 @@
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapList } from "@/lib/api/envelope"
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/** Every row of a paginated admin list endpoint (page_size is capped at 100 server-side). */
-export async function fetchAllPages<T>(endpoint: string, params: Record<string, unknown> = {}): Promise<T[]> {
-  const out: T[] = []
-  try {
-    for (let page = 1; page < 50; page++) {
-      const res = await api.get(endpoint, { params: { ...params, page, page_size: 100 } })
-      const { items, meta } = unwrapList<T>(res.data, page, 100)
-      out.push(...items)
-      if (out.length >= meta.count || items.length === 0) break
-    }
-  } catch (err) {
-    throw extractApiError(err)
-  }
-  return out
-}
+/** Case- and whitespace-insensitive key for matching CSV values against names and codes. */
+export const normalizeKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ")
 
 /**
  * Splits a multi-value CSV cell ("a; b | c") into trimmed, de-duplicated parts. Commas split
@@ -36,6 +20,8 @@ export const splitList = (raw: string, commas = false) =>
 export interface ImportLookup<T extends { id: string }> {
   /** Name / slug / code / UUID → id. Throws `Label "X" not found` when nothing matches. */
   resolve: (raw: string) => Promise<string>
+  /** The cached list (fetched on first use), for resolvers with their own matching rules. */
+  get: () => Promise<T[]>
   /** Adds a record created during the import, so later rows can reference it. */
   add: (item: T) => void
   /** Drops the cache; the next resolve refetches. */
@@ -49,7 +35,7 @@ export interface ImportLookup<T extends { id: string }> {
 export function createImportLookup<T extends { id: string }>(
   label: string,
   load: () => Promise<T[]>,
-  keys: (item: T) => Array<string | null | undefined>
+  keys: (item: T) => Array<string | null | undefined> = () => []
 ): ImportLookup<T> {
   let cache: Promise<T[]> | null = null
   const get = () => {
@@ -63,9 +49,10 @@ export function createImportLookup<T extends { id: string }>(
   }
 
   return {
+    get,
     async resolve(raw) {
       const value = raw.trim()
-      const needle = value.toLowerCase()
+      const needle = normalizeKey(value)
       let items: T[]
       try {
         items = await get()
@@ -75,7 +62,7 @@ export function createImportLookup<T extends { id: string }>(
       const byId = items.find((i) => i.id.toLowerCase() === needle)
       if (byId) return byId.id
       // Earlier keys win: a name match beats a code match on another record.
-      const keyed = items.map((i) => ({ id: i.id, keys: keys(i).map((k) => k?.trim().toLowerCase()) }))
+      const keyed = items.map((i) => ({ id: i.id, keys: keys(i).map((k) => (k == null ? k : normalizeKey(k))) }))
       const width = Math.max(0, ...keyed.map((k) => k.keys.length))
       for (let k = 0; k < width; k++) {
         const hit = keyed.find((i) => i.keys[k] === needle)

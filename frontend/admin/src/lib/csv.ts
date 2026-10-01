@@ -1,3 +1,6 @@
+import { toast } from "sonner"
+import { saveBlob } from "./download"
+
 /**
  * RFC 4180 CSV parsing: quoted fields, escaped quotes (""), commas and newlines inside
  * quotes, CRLF/LF line endings and a UTF-8 BOM (as written by Excel).
@@ -52,24 +55,44 @@ export function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((cell) => cell.trim() !== ""))
 }
 
-function escapeCell(value: string): string {
-  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+// Cells starting with these are evaluated as formulas by Excel/Sheets (CSV injection).
+const FORMULA_PREFIX = /^[=+\-@\t\r]/
+
+function toText(value: unknown): string {
+  if (value === null || value === undefined) return ""
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === "object") return JSON.stringify(value)
+  return String(value)
 }
 
-/** Serialises rows to CSV (with a BOM so Excel reads UTF-8 correctly). */
-export function toCsv(rows: string[][]): string {
+function escapeCell(value: unknown): string {
+  let text = toText(value)
+  // Neutralise formulas, but leave plain negative numbers (e.g. "-12.50") readable.
+  if (FORMULA_PREFIX.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = `'${text}`
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+/** Serialises rows to CSV (with a BOM so Excel reads UTF-8 — names with accents, ৳ — correctly). */
+export function toCsv(rows: unknown[][]): string {
   return "﻿" + rows.map((r) => r.map(escapeCell).join(",")).join("\r\n")
 }
 
 /** Triggers a browser download of a CSV built from `rows`. */
-export function downloadCsv(rows: string[][], filename: string): void {
+export function downloadCsv(rows: unknown[][], filename: string): void {
   const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename.endsWith(".csv") ? filename : `${filename}.csv`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  saveBlob(blob, filename.endsWith(".csv") ? filename : `${filename}.csv`)
+}
+
+/**
+ * Downloads objects as CSV, one column per key (the union of keys, so rows with optional
+ * fields don't drop columns). Returns false — and tells the user — when there is nothing to export.
+ */
+export function exportToCSV(data: Record<string, unknown>[], filename: string): boolean {
+  if (!data.length) {
+    toast.info("Nothing to export")
+    return false
+  }
+  const headers = Array.from(new Set(data.flatMap((row) => Object.keys(row))))
+  downloadCsv([headers, ...data.map((row) => headers.map((h) => row[h]))], filename)
+  return true
 }

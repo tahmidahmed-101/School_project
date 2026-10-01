@@ -1,7 +1,5 @@
-import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
+import { createApiThunk, createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
+import { api } from "@/lib/api/client"
 import type { GoodsReceipt, GoodsReceiptCreatePayload } from "../types"
 
 const ENDPOINT = "/admin/procurement/goods-receipts/"
@@ -15,16 +13,9 @@ const { reducer, fetchAll, fetchSingle } = createSliceFactory<GoodsReceipt>({
 
 export { fetchAll, fetchSingle }
 
-export const createGoodsReceipt = createAsyncThunk(
+export const createGoodsReceipt = createApiThunk<GoodsReceiptCreatePayload, GoodsReceipt>(
   "goodsReceipts/create",
-  async (payload: GoodsReceiptCreatePayload, { rejectWithValue }) => {
-    try {
-      const res = await api.post(ENDPOINT, payload)
-      return unwrapItem<GoodsReceipt>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  (payload) => api.post(ENDPOINT, payload)
 )
 
 export default withExtraCases(reducer, (builder) => {

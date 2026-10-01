@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { isFullAccess } from "@/hooks/use-can"
 
 const Profile = () => {
   useDocumentTitle("Profile")
@@ -57,7 +58,7 @@ const Profile = () => {
       .toUpperCase() || "U"
   const isDirty =
     firstName !== (user.first_name ?? "") || lastName !== (user.last_name ?? "") || phone !== (user.phone ?? "")
-  const fullAccess = user.permissions.includes("*")
+  const fullAccess = isFullAccess(user.permissions)
 
   const savePicture = async (url: string, success: string) => {
     await dispatch(updateProfile({ profile_picture: url })).unwrap()
@@ -125,7 +126,7 @@ const Profile = () => {
 
   return (
     <div className="section-container space-y-6">
-      <PageHeading title="My Profile" description="Manage your personal details and password." />
+      <PageHeader title="My Profile" description="Manage your personal details and password." />
 
       <Card>
         <CardContent className="flex flex-col items-center gap-5 p-6 sm:flex-row">

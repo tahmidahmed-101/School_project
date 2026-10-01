@@ -2,32 +2,32 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { CornerDownRight, FolderTree, PlusIcon, RotateCcw } from "lucide-react"
+import { CornerDownRight, FolderTree, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
+import { ActiveStatusBadge } from "@/components/common/cells"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
+import { createImportLookup } from "@/lib/importLookup"
+import type { Option } from "@/lib/types"
 
 import { createCategory, deleteCategory, fetchAllCategories, restoreCategory } from "../api"
 import { categoryTypeOptions, type Category, type CategoryPayload } from "../types"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
-import { usePermission } from "../lib/usePermission"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
-import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { createImportLookup } from "../lib/importLookup"
-
-type Option = { label: string; value: string }
 
 const Categories = () => {
   useDocumentTitle("Categories")
   const navigate = useNavigate()
-  const canManage = usePermission("catalog.manage")
+  const canManage = useCan("catalog.manage")
   const [includeDeleted, setIncludeDeleted] = useState(false)
   const { options, isLoading, error, reload } = useCategoryOptions(includeDeleted)
   const [search, setSearch] = useState("")
@@ -139,31 +139,23 @@ const Categories = () => {
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) =>
-        row.original.category.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" />
-        ) : (
-          <StatusBadge status={row.original.category.is_active ? "active" : "inactive"} />
-        ),
+      cell: ({ row }) => (
+        <ActiveStatusBadge deleted={row.original.category.deleted_at} active={row.original.category.is_active} />
+      ),
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => {
         const o = row.original
         if (!canManage) return null
-        if (o.category.deleted_at) {
-          return (
-            <Button variant="outline" size="sm" onClick={() => void handleRestore(o)}>
-              <RotateCcw /> Restore
-            </Button>
-          )
-        }
         return (
           <TableActions
             itemName={o.label}
+            deleted={Boolean(o.category.deleted_at)}
+            onRestore={() => handleRestore(o)}
             editUrl={`/category_form/${o.value}`}
-            onDelete={() => void handleDelete(o)}
+            onDelete={() => handleDelete(o)}
           />
         )
       },
@@ -172,25 +164,28 @@ const Categories = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Categories" description="Organise products into a category tree" />
-        {canManage && (
-          <div className="flex flex-wrap gap-2">
-            <CsvImportButton
-              entityName="categories"
-              fields={importFields}
-              createRow={importCategory}
-              onComplete={() => {
-                parentLookup.reset()
-                reload()
-              }}
-            />
-            <Button size="action" onClick={() => navigate("/category_form/new")}>
-              <PlusIcon className="size-5" /> Add Category
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Categories"
+        description="Organise products into a category tree"
+        actions={
+          canManage && (
+            <>
+              <CsvImportButton
+                entityName="categories"
+                fields={importFields}
+                createRow={importCategory}
+                onComplete={() => {
+                  parentLookup.reset()
+                  reload()
+                }}
+              />
+              <Button size="action" onClick={() => navigate("/category_form/new")}>
+                <PlusIcon className="size-5" /> Add Category
+              </Button>
+            </>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search categories…"
@@ -208,13 +203,7 @@ const Categories = () => {
             ),
           },
           ...(canManage
-            ? [
-                {
-                  component: (
-                    <DeletedToggle pressed={includeDeleted} onPressedChange={setIncludeDeleted} />
-                  ),
-                },
-              ]
+            ? [{ component: <DeletedToggle pressed={includeDeleted} onPressedChange={setIncludeDeleted} /> }]
             : []),
         ]}
       />

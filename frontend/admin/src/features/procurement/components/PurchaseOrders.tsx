@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ClipboardList, Plus } from "lucide-react"
@@ -7,21 +6,20 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { PageHeader } from "@/components/common/PageHeader"
+import { DateCell, MoneyCell } from "@/components/common/cells"
+import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useListPage } from "@/hooks/use-list-page"
 
 import { fetchAll } from "../slices/purchaseOrderSlice"
 import type { PurchaseOrder } from "../types"
-import { useCanManagePurchasing, useDebouncedValue, useProcurementSelector } from "../hooks/useProcurement"
+import { useCanManagePurchasing, useProcurementSelector } from "../hooks/useProcurement"
+import { useStatusSortFilters } from "../hooks/useStatusSortFilters"
 import { PO_STATUS_TONE, poOrderedTotal, poUnitsOrdered, poUnitsReceived } from "../utils"
-
-const PAGE_SIZE = 20
-type Option = { label: string; value: string }
 
 const STATUS_OPTIONS: Option[] = [
   { label: "Draft", value: "draft" },
@@ -30,37 +28,21 @@ const STATUS_OPTIONS: Option[] = [
   { label: "Cancelled", value: "cancelled" },
 ]
 
+const SORT_OPTIONS: Option[] = [
+  { label: "Newest order date", value: "-order_date" },
+  { label: "Oldest order date", value: "order_date" },
+  { label: "Recently created", value: "-created_at" },
+]
+
 const PurchaseOrders = () => {
   useDocumentTitle("Purchase Orders")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data, isFetchingList, error, totalItems, meta } = useProcurementSelector((state) => state.purchaseOrders)
+  const state = useProcurementSelector((state) => state.purchaseOrders)
   const canManage = useCanManagePurchasing()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search)
-  const [status, setStatus] = useState<Option | null>(null)
-  const [ordering, setOrdering] = useState<Option | null>(null)
-
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(status ? { status: status.value } : {}),
-          ...(ordering ? { ordering: ordering.value } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, status, ordering]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: filters.params })
 
   const columns: ColumnDef<PurchaseOrder>[] = [
     {
@@ -76,7 +58,7 @@ const PurchaseOrders = () => {
     {
       accessorKey: "order_date",
       header: "ORDER DATE",
-      cell: ({ row }) => <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.original.order_date)}</span>,
+      cell: ({ row }) => <DateCell value={row.original.order_date} className="text-muted-foreground" />,
     },
     {
       id: "received",
@@ -97,9 +79,7 @@ const PurchaseOrders = () => {
     {
       id: "total",
       header: "TOTAL",
-      cell: ({ row }) => (
-        <span className="text-sm font-semibold whitespace-nowrap">{formatCurrency(poOrderedTotal(row.original))}</span>
-      ),
+      cell: ({ row }) => <MoneyCell value={poOrderedTotal(row.original)} emphasis />,
     },
     {
       accessorKey: "status",
@@ -108,7 +88,7 @@ const PurchaseOrders = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => (
         <TableActions itemName={row.original.po_number} viewUrl={`/purchasing/orders/${row.original.id}`} />
       ),
@@ -117,75 +97,31 @@ const PurchaseOrders = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Purchase Orders"
-          description="Draft, submit and receive stock orders from suppliers."
-        />
-        {canManage && (
-          <Button size="action" asChild>
-            <Link to="/purchasing/orders/new">
-              <Plus className="size-5" /> New Purchase Order
-            </Link>
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Purchase Orders"
+        description="Draft, submit and receive stock orders from suppliers."
+        actions={
+          canManage && (
+            <Button size="action" asChild>
+              <Link to="/purchasing/orders/new">
+                <Plus className="size-5" /> New Purchase Order
+              </Link>
+            </Button>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search PO number..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={STATUS_OPTIONS}
-                placeholder="Status"
-                value={status}
-                onValueChange={(v) => {
-                  setStatus(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={[
-                  { label: "Newest order date", value: "-order_date" },
-                  { label: "Oldest order date", value: "order_date" },
-                  { label: "Recently created", value: "-created_at" },
-                ]}
-                placeholder="Sort"
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
-        ]}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
+        filters={filters.filters}
       />
 
       <DataTable
         columns={columns}
-        data={data}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={state.data}
+        {...list.tableProps}
         onRowClick={(po) => navigate(`/purchasing/orders/${po.id}`)}
         emptyIcon={ClipboardList}
         emptyTitle="No purchase orders"

@@ -6,8 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { api } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { cn } from "@/lib/utils"
+import { useDebounced } from "@/hooks/use-debounced"
 import type { VariantOption } from "../types"
-import { useDebouncedValue } from "../hooks/useProcurement"
 import { variantLabel } from "../utils"
 
 export interface PickedVariant {
@@ -31,7 +31,7 @@ export function VariantPicker({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const search = useDebouncedValue(query)
+  const search = useDebounced(query).trim()
   const [results, setResults] = useState<VariantOption[]>([])
   const [loading, setLoading] = useState(false)
 

@@ -191,7 +191,9 @@ export function createSliceFactory<T extends WithId>({
     // Lets detail pages tell "not loaded yet" / "not found" / "request failed" apart.
     singleStatus: "idle" as SingleStatus,
     singleError: null as unknown,
-    error: null as unknown, // Error handling
+    // Error of the latest list fetch (shown by the table). Mutations don't touch it: their
+    // callers unwrap() and report failures themselves.
+    error: null as unknown,
     totalItems: seed.length,
     meta: null as ListMeta | null, // server pagination info, populated once endpoint-backed
     // requestId of the latest list/detail fetch; responses from older requests are dropped.
@@ -284,12 +286,10 @@ export function createSliceFactory<T extends WithId>({
             state.data = [action.payload, ...state.data] as typeof state.data
           }
           state.totalItems += 1
-          state.error = null
         })
-        .addCase(postData.rejected, (state, action) => {
+        .addCase(postData.rejected, (state) => {
           finish(state)
           state.isMutating = false
-          state.error = action.payload ?? action.error
         })
 
         // Update Data
@@ -301,12 +301,10 @@ export function createSliceFactory<T extends WithId>({
           finish(state)
           state.isMutating = false
           replaceItem(state, action.payload)
-          state.error = null
         })
-        .addCase(updateData.rejected, (state, action) => {
+        .addCase(updateData.rejected, (state) => {
           finish(state)
           state.isMutating = false
-          state.error = action.payload ?? action.error
         })
 
         // Patch Data
@@ -318,12 +316,10 @@ export function createSliceFactory<T extends WithId>({
           finish(state)
           state.isMutating = false
           replaceItem(state, action.payload)
-          state.error = null
         })
-        .addCase(patchData.rejected, (state, action) => {
+        .addCase(patchData.rejected, (state) => {
           finish(state)
           state.isMutating = false
-          state.error = action.payload ?? action.error
         })
 
         // Delete Data
@@ -336,12 +332,10 @@ export function createSliceFactory<T extends WithId>({
           state.isMutating = false
           state.data = state.data.filter((item) => item.id !== action.payload)
           state.totalItems = Math.max(0, state.totalItems - 1)
-          state.error = null
         })
-        .addCase(deleteData.rejected, (state, action) => {
+        .addCase(deleteData.rejected, (state) => {
           finish(state)
           state.isMutating = false
-          state.error = action.payload ?? action.error
         })
     },
   })
@@ -384,4 +378,52 @@ export function withExtraCases<S>(
   // `createReducer` returns the identical state reference for non-matching actions, so this
   // composition is a no-op for every action the extra cases don't handle.
   return (state, action) => extra(base(state, action), action)
+}
+
+/**
+ * Thunk for a one-off endpoint: runs `request`, unwraps the `data` envelope, and rejects
+ * with a normalised ApiError — the try / unwrap / rejectWithValue block every action thunk needs.
+ */
+export function createApiThunk<Arg, T>(
+  type: string,
+  request: (arg: Arg) => Promise<{ data: unknown }>,
+  /** How to read the payload; pass `unwrapEnvelope` for endpoints that return an array under `data`. */
+  unwrap: (raw: unknown) => T = unwrapItem<T>
+) {
+  return createAsyncThunk<T, Arg, { rejectValue: ReturnType<typeof extractApiError> }>(
+    type,
+    async (arg, { rejectWithValue }) => {
+      try {
+        const res = await request(arg)
+        return unwrap(res.data)
+      } catch (err) {
+        return rejectWithValue(extractApiError(err))
+      }
+    }
+  )
+}
+
+/** POST to a record action endpoint (`<endpoint><id>/<action>/`, e.g. `restore`) and return the updated record. */
+export function createActionThunk<T>(type: string, endpoint: string, action: string) {
+  return createApiThunk<string, T>(type, (id) => api.post(`${endpoint}${id}/${action}/`))
+}
+
+type ListState = { data: WithId[]; singleData?: unknown }
+type RecordThunk = { fulfilled: { match: (action: unknown) => action is { payload: WithId } } }
+
+/**
+ * Registers `fulfilled` cases that swap the returned record into the list (and the open
+ * detail record) by id — for action thunks such as restore, approve or cancel.
+ * Use inside `withExtraCases`.
+ */
+export function replaceOnFulfilled<S extends ListState>(builder: ActionReducerMapBuilder<S>, ...thunks: RecordThunk[]) {
+  builder.addMatcher(
+    (action): action is { type: string; payload: WithId } => thunks.some((t) => t.fulfilled.match(action)),
+    (state, action) => {
+      const item = action.payload
+      const draft = state as Draft<ListState>
+      draft.data = draft.data.map((existing) => (existing.id === item.id ? item : existing))
+      if ((draft.singleData as Partial<WithId> | undefined)?.id === item.id) draft.singleData = item
+    }
+  )
 }

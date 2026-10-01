@@ -1,7 +1,5 @@
-import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
+import { createApiThunk, createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
+import { api } from "@/lib/api/client"
 import type { JournalEntry, JournalEntryCreatePayload, JournalEntryReversePayload } from "../types"
 
 const ENDPOINT = "/admin/accounting/journal-entries/"
@@ -16,28 +14,14 @@ const { reducer, fetchAll, fetchSingle } = createSliceFactory<JournalEntry>({
 
 export { fetchAll, fetchSingle }
 
-export const createJournalEntry = createAsyncThunk(
+export const createJournalEntry = createApiThunk<JournalEntryCreatePayload, JournalEntry>(
   "journalEntries/create",
-  async (payload: JournalEntryCreatePayload, { rejectWithValue }) => {
-    try {
-      const res = await api.post(ENDPOINT, payload)
-      return unwrapItem<JournalEntry>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  (payload) => api.post(ENDPOINT, payload)
 )
 
-export const reverseJournalEntry = createAsyncThunk(
+export const reverseJournalEntry = createApiThunk<{ id: string; payload: JournalEntryReversePayload }, JournalEntry>(
   "journalEntries/reverse",
-  async ({ id, payload }: { id: string; payload: JournalEntryReversePayload }, { rejectWithValue }) => {
-    try {
-      const res = await api.post(`${ENDPOINT}${id}/reverse/`, payload)
-      return unwrapItem<JournalEntry>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  ({ id, payload }) => api.post(`${ENDPOINT}${id}/reverse/`, payload)
 )
 
 export default withExtraCases(reducer, (builder) => {

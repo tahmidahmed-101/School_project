@@ -13,7 +13,7 @@ import { DeleteModal } from "@/components/common/DeleteModal"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { Account, Expense, ExpenseCategory } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-import { DetailRow } from "./shared"
+import { DetailRow } from "@/components/common/DetailRow"
 
 interface Props {
   expense: Expense | null
@@ -22,7 +22,7 @@ interface Props {
   canPost: boolean
   onClose: () => void
   onEdit: (expense: Expense) => void
-  onDelete: (expense: Expense) => void
+  onDelete: (expense: Expense) => void | Promise<unknown>
 }
 
 export function ExpenseDetailDialog({

@@ -4,7 +4,7 @@ import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
+import { CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,15 +12,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useAllPages } from "@/hooks/use-all-pages"
 
 import { createPurchaseOrder } from "../slices/purchaseOrderSlice"
 import type { Supplier } from "../types"
-import { useAllPages, useCanManagePurchasing } from "../hooks/useProcurement"
+import { useCanManagePurchasing } from "../hooks/useProcurement"
 import { VariantPicker } from "./VariantPicker"
 
 const lineSchema = z.object({
@@ -95,14 +96,11 @@ const PurchaseOrderCreate = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="space-y-2">
-        <Button variant="back" size="sm" asChild>
-          <Link to="/purchasing/orders">
-            <ArrowLeft className="size-4" /> Purchase orders
-          </Link>
-        </Button>
-        <PageHeading title="New Purchase Order" description="Saved as a draft — submit it to the supplier when it's ready." />
-      </div>
+      <PageHeader
+        back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
+        title="New Purchase Order"
+        description="Saved as a draft — submit it to the supplier when it's ready."
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
         <Card>

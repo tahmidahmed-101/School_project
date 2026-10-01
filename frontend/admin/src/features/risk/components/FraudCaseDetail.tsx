@@ -1,38 +1,33 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Loader2, ShieldAlert } from "lucide-react"
+import { CheckCircle2, Loader2, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { DetailRow } from "@/components/common/DetailRow"
+import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, resolveFraudCase } from "@/features/risk/slices/fraudCaseSlice"
 import { selectFraudCases } from "@/features/risk/selectors"
 import type { FraudCase } from "@/features/risk/types"
-import { useCan } from "@/features/system/permissions"
+import { ADMIN_ONLY } from "@/features/system/permissions"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatDateTime, humanize } from "@/lib/format"
 import { fraudStatusTone } from "./fraudStatus"
 
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-    <dt className="text-sm text-muted-foreground">{label}</dt>
-    <dd className="text-sm font-medium">{children}</dd>
-  </div>
-)
-
 const FraudCaseDetail = () => {
   const { id = "" } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const can = useCan()
-  const canManage = can("risk.manage")
+  const canManage = useCan("risk.manage")
+  const canViewCustomers = useCan(ADMIN_ONLY)
   const { singleData, singleStatus, singleError } = useAppSelector(selectFraudCases)
   const fraudCase = singleData && (singleData as FraudCase).id === id ? (singleData as FraudCase) : null
   useDocumentTitle(fraudCase ? `${fraudCase.case_number} — Fraud Case` : "Fraud Case")
@@ -84,18 +79,14 @@ const FraudCaseDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" onClick={() => navigate("/fraud_cases")} aria-label="Back to fraud cases">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="flex flex-wrap items-center gap-3 text-2xl md:text-3xl font-bold tracking-tight">
-            {fraudCase.case_number}
-            <StatusBadge status={fraudCase.status} tone={fraudStatusTone[fraudCase.status]} label={humanize(fraudCase.status)} />
-          </h1>
-          <p className="text-muted-foreground text-sm">Opened {formatDateTime(fraudCase.created_at)}</p>
-        </div>
-      </div>
+      <PageHeader
+        title={fraudCase.case_number}
+        description={`Opened ${formatDateTime(fraudCase.created_at)}`}
+        back={{ to: "/fraud_cases", label: "Back to fraud cases" }}
+        badges={
+          <StatusBadge status={fraudCase.status} tone={fraudStatusTone[fraudCase.status]} label={humanize(fraudCase.status)} />
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="border-none shadow-sm">
@@ -106,8 +97,8 @@ const FraudCaseDetail = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="whitespace-pre-wrap text-sm">{fraudCase.description}</p>
-            <dl className="space-y-3">
-              <Row label="Order">
+            <div>
+              <DetailRow label="Order">
                 {fraudCase.order_id ? (
                   <Link className="text-primary hover:underline" to={`/order_detail/${fraudCase.order_id}`}>
                     View order
@@ -115,10 +106,10 @@ const FraudCaseDetail = () => {
                 ) : (
                   "—"
                 )}
-              </Row>
-              <Row label="Customer">
+              </DetailRow>
+              <DetailRow label="Customer">
                 {fraudCase.customer_id ? (
-                  can("*") ? (
+                  canViewCustomers ? (
                     <Link className="text-primary hover:underline" to={`/customer_detail/${fraudCase.customer_id}`}>
                       View customer
                     </Link>
@@ -128,8 +119,8 @@ const FraudCaseDetail = () => {
                 ) : (
                   "—"
                 )}
-              </Row>
-            </dl>
+              </DetailRow>
+            </div>
           </CardContent>
         </Card>
 

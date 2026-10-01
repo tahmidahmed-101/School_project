@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom"
-import { EyeIcon, Trash2Icon, PencilIcon } from "lucide-react"
+import { EyeIcon, Trash2Icon, PencilIcon, RotateCcw } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { DeleteModal } from "./DeleteModal"
 
@@ -15,8 +15,39 @@ type Props = {
   onView?: () => void
   editUrl?: string
   onEdit?: () => void
-  onDelete?: () => void
+  onDelete?: () => void | Promise<unknown>
+  /** Soft-deleted rows show only a Restore button (when `onRestore` is given). */
+  deleted?: boolean
+  onRestore?: () => void | Promise<unknown>
+  /** Disables Restore, e.g. while a mutation is in flight. */
+  restoreDisabled?: boolean
   itemName: string
+}
+
+/** Restore button for a soft-deleted row; clicks don't trigger the row's own link. */
+export function RestoreButton({
+  onClick,
+  label,
+  disabled = false,
+}: {
+  onClick: () => void | Promise<unknown>
+  label: string
+  disabled?: boolean
+}) {
+  return (
+    <div onClick={(e) => e.stopPropagation()} data-no-row-click="true">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => void onClick()}
+        aria-label={`Restore ${label}`}
+      >
+        <RotateCcw className="size-3.5" /> Restore
+      </Button>
+    </div>
+  )
 }
 
 // Compose the shared Button recipe instead of hand-rolling three near-identical
@@ -39,8 +70,13 @@ export function TableActions({
   editUrl,
   onEdit,
   onDelete,
+  deleted = false,
+  onRestore,
+  restoreDisabled = false,
   itemName,
 }: Props) {
+  if (deleted) return onRestore ? <RestoreButton label={itemName} onClick={onRestore} disabled={restoreDisabled} /> : null
+
   return (
     <div
       className="flex items-center gap-1 sm:ml-1 md:ml-1.5"

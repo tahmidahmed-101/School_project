@@ -1,8 +1,7 @@
 import { PackageCheck } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { useAppSelector } from "@/app/hooks"
-import { hasPermission } from "@/app/modules"
+import { useCan } from "@/hooks/use-can"
 import { formatCount } from "../measure"
 import type { InventoryAlert, LowStockCounts } from "../types"
 import { ReportWidget } from "./ReportWidget"
@@ -17,8 +16,7 @@ interface Props {
 }
 
 export function LowStockAlerts({ items, counts, isLoading, error, onRetry, className }: Props) {
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
-  const canOpenInventory = hasPermission(permissions, "inventory.view")
+  const canOpenInventory = useCan("inventory.view")
   const total = counts?.total ?? 0
 
   return (

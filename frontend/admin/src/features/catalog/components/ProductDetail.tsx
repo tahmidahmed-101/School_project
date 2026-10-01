@@ -1,15 +1,18 @@
 import { useCallback, useEffect } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Boxes, Edit, Package, RotateCcw } from "lucide-react"
+import { Boxes, Edit, Package, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DetailPageState } from "@/components/common/DetailPageState"
-import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeader } from "@/components/common/PageHeader"
+import { DetailRow } from "@/components/common/DetailRow"
+import { ActiveStatusBadge } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -17,26 +20,16 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { restoreProduct } from "../api"
 import type { Product } from "../types"
-import { usePermission } from "../lib/usePermission"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
-
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{children}</span>
-    </div>
-  )
-}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
-  const canViewInventory = usePermission("inventory.view", "inventory.manage")
+  const canManage = useCan("catalog.manage")
+  const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
   const { nameById } = useCategoryOptions()
@@ -80,46 +73,37 @@ const ProductDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="back" size="icon" aria-label="Back to products" onClick={() => navigate("/products")}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{product.name}</h1>
-              {product.deleted_at ? (
-                <StatusBadge status="deleted" tone="destructive" />
-              ) : (
-                <StatusBadge status={product.is_active ? "active" : "inactive"} />
-              )}
-              <Badge variant="secondary" className="capitalize">
-                {product.product_type}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground text-sm">{product.slug}</p>
-          </div>
-        </div>
-        {canManage && (
-          <div className="flex flex-wrap gap-2">
-            {product.deleted_at ? (
-              <Button size="action" variant="outline" onClick={handleRestore}>
-                <RotateCcw className="size-5" /> Restore
-              </Button>
-            ) : isBundle ? (
-              <Button size="action" variant="apply" asChild>
-                <Link to={bundleVariantId ? `/bundles/${bundleVariantId}` : "/bundles"}>
-                  <Boxes className="size-5" /> Edit bundle
-                </Link>
-              </Button>
-            ) : (
-              <Button size="action" variant="apply" onClick={() => navigate(`/product_form/${product.id}`)}>
-                <Edit className="size-5" /> Edit product
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title={product.name}
+        description={product.slug}
+        back={{ to: "/products", label: "Back to products" }}
+        badges={
+          <span className="flex flex-wrap items-center gap-2">
+            <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
+            <Badge variant="secondary" className="capitalize">
+              {product.product_type}
+            </Badge>
+          </span>
+        }
+        actions={
+          canManage &&
+          (product.deleted_at ? (
+            <Button size="action" variant="outline" onClick={handleRestore}>
+              <RotateCcw className="size-5" /> Restore
+            </Button>
+          ) : isBundle ? (
+            <Button size="action" variant="apply" asChild>
+              <Link to={bundleVariantId ? `/bundles/${bundleVariantId}` : "/bundles"}>
+                <Boxes className="size-5" /> Edit bundle
+              </Link>
+            </Button>
+          ) : (
+            <Button size="action" variant="apply" onClick={() => navigate(`/product_form/${product.id}`)}>
+              <Edit className="size-5" /> Edit product
+            </Button>
+          ))
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="overflow-hidden lg:col-span-1">
@@ -130,16 +114,16 @@ const ProductDetail = () => {
               <Package className="size-16 text-muted-foreground/40" />
             )}
           </div>
-          <CardContent className="divide-y divide-border pt-2">
-            <InfoRow label="Category">{nameById.get(product.category_id) ?? "—"}</InfoRow>
-            <InfoRow label="Price">
+          <CardContent className="pt-2">
+            <DetailRow label="Category">{nameById.get(product.category_id) ?? "—"}</DetailRow>
+            <DetailRow label="Price">
               {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
-            </InfoRow>
-            {product.discount_price && <InfoRow label="List price">{formatCurrency(product.price)}</InfoRow>}
-            <InfoRow label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</InfoRow>
-            <InfoRow label="Available stock">{product.total_stock}</InfoRow>
-            <InfoRow label="Variants">{product.variants.length}</InfoRow>
-            {product.deleted_at && <InfoRow label="Deleted">{formatDateTime(product.deleted_at)}</InfoRow>}
+            </DetailRow>
+            {product.discount_price && <DetailRow label="List price">{formatCurrency(product.price)}</DetailRow>}
+            <DetailRow label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</DetailRow>
+            <DetailRow label="Available stock">{product.total_stock}</DetailRow>
+            <DetailRow label="Variants">{product.variants.length}</DetailRow>
+            {product.deleted_at && <DetailRow label="Deleted">{formatDateTime(product.deleted_at)}</DetailRow>}
           </CardContent>
         </Card>
 

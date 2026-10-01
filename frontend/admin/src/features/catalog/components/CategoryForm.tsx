@@ -4,26 +4,29 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, ImageIcon, Loader2, Save } from "lucide-react"
+import { ImageIcon, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { PageHeader } from "@/components/common/PageHeader"
+import { SwitchField } from "@/components/common/FormDialog"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { useCan } from "@/hooks/use-can"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
+import { reportFormError } from "@/lib/forms"
 
 import { fetchSingle } from "../slices/categorySlice"
 import { createCategory, updateCategory, uploadCategoryImage } from "../api"
 import type { Category, CategoryPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { usePermission } from "../lib/usePermission"
+import { CategoryTreeSelect } from "./CategoryTreeSelect"
 
 const NO_PARENT = "none"
 
@@ -41,7 +44,7 @@ const CategoryForm = () => {
   const isEditing = Boolean(id && id !== "new")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
+  const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.categories)
   const existing = singleData as Category | null
   const { categories, options } = useCategoryOptions()
@@ -154,10 +157,7 @@ const CategoryForm = () => {
       toast.success(`${values.name} ${isEditing ? "updated" : "created"}`)
       navigate("/categories")
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in values) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save category"))
+      reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save category" })
     }
   }
 
@@ -165,17 +165,11 @@ const CategoryForm = () => {
 
   return (
     <div className="section-container">
-      <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" aria-label="Back" onClick={() => navigate("/categories")}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{isEditing ? "Edit Category" : "Add Category"}</h1>
-          <p className="text-muted-foreground text-sm">
-            {isEditing ? `Editing ${existing?.name ?? ""}` : "Create a category to organise your catalog"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={isEditing ? "Edit Category" : "Add Category"}
+        description={isEditing ? `Editing ${existing?.name ?? ""}` : "Create a category to organise your catalog"}
+        back={{ to: "/categories", label: "Back" }}
+      />
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
@@ -194,25 +188,12 @@ const CategoryForm = () => {
             <Field>
               <FieldLabel htmlFor="parent_id">Parent category</FieldLabel>
               <FieldContent>
-                <Controller
+                <CategoryTreeSelect
                   control={control}
                   name="parent_id"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="parent_id" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_PARENT}>None (root category)</SelectItem>
-                        {parentOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {"  ".repeat(o.depth)}
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  id="parent_id"
+                  options={parentOptions}
+                  none={{ value: NO_PARENT, label: "None (root category)" }}
                 />
                 <FieldError errors={[errors.parent_id]} />
               </FieldContent>
@@ -248,16 +229,7 @@ const CategoryForm = () => {
             </Field>
 
             {isEditing && (
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
-                </FieldContent>
-                <Controller
-                  control={control}
-                  name="is_active"
-                  render={({ field }) => <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />}
-                />
-              </Field>
+              <SwitchField control={control} name="is_active" label="Active" />
             )}
 
             <Field className="md:col-span-2">

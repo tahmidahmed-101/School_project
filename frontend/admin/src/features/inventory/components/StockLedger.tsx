@@ -1,103 +1,87 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
-import { DownloadIcon, History, Loader2, X } from "lucide-react"
+import { History } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
+import { ExportButton } from "@/components/common/ExportButton"
+import { PageHeader } from "@/components/common/PageHeader"
+import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { DateCell, MoneyCell, ProductCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency, formatDateTime } from "@/lib/format"
-import { useDebounced } from "@/features/catalog/lib/useDebounced"
-import { VariantPicker } from "@/features/catalog/components/VariantPicker"
+import { useListPage } from "@/hooks/use-list-page"
+import type { Option } from "@/lib/types"
+import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
 
 import { fetchAll } from "../slices/ledgerSlice"
 import { downloadLedgerExport } from "../api"
 import { movementTypeLabel, movementTypeOptions, type StockLedgerEntry } from "../types"
 import { useWarehouses } from "../lib/useWarehouses"
 
-type Option = { label: string; value: string }
 const PAGE_SIZE = 25
+const ORDERING_OPTIONS: Option[] = [
+  { label: "Newest first", value: "-created_at" },
+  { label: "Oldest first", value: "created_at" },
+]
 
 const StockLedger = () => {
   useDocumentTitle("Stock Ledger")
   const dispatch = useAppDispatch()
-  const { data: entries, isFetchingList, error, totalItems } = useAppSelector((s) => s.inventoryLedger)
+  const ledgerState = useAppSelector((s) => s.inventoryLedger)
   const { warehouses } = useWarehouses()
   const [searchParams, setSearchParams] = useSearchParams()
   const variantId = searchParams.get("variant_id")
   const variantSku = searchParams.get("sku")
+  const variantName = searchParams.get("name")
+  // The variant lives in the URL so Stock Overview and product pages can deep-link here; those links carry only the SKU.
+  const variant: PickedVariant | null = variantId
+    ? { id: variantId, sku: variantName ? variantSku ?? "" : "", product_name: variantName ?? variantSku ?? variantId }
+    : null
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search)
   const [warehouse, setWarehouse] = useState<Option | null>(null)
   const [movement, setMovement] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
-  const [exporting, setExporting] = useState(false)
 
-  const filters = useMemo(
-    () => ({
-      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
-      ...(variantId ? { variant_id: variantId } : {}),
-      ...(warehouse ? { warehouse_id: warehouse.value } : {}),
-      ...(movement ? { movement_type: movement.value } : {}),
-      ...(ordering ? { ordering: ordering.value } : {}),
-    }),
-    [debouncedSearch, variantId, warehouse, movement, ordering]
-  )
-  const load = useCallback(() => {
-    dispatch(fetchAll({ page, page_size: PAGE_SIZE, ...filters }))
-  }, [dispatch, page, filters])
-  useEffect(() => {
-    load()
-  }, [load])
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state: ledgerState,
+    pageSize: PAGE_SIZE,
+    params: {
+      variant_id: variantId,
+      warehouse_id: warehouse?.value,
+      movement_type: movement?.value,
+      ordering: ordering?.value,
+    },
+  })
 
-  const setVariant = (v: { id: string; sku: string } | null) => {
-    setPage(1)
+  const setVariant = (v: PickedVariant | null) => {
     const next = new URLSearchParams(searchParams)
     if (v) {
       next.set("variant_id", v.id)
       next.set("sku", v.sku)
+      next.set("name", v.product_name)
     } else {
       next.delete("variant_id")
       next.delete("sku")
+      next.delete("name")
     }
     setSearchParams(next, { replace: true })
-  }
-
-  const runExport = async () => {
-    setExporting(true)
-    try {
-      await downloadLedgerExport(filters)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Export failed"))
-    } finally {
-      setExporting(false)
-    }
   }
 
   const columns: ColumnDef<StockLedgerEntry>[] = [
     {
       accessorKey: "created_at",
       header: "DATE",
-      cell: ({ row }) => <span className="text-sm whitespace-nowrap">{formatDateTime(row.original.created_at)}</span>,
+      cell: ({ row }) => <DateCell value={row.original.created_at} withTime />,
     },
     {
       id: "item",
       header: "ITEM",
-      cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{row.original.product_name}</div>
-          <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant_sku}</div>
-        </div>
-      ),
+      cell: ({ row }) => <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />,
     },
     {
       id: "warehouse",
@@ -134,11 +118,7 @@ const StockLedger = () => {
     {
       accessorKey: "unit_cost",
       header: "UNIT COST",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.unit_cost === null ? "—" : formatCurrency(row.original.unit_cost)}
-        </span>
-      ),
+      cell: ({ row }) => <MoneyCell value={row.original.unit_cost} className="text-muted-foreground" />,
     },
     {
       id: "reference",
@@ -155,53 +135,27 @@ const StockLedger = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Stock Ledger" description="Every stock movement, newest first" />
-        <Button variant="primary" size="action" onClick={runExport} disabled={exporting}>
-          {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export CSV
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Variant:</span>
-        {variantId ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-3 py-1 font-mono text-xs">
-            {variantSku ?? variantId}
-            <button type="button" aria-label="Clear variant filter" onClick={() => setVariant(null)}>
-              <X className="size-3.5" />
-            </button>
-          </span>
-        ) : (
-          <VariantPicker
-            className="w-full max-w-sm"
-            value={null}
-            onChange={(v) => v && setVariant(v)}
-            placeholder="Filter by variant…"
-          />
-        )}
-        <Link to="/inventory" className="ml-auto text-sm text-primary hover:underline">
-          Back to stock
-        </Link>
-      </div>
+      <PageHeader
+        title="Stock Ledger"
+        description="Every stock movement, newest first"
+        actions={<ExportButton onExport={() => downloadLedgerExport(list.query)} />}
+      />
 
       <FilterToolbar
-        searchPlaceholder="Search SKU, product or notes…"
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
+        inlineCount={3}
         filters={[
+          {
+            wide: true,
+            active: Boolean(variant),
+            component: <VariantPicker value={variant} onChange={setVariant} placeholder="Filter by variant…" />,
+          },
           {
             component: (
               <ExampleComboboxCustomItems
                 placeholder="Warehouse"
                 frameworks={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
                 value={warehouse}
-                onValueChange={(v) => {
-                  setWarehouse(v)
-                  setPage(1)
-                }}
+                onValueChange={setWarehouse}
               />
             ),
           },
@@ -211,44 +165,20 @@ const StockLedger = () => {
                 placeholder="Movement"
                 frameworks={movementTypeOptions}
                 value={movement}
-                onValueChange={(v) => {
-                  setMovement(v)
-                  setPage(1)
-                }}
+                onValueChange={setMovement}
               />
             ),
           },
           {
-            component: (
-              <ExampleComboboxCustomItems
-                placeholder="Sort"
-                frameworks={[
-                  { label: "Newest first", value: "-created_at" },
-                  { label: "Oldest first", value: "created_at" },
-                ]}
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
-            ),
+            component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} />,
           },
         ]}
       />
 
       <DataTable
         columns={columns}
-        data={entries}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
-        totalCount={totalItems}
-        onPageChange={(i) => setPage(i + 1)}
+        data={ledgerState.data}
+        {...list.tableProps}
         emptyIcon={History}
         emptyTitle="No movements"
         emptyDescription="No ledger entries match these filters."

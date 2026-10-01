@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input"
+import { ProductCell } from "@/components/common/cells"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { OrderLine } from "@/features/sales/types"
 
@@ -31,8 +32,7 @@ export function LineQuantityTable({ lines, maxFor, maxLabel, values, onChange }:
             return (
               <TableRow key={line.id}>
                 <TableCell>
-                  <p className="text-sm font-medium">{line.product_name}</p>
-                  <p className="font-mono text-xs uppercase text-muted-foreground">{line.variant_sku}</p>
+                  <ProductCell name={line.product_name} sku={line.variant_sku} />
                 </TableCell>
                 <TableCell className="text-center text-sm">{max}</TableCell>
                 <TableCell className="text-right">

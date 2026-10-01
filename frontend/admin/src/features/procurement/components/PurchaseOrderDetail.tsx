@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
-  ArrowLeft,
   Ban,
-  CheckCircle2,
   FileDown,
   FileText,
   ImageOff,
-  Loader2,
   PackageCheck,
   Pencil,
   Plus,
@@ -22,17 +19,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeleteModal } from "@/components/common/DeleteModal"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { FormDialog } from "@/components/common/FormDialog"
+import { PageHeader } from "@/components/common/PageHeader"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { resolveDetailState } from "@/lib/detailState"
 import { api, getApiErrorMessage } from "@/lib/api/client"
@@ -40,6 +32,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useAllPages } from "@/hooks/use-all-pages"
 
 import {
   addPurchaseOrderLine,
@@ -53,7 +46,7 @@ import {
   updatePurchaseOrderLine,
 } from "../slices/purchaseOrderSlice"
 import type { GoodsReceipt, PurchaseOrder, PurchaseOrderLine, Supplier } from "../types"
-import { useAllPages, useCanManagePurchasing, useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
+import { useCanManagePurchasing, useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
 import {
   GRN_STATUS_LABEL,
   GRN_STATUS_TONE,
@@ -64,7 +57,6 @@ import {
   poUnitsOrdered,
   poUnitsReceived,
 } from "../utils"
-import { ConfirmAction } from "./ConfirmAction"
 import { GoodsReceiptDialog } from "./GoodsReceiptDialog"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
 import { VariantPicker, type PickedVariant } from "./VariantPicker"
@@ -81,7 +73,7 @@ function HeaderEditDialog({
   po: PurchaseOrder
 }) {
   const dispatch = useAppDispatch()
-  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", undefined, open)
+  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", undefined, { enabled: open })
   const [supplierId, setSupplierId] = useState(po.supplier_id)
   const [orderDate, setOrderDate] = useState(po.order_date)
   const [notes, setNotes] = useState(po.notes)
@@ -103,55 +95,51 @@ function HeaderEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit {po.po_number}</DialogTitle>
-          <DialogDescription>Header details can only change while the order is a draft.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <Field>
-            <FieldLabel htmlFor="poe-supplier">Supplier</FieldLabel>
-            <FieldContent>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger id="poe-supplier">
-                  <SelectValue placeholder={po.supplier_name} />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers
-                    .filter((s) => s.is_active || s.id === po.supplier_id)
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="poe-date">Order date</FieldLabel>
-            <FieldContent>
-              <Input id="poe-date" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="poe-notes">Notes</FieldLabel>
-            <FieldContent>
-              <Textarea id="poe-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </FieldContent>
-          </Field>
-        </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={save} disabled={saving || !orderDate}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Edit ${po.po_number}`}
+      description="Header details can only change while the order is a draft."
+      onSubmit={(e) => {
+        e.preventDefault()
+        save()
+      }}
+      submitting={saving}
+      submitLabel="Save"
+      submitDisabled={!orderDate}
+    >
+      <Field>
+        <FieldLabel htmlFor="poe-supplier">Supplier</FieldLabel>
+        <FieldContent>
+          <Select value={supplierId} onValueChange={setSupplierId}>
+            <SelectTrigger id="poe-supplier">
+              <SelectValue placeholder={po.supplier_name} />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers
+                .filter((s) => s.is_active || s.id === po.supplier_id)
+                .map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </FieldContent>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="poe-date">Order date</FieldLabel>
+        <FieldContent>
+          <Input id="poe-date" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
+        </FieldContent>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="poe-notes">Notes</FieldLabel>
+        <FieldContent>
+          <Textarea id="poe-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </FieldContent>
+      </Field>
+    </FormDialog>
   )
 }
 
@@ -202,67 +190,63 @@ function LineDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{line ? "Edit Line" : "Add Line"}</DialogTitle>
-          <DialogDescription>{po.po_number}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <Field>
-            <FieldLabel htmlFor="line-variant">Variant *</FieldLabel>
-            <FieldContent>
-              <VariantPicker
-                id="line-variant"
-                value={variant}
-                onChange={(v) => {
-                  setVariant(v)
-                  if (v.cost_price && !unitCost) setUnitCost(Number(v.cost_price).toFixed(2))
-                }}
-              />
-            </FieldContent>
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="line-qty">Quantity *</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="line-qty"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={quantity}
-                  aria-invalid={!qtyValid}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="line-cost">Unit cost *</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="line-cost"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={unitCost}
-                  aria-invalid={!costValid}
-                  onChange={(e) => setUnitCost(e.target.value)}
-                />
-              </FieldContent>
-            </Field>
-          </div>
-        </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={save} disabled={saving || !variant || !qtyValid || !costValid}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={line ? "Edit Line" : "Add Line"}
+      description={po.po_number}
+      onSubmit={(e) => {
+        e.preventDefault()
+        save()
+      }}
+      submitting={saving}
+      submitLabel="Save"
+      submitDisabled={!variant || !qtyValid || !costValid}
+    >
+      <Field>
+        <FieldLabel htmlFor="line-variant">Variant *</FieldLabel>
+        <FieldContent>
+          <VariantPicker
+            id="line-variant"
+            value={variant}
+            onChange={(v) => {
+              setVariant(v)
+              if (v.cost_price && !unitCost) setUnitCost(Number(v.cost_price).toFixed(2))
+            }}
+          />
+        </FieldContent>
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="line-qty">Quantity *</FieldLabel>
+          <FieldContent>
+            <Input
+              id="line-qty"
+              type="number"
+              min={1}
+              step={1}
+              value={quantity}
+              aria-invalid={!qtyValid}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="line-cost">Unit cost *</FieldLabel>
+          <FieldContent>
+            <Input
+              id="line-cost"
+              type="number"
+              min={0}
+              step="0.01"
+              value={unitCost}
+              aria-invalid={!costValid}
+              onChange={(e) => setUnitCost(e.target.value)}
+            />
+          </FieldContent>
+        </Field>
+      </div>
+    </FormDialog>
   )
 }
 
@@ -367,82 +351,73 @@ const PurchaseOrderDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <Button variant="back" size="sm" asChild>
-            <Link to="/purchasing/orders">
-              <ArrowLeft className="size-4" /> Purchase orders
-            </Link>
-          </Button>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-mono">{po.po_number}</h1>
-            <StatusBadge status={po.status} tone={PO_STATUS_TONE[po.status]} />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {po.supplier_name} · ordered {formatDate(po.order_date)}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" size="action" onClick={() => openPdf(purchaseOrderPdfUrl(po.id))}>
-            <FileDown className="size-4" /> PDF
-          </Button>
-          {canManage && isDraft && (
-            <Button variant="primary" size="action" onClick={() => setHeaderOpen(true)}>
-              <Pencil className="size-4" /> Edit
+      <PageHeader
+        back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
+        title={<span className="font-mono">{po.po_number}</span>}
+        badges={<StatusBadge status={po.status} tone={PO_STATUS_TONE[po.status]} />}
+        description={`${po.supplier_name} · ordered ${formatDate(po.order_date)}`}
+        actions={
+          <>
+            <Button variant="primary" size="action" onClick={() => openPdf(purchaseOrderPdfUrl(po.id))}>
+              <FileDown className="size-4" /> PDF
             </Button>
-          )}
-          {canManage && isDraft && (
-            <ConfirmAction
-              title={`Submit ${po.po_number}?`}
-              description="Submitting locks the order's lines and header. Goods can then be received against it."
-              confirmLabel="Submit order"
-              onConfirm={() => runAction(() => dispatch(submitPurchaseOrder(po.id)).unwrap(), "Purchase order submitted")}
-              trigger={
-                <Button size="action" disabled={busy}>
-                  <Send className="size-4" /> Submit
-                </Button>
-              }
-            />
-          )}
-          {canManage && po.status === "submitted" && hasOutstanding && (
-            <Button size="action" onClick={() => setReceiveOpen(true)}>
-              <PackageCheck className="size-4" /> Receive Goods
-            </Button>
-          )}
-          {canBill && (po.status === "submitted" || po.status === "received") && receivedValue > 0 && (
-            <Button variant="primary" size="action" onClick={() => setBillOpen(true)}>
-              <FileText className="size-4" /> Create Bill
-            </Button>
-          )}
-          {canManage && (po.status === "draft" || po.status === "submitted") && (
-            <ConfirmAction
-              title={`Cancel ${po.po_number}?`}
-              description="The order will be marked cancelled. Stock already received stays in inventory."
-              confirmLabel="Cancel order"
-              destructive
-              onConfirm={() => runAction(() => dispatch(cancelPurchaseOrder(po.id)).unwrap(), "Purchase order cancelled")}
-              trigger={
-                <Button variant="destructive" size="action" disabled={busy}>
-                  <Ban className="size-4" /> Cancel
-                </Button>
-              }
-            />
-          )}
-          {canManage && (po.status === "draft" || po.status === "cancelled") && (
-            <DeleteModal
-              title={`Delete ${po.po_number}?`}
-              description="Only draft or cancelled orders can be deleted."
-              onConfirm={handleDelete}
-              trigger={
-                <Button variant="destructive" size="action" disabled={busy}>
-                  <Trash2 className="size-4" /> Delete
-                </Button>
-              }
-            />
-          )}
-        </div>
-      </div>
+            {canManage && isDraft && (
+              <Button variant="primary" size="action" onClick={() => setHeaderOpen(true)}>
+                <Pencil className="size-4" /> Edit
+              </Button>
+            )}
+            {canManage && isDraft && (
+              <ConfirmDialog
+                title={`Submit ${po.po_number}?`}
+                description="Submitting locks the order's lines and header. Goods can then be received against it."
+                confirmLabel="Submit order"
+                onConfirm={() => runAction(() => dispatch(submitPurchaseOrder(po.id)).unwrap(), "Purchase order submitted")}
+                trigger={
+                  <Button size="action" disabled={busy}>
+                    <Send className="size-4" /> Submit
+                  </Button>
+                }
+              />
+            )}
+            {canManage && po.status === "submitted" && hasOutstanding && (
+              <Button size="action" onClick={() => setReceiveOpen(true)}>
+                <PackageCheck className="size-4" /> Receive Goods
+              </Button>
+            )}
+            {canBill && (po.status === "submitted" || po.status === "received") && receivedValue > 0 && (
+              <Button variant="primary" size="action" onClick={() => setBillOpen(true)}>
+                <FileText className="size-4" /> Create Bill
+              </Button>
+            )}
+            {canManage && (po.status === "draft" || po.status === "submitted") && (
+              <ConfirmDialog
+                title={`Cancel ${po.po_number}?`}
+                description="The order will be marked cancelled. Stock already received stays in inventory."
+                confirmLabel="Cancel order"
+                destructive
+                onConfirm={() => runAction(() => dispatch(cancelPurchaseOrder(po.id)).unwrap(), "Purchase order cancelled")}
+                trigger={
+                  <Button variant="destructive" size="action" disabled={busy}>
+                    <Ban className="size-4" /> Cancel
+                  </Button>
+                }
+              />
+            )}
+            {canManage && (po.status === "draft" || po.status === "cancelled") && (
+              <DeleteModal
+                title={`Delete ${po.po_number}?`}
+                description="Only draft or cancelled orders can be deleted."
+                onConfirm={handleDelete}
+                trigger={
+                  <Button variant="destructive" size="action" disabled={busy}>
+                    <Trash2 className="size-4" /> Delete
+                  </Button>
+                }
+              />
+            )}
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryStat label="Order value" value={formatCurrency(poOrderedTotal(po))} sub={`${po.lines.length} lines`} />

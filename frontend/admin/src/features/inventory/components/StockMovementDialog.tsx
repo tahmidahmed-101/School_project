@@ -3,15 +3,13 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
+import { FormDialog } from "@/components/common/FormDialog"
 import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
 
 import { postAdjustment, postIntake, postWriteOff } from "../api"
@@ -116,113 +114,101 @@ export function StockMovementDialog({ mode, onOpenChange, warehouses, variant, w
       onDone()
       onOpenChange(false)
     } catch (err) {
-      const fields = getApiFieldErrors(err)
-      if (fields.quantity_delta) setError("quantity", { message: fields.quantity_delta })
-      if (fields.quantity) setError("quantity", { message: fields.quantity })
-      if (fields.unit_cost) setError("unit_cost", { message: fields.unit_cost })
-      toast.error(getApiErrorMessage(err, "Stock movement failed"))
+      reportFormError(err, {
+        setError,
+        fields: ["quantity", "unit_cost"],
+        fieldMap: { quantity_delta: "quantity" },
+        fallback: "Stock movement failed",
+      })
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{copy.title}</DialogTitle>
-          <DialogDescription>{copy.description}</DialogDescription>
-        </DialogHeader>
-        <form id="stock-movement-form" onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <Field>
-            <FieldLabel htmlFor="movement-variant">Variant</FieldLabel>
-            <FieldContent>
-              <Controller
-                control={control}
-                name="variant"
-                render={({ field }) => (
-                  <VariantPicker id="movement-variant" value={field.value ?? null} onChange={field.onChange} />
-                )}
-              />
-              <FieldError errors={[errors.variant]} />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="movement-warehouse">Warehouse</FieldLabel>
-            <FieldContent>
-              <Controller
-                control={control}
-                name="warehouse_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="movement-warehouse" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={DEFAULT_WAREHOUSE}>Default warehouse</SelectItem>
-                      {warehouses
-                        .filter((w) => w.is_active && !w.deleted_at)
-                        .map((w) => (
-                          <SelectItem key={w.id} value={w.id}>
-                            {w.name} ({w.code})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </FieldContent>
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="movement-qty">{mode === "adjust" ? "Quantity change" : "Quantity"}</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="movement-qty"
-                  type="number"
-                  step={1}
-                  min={mode === "adjust" ? undefined : 1}
-                  {...register("quantity", { valueAsNumber: true })}
-                />
-                {mode === "adjust" && <FieldDescription>e.g. 5 or -3</FieldDescription>}
-                <FieldError errors={[errors.quantity]} />
-              </FieldContent>
-            </Field>
-            {mode !== "write_off" && (
-              <Field>
-                <FieldLabel htmlFor="movement-cost">Unit cost</FieldLabel>
-                <FieldContent>
-                  <Input id="movement-cost" inputMode="decimal" placeholder="Optional" {...register("unit_cost")} />
-                  <FieldError errors={[errors.unit_cost]} />
-                </FieldContent>
-              </Field>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={copy.title}
+      description={copy.description}
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={copy.submit}
+      destructive={mode === "write_off"}
+    >
+      <Field>
+        <FieldLabel htmlFor="movement-variant">Variant</FieldLabel>
+        <FieldContent>
+          <Controller
+            control={control}
+            name="variant"
+            render={({ field }) => (
+              <VariantPicker id="movement-variant" value={field.value ?? null} onChange={field.onChange} />
             )}
-          </div>
+          />
+          <FieldError errors={[errors.variant]} />
+        </FieldContent>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="movement-warehouse">Warehouse</FieldLabel>
+        <FieldContent>
+          <Controller
+            control={control}
+            name="warehouse_id"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="movement-warehouse" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={DEFAULT_WAREHOUSE}>Default warehouse</SelectItem>
+                  {warehouses
+                    .filter((w) => w.is_active && !w.deleted_at)
+                    .map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name} ({w.code})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </FieldContent>
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="movement-qty">{mode === "adjust" ? "Quantity change" : "Quantity"}</FieldLabel>
+          <FieldContent>
+            <Input
+              id="movement-qty"
+              type="number"
+              step={1}
+              min={mode === "adjust" ? undefined : 1}
+              {...register("quantity", { valueAsNumber: true })}
+            />
+            {mode === "adjust" && <FieldDescription>e.g. 5 or -3</FieldDescription>}
+            <FieldError errors={[errors.quantity]} />
+          </FieldContent>
+        </Field>
+        {mode !== "write_off" && (
           <Field>
-            <FieldLabel htmlFor="movement-notes">{mode === "write_off" ? "Reason" : "Notes"}</FieldLabel>
+            <FieldLabel htmlFor="movement-cost">Unit cost</FieldLabel>
             <FieldContent>
-              <Textarea
-                id="movement-notes"
-                rows={2}
-                placeholder={mode === "write_off" ? "e.g. water damage" : "Optional"}
-                {...register("notes")}
-              />
+              <Input id="movement-cost" inputMode="decimal" placeholder="Optional" {...register("unit_cost")} />
+              <FieldError errors={[errors.unit_cost]} />
             </FieldContent>
           </Field>
-        </form>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="stock-movement-form"
-            disabled={isSubmitting}
-            variant={mode === "write_off" ? "destructive" : "default"}
-          >
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {copy.submit}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )}
+      </div>
+      <Field>
+        <FieldLabel htmlFor="movement-notes">{mode === "write_off" ? "Reason" : "Notes"}</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id="movement-notes"
+            rows={2}
+            placeholder={mode === "write_off" ? "e.g. water damage" : "Optional"}
+            {...register("notes")}
+          />
+        </FieldContent>
+      </Field>
+    </FormDialog>
   )
 }

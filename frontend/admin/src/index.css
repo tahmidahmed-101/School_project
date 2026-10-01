@@ -69,6 +69,8 @@
    LIGHT MODE — Tailgrids CMS
 --------------------------*/
 :root {
+  /* Native controls (date/time picker icons and popups) follow the theme. */
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #1f2937;
 
@@ -116,6 +118,7 @@
    DARK MODE — Tailgrids CMS
 --------------------------*/
 .dark {
+  color-scheme: dark;
   --background: #06110f;
   --foreground: #f9fafb;
 

@@ -1,6 +1,5 @@
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
+import { createActionThunk, createSliceFactory, replaceOnFulfilled, withExtraCases } from "@/lib/sliceFactory"
 import type { TaxRate } from "../types"
-import { createRestoreThunk } from "./restore"
 
 const ENDPOINT = "/admin/accounting/tax-rates/"
 
@@ -10,12 +9,10 @@ const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = crea
   initialSingleData: null,
 })
 
-export const restoreTaxRate = createRestoreThunk<TaxRate>("taxRates", ENDPOINT)
+export const restoreTaxRate = createActionThunk<TaxRate>("taxRates/restore", ENDPOINT, "restore")
 
 export { fetchAll, fetchSingle, postData, patchData, deleteData }
 
 export default withExtraCases(reducer, (builder) => {
-  builder.addCase(restoreTaxRate.fulfilled, (state, action) => {
-    state.data = state.data.map((item) => (item.id === action.payload.id ? action.payload : item))
-  })
+  replaceOnFulfilled(builder, restoreTaxRate)
 })

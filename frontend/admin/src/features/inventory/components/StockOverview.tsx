@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
@@ -28,13 +28,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { SortSelect } from "@/components/common/SortSelect"
+import { MoneyCell, ProductCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
-import { usePermission } from "@/features/catalog/lib/usePermission"
-import { useDebounced } from "@/features/catalog/lib/useDebounced"
+import type { Option } from "@/lib/types"
 import type { PickedVariant } from "@/features/catalog/components/VariantPicker"
 
 import { fetchAll } from "../slices/stockItemSlice"
@@ -45,7 +48,6 @@ import { StockMovementDialog, type MovementMode } from "./StockMovementDialog"
 import { BulkAdjustDialog } from "./BulkAdjustDialog"
 import { QuickProductDialog } from "./QuickProductDialog"
 
-type Option = { label: string; value: string }
 const PAGE_SIZE = 25
 
 const STATUS_CARDS: { key: keyof StockStatusSummary; label: string; icon: typeof Package; tone: string }[] = [
@@ -68,18 +70,15 @@ const StockOverview = () => {
   useDocumentTitle("Stock")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canAdjust = usePermission("inventory.adjust", "inventory.manage")
-  const canQuickCreate = usePermission("catalog.manage", "inventory.manage")
-  const { data: items, isFetchingList, error, totalItems } = useAppSelector((s) => s.inventoryStockItems)
+  const canAdjust = useCan("inventory.adjust", "inventory.manage")
+  const canQuickCreate = useCan("catalog.manage", "inventory.manage")
+  const stockState = useAppSelector((s) => s.inventoryStockItems)
   const { warehouses } = useWarehouses()
 
   const [status, setStatus] = useState<StockStatusSummary | null>(null)
   const [statusError, setStatusError] = useState<unknown>(null)
   const [statusKey, setStatusKey] = useState(0)
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search)
   const [warehouse, setWarehouse] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [lowOnly, setLowOnly] = useState(false)
@@ -113,26 +112,19 @@ const StockOverview = () => {
     }
   }, [statusKey])
 
-  const params = useMemo(
-    () => ({
-      page,
-      page_size: PAGE_SIZE,
-      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
-      ...(warehouse ? { warehouse_id: warehouse.value } : {}),
-      ...(ordering?.value ? { ordering: ordering.value } : {}),
-      ...(lowOnly ? { low_stock_only: true } : {}),
-    }),
-    [page, debouncedSearch, warehouse, ordering, lowOnly]
-  )
-  const load = useCallback(() => {
-    dispatch(fetchAll(params))
-  }, [dispatch, params])
-  useEffect(() => {
-    load()
-  }, [load])
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state: stockState,
+    pageSize: PAGE_SIZE,
+    params: {
+      warehouse_id: warehouse?.value,
+      ordering: ordering?.value,
+      low_stock_only: lowOnly || undefined,
+    },
+  })
 
   const refreshAll = () => {
-    load()
+    list.reload()
     setStatusKey((k) => k + 1)
     if (lookup?.found) void runLookup(lookup.sku)
   }
@@ -170,10 +162,7 @@ const StockOverview = () => {
               <Package className="size-4 text-muted-foreground" />
             )}
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{row.original.product_name}</div>
-            <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant_sku}</div>
-          </div>
+          <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />
         </div>
       ),
     },
@@ -214,11 +203,11 @@ const StockOverview = () => {
     {
       accessorKey: "avg_cost",
       header: "AVG COST",
-      cell: ({ row }) => <span className="text-sm">{formatCurrency(row.original.avg_cost)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.avg_cost} />,
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => {
         const s = row.original
         const action = (label: string, icon: React.ReactNode, onClick: () => void) => (
@@ -254,25 +243,28 @@ const StockOverview = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Stock" description="On-hand, reserved and available stock per warehouse" />
-        {canAdjust && (
-          <div className="flex flex-wrap gap-2">
-            <Button size="action" onClick={() => setMovement({ mode: "intake" })}>
-              <ArrowDownToLine className="size-5" /> Receive stock
-            </Button>
-            <Button variant="primary" size="action" onClick={() => setMovement({ mode: "adjust" })}>
-              <SlidersHorizontal className="size-5" /> Adjust
-            </Button>
-            <Button variant="primary" size="action" onClick={() => setBulkOpen(true)}>
-              <SlidersHorizontal className="size-5" /> Bulk adjust
-            </Button>
-            <Button variant="primary" size="action" onClick={() => setMovement({ mode: "write_off" })}>
-              <MinusCircle className="size-5" /> Write off
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Stock"
+        description="On-hand, reserved and available stock per warehouse"
+        actions={
+          canAdjust && (
+            <>
+              <Button size="action" onClick={() => setMovement({ mode: "intake" })}>
+                <ArrowDownToLine className="size-5" /> Receive stock
+              </Button>
+              <Button variant="primary" size="action" onClick={() => setMovement({ mode: "adjust" })}>
+                <SlidersHorizontal className="size-5" /> Adjust
+              </Button>
+              <Button variant="primary" size="action" onClick={() => setBulkOpen(true)}>
+                <SlidersHorizontal className="size-5" /> Bulk adjust
+              </Button>
+              <Button variant="primary" size="action" onClick={() => setMovement({ mode: "write_off" })}>
+                <MinusCircle className="size-5" /> Write off
+              </Button>
+            </>
+          )
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {STATUS_CARDS.map(({ key, label, icon: Icon, tone }) => (
@@ -369,11 +361,8 @@ const StockOverview = () => {
 
       <FilterToolbar
         searchPlaceholder="Search SKU, barcode or product…"
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -381,24 +370,13 @@ const StockOverview = () => {
                 placeholder="Warehouse"
                 frameworks={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
                 value={warehouse}
-                onValueChange={(v) => {
-                  setWarehouse(v)
-                  setPage(1)
-                }}
+                onValueChange={setWarehouse}
               />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems
-                placeholder="Sort"
-                frameworks={orderingOptions}
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
+              <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} />
             ),
           },
           {
@@ -407,10 +385,7 @@ const StockOverview = () => {
                 <Switch
                   id="stock-low-only"
                   checked={lowOnly}
-                  onCheckedChange={(v) => {
-                    setLowOnly(v)
-                    setPage(1)
-                  }}
+                  onCheckedChange={setLowOnly}
                 />
                 <Label htmlFor="stock-low-only" className="whitespace-nowrap text-sm">
                   At or below reorder point
@@ -423,16 +398,8 @@ const StockOverview = () => {
 
       <DataTable
         columns={columns}
-        data={items}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
-        totalCount={totalItems}
-        onPageChange={(i) => setPage(i + 1)}
+        data={stockState.data}
+        {...list.tableProps}
         emptyIcon={Package}
         emptyTitle="No stock items"
         emptyDescription="Nothing matches these filters."

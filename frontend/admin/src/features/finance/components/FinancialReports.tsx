@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { format, startOfYear } from "date-fns"
+import { startOfYear } from "date-fns"
 import { toast } from "sonner"
 import { AlertCircle, CheckCircle2, DownloadIcon, Loader2, RotateCcw } from "lucide-react"
 
@@ -10,14 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeading } from "@/components/common/PageHeading"
 import { api, extractApiError, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { formatCurrency, formatDate, toISODate, todayLocalISODate } from "@/lib/format"
+import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { BalanceSheetReport, CashFlowReport, InventoryValuationReport, ProfitAndLossReport } from "../types"
 
 const REPORTS = "/admin/accounting/reports/"
-const today = () => format(new Date(), "yyyy-MM-dd")
-const yearStart = () => format(startOfYear(new Date()), "yyyy-MM-dd")
+const yearStart = () => toISODate(startOfYear(new Date()))
 
 /** Fetches one report whenever `params` change; `null` params means "inputs incomplete". */
 function useReport<T>(path: string, params: Record<string, string> | null) {
@@ -56,14 +56,9 @@ async function downloadCsv(path: string, params: Record<string, string>, filenam
       params: { ...params, file_format: "csv" },
       responseType: "blob",
     })
-    const url = URL.createObjectURL(res.data as Blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(res.data as Blob, filename)
   } catch (err) {
-    toast.error(getApiErrorMessage(extractApiError(err), "Failed to download CSV"))
+    toast.error(getApiErrorMessage(extractApiError(await blobErrorToJson(err)), "Failed to download CSV"))
   }
 }
 
@@ -210,7 +205,7 @@ function ReportCard({
 
 function ProfitAndLoss() {
   const [start, setStart] = useState(yearStart)
-  const [end, setEnd] = useState(today)
+  const [end, setEnd] = useState(todayLocalISODate)
   const params = start && end && start <= end ? { start, end } : null
   const { data, error, isLoading, reload } = useReport<ProfitAndLossReport>("profit-and-loss/", params)
   const margin = data && data.revenue ? (data.gross_profit / data.revenue) * 100 : null
@@ -250,7 +245,7 @@ function ProfitAndLoss() {
 }
 
 function BalanceSheet() {
-  const [asOf, setAsOf] = useState(today)
+  const [asOf, setAsOf] = useState(todayLocalISODate)
   const params = asOf ? { as_of: asOf } : null
   const { data, error, isLoading, reload } = useReport<BalanceSheetReport>("balance-sheet/", params)
   const liabilitiesAndEquity = data ? data.liabilities + data.equity : 0
@@ -300,7 +295,7 @@ function BalanceSheet() {
 
 function CashFlow() {
   const [start, setStart] = useState(yearStart)
-  const [end, setEnd] = useState(today)
+  const [end, setEnd] = useState(todayLocalISODate)
   const params = start && end && start <= end ? { start, end } : null
   const { data, error, isLoading, reload } = useReport<CashFlowReport>("cash-flow/", params)
 
@@ -338,7 +333,7 @@ function CashFlow() {
 
 function InventoryValuation() {
   const { data, error, isLoading, reload } = useReport<InventoryValuationReport>("inventory-valuation/", {})
-  const asOf = today()
+  const asOf = todayLocalISODate()
   const ledger = useReport<BalanceSheetReport>("balance-sheet/", { as_of: asOf })
   const difference = data && ledger.data ? data.inventory_value - ledger.data.inventory_asset : null
 

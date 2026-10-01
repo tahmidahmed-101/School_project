@@ -22,8 +22,8 @@ import {
   type Shipment,
   type ShipmentStatus,
 } from "@/features/shipping/types"
-import { ConfirmAction } from "@/features/sales/shared/ConfirmAction"
-import { useCan } from "@/features/sales/shared/useCan"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 interface ShipmentActionsProps {
@@ -80,7 +80,7 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
   return (
     <div className="flex flex-wrap gap-2" data-no-row-click="true" onClick={(e) => e.stopPropagation()}>
       {shipment.status === "pending" && (
-        <ConfirmAction
+        <ConfirmDialog
           trigger={
             <Button variant="outline" size={size} disabled={busy}>
               {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
@@ -94,6 +94,7 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
               : "No carrier is set, so the cheapest carrier quoting a rate for the delivery zone is picked automatically."
           }
           confirmLabel="Dispatch"
+          cancelLabel="Go back"
           onConfirm={handleDispatch}
         />
       )}

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
 import { addDays, differenceInCalendarDays, format, isValid, startOfMonth, subDays } from "date-fns"
-import { parseDate } from "@/lib/format"
+import { parseDate, toISODate } from "@/lib/format"
 import type { DateRangeParams } from "./types"
 
 export type RangePreset = "7d" | "30d" | "90d" | "month" | "custom"
@@ -15,22 +15,19 @@ export const RANGE_PRESETS: { value: Exclude<RangePreset, "custom">; label: stri
 
 export const DEFAULT_PRESET: RangePreset = "30d"
 
-const ISO = "yyyy-MM-dd"
-const toISO = (d: Date) => format(d, ISO)
-
 /** The backend's start/end are inclusive calendar days in the user's local calendar. */
 export function presetRange(preset: Exclude<RangePreset, "custom">, today = new Date()): DateRangeParams {
-  const end = toISO(today)
+  const end = toISODate(today)
   switch (preset) {
     case "7d":
-      return { start: toISO(subDays(today, 6)), end }
+      return { start: toISODate(subDays(today, 6)), end }
     case "90d":
-      return { start: toISO(subDays(today, 89)), end }
+      return { start: toISODate(subDays(today, 89)), end }
     case "month":
-      return { start: toISO(startOfMonth(today)), end }
+      return { start: toISODate(startOfMonth(today)), end }
     case "30d":
     default:
-      return { start: toISO(subDays(today, 29)), end }
+      return { start: toISODate(subDays(today, 29)), end }
   }
 }
 
@@ -40,7 +37,7 @@ export function previousWindow({ start, end }: DateRangeParams): DateRangeParams
   const e = parseDate(end) ?? s
   const span = differenceInCalendarDays(e, s) + 1
   const prevEnd = subDays(s, 1)
-  return { start: toISO(subDays(prevEnd, span - 1)), end: toISO(prevEnd) }
+  return { start: toISODate(subDays(prevEnd, span - 1)), end: toISODate(prevEnd) }
 }
 
 export function rangeKey({ start, end }: DateRangeParams): string {
@@ -104,8 +101,8 @@ export function useDateRange() {
         (prev) => {
           const out = new URLSearchParams(prev)
           out.set("range", "custom")
-          out.set("start", toISO(from))
-          out.set("end", toISO(to))
+          out.set("start", toISODate(from))
+          out.set("end", toISODate(to))
           return out
         },
         { replace: true }
@@ -138,5 +135,5 @@ export function longDay(iso: string): string {
 /** The day `offset` days after `iso` (used to label previous-window points). */
 export function shiftDay(iso: string, offset: number): string {
   const d = parseDate(iso)
-  return d ? toISO(addDays(d, offset)) : iso
+  return d ? toISODate(addDays(d, offset)) : iso
 }

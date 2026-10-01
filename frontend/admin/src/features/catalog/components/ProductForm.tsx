@@ -4,26 +4,28 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { PageHeader } from "@/components/common/PageHeader"
+import { SwitchField } from "@/components/common/FormDialog"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { useCan } from "@/hooks/use-can"
 import { resolveDetailState } from "@/lib/detailState"
+import { reportFormError } from "@/lib/forms"
 
 import { fetchSingle } from "../slices/productSlice"
 import { createProduct, updateProduct } from "../api"
 import type { Product, ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { usePermission } from "../lib/usePermission"
+import { CategoryTreeSelect } from "./CategoryTreeSelect"
 
 const money = z
   .string()
@@ -56,7 +58,7 @@ const ProductForm = () => {
   const isEditing = Boolean(id && id !== "new")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
+  const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
   const { options: categoryOptions } = useCategoryOptions()
@@ -178,11 +180,7 @@ const ProductForm = () => {
         navigate(`/product_detail/${created.id}`)
       }
     } catch (err) {
-      const fieldErrors = getApiFieldErrors(err)
-      for (const [field, message] of Object.entries(fieldErrors)) {
-        if (field in values) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save product"))
+      reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save product" })
     }
   }
 
@@ -190,19 +188,11 @@ const ProductForm = () => {
 
   return (
     <div className="section-container">
-      <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" aria-label="Back" onClick={() => navigate(backTo)}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {isEditing ? "Edit Product" : "Add Product"}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {isEditing ? `Editing ${product?.name ?? ""}` : "Create a product; add images and variants after saving"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={isEditing ? "Edit Product" : "Add Product"}
+        description={isEditing ? `Editing ${product?.name ?? ""}` : "Create a product; add images and variants after saving"}
+        back={{ to: backTo, label: "Back" }}
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
@@ -221,24 +211,12 @@ const ProductForm = () => {
             <Field>
               <FieldLabel htmlFor="category_id">Category</FieldLabel>
               <FieldContent>
-                <Controller
+                <CategoryTreeSelect
                   control={control}
                   name="category_id"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="category_id" className="w-full">
-                        <SelectValue placeholder="Choose a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {"  ".repeat(o.depth)}
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  id="category_id"
+                  options={categoryOptions}
+                  placeholder="Choose a category"
                 />
                 <FieldError errors={[errors.category_id]} />
               </FieldContent>
@@ -294,19 +272,12 @@ const ProductForm = () => {
             </Field>
 
             {isEditing && (
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
-                  <FieldDescription>Inactive products are hidden from the storefront.</FieldDescription>
-                </FieldContent>
-                <Controller
-                  control={control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-              </Field>
+              <SwitchField
+                control={control}
+                name="is_active"
+                label="Active"
+                description="Inactive products are hidden from the storefront."
+              />
             )}
           </CardContent>
         </Card>

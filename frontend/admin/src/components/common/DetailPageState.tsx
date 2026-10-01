@@ -16,7 +16,7 @@ export function DetailPageState({ state, entity, backTo, backLabel, error, onRet
   if (state === "loading") {
     return (
       <div
-        className="section-container py-16 flex flex-col items-center justify-center text-center space-y-4"
+        className="section-container flex min-h-full flex-col items-center justify-center space-y-4 py-16 text-center"
         role="status"
         aria-live="polite"
       >
@@ -31,7 +31,7 @@ export function DetailPageState({ state, entity, backTo, backLabel, error, onRet
 
   return (
     <div
-      className="section-container py-16 flex flex-col items-center justify-center text-center space-y-4"
+      className="section-container flex min-h-full flex-col items-center justify-center space-y-4 py-16 text-center"
       role={isError ? "alert" : undefined}
     >
       <div className="rounded-full bg-destructive/10 p-4">

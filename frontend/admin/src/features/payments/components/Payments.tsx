@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import type { DateRange } from "react-day-picker"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
-import { format } from "date-fns"
 import { XIcon } from "lucide-react"
 
 import { DataTable } from "@/components/common/data-table"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { MoneyCell, TextCell } from "@/components/common/cells"
 import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
@@ -22,67 +22,44 @@ import { DatePicker } from "@/features/sales/components/DatePicker"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { formatCurrency } from "@/lib/format"
-
-const PAGE_SIZE = 20
-const toLocalDay = (date: Date | undefined) => (date ? format(date, "yyyy-MM-dd") : undefined)
-
-type Option = { label: string; value: string }
+import { useListPage } from "@/hooks/use-list-page"
+import { toISODate } from "@/lib/format"
+import type { Option } from "@/lib/types"
 
 const Payments = () => {
   useDocumentTitle("Payments")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: payments, isFetchingList, error, totalItems, meta } = useAppSelector((state) => state.payments)
+  const paymentsState = useAppSelector((state) => state.payments)
 
   // AdminPaymentListView has no text search; ?order_id=… narrows to one order.
   const [searchParams, setSearchParams] = useSearchParams()
   const orderId = searchParams.get("order_id") ?? ""
 
-  const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
   const [methodFilter, setMethodFilter] = useState<Option | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
-  const withPageReset =
-    <T,>(setter: (v: T) => void) =>
-    (value: T) => {
-      setter(value)
-      setPage(1)
-    }
+  const from = dateRange?.from
+  const to = dateRange?.to ?? dateRange?.from
 
-  const start = toLocalDay(dateRange?.from)
-  const end = toLocalDay(dateRange?.to ?? dateRange?.from)
-  const status = statusFilter?.value
-  const method = methodFilter?.value
-
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAllPayments({
-          page,
-          page_size: PAGE_SIZE,
-          ...(orderId ? { order_id: orderId } : {}),
-          ...(status ? { status } : {}),
-          ...(method ? { method } : {}),
-          ...(start ? { start } : {}),
-          ...(end ? { end } : {}),
-        })
-      ),
-    [dispatch, page, orderId, status, method, start, end]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAllPayments(p)),
+    state: paymentsState,
+    params: {
+      order_id: orderId,
+      status: statusFilter?.value,
+      method: methodFilter?.value,
+      start: from ? toISODate(from) : undefined,
+      end: to ? toISODate(to) : undefined,
+    },
+  })
 
   const clearOrder = () => {
     const next = new URLSearchParams(searchParams)
     next.delete("order_id")
     setSearchParams(next, { replace: true })
-    setPage(1)
   }
 
   const columns: ColumnDef<Payment>[] = [
@@ -108,16 +85,17 @@ const Payments = () => {
     {
       accessorKey: "amount",
       header: "AMOUNT",
-      cell: ({ row }) => <span className="text-sm font-semibold">{formatCurrency(row.original.amount)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.amount} emphasis />,
     },
     {
       accessorKey: "refunded_amount",
       header: "REFUNDED",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {Number(row.original.refunded_amount) > 0 ? formatCurrency(row.original.refunded_amount) : "—"}
-        </span>
-      ),
+      cell: ({ row }) =>
+        Number(row.original.refunded_amount) > 0 ? (
+          <MoneyCell value={row.original.refunded_amount} className="text-muted-foreground" />
+        ) : (
+          <TextCell value={null} />
+        ),
     },
     {
       accessorKey: "status",
@@ -133,7 +111,7 @@ const Payments = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => (
         <TableActions
           itemName={`Payment for order ${row.original.order_number}`}
@@ -145,11 +123,11 @@ const Payments = () => {
 
   return (
     <div className="section-container">
-      <PageHeading title="Payments" description="Track captured payments and process refunds." />
+      <PageHeader title="Payments" description="Track captured payments and process refunds." />
 
       {/* No text search on this endpoint — only status / method / date filters. */}
       <FilterToolbar
-        datePicker={<DatePicker value={dateRange} onChange={withPageReset(setDateRange)} />}
+        datePicker={<DatePicker value={dateRange} onChange={setDateRange} />}
         inlineCount={3}
         filters={[
           {
@@ -159,7 +137,7 @@ const Payments = () => {
                 frameworks={PAYMENT_STATUS_OPTIONS}
                 placeholder="Status"
                 value={statusFilter}
-                onValueChange={withPageReset(setStatusFilter)}
+                onValueChange={setStatusFilter}
               />
             ),
           },
@@ -170,7 +148,7 @@ const Payments = () => {
                 frameworks={PAYMENT_METHOD_OPTIONS}
                 placeholder="Method"
                 value={methodFilter}
-                onValueChange={withPageReset(setMethodFilter)}
+                onValueChange={setMethodFilter}
               />
             ),
           },
@@ -190,18 +168,8 @@ const Payments = () => {
 
       <DataTable
         columns={columns}
-        data={payments}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={paymentsState.data}
+        {...list.tableProps}
         onRowClick={(payment) => navigate(`/payment_detail/${payment.id}`)}
         emptyTitle="No payments found"
         emptyDescription="Try adjusting the filters."

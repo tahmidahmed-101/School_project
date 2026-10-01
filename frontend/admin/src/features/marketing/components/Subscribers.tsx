@@ -1,37 +1,30 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { DownloadIcon, Loader2, PlusIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ExportButton } from "@/components/common/ExportButton"
+import { FormDialog } from "@/components/common/FormDialog"
+import { DateCell } from "@/components/common/cells"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteData, fetchAll, patchData, postData } from "@/features/marketing/slices/subscriberSlice"
 import type { NewsletterSubscriber } from "@/features/marketing/types"
-import { downloadCsv } from "@/features/system/files"
-import { useCan } from "@/features/system/permissions"
-import { useDebounced } from "@/features/system/useDebounced"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { extractApiError, getApiErrorMessage } from "@/lib/api/client"
-import { formatDateTime } from "@/lib/format"
+import { useListPage } from "@/hooks/use-list-page"
+import { extractApiError, getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { downloadFile } from "@/lib/download"
+import type { Option } from "@/lib/types"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-
-const PAGE_SIZE = 20
 
 // Mirrors AdminNewsletterSubscriberWriteSerializer (POST /admin/marketing/subscribers/).
 const SUBSCRIBER_IMPORT_FIELDS: ImportField[] = [
@@ -39,7 +32,7 @@ const SUBSCRIBER_IMPORT_FIELDS: ImportField[] = [
   { key: "is_active", label: "Subscribed", type: "boolean", aliases: ["active", "status"], example: "yes" },
 ]
 
-const statusOptions = [
+const statusOptions: Option[] = [
   { label: "Subscribed", value: "true" },
   { label: "Unsubscribed", value: "false" },
 ]
@@ -48,38 +41,21 @@ const Subscribers = () => {
   useDocumentTitle("Subscribers")
 
   const dispatch = useAppDispatch()
-  const canManage = useCan()("marketing.manage")
-  const { data: subscribers, isFetchingList, isMutating, error, totalItems, meta } = useAppSelector(
-    (state) => state.subscribers
-  )
+  const canManage = useCan("marketing.manage")
+  const subscriberState = useAppSelector((state) => state.subscribers)
+  const { data: subscribers, isMutating } = subscriberState
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search.trim())
-  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
-  const [exporting, setExporting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<Option | null>(null)
 
   const [addOpen, setAddOpen] = useState(false)
   const [newEmail, setNewEmail] = useState("")
   const [addError, setAddError] = useState<string | null>(null)
 
-  const loadSubscribers = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(statusFilter ? { is_active: statusFilter.value } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, statusFilter]
-  )
-
-  useEffect(() => {
-    const request = loadSubscribers()
-    return () => request.abort()
-  }, [loadSubscribers])
+  const list = useListPage({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: subscriberState,
+    params: { is_active: statusFilter?.value },
+  })
 
   const handleToggle = async (subscriber: NewsletterSubscriber, isActive: boolean) => {
     try {
@@ -108,23 +84,15 @@ const Subscribers = () => {
       setAddOpen(false)
       setNewEmail("")
     } catch (err) {
-      const fields = extractApiError(err).fields
-      setAddError(fields?.email?.[0] ?? getApiErrorMessage(err, "Couldn't add this subscriber"))
+      setAddError(getApiFieldErrors(err).email ?? getApiErrorMessage(err, "Couldn't add this subscriber"))
     }
   }
 
   const handleExport = async () => {
-    setExporting(true)
     try {
-      await downloadCsv(
-        "/admin/marketing/subscribers/export/",
-        debouncedSearch ? { search: debouncedSearch } : {},
-        "newsletter-subscribers.csv"
-      )
+      await downloadFile("/admin/marketing/subscribers/export/", "newsletter-subscribers.csv", list.query)
     } catch (err) {
-      toast.error(getApiErrorMessage(extractApiError(err), "Couldn't export subscribers"))
-    } finally {
-      setExporting(false)
+      throw extractApiError(err)
     }
   }
 
@@ -137,16 +105,12 @@ const Subscribers = () => {
     {
       accessorKey: "created_at",
       header: "SUBSCRIBED",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(row.original.created_at)}</span>
-      ),
+      cell: ({ row }) => <DateCell withTime value={row.original.created_at} className="text-muted-foreground" />,
     },
     {
       accessorKey: "unsubscribed_at",
       header: "UNSUBSCRIBED",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(row.original.unsubscribed_at)}</span>
-      ),
+      cell: ({ row }) => <DateCell withTime value={row.original.unsubscribed_at} className="text-muted-foreground" />,
     },
     {
       accessorKey: "is_active",
@@ -173,7 +137,7 @@ const Subscribers = () => {
       ? [
           {
             id: "actions",
-            header: "ACTION",
+            header: "ACTIONS",
             cell: ({ row }) => (
               <TableActions itemName={row.original.email} onDelete={() => handleDelete(row.original)} />
             ),
@@ -184,35 +148,33 @@ const Subscribers = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Newsletter Subscribers" description="People who signed up for your newsletter." />
-        <div className="flex items-center gap-3">
-          <Button variant="primary" size="action" onClick={handleExport} disabled={exporting}>
-            {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export CSV
-          </Button>
-          {canManage && (
-            <CsvImportButton
-              entityName="subscribers"
-              fields={SUBSCRIBER_IMPORT_FIELDS}
-              createRow={(payload) => dispatch(postData({ payload: payload as Partial<NewsletterSubscriber> })).unwrap()}
-              onComplete={() => void loadSubscribers()}
-            />
-          )}
-          {canManage && (
-            <Button variant="apply" size="action" onClick={() => setAddOpen(true)}>
-              <PlusIcon className="size-5" /> Add Subscriber
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Newsletter Subscribers"
+        description="People who signed up for your newsletter."
+        actions={
+          <>
+            <ExportButton onExport={handleExport} />
+            {canManage && (
+              <CsvImportButton
+                entityName="subscribers"
+                fields={SUBSCRIBER_IMPORT_FIELDS}
+                createRow={(payload) => dispatch(postData({ payload: payload as Partial<NewsletterSubscriber> })).unwrap()}
+                onComplete={list.reload}
+              />
+            )}
+            {canManage && (
+              <Button variant="apply" size="action" onClick={() => setAddOpen(true)}>
+                <PlusIcon className="size-5" /> Add Subscriber
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search by email..."
-        searchValue={search}
-        onSearchChange={(value) => {
-          setSearch(value)
-          setPage(1)
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -220,10 +182,7 @@ const Subscribers = () => {
                 frameworks={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value)
-                  setPage(1)
-                }}
+                onValueChange={setStatusFilter}
               />
             ),
           },
@@ -233,60 +192,41 @@ const Subscribers = () => {
       <DataTable
         columns={columns}
         data={subscribers}
-        pageSize={PAGE_SIZE}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={loadSubscribers}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        {...list.tableProps}
         emptyTitle="No subscribers"
         emptyDescription="Newsletter sign-ups from the storefront will appear here."
         minWidth="760px"
       />
 
-      <Dialog
+      <FormDialog
         open={addOpen}
         onOpenChange={(open) => {
           setAddOpen(open)
           if (!open) setAddError(null)
         }}
+        title="Add subscriber"
+        description="Only add people who have agreed to receive your newsletter."
+        onSubmit={handleAdd}
+        submitting={isMutating}
+        submitLabel="Add"
+        submitDisabled={!newEmail.trim()}
       >
-        <DialogContent>
-          <form onSubmit={handleAdd} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>Add subscriber</DialogTitle>
-              <DialogDescription>Only add people who have agreed to receive your newsletter.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="subscriber-email">Email</Label>
-              <Input
-                id="subscriber-email"
-                type="email"
-                required
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-              />
-              {addError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {addError}
-                </p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isMutating || !newEmail.trim()}>
-                {isMutating && <Loader2 className="size-4 animate-spin" />}
-                Add
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        <div className="space-y-2">
+          <Label htmlFor="subscriber-email">Email</Label>
+          <Input
+            id="subscriber-email"
+            type="email"
+            required
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+          />
+          {addError && (
+            <p role="alert" className="text-sm text-destructive">
+              {addError}
+            </p>
+          )}
+        </div>
+      </FormDialog>
     </div>
   )
 }

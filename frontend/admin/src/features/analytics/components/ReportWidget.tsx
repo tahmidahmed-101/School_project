@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/EmptyState"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { isForbidden } from "../hooks"
+import { isForbidden } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 
 export function WidgetError({

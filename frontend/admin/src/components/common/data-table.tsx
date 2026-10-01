@@ -206,21 +206,7 @@ export function DataTable<TData, TValue>({
            pinned while rows scroll vertically and moves with them horizontally. ---- */}
       <div className="hidden sm:block">
         {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
-        {Boolean(error) && data.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-border bg-destructive/5 px-4 py-2 text-xs text-destructive">
-            <AlertCircleIcon className="size-3.5 shrink-0" />
-            <span className="flex-1">{getApiErrorMessage(error, "Couldn't refresh this data.")}</span>
-            {onRetry && (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="font-medium underline underline-offset-2 hover:no-underline"
-              >
-                Retry
-              </button>
-            )}
-          </div>
-        )}
+        {Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
         <div ref={scrollRef} className="overflow-auto max-h-[500px] table-scroll">
           {/* A plain <table>, not <Table>: that wrapper adds its own overflow container, which
@@ -317,21 +303,7 @@ export function DataTable<TData, TValue>({
 
       {/* ---- Mobile (< sm): stacked cards, so no horizontal scrolling is needed ---- */}
       <div className="sm:hidden">
-        {Boolean(error) && data.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-border bg-destructive/5 px-4 py-2 text-xs text-destructive">
-            <AlertCircleIcon className="size-3.5 shrink-0" />
-            <span className="flex-1">{getApiErrorMessage(error, "Couldn't refresh this data.")}</span>
-            {onRetry && (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="font-medium underline underline-offset-2 hover:no-underline"
-              >
-                Retry
-              </button>
-            )}
-          </div>
-        )}
+        {Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
         <div
           className={cn(
@@ -513,6 +485,20 @@ export function DataTable<TData, TValue>({
             </Button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function StaleErrorBanner({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border bg-destructive/5 px-4 py-2 text-xs text-destructive">
+      <AlertCircleIcon className="size-3.5 shrink-0" />
+      <span className="flex-1">{getApiErrorMessage(error, "Couldn't refresh this data.")}</span>
+      {onRetry && (
+        <button type="button" onClick={onRetry} className="font-medium underline underline-offset-2 hover:no-underline">
+          Retry
+        </button>
       )}
     </div>
   )

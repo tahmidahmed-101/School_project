@@ -1,17 +1,14 @@
 import { useEffect } from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
+import { reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
 import type { ProductVariant, ProductVariantPayload } from "../types"
@@ -128,10 +125,7 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in values) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save variant"))
+      reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save variant" })
     }
   }
 
@@ -152,90 +146,49 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? `Edit variant ${variant?.sku}` : "Add variant"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Changes apply to this SKU only." : "Leave price blank to inherit it from a sibling variant."}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? `Edit variant ${variant?.sku}` : "Add variant"}
+      description={isEditing ? "Changes apply to this SKU only." : "Leave price blank to inherit it from a sibling variant."}
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={isEditing ? "Save variant" : "Create variant"}
+      size="lg"
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {text("sku", "SKU", { placeholder: isEditing ? undefined : "Auto-generated if blank" })}
+        {text("barcode", "Barcode")}
+        {text("color", "Colour")}
+        {text("size", "Size")}
+        {text("price", "Price (BDT)", { placeholder: "0.00" })}
+        {text("discount_price", "Discount price", { placeholder: "Optional" })}
+        {text("cost_price", "Cost price", { placeholder: "0.00" })}
+        {text("weight", "Weight (kg)", { placeholder: "Optional" })}
+        {text("wholesale_price", "Wholesale price", { placeholder: "Optional" })}
+        <div className="self-end">
+          <SwitchField control={control} name="show_wholesale_price" label="Show wholesale price" />
+        </div>
+        {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
+      </div>
 
-        <form id="variant-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="space-y-4 rounded-lg border border-border p-4">
+        <SwitchField
+          control={control}
+          name="is_preorder_enabled"
+          label="Pre-order"
+          description="Allow customers to order before stock arrives."
+        />
+        {preorder && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {text("sku", "SKU", { placeholder: isEditing ? undefined : "Auto-generated if blank" })}
-            {text("barcode", "Barcode")}
-            {text("color", "Colour")}
-            {text("size", "Size")}
-            {text("price", "Price (BDT)", { placeholder: "0.00" })}
-            {text("discount_price", "Discount price", { placeholder: "Optional" })}
-            {text("cost_price", "Cost price", { placeholder: "0.00" })}
-            {text("weight", "Weight (kg)", { placeholder: "Optional" })}
-            {text("wholesale_price", "Wholesale price", { placeholder: "Optional" })}
-            <Field orientation="horizontal" className="self-end">
-              <FieldContent>
-                <FieldLabel htmlFor="variant-show_wholesale_price">Show wholesale price</FieldLabel>
-              </FieldContent>
-              <Controller
-                control={control}
-                name="show_wholesale_price"
-                render={({ field }) => (
-                  <Switch id="variant-show_wholesale_price" checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-            </Field>
-            {isEditing && (
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="variant-is_active">Active</FieldLabel>
-                </FieldContent>
-                <Controller
-                  control={control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <Switch id="variant-is_active" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-              </Field>
-            )}
+            {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
+            {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
+            {text("preorder_start_date", "Starts", { type: "datetime-local" })}
+            {text("preorder_end_date", "Ends", { type: "datetime-local" })}
+            {text("release_date", "Release date", { type: "datetime-local" })}
           </div>
-
-          <div className="space-y-4 rounded-lg border border-border p-4">
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel htmlFor="variant-is_preorder_enabled">Pre-order</FieldLabel>
-                <FieldDescription>Allow customers to order before stock arrives.</FieldDescription>
-              </FieldContent>
-              <Controller
-                control={control}
-                name="is_preorder_enabled"
-                render={({ field }) => (
-                  <Switch id="variant-is_preorder_enabled" checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-            </Field>
-            {preorder && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
-                {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
-                {text("preorder_start_date", "Starts", { type: "datetime-local" })}
-                {text("preorder_end_date", "Ends", { type: "datetime-local" })}
-                {text("release_date", "Release date", { type: "datetime-local" })}
-              </div>
-            )}
-          </div>
-        </form>
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="variant-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {isEditing ? "Save variant" : "Create variant"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )}
+      </div>
+    </FormDialog>
   )
 }

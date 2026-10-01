@@ -1,21 +1,15 @@
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
-import { Loader2, Package, PencilIcon, Trash2Icon } from "lucide-react"
+import { Package, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DeleteModal } from "@/components/common/DeleteModal"
+import { FormDialog } from "@/components/common/FormDialog"
+import { ProductCell } from "@/components/common/cells"
 import { useAppDispatch } from "@/app/hooks"
 import { removeOrderLine, updateOrderLine } from "@/features/sales/slices/orderSlice"
 import { PRE_SHIPMENT_STATUSES, type Order, type OrderLine } from "@/features/sales/types"
@@ -45,8 +39,9 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
     setQuantity(String(line.quantity))
   }
 
-  const saveQuantity = async () => {
-    if (!editing) return
+  const saveQuantity = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editing || !qtyValid) return
     setBusy(true)
     try {
       await dispatch(updateOrderLine({ orderId: order.id, lineId: editing.id, quantity: Number(quantity) })).unwrap()
@@ -111,10 +106,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
                       ) : (
                         <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
                       )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{line.product_name || "—"}</p>
-                        <p className="font-mono text-xs uppercase text-muted-foreground">{line.variant_sku}</p>
-                      </div>
+                      <ProductCell name={line.product_name || "—"} sku={line.variant_sku} />
                     </div>
                   </TableCell>
                   <TableCell className="text-center font-semibold">{line.quantity}</TableCell>
@@ -163,37 +155,31 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
         </div>
       </CardContent>
 
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit quantity</DialogTitle>
-            <DialogDescription>{editing?.product_name}</DialogDescription>
-          </DialogHeader>
-          <Field>
-            <FieldLabel htmlFor="line-quantity">Quantity</FieldLabel>
-            <FieldContent>
-              <Input
-                id="line-quantity"
-                type="number"
-                min={1}
-                step={1}
-                value={quantity}
-                aria-invalid={!qtyValid}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </FieldContent>
-          </Field>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              Cancel
-            </Button>
-            <Button onClick={saveQuantity} disabled={!qtyValid || busy}>
-              {busy && <Loader2 className="size-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+        title="Edit quantity"
+        description={editing?.product_name}
+        onSubmit={saveQuantity}
+        submitting={busy}
+        submitLabel="Save"
+        submitDisabled={!qtyValid}
+      >
+        <Field>
+          <FieldLabel htmlFor="line-quantity">Quantity</FieldLabel>
+          <FieldContent>
+            <Input
+              id="line-quantity"
+              type="number"
+              min={1}
+              step={1}
+              value={quantity}
+              aria-invalid={!qtyValid}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </FieldContent>
+        </Field>
+      </FormDialog>
     </Card>
   )
 }

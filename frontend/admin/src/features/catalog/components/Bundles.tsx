@@ -1,30 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Boxes, Package, PlusIcon, RotateCcw } from "lucide-react"
+import { Boxes, Package, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
-import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
+import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
+import { SortSelect } from "@/components/common/SortSelect"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
+import type { Option } from "@/lib/types"
 
 import { deleteData, fetchAll } from "../slices/bundleSlice"
 import { restoreBundle } from "../api"
 import type { Bundle } from "../types"
-import { usePermission } from "../lib/usePermission"
-import { useDebounced } from "../lib/useDebounced"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
-
-type Option = { label: string; value: string }
-const PAGE_SIZE = 20
 
 const orderingOptions: Option[] = [
   { label: "Newest first", value: "-created_at" },
@@ -37,31 +35,35 @@ const Bundles = () => {
   useDocumentTitle("Bundles")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
-  const { data: bundles, isFetchingList, error, totalItems } = useAppSelector((s) => s.catalogBundles)
-
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search)
+  const canManage = useCan("catalog.manage")
+  const bundleState = useAppSelector((s) => s.catalogBundles)
   const [ordering, setOrdering] = useState<Option | null>(null)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
 
-  const params = useMemo(
-    () => ({
-      page,
-      page_size: PAGE_SIZE,
-      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
-      ...(ordering ? { ordering: ordering.value } : {}),
-      ...(includeDeleted ? { include_deleted: true } : {}),
-    }),
-    [page, debouncedSearch, ordering, includeDeleted]
-  )
-  const load = useCallback(() => {
-    dispatch(fetchAll(params))
-  }, [dispatch, params])
-  useEffect(() => {
-    load()
-  }, [load])
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state: bundleState,
+    params: { ordering: ordering?.value },
+  })
+
+  const handleRestore = async (b: Bundle) => {
+    try {
+      await restoreBundle(b.id)
+      toast.success(`${b.name} restored`)
+      list.reload()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to restore bundle"))
+    }
+  }
+
+  const handleDelete = async (b: Bundle) => {
+    try {
+      await dispatch(deleteData(b.id)).unwrap()
+      toast.success(`${b.name} deleted`)
+      if (list.includeDeleted) list.reload()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete bundle"))
+    }
+  }
 
   const columns: ColumnDef<Bundle>[] = [
     {
@@ -74,10 +76,7 @@ const Bundles = () => {
             <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
               {img ? <img src={img} alt="" className="size-full object-cover" /> : <Boxes className="size-5 text-muted-foreground" />}
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{row.original.name}</div>
-              <div className="truncate font-mono text-xs text-muted-foreground">{row.original.sku}</div>
-            </div>
+            <ProductCell name={row.original.name} sku={row.original.sku} />
           </div>
         )
       },
@@ -115,55 +114,21 @@ const Bundles = () => {
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) =>
-        row.original.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" />
-        ) : (
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-        ),
+      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => {
         const b = row.original
-        if (b.deleted_at) {
-          return canManage ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async (e) => {
-                e.stopPropagation()
-                try {
-                  await restoreBundle(b.id)
-                  toast.success(`${b.name} restored`)
-                  load()
-                } catch (err) {
-                  toast.error(getApiErrorMessage(err, "Failed to restore bundle"))
-                }
-              }}
-            >
-              <RotateCcw /> Restore
-            </Button>
-          ) : null
-        }
         return (
           <TableActions
             itemName={b.name}
+            deleted={Boolean(b.deleted_at)}
+            onRestore={canManage ? () => handleRestore(b) : undefined}
             viewUrl={`/product_detail/${b.product_id}`}
             editUrl={canManage ? `/bundles/${b.id}` : undefined}
-            onDelete={
-              canManage
-                ? async () => {
-                    try {
-                      await dispatch(deleteData(b.id)).unwrap()
-                      toast.success(`${b.name} deleted`)
-                    } catch (err) {
-                      toast.error(getApiErrorMessage(err, "Failed to delete bundle"))
-                    }
-                  }
-                : undefined
-            }
+            onDelete={canManage ? () => handleDelete(b) : undefined}
           />
         )
       },
@@ -172,66 +137,34 @@ const Bundles = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Bundles"
-          description="Combo products sold as one SKU; stock is drawn from their component variants"
-        />
-        {canManage && (
-          <Button size="action" onClick={() => navigate("/bundles/new")}>
-            <PlusIcon className="size-5" /> New Bundle
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Bundles"
+        description="Combo products sold as one SKU; stock is drawn from their component variants"
+        actions={
+          canManage && (
+            <Button size="action" onClick={() => navigate("/bundles/new")}>
+              <PlusIcon className="size-5" /> New Bundle
+            </Button>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search by SKU or name…"
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                placeholder="Sort"
-                frameworks={orderingOptions}
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
+          { component: <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} /> },
           ...(canManage
-            ? [
-                {
-                  component: (
-                    <DeletedToggle pressed={includeDeleted} onPressedChange={(v) => {
-                          setIncludeDeleted(v)
-                          setPage(1)
-                        }} />
-                  ),
-                },
-              ]
+            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
             : []),
         ]}
       />
 
       <DataTable
         columns={columns}
-        data={bundles}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
-        totalCount={totalItems}
-        onPageChange={(i) => setPage(i + 1)}
+        data={bundleState.data}
+        {...list.tableProps}
         getRowLink={canManage ? (b) => `/bundles/${b.id}` : undefined}
         emptyIcon={Package}
         emptyTitle="No bundles yet"

@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useCallback, useEffect, useState } from "react"
+import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
-  ArrowLeft,
   Ban,
   CheckCircle2,
   Clock,
@@ -34,9 +33,11 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { ConfirmAction } from "@/features/sales/shared/ConfirmAction"
-import { downloadFile } from "@/features/sales/shared/download"
-import { useCan } from "@/features/sales/shared/useCan"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { DetailRow } from "@/components/common/DetailRow"
+import { PageHeader } from "@/components/common/PageHeader"
+import { downloadFile } from "@/lib/download"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -47,16 +48,8 @@ import { CreateShipmentDialog } from "./order/CreateShipmentDialog"
 import { CreateReturnDialog } from "./order/CreateReturnDialog"
 import { OrderLinesCard } from "./order/OrderLinesCard"
 
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="flex justify-between gap-4 py-1 text-sm">
-    <span className="text-muted-foreground">{label}</span>
-    <span className="text-right font-medium">{children}</span>
-  </div>
-)
-
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
   const singleData = useAppSelector(selectOrderDetail)
@@ -150,33 +143,26 @@ const OrderDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="back" size="icon" onClick={() => navigate("/orders")} aria-label="Back to orders">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{order.order_number}</h1>
-              <StatusBadge status={order.status} />
-            </div>
-            <p className="text-muted-foreground text-sm mt-0.5">Placed on {formatDateTime(order.created_at)}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleInvoice} disabled={downloading}>
-            {downloading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-            Invoice PDF
-          </Button>
-          {canManage && (
-            <Button variant="outline" onClick={() => setDialog("edit")}>
-              <PencilIcon className="size-4" />
-              Edit details
+      <PageHeader
+        back={{ to: "/orders", label: "Back to orders" }}
+        title={order.order_number}
+        badges={<StatusBadge status={order.status} />}
+        description={`Placed on ${formatDateTime(order.created_at)}`}
+        actions={
+          <>
+            <Button variant="outline" onClick={handleInvoice} disabled={downloading}>
+              {downloading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+              Invoice PDF
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button variant="outline" onClick={() => setDialog("edit")}>
+                <PencilIcon className="size-4" />
+                Edit details
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Actions + totals */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -188,12 +174,12 @@ const OrderDetail = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <Row label="Subtotal">{formatCurrency(order.subtotal)}</Row>
-            <Row label="Discount">
+            <DetailRow label="Subtotal">{formatCurrency(order.subtotal)}</DetailRow>
+            <DetailRow label="Discount">
               <span className="text-green-600">−{formatCurrency(order.discount_total)}</span>
-            </Row>
-            <Row label="Shipping">{formatCurrency(order.shipping_total)}</Row>
-            <Row label="Tax">{formatCurrency(order.tax_total)}</Row>
+            </DetailRow>
+            <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>
+            <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>
             <Separator className="my-2" />
             <div className="flex items-center justify-between font-bold text-lg">
               <span>Grand total</span>
@@ -262,7 +248,7 @@ const OrderDetail = () => {
                 </Button>
               )}
               {canCancel && (
-                <ConfirmAction
+                <ConfirmDialog
                   destructive
                   title={`Cancel order ${order.order_number}?`}
                   description="Stock holds are released. Cancelling never refunds money — refund captured payments separately."
@@ -300,9 +286,9 @@ const OrderDetail = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <Row label="Name">{order.customer_name || "—"}</Row>
-            <Row label="Email">{order.customer_email || "—"}</Row>
-            <Row label="Phone">{order.customer_phone || "—"}</Row>
+            <DetailRow label="Name">{order.customer_name || "—"}</DetailRow>
+            <DetailRow label="Email">{order.customer_email || "—"}</DetailRow>
+            <DetailRow label="Phone">{order.customer_phone || "—"}</DetailRow>
             {(order.contact_email || order.contact_phone) && (
               <p className="pt-1 text-xs text-muted-foreground">Contact details overridden on this order.</p>
             )}

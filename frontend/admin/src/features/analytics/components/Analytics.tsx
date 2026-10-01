@@ -1,9 +1,10 @@
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { isForbidden } from "@/lib/api/client"
 import { useDateRange } from "../dateRange"
 import {
-  isForbidden,
-  useCanViewReports,
+  REPORT_PERMISSIONS,
   useDashboardReport,
   useLowStockReport,
   useSalesTrendReport,
@@ -20,7 +21,7 @@ import { StockTurnoverCard } from "./StockTurnoverCard"
 const Analytics = () => {
   useDocumentTitle("Analytics")
 
-  const canView = useCanViewReports()
+  const canView = useCan(...REPORT_PERMISSIONS)
   const { preset, range, setPreset, setCustom } = useDateRange()
 
   const sales = useSalesTrendReport(range, canView)
@@ -34,18 +35,21 @@ const Analytics = () => {
 
   return (
     <div className="section-container flex flex-col gap-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <PageHeading title="Analytics" description="Sales, stock and customer reports for the selected period." />
-        {!blocked && (
-          <DateRangeControl
-            preset={preset}
-            range={range}
-            onPreset={setPreset}
-            onCustom={setCustom}
-            busy={refreshing}
-          />
-        )}
-      </div>
+      <PageHeader
+        title="Analytics"
+        description="Sales, stock and customer reports for the selected period."
+        actions={
+          !blocked && (
+            <DateRangeControl
+              preset={preset}
+              range={range}
+              onPreset={setPreset}
+              onCustom={setCustom}
+              busy={refreshing}
+            />
+          )
+        }
+      />
 
       {blocked ? (
         <ReportsUnavailable links={[{ to: "/", label: "Back to overview" }]} />

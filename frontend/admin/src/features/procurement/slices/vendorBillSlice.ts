@@ -1,7 +1,11 @@
-import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
+import {
+  createActionThunk,
+  createApiThunk,
+  createSliceFactory,
+  replaceOnFulfilled,
+  withExtraCases,
+} from "@/lib/sliceFactory"
+import { api } from "@/lib/api/client"
 import type {
   VendorBill,
   VendorBillCreatePayload,
@@ -9,7 +13,6 @@ import type {
   VendorPayment,
   VendorPaymentCreatePayload,
 } from "../types"
-import { createActionThunk } from "./restore"
 
 const ENDPOINT = "/admin/procurement/vendor-bills/"
 
@@ -22,60 +25,28 @@ const { reducer, fetchAll, fetchSingle } = createSliceFactory<VendorBill>({
 
 export { fetchAll, fetchSingle }
 
-export const createVendorBill = createAsyncThunk(
-  "vendorBills/create",
-  async (payload: VendorBillCreatePayload, { rejectWithValue }) => {
-    try {
-      const res = await api.post(ENDPOINT, payload)
-      return unwrapItem<VendorBill>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+export const createVendorBill = createApiThunk<VendorBillCreatePayload, VendorBill>("vendorBills/create", (payload) =>
+  api.post(ENDPOINT, payload)
 )
 
-export const updateVendorBill = createAsyncThunk(
+export const updateVendorBill = createApiThunk<{ id: string; payload: VendorBillUpdatePayload }, VendorBill>(
   "vendorBills/update",
-  async ({ id, payload }: { id: string; payload: VendorBillUpdatePayload }, { rejectWithValue }) => {
-    try {
-      const res = await api.patch(`${ENDPOINT}${id}/`, payload)
-      return unwrapItem<VendorBill>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  ({ id, payload }) => api.patch(`${ENDPOINT}${id}/`, payload)
 )
 
 export const voidVendorBill = createActionThunk<VendorBill>("vendorBills/void", ENDPOINT, "void")
 
-export const recordVendorPayment = createAsyncThunk(
-  "vendorBills/recordPayment",
-  async ({ billId, payload }: { billId: string; payload: VendorPaymentCreatePayload }, { rejectWithValue }) => {
-    try {
-      const res = await api.post(`${ENDPOINT}${billId}/payments/`, payload)
-      return unwrapItem<VendorPayment>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
-)
+export const recordVendorPayment = createApiThunk<
+  { billId: string; payload: VendorPaymentCreatePayload },
+  VendorPayment
+>("vendorBills/recordPayment", ({ billId, payload }) => api.post(`${ENDPOINT}${billId}/payments/`, payload))
 
 export const vendorBillPdfUrl = (id: string) => `${ENDPOINT}${id}/pdf/`
 
-type State = ReturnType<typeof reducer>
-
-function replaceBill(state: State, bill: VendorBill) {
-  state.data = state.data.map((b) => (b.id === bill.id ? bill : b))
-  const single = state.singleData as VendorBill | null
-  if (single && single.id === bill.id) state.singleData = bill
-}
-
 export default withExtraCases(reducer, (builder) => {
-  builder
-    .addCase(createVendorBill.fulfilled, (state, action) => {
-      state.data = [action.payload, ...state.data]
-      state.totalItems += 1
-    })
-    .addCase(updateVendorBill.fulfilled, (state, action) => replaceBill(state, action.payload))
-    .addCase(voidVendorBill.fulfilled, (state, action) => replaceBill(state, action.payload))
+  builder.addCase(createVendorBill.fulfilled, (state, action) => {
+    state.data = [action.payload, ...state.data]
+    state.totalItems += 1
+  })
+  replaceOnFulfilled(builder, updateVendorBill, voidVendorBill)
 })

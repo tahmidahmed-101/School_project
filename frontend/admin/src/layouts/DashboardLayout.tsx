@@ -2,8 +2,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { useEffect } from "react";
 import { Outlet, useNavigation } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { hasPermission } from "@/app/modules";
+import { useAppDispatch } from "@/app/hooks";
+import { useCan } from "@/hooks/use-can";
 import { fetchBusinessProfile } from "@/features/system/slices/businessSettingsSlice";
 import Navbar from "@/components/common/Navbar";
 import ScrollToTop from "@/components/common/ScrollToTop";
@@ -15,8 +15,7 @@ const DashboardLayout = () => {
 
   // Load the store profile once per session: it sets the app-wide currency (formatCurrency).
   const dispatch = useAppDispatch();
-  const permissions = useAppSelector((state) => state.auth.user?.permissions);
-  const canViewSettings = hasPermission(permissions, "settings.view");
+  const canViewSettings = useCan("settings.view");
   useEffect(() => {
     if (canViewSettings) dispatch(fetchBusinessProfile());
   }, [dispatch, canViewSettings]);

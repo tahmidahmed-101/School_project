@@ -1,54 +1,26 @@
-import { useCallback, useEffect, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Link, useNavigate } from "react-router-dom"
 
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllShipments } from "@/features/shipping/slices/shipmentSlice"
 import type { Shipment } from "@/features/shipping/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { DateCell, MoneyCell } from "@/components/common/cells"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { useListPage } from "@/hooks/use-list-page"
 import { ShipmentActions } from "./ShipmentActions"
-
-const PAGE_SIZE = 20
 
 const Shipments = () => {
   useDocumentTitle("Shipments")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: shipments, isFetchingList, error, totalItems, meta } = useAppSelector((state) => state.shipments)
-
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-
-  useEffect(() => {
-    const next = search.trim()
-    if (next === debouncedSearch) return
-    const t = setTimeout(() => {
-      setDebouncedSearch(next)
-      setPage(1)
-    }, 300)
-    return () => clearTimeout(t)
-  }, [search, debouncedSearch])
-
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAllShipments({ page, page_size: PAGE_SIZE, ...(debouncedSearch ? { search: debouncedSearch } : {}) })
-      ),
-    [dispatch, page, debouncedSearch]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const shipmentState = useAppSelector((state) => state.shipments)
+  const list = useListPage({ fetch: (p) => dispatch(fetchAllShipments(p)), state: shipmentState })
 
   const columns: ColumnDef<Shipment>[] = [
     {
@@ -80,7 +52,7 @@ const Shipments = () => {
     {
       accessorKey: "cod_amount",
       header: "COD",
-      cell: ({ row }) => <span className="text-sm">{formatCurrency(row.original.cod_amount)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.cod_amount} />,
     },
     {
       accessorKey: "status",
@@ -97,9 +69,7 @@ const Shipments = () => {
     {
       accessorKey: "shipped_at",
       header: "SHIPPED",
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-sm text-muted-foreground">{formatDateTime(row.original.shipped_at)}</span>
-      ),
+      cell: ({ row }) => <DateCell value={row.original.shipped_at} withTime className="text-muted-foreground" />,
     },
     {
       id: "update",
@@ -108,7 +78,7 @@ const Shipments = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => (
         <TableActions
           itemName={`Shipment ${row.original.tracking_number || ""}`.trim()}
@@ -120,28 +90,18 @@ const Shipments = () => {
 
   return (
     <div className="section-container">
-      <PageHeading title="Shipments" description="Track consignments, dispatch to couriers and update delivery status." />
+      <PageHeader title="Shipments" description="Track consignments, dispatch to couriers and update delivery status." />
 
       <FilterToolbar
         searchPlaceholder="Search tracking #, order # or carrier..."
-        searchValue={search}
-        onSearchChange={setSearch}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
       />
 
       <DataTable
         columns={columns}
-        data={shipments}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={shipmentState.data}
+        {...list.tableProps}
         onRowClick={(s) => navigate(`/shipment_detail/${s.id}`)}
         emptyTitle="No shipments found"
         emptyDescription="Shipments are created from a confirmed order's detail page."

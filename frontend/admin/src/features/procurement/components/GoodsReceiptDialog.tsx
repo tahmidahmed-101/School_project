@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
-import { api, getApiErrorMessage } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
+import { useAllPages } from "@/hooks/use-all-pages"
 
 import { createGoodsReceipt } from "../slices/goodsReceiptSlice"
 import type { GoodsReceipt, GRNLineCondition, PurchaseOrder } from "../types"
-import { useAllPages } from "../hooks/useProcurement"
+import { usePurchaseOrderPick } from "../hooks/usePurchaseOrderPick"
 
 type LineState = { quantity: string; condition: GRNLineCondition }
 
@@ -45,24 +45,10 @@ export function GoodsReceiptDialog({
   const { items: submittedPos, isLoading: posLoading } = useAllPages<PurchaseOrder>(
     "/admin/procurement/purchase-orders/",
     { status: "submitted" },
-    open && pickMode
+    { enabled: open && pickMode }
   )
-  const [picked, setPicked] = useState<PurchaseOrder | null>(null)
+  const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)
   const po = purchaseOrder ?? picked
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) setPicked(null)
-    onOpenChange(next)
-  }
-
-  const handlePick = async (id: string) => {
-    try {
-      const res = await api.get(`/admin/procurement/purchase-orders/${id}/`)
-      setPicked(unwrapItem<PurchaseOrder>(res.data))
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't load that purchase order"))
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

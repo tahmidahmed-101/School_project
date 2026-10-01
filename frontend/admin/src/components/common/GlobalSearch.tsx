@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useId, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { useAppSelector } from "@/app/hooks"
+import { usePermissions } from "@/hooks/use-can"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
@@ -278,7 +278,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   const sheetListboxId = `${instanceId}-sheet-search-listbox`
 
   // Pages come from the module registry; records from live backend search.
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
+  const permissions = usePermissions()
   const navDestinations = useNavDestinations(permissions)
   const { results: recordResults, isSearching } = useRecordSearch(query, permissions)
 

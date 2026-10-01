@@ -3,24 +3,15 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { FormDialog } from "@/components/common/FormDialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { useAppDispatch } from "@/app/hooks"
 import { updateOrder } from "@/features/sales/slices/orderSlice"
 import type { Order, OrderUpdatePayload } from "@/features/sales/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 
 const schema = z.object({
   contact_email: z.union([z.literal(""), z.email("Enter a valid email")]),
@@ -87,10 +78,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       toast.success("Order details updated")
       onOpenChange(false)
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in schema.shape) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to update order"))
+      reportFormError(err, { setError, fields: Object.keys(schema.shape), fallback: "Failed to update order" })
     }
   }
 
@@ -105,57 +93,47 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit order {order.order_number}</DialogTitle>
-          <DialogDescription>
-            Ship-to changes are written onto this order only — the customer's address book is not touched.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form id="order-edit-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {text("contact_email", "Contact email", order.customer_email)}
-              {text("contact_phone", "Contact phone", order.customer_phone)}
-            </div>
-            <FieldDescription>Leave blank to fall back to the ship-to / account details.</FieldDescription>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Edit order ${order.order_number}`}
+      description="Ship-to changes are written onto this order only — the customer's address book is not touched."
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel="Save changes"
+      size="lg"
+    >
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {text("contact_email", "Contact email", order.customer_email)}
+            {text("contact_phone", "Contact phone", order.customer_phone)}
           </div>
+          <FieldDescription>Leave blank to fall back to the ship-to / account details.</FieldDescription>
+        </div>
 
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ship to</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {text("full_name", "Recipient name")}
-              {text("phone", "Recipient phone")}
-            </div>
-            {text("line1", "Address")}
-            {text("delivery_note", "Delivery note")}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {text("postal_code", "Postal code")}
-              {text("country", "Country")}
-            </div>
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ship to</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {text("full_name", "Recipient name")}
+            {text("phone", "Recipient phone")}
           </div>
+          {text("line1", "Address")}
+          {text("delivery_note", "Delivery note")}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {text("postal_code", "Postal code")}
+            {text("country", "Country")}
+          </div>
+        </div>
 
-          <Field>
-            <FieldLabel htmlFor="order-notes">Internal notes</FieldLabel>
-            <FieldContent>
-              <Textarea id="order-notes" rows={3} {...register("notes")} />
-            </FieldContent>
-          </Field>
-        </form>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="order-edit-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            Save changes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <Field>
+          <FieldLabel htmlFor="order-notes">Internal notes</FieldLabel>
+          <FieldContent>
+            <Textarea id="order-notes" rows={3} {...register("notes")} />
+          </FieldContent>
+        </Field>
+      </div>
+    </FormDialog>
   )
 }

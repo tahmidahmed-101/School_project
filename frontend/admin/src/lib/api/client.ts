@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios"
 import { getAccessToken, setAccessToken, clearTokens } from "./tokenStore"
+import { unwrapItem } from "./envelope"
 
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
@@ -97,8 +98,16 @@ export interface ApiError {
   fields: Record<string, string[]>
 }
 
+/** True for a value already normalised by extractApiError, so normalising twice is harmless. */
+function isApiError(err: unknown): err is ApiError {
+  if (!err || typeof err !== "object" || axios.isAxiosError(err)) return false
+  const e = err as Record<string, unknown>
+  return typeof e.status === "number" && typeof e.code === "string" && typeof e.message === "string" && !!e.fields
+}
+
 // Kull-mart errors look like { error: { code, message, fields } } (apps/common/exception_handler.py).
 export function extractApiError(err: unknown): ApiError {
+  if (isApiError(err)) return err
   if (axios.isAxiosError(err)) {
     const status = err.response?.status ?? 0
     const body = err.response?.data as Record<string, unknown> | undefined
@@ -153,4 +162,19 @@ export function getApiFieldErrors(err: unknown): Record<string, string> {
     }
   }
   return out
+}
+
+/** Runs a request and unwraps its `data` envelope, rethrowing failures as `ApiError`. */
+export async function apiCall<T>(request: () => Promise<{ data: unknown }>): Promise<T> {
+  try {
+    const res = await request()
+    return unwrapItem<T>(res.data)
+  } catch (err) {
+    throw extractApiError(err)
+  }
+}
+
+/** True for a 403 — the user lacks the permission the endpoint needs. */
+export function isForbidden(error: unknown): boolean {
+  return !!error && typeof error === "object" && (error as Partial<ApiError>).status === 403
 }

@@ -1,7 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
 import { api, extractApiError } from "@/lib/api/client"
-import { unwrapEnvelope, unwrapItem } from "@/lib/api/envelope"
+import { unwrapEnvelope } from "@/lib/api/envelope"
+import {
+  createActionThunk,
+  createApiThunk,
+  createSliceFactory,
+  replaceOnFulfilled,
+  withExtraCases,
+} from "@/lib/sliceFactory"
 import type { AdminUser, PermissionCodeInfo } from "../types"
 
 // /admin/staff/ (admin-only). List filters: search, include_deleted. DELETE is a soft delete.
@@ -14,26 +20,12 @@ const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = crea
 export { fetchAll, fetchSingle, postData, patchData, deleteData }
 
 /** PATCH /admin/staff/{id}/permissions/ — `permissions` fully replaces the current grant set. */
-export const updateStaffPermissions = createAsyncThunk(
+export const updateStaffPermissions = createApiThunk<{ id: string; permissions: string[] }, AdminUser>(
   "staffs/updatePermissions",
-  async ({ id, permissions }: { id: string; permissions: string[] }, { rejectWithValue }) => {
-    try {
-      const res = await api.patch(`/admin/staff/${id}/permissions/`, { permissions })
-      return unwrapItem<AdminUser>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  ({ id, permissions }) => api.patch(`/admin/staff/${id}/permissions/`, { permissions })
 )
 
-export const restoreStaff = createAsyncThunk("staffs/restore", async (id: string, { rejectWithValue }) => {
-  try {
-    const res = await api.post(`/admin/staff/${id}/restore/`)
-    return unwrapItem<AdminUser>(res.data)
-  } catch (err) {
-    return rejectWithValue(extractApiError(err))
-  }
-})
+export const restoreStaff = createActionThunk<AdminUser>("staffs/restore", "/admin/staff/", "restore")
 
 /** GET /admin/staff/permission-codes/ — the backend's source of truth for the permission picker. */
 export const fetchPermissionCodes = createAsyncThunk(
@@ -49,13 +41,5 @@ export const fetchPermissionCodes = createAsyncThunk(
 )
 
 export default withExtraCases(reducer, (builder) => {
-  for (const thunk of [updateStaffPermissions, restoreStaff]) {
-    builder.addCase(thunk.fulfilled, (state, action) => {
-      const user = action.payload
-      state.data = state.data.map((u) => (u.id === user.id ? user : u))
-      if (state.singleData && (state.singleData as AdminUser).id === user.id) {
-        state.singleData = user
-      }
-    })
-  }
+  replaceOnFulfilled(builder, updateStaffPermissions, restoreStaff)
 })

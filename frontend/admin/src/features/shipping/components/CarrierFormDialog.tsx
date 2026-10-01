@@ -3,22 +3,12 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { useAppDispatch } from "@/app/hooks"
 import { createCarrier, updateCarrier } from "@/features/shipping/slices/carrierSlice"
 import {
@@ -27,7 +17,7 @@ import {
   type CarrierPayload,
   type CarrierProvider,
 } from "@/features/shipping/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -118,179 +108,150 @@ export function CarrierFormDialog({ open, onOpenChange, carrier, onSaved }: Carr
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in schema.shape) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save carrier"))
+      reportFormError(err, { setError, fields: Object.keys(schema.shape), fallback: "Failed to save carrier" })
     }
   }
 
   const secretHint = (stored: boolean) => (carrier && stored ? "Stored — leave blank to keep" : "Not set")
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{carrier ? `Edit ${carrier.name}` : "Add carrier"}</DialogTitle>
-          <DialogDescription>
-            Courier credentials are write-only — they are never shown again once saved.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form id="carrier-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="carrier-name">Name *</FieldLabel>
-              <FieldContent>
-                <Input id="carrier-name" aria-invalid={!!errors.name} {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="carrier-code">Provider</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="code"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="carrier-code">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CARRIER_PROVIDER_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="carrier-phone">Phone</FieldLabel>
-              <FieldContent>
-                <Input id="carrier-phone" {...register("phone")} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="carrier-email">Contact email</FieldLabel>
-              <FieldContent>
-                <Input id="carrier-email" aria-invalid={!!errors.contact_email} {...register("contact_email")} />
-                <FieldError errors={[errors.contact_email]} />
-              </FieldContent>
-            </Field>
-          </div>
-
-          <div className="space-y-4 rounded-lg border p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Courier integration</p>
-            <Field>
-              <FieldLabel htmlFor="carrier-url">API base URL</FieldLabel>
-              <FieldContent>
-                <Input id="carrier-url" placeholder="https://api.courier.example" {...register("api_base_url")} />
-              </FieldContent>
-            </Field>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Field>
-                <FieldLabel htmlFor="carrier-key">API key</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="carrier-key"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={secretHint(!!carrier?.has_api_key)}
-                    {...register("api_key")}
-                  />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="carrier-secret">API secret</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="carrier-secret"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={carrier ? "Leave blank to keep" : ""}
-                    {...register("api_secret")}
-                  />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="carrier-webhook">Webhook secret</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="carrier-webhook"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={carrier ? "Leave blank to keep" : ""}
-                    {...register("webhook_secret")}
-                  />
-                </FieldContent>
-              </Field>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="carrier-config">Config (JSON)</FieldLabel>
-              <FieldContent>
-                <Textarea
-                  id="carrier-config"
-                  rows={3}
-                  className="font-mono text-xs"
-                  placeholder={'{"store_id": "...", "merchant_password": "..."}'}
-                  aria-invalid={!!errors.config}
-                  {...register("config")}
-                />
-                <FieldDescription>
-                  {carrier?.config_keys.length
-                    ? `Stored keys: ${carrier.config_keys.join(", ")}. Saving a value here replaces the whole config.`
-                    : "Provider-specific settings. Values are never read back."}
-                </FieldDescription>
-                <FieldError errors={[errors.config]} />
-              </FieldContent>
-            </Field>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={carrier ? `Edit ${carrier.name}` : "Add carrier"}
+      description="Courier credentials are write-only — they are never shown again once saved."
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={carrier ? "Save changes" : "Add carrier"}
+      size="lg"
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field>
+          <FieldLabel htmlFor="carrier-name">Name *</FieldLabel>
+          <FieldContent>
+            <Input id="carrier-name" aria-invalid={!!errors.name} {...register("name")} />
+            <FieldError errors={[errors.name]} />
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="carrier-code">Provider</FieldLabel>
+          <FieldContent>
             <Controller
               control={control}
-              name="is_integration_enabled"
+              name="code"
               render={({ field }) => (
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor="carrier-integration">Live integration</FieldLabel>
-                    <FieldDescription>Book consignments through the courier's API on dispatch.</FieldDescription>
-                  </FieldContent>
-                  <Switch id="carrier-integration" checked={field.value} onCheckedChange={field.onChange} />
-                </Field>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="carrier-code">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CARRIER_PROVIDER_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
-          </div>
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="carrier-phone">Phone</FieldLabel>
+          <FieldContent>
+            <Input id="carrier-phone" {...register("phone")} />
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="carrier-email">Contact email</FieldLabel>
+          <FieldContent>
+            <Input id="carrier-email" aria-invalid={!!errors.contact_email} {...register("contact_email")} />
+            <FieldError errors={[errors.contact_email]} />
+          </FieldContent>
+        </Field>
+      </div>
 
-          {carrier && (
-            <Controller
-              control={control}
-              name="is_active"
-              render={({ field }) => (
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor="carrier-active">Active</FieldLabel>
-                    <FieldDescription>Inactive carriers aren't offered for new shipments.</FieldDescription>
-                  </FieldContent>
-                  <Switch id="carrier-active" checked={field.value} onCheckedChange={field.onChange} />
-                </Field>
-              )}
+      <div className="space-y-4 rounded-lg border p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Courier integration</p>
+        <Field>
+          <FieldLabel htmlFor="carrier-url">API base URL</FieldLabel>
+          <FieldContent>
+            <Input id="carrier-url" placeholder="https://api.courier.example" {...register("api_base_url")} />
+          </FieldContent>
+        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field>
+            <FieldLabel htmlFor="carrier-key">API key</FieldLabel>
+            <FieldContent>
+              <Input
+                id="carrier-key"
+                type="password"
+                autoComplete="new-password"
+                placeholder={secretHint(!!carrier?.has_api_key)}
+                {...register("api_key")}
+              />
+            </FieldContent>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="carrier-secret">API secret</FieldLabel>
+            <FieldContent>
+              <Input
+                id="carrier-secret"
+                type="password"
+                autoComplete="new-password"
+                placeholder={carrier ? "Leave blank to keep" : ""}
+                {...register("api_secret")}
+              />
+            </FieldContent>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="carrier-webhook">Webhook secret</FieldLabel>
+            <FieldContent>
+              <Input
+                id="carrier-webhook"
+                type="password"
+                autoComplete="new-password"
+                placeholder={carrier ? "Leave blank to keep" : ""}
+                {...register("webhook_secret")}
+              />
+            </FieldContent>
+          </Field>
+        </div>
+        <Field>
+          <FieldLabel htmlFor="carrier-config">Config (JSON)</FieldLabel>
+          <FieldContent>
+            <Textarea
+              id="carrier-config"
+              rows={3}
+              className="font-mono text-xs"
+              placeholder={'{"store_id": "...", "merchant_password": "..."}'}
+              aria-invalid={!!errors.config}
+              {...register("config")}
             />
-          )}
-        </form>
+            <FieldDescription>
+              {carrier?.config_keys.length
+                ? `Stored keys: ${carrier.config_keys.join(", ")}. Saving a value here replaces the whole config.`
+                : "Provider-specific settings. Values are never read back."}
+            </FieldDescription>
+            <FieldError errors={[errors.config]} />
+          </FieldContent>
+        </Field>
+        <SwitchField
+          control={control}
+          name="is_integration_enabled"
+          label="Live integration"
+          description="Book consignments through the courier's API on dispatch."
+        />
+      </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="carrier-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {carrier ? "Save changes" : "Add carrier"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {carrier && (
+        <SwitchField
+          control={control}
+          name="is_active"
+          label="Active"
+          description="Inactive carriers aren't offered for new shipments."
+        />
+      )}
+    </FormDialog>
   )
 }

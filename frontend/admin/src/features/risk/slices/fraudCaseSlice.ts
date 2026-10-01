@@ -1,7 +1,5 @@
-import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
-import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
+import { api } from "@/lib/api/client"
+import { createApiThunk, createSliceFactory, replaceOnFulfilled, withExtraCases } from "@/lib/sliceFactory"
 import type { FraudCase, ResolveFraudCasePayload } from "../types"
 
 // /admin/risk/cases/ — list filters: status, ordering (created_at, status). Read-only except
@@ -14,22 +12,11 @@ const { reducer, fetchAll, fetchSingle } = createSliceFactory<FraudCase>({
 
 export { fetchAll, fetchSingle }
 
-export const resolveFraudCase = createAsyncThunk(
+export const resolveFraudCase = createApiThunk<{ id: string; payload: ResolveFraudCasePayload }, FraudCase>(
   "fraudCases/resolve",
-  async ({ id, payload }: { id: string; payload: ResolveFraudCasePayload }, { rejectWithValue }) => {
-    try {
-      const res = await api.patch(`/admin/risk/cases/${id}/resolve/`, payload)
-      return unwrapItem<FraudCase>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
+  ({ id, payload }) => api.patch(`/admin/risk/cases/${id}/resolve/`, payload)
 )
 
 export default withExtraCases(reducer, (builder) => {
-  builder.addCase(resolveFraudCase.fulfilled, (state, action) => {
-    const updated = action.payload
-    state.data = state.data.map((c) => (c.id === updated.id ? updated : c))
-    if (state.singleData && (state.singleData as FraudCase).id === updated.id) state.singleData = updated
-  })
+  replaceOnFulfilled(builder, resolveFraudCase)
 })

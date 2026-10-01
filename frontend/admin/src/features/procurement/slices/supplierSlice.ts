@@ -1,6 +1,5 @@
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
+import { createActionThunk, createSliceFactory, replaceOnFulfilled, withExtraCases } from "@/lib/sliceFactory"
 import type { Supplier } from "../types"
-import { createActionThunk } from "./restore"
 
 const ENDPOINT = "/admin/procurement/suppliers/"
 
@@ -15,7 +14,5 @@ export const restoreSupplier = createActionThunk<Supplier>("suppliers/restore", 
 export { fetchAll, postData, patchData, deleteData }
 
 export default withExtraCases(reducer, (builder) => {
-  builder.addCase(restoreSupplier.fulfilled, (state, action) => {
-    state.data = state.data.map((s) => (s.id === action.payload.id ? action.payload : s))
-  })
+  replaceOnFulfilled(builder, restoreSupplier)
 })

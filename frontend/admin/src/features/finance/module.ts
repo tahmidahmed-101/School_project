@@ -20,6 +20,7 @@ export const financeModule: FeatureModule = {
       items: [
         { title: "Financial Reports", url: "/accounting/reports", permission: ["accounting.view", "accounting.post"] },
         { title: "Expenses", url: "/expenses", permission: ["accounting.view", "accounting.post"] },
+        { title: "Expense Categories", url: "/expenses/categories", permission: ["accounting.view", "accounting.post"] },
         { title: "Journal Entries", url: "/accounting/journal-entries", permission: ["accounting.view", "accounting.post"] },
         { title: "Chart of Accounts", url: "/accounting/accounts", permission: ["accounting.view", "accounting.post"] },
         { title: "Tax Rates", url: "/accounting/tax-rates", permission: ["accounting.view", "accounting.post"] },

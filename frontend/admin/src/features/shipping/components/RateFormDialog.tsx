@@ -3,25 +3,16 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FormDialog } from "@/components/common/FormDialog"
 import { useAppDispatch } from "@/app/hooks"
 import { createZoneRate } from "@/features/shipping/slices/zoneSlice"
 import { updateRate } from "@/features/shipping/slices/rateSlice"
 import type { Carrier, ShippingRate, ShippingZone } from "@/features/shipping/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 
 const nonNegative = (label: string) =>
   z
@@ -105,10 +96,7 @@ export function RateFormDialog({ open, onOpenChange, rate, zones, carriers, defa
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in schema.shape) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save rate"))
+      reportFormError(err, { setError, fields: Object.keys(schema.shape), fallback: "Failed to save rate" })
     }
   }
 
@@ -159,37 +147,24 @@ export function RateFormDialog({ open, onOpenChange, rate, zones, carriers, defa
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{rate ? "Edit rate" : "Add rate"}</DialogTitle>
-          <DialogDescription>
-            Charge = base charge up to the base weight, plus the increment charge per started increment above it.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form id="rate-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {picker("zone_id", "Zone", zones)}
-            {picker("carrier_id", "Carrier", carriers)}
-            {numberField("base_weight", "Base weight", "0.001", "kg")}
-            {numberField("base_charge", "Base charge", "0.01", "BDT")}
-            {numberField("increment_weight", "Increment weight", "0.001", "kg")}
-            {numberField("increment_charge", "Increment charge", "0.01", "BDT")}
-          </div>
-          {rate && <FieldDescription>Zone and carrier can't change — delete the rate and add a new one.</FieldDescription>}
-        </form>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="rate-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {rate ? "Save changes" : "Add rate"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={rate ? "Edit rate" : "Add rate"}
+      description="Charge = base charge up to the base weight, plus the increment charge per started increment above it."
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={rate ? "Save changes" : "Add rate"}
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {picker("zone_id", "Zone", zones)}
+        {picker("carrier_id", "Carrier", carriers)}
+        {numberField("base_weight", "Base weight", "0.001", "kg")}
+        {numberField("base_charge", "Base charge", "0.01", "BDT")}
+        {numberField("increment_weight", "Increment weight", "0.001", "kg")}
+        {numberField("increment_charge", "Increment charge", "0.01", "BDT")}
+      </div>
+      {rate && <FieldDescription>Zone and carrier can't change — delete the rate and add a new one.</FieldDescription>}
+    </FormDialog>
   )
 }

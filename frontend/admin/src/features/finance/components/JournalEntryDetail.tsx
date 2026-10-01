@@ -1,35 +1,29 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, Undo2 } from "lucide-react"
+import { Undo2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { DetailRow } from "@/components/common/DetailRow"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { resolveDetailState } from "@/lib/detailState"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, humanize } from "@/lib/format"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
 
 import { fetchSingle, reverseJournalEntry } from "../slices/journalEntrySlice"
 import type { JournalEntry } from "../types"
-import { accountLabel, useAccounts, useCan } from "../hooks/useFinanceHelpers"
+import { accountLabel, useAccounts } from "../hooks/useFinanceHelpers"
 import { entryTotal } from "../utils"
-import { DetailRow } from "./shared"
 
 const JournalEntryDetail = () => {
   const { id = "" } = useParams<{ id: string }>()
@@ -41,10 +35,7 @@ const JournalEntryDetail = () => {
   const canPost = useCan("accounting.post")
   const { accountsById } = useAccounts()
 
-  const [reverseOpen, setReverseOpen] = useState(false)
   const [reverseDate, setReverseDate] = useState("")
-  const [reason, setReason] = useState("")
-  const [reversing, setReversing] = useState(false)
 
   useDocumentTitle(entry ? `Journal Entry ${formatDate(entry.entry_date)}` : "Journal Entry")
 
@@ -71,45 +62,60 @@ const JournalEntryDetail = () => {
   const totalCredit = entry.lines.reduce((s, l) => s + Number(l.credit), 0)
   const canReverse = canPost && entry.status === "posted" && !entry.reversed_by_id
 
-  const handleReverse = async () => {
-    setReversing(true)
+  const handleReverse = async (reason: string) => {
     try {
       const reversal = await dispatch(
         reverseJournalEntry({
           id: entry.id,
-          payload: { ...(reverseDate ? { entry_date: reverseDate } : {}), reason: reason.trim() },
+          payload: { ...(reverseDate ? { entry_date: reverseDate } : {}), reason },
         })
       ).unwrap()
       toast.success("Reversing entry posted")
-      setReverseOpen(false)
       navigate(`/accounting/journal-entries/${reversal.id}`)
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to reverse entry"))
-    } finally {
-      setReversing(false)
+      throw err
     }
   }
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
-          <Button variant="back" size="sm" asChild>
-            <Link to="/accounting/journal-entries">
-              <ArrowLeft className="size-4" /> Journal
-            </Link>
-          </Button>
-          <PageHeading
-            title={entry.description || "Journal entry"}
-            description={`Posted ${formatDate(entry.entry_date)} · ${formatCurrency(entryTotal(entry))}`}
-          />
-        </div>
-        {canReverse && (
-          <Button size="action" variant="outline" onClick={() => setReverseOpen(true)}>
-            <Undo2 className="size-5" /> Reverse Entry
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={entry.description || "Journal entry"}
+        description={`Posted ${formatDate(entry.entry_date)} · ${formatCurrency(entryTotal(entry))}`}
+        back={{ to: "/accounting/journal-entries", label: "Back to journal" }}
+        actions={
+          canReverse && (
+            <ConfirmDialog
+              trigger={
+                <Button size="action" variant="outline">
+                  <Undo2 className="size-5" /> Reverse Entry
+                </Button>
+              }
+              onOpenChange={(open) => !open && setReverseDate("")}
+              title="Reverse this entry?"
+              description="Posts a new entry with debits and credits swapped. The original stays in the ledger for the audit trail."
+              confirmLabel="Post Reversal"
+              reason={{ label: "Reason" }}
+              onConfirm={handleReverse}
+            >
+              <Field>
+                <FieldLabel htmlFor="rev-date">Reversal date</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="rev-date"
+                    type="date"
+                    min={entry.entry_date}
+                    value={reverseDate}
+                    onChange={(e) => setReverseDate(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave blank for today.</p>
+                </FieldContent>
+              </Field>
+            </ConfirmDialog>
+          )
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -183,46 +189,6 @@ const JournalEntryDetail = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={reverseOpen} onOpenChange={setReverseOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reverse this entry?</DialogTitle>
-            <DialogDescription>
-              Posts a new entry with debits and credits swapped. The original stays in the ledger for the audit trail.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <Field>
-              <FieldLabel htmlFor="rev-date">Reversal date</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="rev-date"
-                  type="date"
-                  min={entry.entry_date}
-                  value={reverseDate}
-                  onChange={(e) => setReverseDate(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Leave blank for today.</p>
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="rev-reason">Reason</FieldLabel>
-              <FieldContent>
-                <Input id="rev-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-              </FieldContent>
-            </Field>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setReverseOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReverse} disabled={reversing}>
-              {reversing ? <Loader2 className="size-4 animate-spin" /> : <Undo2 className="size-4" />} Post Reversal
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

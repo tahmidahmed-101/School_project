@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link } from "react-router-dom"
-import { DownloadIcon, Plus, Receipt, Tags } from "lucide-react"
+import { Plus, Receipt } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -10,76 +9,67 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ExportButton } from "@/components/common/ExportButton"
+import { SortSelect } from "@/components/common/SortSelect"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { DateRangeInputs } from "@/components/common/DateRangeInputs"
+import { DateCell, MoneyCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { exportToCSV } from "@/lib/ExportToCsv"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { exportToCSV } from "@/lib/csv"
+import { fetchAllPages } from "@/lib/api/fetchAll"
+import type { Option } from "@/lib/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { useListPage } from "@/hooks/use-list-page"
 
 import { fetchAll, deleteData, postData, restoreExpense } from "../slices/expenseSlice"
-import type { Account, Expense, ExpenseCategory } from "../types"
-import { accountLabel, useAccounts, useCan, useDebouncedValue, useExpenseCategories } from "../hooks/useFinanceHelpers"
-import { findAccount, findExpenseCategory, useImportLookup } from "../hooks/useImportLookups"
-import { DateRangeInputs, RestoreButton, ShowDeletedToggle } from "./shared"
+import type { Expense } from "../types"
+import { accountLabel, useAccounts, useExpenseCategories } from "../hooks/useFinanceHelpers"
+import { findAccount, findExpenseCategory, useFinanceImportLookups } from "../hooks/useImportLookups"
 import { ExpenseFormDialog } from "./ExpenseFormDialog"
 import { ExpenseDetailDialog } from "./ExpenseDetailDialog"
 
-const PAGE_SIZE = 20
-
-type Option = { label: string; value: string }
+const ORDERING_OPTIONS: Option[] = [
+  { label: "Newest first", value: "-expense_date" },
+  { label: "Oldest first", value: "expense_date" },
+  { label: "Amount: high to low", value: "-amount" },
+  { label: "Amount: low to high", value: "amount" },
+]
 
 const Expenses = () => {
   useDocumentTitle("Expenses")
 
   const dispatch = useAppDispatch()
-  const { data: expenses, isFetchingList, error, totalItems, meta } = useAppSelector((state) => state.expenses)
+  const listState = useAppSelector((state) => state.expenses)
+  const expenses = listState.data
   const canPost = useCan("accounting.post")
   const { accounts, accountsById } = useAccounts()
   const { categories, categoriesById } = useExpenseCategories()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search)
   const [category, setCategory] = useState<Option | null>(null)
   const [account, setAccount] = useState<Option | null>(null)
   const [start, setStart] = useState("")
   const [end, setEnd] = useState("")
   const [ordering, setOrdering] = useState<Option | null>(null)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
   const [viewing, setViewing] = useState<Expense | null>(null)
 
-  const withPageReset = <T,>(setter: (v: T) => void) => (value: T) => {
-    setter(value)
-    setPage(1)
-  }
-
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(category ? { category_id: category.value } : {}),
-          ...(account ? { account_id: account.value } : {}),
-          ...(start ? { start } : {}),
-          ...(end ? { end } : {}),
-          ...(ordering ? { ordering: ordering.value } : {}),
-          ...(includeDeleted ? { include_deleted: "true" } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, category, account, start, end, ordering, includeDeleted]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const list = useListPage({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: listState,
+    params: {
+      category_id: category?.value,
+      account_id: account?.value,
+      start,
+      end,
+      ordering: ordering?.value,
+    },
+  })
 
   const categoryOptions = useMemo<Option[]>(
     () => categories.map((c) => ({ label: c.name, value: c.id })),
@@ -89,8 +79,7 @@ const Expenses = () => {
     () => accounts.filter((a) => a.type === "expense").map((a) => ({ label: accountLabel(a), value: a.id })),
     [accounts]
   )
-  const accountLookup = useImportLookup<Account>("/admin/accounting/accounts/")
-  const categoryLookup = useImportLookup<ExpenseCategory>("/admin/accounting/expense-categories/")
+  const { accountLookup, categoryLookup } = useFinanceImportLookups()
   const importFields = useMemo<ImportField[]>(
     () => [
       { key: "expense_date", label: "Date", required: true, type: "date", aliases: ["Expense date"], example: "2026-09-15" },
@@ -125,19 +114,12 @@ const Expenses = () => {
     [accountLookup, categoryLookup]
   )
 
-  const orderingOptions: Option[] = [
-    { label: "Newest first", value: "-expense_date" },
-    { label: "Oldest first", value: "expense_date" },
-    { label: "Amount: high to low", value: "-amount" },
-    { label: "Amount: low to high", value: "amount" },
-  ]
-
   const handleDelete = async (expense: Expense) => {
     try {
       await dispatch(deleteData(expense.id)).unwrap()
       toast.success("Expense deleted")
       setViewing(null)
-      if (includeDeleted) load()
+      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete expense"))
     }
@@ -156,9 +138,7 @@ const Expenses = () => {
     {
       accessorKey: "expense_date",
       header: "DATE",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.original.expense_date)}</span>
-      ),
+      cell: ({ row }) => <DateCell value={row.original.expense_date} className="text-muted-foreground" />,
     },
     {
       accessorKey: "payee",
@@ -198,9 +178,7 @@ const Expenses = () => {
     {
       accessorKey: "amount",
       header: "AMOUNT",
-      cell: ({ row }) => (
-        <span className="text-sm font-semibold text-foreground whitespace-nowrap">{formatCurrency(row.original.amount)}</span>
-      ),
+      cell: ({ row }) => <MoneyCell value={row.original.amount} emphasis className="text-foreground" />,
     },
     {
       accessorKey: "reference_number",
@@ -217,12 +195,11 @@ const Expenses = () => {
       header: "ACTIONS",
       cell: ({ row }) => {
         const exp = row.original
-        if (exp.deleted_at) {
-          return canPost ? <RestoreButton label={exp.payee} onClick={() => handleRestore(exp)} /> : null
-        }
         return (
           <TableActions
             itemName={exp.payee}
+            deleted={!!exp.deleted_at}
+            onRestore={canPost ? () => handleRestore(exp) : undefined}
             onView={() => setViewing(exp)}
             onEdit={
               canPost
@@ -239,70 +216,69 @@ const Expenses = () => {
     },
   ]
 
-  const csvData = expenses.map((e) => ({
-    Date: e.expense_date,
-    Payee: e.payee,
-    Description: e.description,
-    Category: e.category_id ? categoriesById.get(e.category_id)?.name ?? "" : "",
-    ExpenseAccount: accountLabel(accountsById.get(e.expense_account_id), ""),
-    PaidFrom: accountLabel(accountsById.get(e.payment_account_id), ""),
-    Amount: e.amount,
-    Reference: e.reference_number,
-  }))
+  const exportAll = async () => {
+    const rows = await fetchAllPages<Expense>("/admin/accounting/expenses/", list.query)
+    exportToCSV(
+      rows.map((e) => ({
+        Date: e.expense_date,
+        Payee: e.payee,
+        Description: e.description,
+        Category: e.category_id ? categoriesById.get(e.category_id)?.name ?? "" : "",
+        ExpenseAccount: accountLabel(accountsById.get(e.expense_account_id), ""),
+        PaidFrom: accountLabel(accountsById.get(e.payment_account_id), ""),
+        Amount: e.amount,
+        Reference: e.reference_number,
+      })),
+      "Expenses"
+    )
+  }
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Expenses"
-          description="Operating spend posted to the ledger. Each expense books a journal entry against its expense and payment accounts."
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="primary" size="action" asChild>
-            <Link to="/expenses/categories">
-              <Tags className="size-5" /> Categories
-            </Link>
-          </Button>
-          <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Expenses")}>
-            <DownloadIcon className="size-5" /> Export CSV
-          </Button>
-          {canPost && (
-            <CsvImportButton
-              entityName="expenses"
-              fields={importFields}
-              createRow={(payload) => dispatch(postData({ payload: payload as Partial<Expense> })).unwrap()}
-              onComplete={() => {
-                accountLookup.reset()
-                categoryLookup.reset()
-                load()
-              }}
-            />
-          )}
-          {canPost && (
-            <Button
-              size="action"
-              onClick={() => {
-                setEditing(null)
-                setIsFormOpen(true)
-              }}
-            >
-              <Plus className="size-5" /> Record Expense
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Expenses"
+        description="Operating spend, posted to the ledger as journal entries."
+        actions={
+          <>
+            <ExportButton onExport={exportAll} />
+            {canPost && (
+              <CsvImportButton
+                entityName="expenses"
+                fields={importFields}
+                createRow={(payload) => dispatch(postData({ payload: payload as Partial<Expense> })).unwrap()}
+                onComplete={() => {
+                  accountLookup.reset()
+                  categoryLookup.reset()
+                  list.reload()
+                }}
+              />
+            )}
+            {canPost && (
+              <Button
+                size="action"
+                onClick={() => {
+                  setEditing(null)
+                  setIsFormOpen(true)
+                }}
+              >
+                <Plus className="size-5" /> Record Expense
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search payee, description, reference..."
-        searchValue={search}
-        onSearchChange={withPageReset(setSearch)}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         datePicker={
           <DateRangeInputs
             idPrefix="expenses"
             start={start}
             end={end}
-            onStartChange={withPageReset(setStart)}
-            onEndChange={withPageReset(setEnd)}
+            onStartChange={setStart}
+            onEndChange={setEnd}
           />
         }
         filters={[
@@ -312,7 +288,7 @@ const Expenses = () => {
                 frameworks={categoryOptions}
                 placeholder="Category"
                 value={category}
-                onValueChange={withPageReset(setCategory)}
+                onValueChange={setCategory}
               />
             ),
           },
@@ -322,30 +298,15 @@ const Expenses = () => {
                 frameworks={expenseAccountOptions}
                 placeholder="Expense account"
                 value={account}
-                onValueChange={withPageReset(setAccount)}
+                onValueChange={setAccount}
               />
             ),
           },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={orderingOptions}
-                placeholder="Sort"
-                value={ordering}
-                onValueChange={withPageReset(setOrdering)}
-              />
-            ),
-          },
+          { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
           ...(canPost
             ? [
                 {
-                  component: (
-                    <ShowDeletedToggle
-                      id="expenses-deleted"
-                      checked={includeDeleted}
-                      onCheckedChange={withPageReset(setIncludeDeleted)}
-                    />
-                  ),
+                  component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
                 },
               ]
             : []),
@@ -355,17 +316,7 @@ const Expenses = () => {
       <DataTable
         columns={columns}
         data={expenses}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        {...list.tableProps}
         onRowClick={(exp) => !exp.deleted_at && setViewing(exp)}
         emptyIcon={Receipt}
         emptyTitle="No expenses found"

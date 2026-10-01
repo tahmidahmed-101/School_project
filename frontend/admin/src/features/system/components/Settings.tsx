@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Boxes, CreditCard, Plug, Store } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch } from "@/app/hooks"
 import {
   fetchBusinessProfile,
@@ -10,7 +10,7 @@ import {
   fetchModules,
   fetchPaymentMethods,
 } from "@/features/system/slices/businessSettingsSlice"
-import { useCan } from "@/features/system/permissions"
+import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { BusinessProfileForm } from "./settings/BusinessProfileForm"
 import { ModulesPanel } from "./settings/ModulesPanel"
@@ -27,7 +27,7 @@ const TABS = [
 const Settings = () => {
   useDocumentTitle("Settings")
   const dispatch = useAppDispatch()
-  const canManage = useCan()("settings.manage")
+  const canManage = useCan("settings.manage")
   const [searchParams, setSearchParams] = useSearchParams()
   const requested = searchParams.get("tab")
   const tab = TABS.some((t) => t.value === requested) ? (requested as string) : "business"
@@ -44,7 +44,7 @@ const Settings = () => {
 
   return (
     <div className="section-container space-y-6">
-      <PageHeading
+      <PageHeader
         title="Settings"
         description={
           canManage

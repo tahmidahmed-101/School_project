@@ -1,62 +1,35 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Link, useNavigate } from "react-router-dom"
 
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { RMA_STATUS_OPTIONS, type Rma } from "@/features/returns/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-
-const PAGE_SIZE = 20
-
-type Option = { label: string; value: string }
+import { useListPage } from "@/hooks/use-list-page"
+import type { Option } from "@/lib/types"
 
 const Returns = () => {
   useDocumentTitle("Returns")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: returns, isFetchingList, error, totalItems, meta } = useAppSelector((state) => state.returns)
+  const returnsState = useAppSelector((state) => state.returns)
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
 
-  useEffect(() => {
-    const next = search.trim()
-    if (next === debouncedSearch) return
-    const t = setTimeout(() => {
-      setDebouncedSearch(next)
-      setPage(1)
-    }, 300)
-    return () => clearTimeout(t)
-  }, [search, debouncedSearch])
-
-  const status = statusFilter?.value
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAllReturns({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(status ? { status } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, status]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAllReturns(p)),
+    state: returnsState,
+    params: { status: statusFilter?.value },
+  })
 
   const columns: ColumnDef<Rma>[] = [
     {
@@ -90,9 +63,7 @@ const Returns = () => {
     {
       accessorKey: "reason",
       header: "REASON",
-      cell: ({ row }) => (
-        <span className="line-clamp-2 text-sm text-muted-foreground">{row.original.reason || "—"}</span>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.reason} muted className="line-clamp-2" />,
     },
     {
       accessorKey: "status",
@@ -101,7 +72,7 @@ const Returns = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => (
         <TableActions itemName={`Return ${row.original.rma_number}`} viewUrl={`/return_detail/${row.original.id}`} />
       ),
@@ -110,12 +81,12 @@ const Returns = () => {
 
   return (
     <div className="section-container">
-      <PageHeading title="Returns" description="Review return requests, grade returned items and book receipts." />
+      <PageHeader title="Returns" description="Review return requests, grade returned items and book receipts." />
 
       <FilterToolbar
         searchPlaceholder="Search RMA number..."
-        searchValue={search}
-        onSearchChange={setSearch}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -123,10 +94,7 @@ const Returns = () => {
                 frameworks={RMA_STATUS_OPTIONS}
                 placeholder="Status"
                 value={statusFilter}
-                onValueChange={(v) => {
-                  setStatusFilter(v)
-                  setPage(1)
-                }}
+                onValueChange={setStatusFilter}
               />
             ),
           },
@@ -135,18 +103,8 @@ const Returns = () => {
 
       <DataTable
         columns={columns}
-        data={returns}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={returnsState.data}
+        {...list.tableProps}
         onRowClick={(rma) => navigate(`/return_detail/${rma.id}`)}
         emptyTitle="No returns found"
         emptyDescription="Returns are opened from an order's detail page or by customers."

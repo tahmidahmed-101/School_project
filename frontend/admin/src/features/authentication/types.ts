@@ -1,3 +1,5 @@
+import { isFullAccess } from "@/hooks/use-can"
+
 export interface AuthUser {
   id: string
   email: string
@@ -18,5 +20,5 @@ export interface LoginPayload {
 
 export function hasAdminAccess(user: AuthUser | null): boolean {
   if (!user) return false
-  return user.permissions.includes("*") || user.permissions.length > 0
+  return isFullAccess(user.permissions) || user.permissions.length > 0
 }

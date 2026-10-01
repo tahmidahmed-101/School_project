@@ -1,17 +1,8 @@
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { FormDialog } from "@/components/common/FormDialog"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { useAppDispatch } from "@/app/hooks"
 import { createReturn } from "@/features/sales/slices/orderSlice"
@@ -30,16 +21,28 @@ interface CreateReturnDialogProps {
 }
 
 /** Staff-initiated RMA against shipped, not-yet-claimed units. */
-function CreateReturnDialogForm({ order, onOpenChange, onCreated }: Omit<CreateReturnDialogProps, "open">) {
+export function CreateReturnDialog({ order, open, onOpenChange, onCreated }: CreateReturnDialogProps) {
   const dispatch = useAppDispatch()
   const [reason, setReason] = useState("")
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // Start from a clean form each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setReason("")
+      setQuantities({})
+    }
+  }
+
   const lines = order.lines.filter((l) => l.shipped_quantity > 0)
   const valid = lineQuantitiesValid(lines, quantities, returnable)
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!valid) return
     setSubmitting(true)
     try {
       const rma = await dispatch(
@@ -56,55 +59,36 @@ function CreateReturnDialogForm({ order, onOpenChange, onCreated }: Omit<CreateR
   }
 
   return (
-    <>
-        <DialogHeader>
-          <DialogTitle>Create return (RMA)</DialogTitle>
-          <DialogDescription>
-            Only shipped units that aren't already claimed by another return can be returned.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <LineQuantityTable
-            lines={lines}
-            maxFor={returnable}
-            maxLabel="Returnable"
-            values={quantities}
-            onChange={setQuantities}
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Create return (RMA)"
+      description="Only shipped units that aren't already claimed by another return can be returned."
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      submitLabel="Create return"
+      submitDisabled={!valid}
+      size="lg"
+    >
+      <LineQuantityTable
+        lines={lines}
+        maxFor={returnable}
+        maxLabel="Returnable"
+        values={quantities}
+        onChange={setQuantities}
+      />
+      <Field>
+        <FieldLabel htmlFor="rma-reason">Reason</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id="rma-reason"
+            rows={3}
+            placeholder="e.g. Wrong size delivered"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
           />
-          <Field>
-            <FieldLabel htmlFor="rma-reason">Reason</FieldLabel>
-            <FieldContent>
-              <Textarea
-                id="rma-reason"
-                rows={3}
-                placeholder="e.g. Wrong size delivered"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </FieldContent>
-          </Field>
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!valid || submitting}>
-            {submitting && <Loader2 className="size-4 animate-spin" />}
-            Create return
-          </Button>
-        </DialogFooter>
-    </>
-  )
-}
-
-export function CreateReturnDialog({ open, onOpenChange, ...props }: CreateReturnDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        {open && <CreateReturnDialogForm onOpenChange={onOpenChange} {...props} />}
-      </DialogContent>
-    </Dialog>
+        </FieldContent>
+      </Field>
+    </FormDialog>
   )
 }

@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { DateCell, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/audit/slices/loginHistorySlice"
 import type { LoginHistoryEntry } from "@/features/audit/types"
-import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { formatDateTime } from "@/lib/format"
+import { useListPage } from "@/hooks/use-list-page"
+import type { Option } from "@/lib/types"
+
+const ORDERING_OPTIONS: Option[] = [
+  { value: "-created_at", label: "Newest first" },
+  { value: "created_at", label: "Oldest first" },
+]
 
 const PAGE_SIZE = 25
 
@@ -18,33 +24,22 @@ const LoginHistory = () => {
   useDocumentTitle("Login History")
 
   const dispatch = useAppDispatch()
-  const { data, totalItems, meta, isFetchingList, error } = useAppSelector((state) => state.loginHistory)
+  const historyState = useAppSelector((state) => state.loginHistory)
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search.trim())
-  const [ordering, setOrdering] = useState("-created_at")
+  const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
 
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({ page, page_size: PAGE_SIZE, ordering, ...(debouncedSearch ? { search: debouncedSearch } : {}) })
-      ),
-    [dispatch, page, ordering, debouncedSearch]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const list = useListPage({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: historyState,
+    params: { ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    pageSize: PAGE_SIZE,
+  })
 
   const columns: ColumnDef<LoginHistoryEntry>[] = [
     {
       accessorKey: "created_at",
       header: "DATE",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(row.original.created_at)}</span>
-      ),
+      cell: ({ row }) => <DateCell withTime value={row.original.created_at} className="text-muted-foreground" />,
     },
     {
       accessorKey: "email",
@@ -54,7 +49,7 @@ const LoginHistory = () => {
     {
       accessorKey: "ip_address",
       header: "IP ADDRESS",
-      cell: ({ row }) => <span className="font-mono text-sm text-muted-foreground">{row.original.ip_address || "—"}</span>,
+      cell: ({ row }) => <TextCell muted value={row.original.ip_address} className="font-mono" />,
     },
     {
       accessorKey: "was_successful",
@@ -70,50 +65,19 @@ const LoginHistory = () => {
 
   return (
     <div className="section-container">
-      <PageHeading title="Login History" description="Sign-in attempts to the dashboard and storefront." />
+      <PageHeader title="Login History" description="Sign-in attempts to the dashboard and storefront." />
 
       <FilterToolbar
         searchPlaceholder="Search by email or IP address..."
-        searchValue={search}
-        onSearchChange={(value) => {
-          setSearch(value)
-          setPage(1)
-        }}
-        filters={[
-          {
-            component: (
-              <Select
-                value={ordering}
-                onValueChange={(value) => {
-                  setOrdering(value)
-                  setPage(1)
-                }}
-              >
-                <SelectTrigger className="w-[160px]" aria-label="Sort sign-ins">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="-created_at">Newest first</SelectItem>
-                  <SelectItem value="created_at">Oldest first</SelectItem>
-                </SelectContent>
-              </Select>
-            ),
-          },
-        ]}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
+        filters={[{ component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> }]}
       />
 
       <DataTable
         columns={columns}
-        data={data}
-        pageSize={PAGE_SIZE}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={historyState.data}
+        {...list.tableProps}
         emptyTitle="No sign-ins found"
         emptyDescription="No sign-in attempts match this search."
         minWidth="720px"

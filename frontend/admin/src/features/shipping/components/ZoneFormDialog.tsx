@@ -1,27 +1,17 @@
 import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { useAppDispatch } from "@/app/hooks"
 import { createZone, updateZone } from "@/features/shipping/slices/zoneSlice"
 import type { ShippingZone, ShippingZonePayload } from "@/features/shipping/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -85,71 +75,47 @@ export function ZoneFormDialog({ open, onOpenChange, zone, onSaved }: ZoneFormDi
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      const fields = getApiFieldErrors(err)
-      if (fields.name) setError("name", { message: fields.name })
-      if (fields.country_codes) setError("areas", { message: fields.country_codes })
-      toast.error(getApiErrorMessage(err, "Failed to save zone"))
+      reportFormError(err, {
+        setError,
+        fields: ["name", "areas"],
+        fieldMap: { country_codes: "areas" },
+        fallback: "Failed to save zone",
+      })
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{zone ? `Edit ${zone.name}` : "New delivery zone"}</DialogTitle>
-          <DialogDescription>
-            An order lands in this zone when its ship-to address mentions one of the zone's areas.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form id="zone-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          <Field>
-            <FieldLabel htmlFor="zone-name">Name *</FieldLabel>
-            <FieldContent>
-              <Input id="zone-name" placeholder="e.g. Inside Dhaka" aria-invalid={!!errors.name} {...register("name")} />
-              <FieldError errors={[errors.name]} />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="zone-areas">Areas</FieldLabel>
-            <FieldContent>
-              <Textarea
-                id="zone-areas"
-                rows={4}
-                placeholder="dhaka, gulshan, banani, uttara"
-                aria-invalid={!!errors.areas}
-                {...register("areas")}
-              />
-              <FieldDescription>Comma or newline separated keywords matched against the address.</FieldDescription>
-              <FieldError errors={[errors.areas]} />
-            </FieldContent>
-          </Field>
-          {zone && (
-            <Controller
-              control={control}
-              name="is_active"
-              render={({ field }) => (
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor="zone-active">Active</FieldLabel>
-                  </FieldContent>
-                  <Switch id="zone-active" checked={field.value} onCheckedChange={field.onChange} />
-                </Field>
-              )}
-            />
-          )}
-        </form>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="zone-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {zone ? "Save changes" : "Create zone"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={zone ? `Edit ${zone.name}` : "New delivery zone"}
+      description="An order lands in this zone when its ship-to address mentions one of the zone's areas."
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={zone ? "Save changes" : "Create zone"}
+    >
+      <Field>
+        <FieldLabel htmlFor="zone-name">Name *</FieldLabel>
+        <FieldContent>
+          <Input id="zone-name" placeholder="e.g. Inside Dhaka" aria-invalid={!!errors.name} {...register("name")} />
+          <FieldError errors={[errors.name]} />
+        </FieldContent>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="zone-areas">Areas</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id="zone-areas"
+            rows={4}
+            placeholder="dhaka, gulshan, banani, uttara"
+            aria-invalid={!!errors.areas}
+            {...register("areas")}
+          />
+          <FieldDescription>Comma or newline separated keywords matched against the address.</FieldDescription>
+          <FieldError errors={[errors.areas]} />
+        </FieldContent>
+      </Field>
+      {zone && <SwitchField control={control} name="is_active" label="Active" />}
+    </FormDialog>
   )
 }

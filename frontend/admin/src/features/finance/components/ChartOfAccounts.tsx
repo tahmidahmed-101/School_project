@@ -1,41 +1,38 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
-import { BookText, CheckCircle2, Loader2, Plus } from "lucide-react"
+import { BookText, Plus } from "lucide-react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { FormDialog, SwitchField } from "@/components/common/FormDialog"
+import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { reportFormError } from "@/lib/forms"
 import { humanize } from "@/lib/format"
+import type { Option } from "@/lib/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { useListPage } from "@/hooks/use-list-page"
 
 import { deleteData, fetchAll, patchData, postData, restoreAccount } from "../slices/accountSlice"
 import type { Account, AccountPayload, AccountType } from "../types"
-import { accountLabel, useAccounts, useCan, useDebouncedValue } from "../hooks/useFinanceHelpers"
-import { findAccount, useImportLookup } from "../hooks/useImportLookups"
-import { RestoreButton, ShowDeletedToggle } from "./shared"
+import { accountLabel, useAccounts } from "../hooks/useFinanceHelpers"
+import { findAccount, useFinanceImportLookups } from "../hooks/useImportLookups"
 
 const PAGE_SIZE = 50
 const NONE = "none"
@@ -111,156 +108,113 @@ function AccountFormDialog({
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      for (const [field, message] of Object.entries(getApiFieldErrors(err))) {
-        if (field in schema.shape) setError(field as keyof FormValues, { message })
-      }
-      toast.error(getApiErrorMessage(err, "Failed to save account"))
+      reportFormError(err, { setError, fields: Object.keys(schema.shape), fallback: "Failed to save account" })
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{account ? "Edit Account" : "New Ledger Account"}</DialogTitle>
-          <DialogDescription>Accounts in the chart are what every journal line posts to.</DialogDescription>
-        </DialogHeader>
-        <form id="account-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 py-2">
-          <div className="grid grid-cols-3 gap-4">
-            <Field>
-              <FieldLabel htmlFor="acc-code">Code *</FieldLabel>
-              <FieldContent>
-                <Input id="acc-code" placeholder="e.g. 5300" aria-invalid={!!errors.code} {...register("code")} />
-                <FieldError errors={[errors.code]} />
-              </FieldContent>
-            </Field>
-            <Field className="col-span-2">
-              <FieldLabel htmlFor="acc-name">Name *</FieldLabel>
-              <FieldContent>
-                <Input id="acc-name" aria-invalid={!!errors.name} {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="acc-type">Type *</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="type"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="acc-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACCOUNT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {humanize(t)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError errors={[errors.type]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="acc-parent">Parent account</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="parent_id"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="acc-parent">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>None (top level)</SelectItem>
-                        {allAccounts
-                          .filter((a) => a.id !== account?.id)
-                          .map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {accountLabel(a)}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError errors={[errors.parent_id]} />
-              </FieldContent>
-            </Field>
-          </div>
-          {account && (
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={account ? "Edit Account" : "New Ledger Account"}
+      description="Accounts in the chart are what every journal line posts to."
+      onSubmit={handleSubmit(onSubmit)}
+      submitting={isSubmitting}
+      submitLabel={account ? "Save Changes" : "Create Account"}
+    >
+      <div className="grid grid-cols-3 gap-4">
+        <Field>
+          <FieldLabel htmlFor="acc-code">Code *</FieldLabel>
+          <FieldContent>
+            <Input id="acc-code" placeholder="e.g. 5300" aria-invalid={!!errors.code} {...register("code")} />
+            <FieldError errors={[errors.code]} />
+          </FieldContent>
+        </Field>
+        <Field className="col-span-2">
+          <FieldLabel htmlFor="acc-name">Name *</FieldLabel>
+          <FieldContent>
+            <Input id="acc-name" aria-invalid={!!errors.name} {...register("name")} />
+            <FieldError errors={[errors.name]} />
+          </FieldContent>
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="acc-type">Type *</FieldLabel>
+          <FieldContent>
             <Controller
               control={control}
-              name="is_active"
+              name="type"
               render={({ field }) => (
-                <div className="flex items-center gap-3">
-                  <Switch id="acc-active" checked={field.value} onCheckedChange={field.onChange} />
-                  <label htmlFor="acc-active" className="text-sm">
-                    Active
-                  </label>
-                </div>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="acc-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACCOUNT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {humanize(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
-          )}
-        </form>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="account-form" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
-            {account ? "Save Changes" : "Create Account"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <FieldError errors={[errors.type]} />
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="acc-parent">Parent account</FieldLabel>
+          <FieldContent>
+            <Controller
+              control={control}
+              name="parent_id"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="acc-parent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>None (top level)</SelectItem>
+                    {allAccounts
+                      .filter((a) => a.id !== account?.id)
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {accountLabel(a)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <FieldError errors={[errors.parent_id]} />
+          </FieldContent>
+        </Field>
+      </div>
+      {account && <SwitchField control={control} name="is_active" label="Active" />}
+    </FormDialog>
   )
 }
-
-type Option = { label: string; value: string }
 
 const ChartOfAccounts = () => {
   useDocumentTitle("Chart of Accounts")
   const dispatch = useAppDispatch()
-  const { data, isFetchingList, error, totalItems, meta } = useAppSelector((state) => state.ledgerAccounts)
+  const listState = useAppSelector((state) => state.ledgerAccounts)
   const canPost = useCan("accounting.post")
   const { accounts: allAccounts, accountsById, reload: reloadLookup } = useAccounts()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search)
   const [type, setType] = useState<Option | null>(null)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
 
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(type ? { type: type.value } : {}),
-          ...(includeDeleted ? { include_deleted: "true" } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, type, includeDeleted]
-  )
+  const list = useListPage({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: listState,
+    params: { type: type?.value },
+    pageSize: PAGE_SIZE,
+  })
 
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
-
-  const accountLookup = useImportLookup<Account>("/admin/accounting/accounts/")
+  const { accountLookup } = useFinanceImportLookups()
   const importFields = useMemo<ImportField[]>(
     () => [
       { key: "code", label: "Code", required: true, aliases: ["Account code"], example: "6500" },
@@ -282,7 +236,7 @@ const ChartOfAccounts = () => {
       await dispatch(deleteData(account.id)).unwrap()
       toast.success("Account deleted")
       reloadLookup()
-      if (includeDeleted) load()
+      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete account"))
     }
@@ -318,20 +272,16 @@ const ChartOfAccounts = () => {
       id: "parent",
       header: "PARENT",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.parent_id ? accountLabel(accountsById.get(row.original.parent_id)) : "—"}
-        </span>
+        <TextCell
+          value={row.original.parent_id ? accountLabel(accountsById.get(row.original.parent_id)) : null}
+          muted
+        />
       ),
     },
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) =>
-        row.original.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" />
-        ) : (
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-        ),
+      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
     },
     {
       id: "actions",
@@ -339,10 +289,11 @@ const ChartOfAccounts = () => {
       cell: ({ row }) => {
         const acc = row.original
         if (!canPost) return null
-        if (acc.deleted_at) return <RestoreButton label={acc.name} onClick={() => handleRestore(acc)} />
         return (
           <TableActions
             itemName={`${acc.code} ${acc.name}`}
+            deleted={!!acc.deleted_at}
+            onRestore={() => handleRestore(acc)}
             onEdit={() => {
               setEditing(acc)
               setFormOpen(true)
@@ -356,45 +307,45 @@ const ChartOfAccounts = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Chart of Accounts" description="The ledger accounts every posting is booked against." />
-        {canPost && (
-          <div className="flex flex-wrap items-center gap-3">
-            <CsvImportButton
-              entityName="accounts"
-              fields={importFields}
-              createRow={async (payload) => {
-                const created = await dispatch(postData({ payload: payload as Partial<Account> })).unwrap()
-                // Lets later rows in the same file use this account as their parent.
-                accountLookup.add(created)
-                return created
-              }}
-              onComplete={() => {
-                accountLookup.reset()
-                reloadLookup()
-                load()
-              }}
-            />
-            <Button
-              size="action"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <Plus className="size-5" /> New Account
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Chart of Accounts"
+        description="The ledger accounts every posting is booked against."
+        actions={
+          canPost && (
+            <>
+              <CsvImportButton
+                entityName="accounts"
+                fields={importFields}
+                createRow={async (payload) => {
+                  const created = await dispatch(postData({ payload: payload as Partial<Account> })).unwrap()
+                  // Lets later rows in the same file use this account as their parent.
+                  accountLookup.add(created)
+                  return created
+                }}
+                onComplete={() => {
+                  accountLookup.reset()
+                  reloadLookup()
+                  list.reload()
+                }}
+              />
+              <Button
+                size="action"
+                onClick={() => {
+                  setEditing(null)
+                  setFormOpen(true)
+                }}
+              >
+                <Plus className="size-5" /> New Account
+              </Button>
+            </>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search code or name..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -402,46 +353,20 @@ const ChartOfAccounts = () => {
                 frameworks={ACCOUNT_TYPES.map((t) => ({ label: humanize(t), value: t }))}
                 placeholder="Type"
                 value={type}
-                onValueChange={(v) => {
-                  setType(v)
-                  setPage(1)
-                }}
+                onValueChange={setType}
               />
             ),
           },
           ...(canPost
-            ? [
-                {
-                  component: (
-                    <ShowDeletedToggle
-                      id="accounts-deleted"
-                      checked={includeDeleted}
-                      onCheckedChange={(v) => {
-                        setIncludeDeleted(v)
-                        setPage(1)
-                      }}
-                    />
-                  ),
-                },
-              ]
+            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
             : []),
         ]}
       />
 
       <DataTable
         columns={columns}
-        data={data}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={listState.data}
+        {...list.tableProps}
         emptyIcon={BookText}
         emptyTitle="No accounts found"
         minWidth="860px"

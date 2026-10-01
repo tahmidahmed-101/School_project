@@ -83,9 +83,29 @@ export function formatDateTime(value: DateInput, fallback = "—"): string {
   return d ? d.toLocaleString() : fallback
 }
 
+/** A Date as a local calendar day, "YYYY-MM-DD" — the format of the backend's date params. */
+export function toISODate(date: Date): string {
+  return formatFns(date, "yyyy-MM-dd")
+}
+
 /** Today's date in the user's local timezone as "YYYY-MM-DD". */
 export function todayLocalISODate(): string {
-  return formatFns(new Date(), "yyyy-MM-dd")
+  return toISODate(new Date())
+}
+
+/**
+ * Parses a CSV-import date ("2026-12-31" or "2026-12-31 23:59", local time) to an ISO string.
+ * A bare date means the end of that day.
+ */
+export function parseImportDateTime(raw: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/.exec(raw.trim())
+  if (!m) throw new Error(`"${raw}" is not a date like 2026-12-31 or 2026-12-31 23:59`)
+  const [, y, mo, d, h, mi] = m
+  const date = h
+    ? new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi))
+    : new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59)
+  if (Number.isNaN(date.getTime()) || date.getMonth() !== Number(mo) - 1) throw new Error(`"${raw}" is not a valid date`)
+  return date.toISOString()
 }
 
 /** UTC ISO string → local "yyyy-MM-dd'T'HH:mm" for <input type="datetime-local">. */

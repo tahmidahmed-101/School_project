@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
@@ -17,24 +17,24 @@ import {
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { DateCell, MoneyCell } from "@/components/common/cells"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime, fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
+import type { Option } from "@/lib/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useListPage } from "@/hooks/use-list-page"
 
 import { fetchAll, fetchSingle, recordVendorPayment, vendorBillPdfUrl, voidVendorBill } from "../slices/vendorBillSlice"
 import type { VendorBill } from "../types"
-import { useCanWriteBills, useDebouncedValue, useProcurementSelector } from "../hooks/useProcurement"
+import { useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
+import { useStatusSortFilters } from "../hooks/useStatusSortFilters"
 import { BILL_STATUS_TONE, openPdf } from "../utils"
-import { ConfirmAction } from "./ConfirmAction"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
-
-const PAGE_SIZE = 20
-type Option = { label: string; value: string }
 
 const PAYMENT_METHODS = ["Bank transfer", "Cash", "Cheque", "bKash", "Nagad", "Card"]
 
@@ -246,7 +246,7 @@ function BillDetailDialog({
               <div className="flex flex-wrap gap-2">
                 {!hasPayments && (
                   <>
-                    <ConfirmAction
+                    <ConfirmDialog
                       title={`Void ${bill.bill_number}?`}
                       description="Voiding reverses the bill's ledger postings. It can't be undone."
                       confirmLabel="Void bill"
@@ -287,45 +287,30 @@ const STATUS_OPTIONS: Option[] = [
   { label: "Void", value: "void" },
 ]
 
+const SORT_OPTIONS: Option[] = [
+  { label: "Due date: latest", value: "-due_date" },
+  { label: "Due date: soonest", value: "due_date" },
+  { label: "Recently created", value: "-created_at" },
+]
+
 const VendorBills = () => {
   useDocumentTitle("Vendor Bills")
   const dispatch = useAppDispatch()
-  const { data, isFetchingList, error, totalItems, meta } = useProcurementSelector((state) => state.vendorBills)
+  const state = useProcurementSelector((state) => state.vendorBills)
+  const { data } = state
   const canWrite = useCanWriteBills()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search)
-  const [status, setStatus] = useState<Option | null>(null)
-  const [ordering, setOrdering] = useState<Option | null>(null)
+  const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: filters.params })
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
   const viewing = data.find((b) => b.id === viewingId) ?? null
 
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(status ? { status: status.value } : {}),
-          ...(ordering ? { ordering: ordering.value } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, status, ordering]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
-
   // Payments/edits change totals and status server-side: refetch the bill, then the page.
   const handleChanged = async (billId: string) => {
     await dispatch(fetchSingle(billId))
-    load()
+    list.reload()
   }
 
   const columns: ColumnDef<VendorBill>[] = [
@@ -355,7 +340,7 @@ const VendorBills = () => {
     {
       accessorKey: "amount",
       header: "AMOUNT",
-      cell: ({ row }) => <span className="text-sm font-semibold tabular-nums">{formatCurrency(row.original.amount)}</span>,
+      cell: ({ row }) => <MoneyCell value={row.original.amount} emphasis />,
     },
     {
       id: "outstanding",
@@ -369,7 +354,7 @@ const VendorBills = () => {
     {
       accessorKey: "due_date",
       header: "DUE",
-      cell: ({ row }) => <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.original.due_date)}</span>,
+      cell: ({ row }) => <DateCell value={row.original.due_date} className="text-muted-foreground" />,
     },
     {
       accessorKey: "status",
@@ -378,77 +363,36 @@ const VendorBills = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => <TableActions itemName={row.original.bill_number} onView={() => setViewingId(row.original.id)} />,
     },
   ]
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Vendor Bills" description="Supplier invoices matched to received purchase orders (accounts payable)." />
-        {canWrite && (
-          <Button size="action" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-5" /> New Bill
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Vendor Bills"
+        description="Supplier invoices matched to received purchase orders (accounts payable)."
+        actions={
+          canWrite && (
+            <Button size="action" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-5" /> New Bill
+            </Button>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search bill number..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={STATUS_OPTIONS}
-                placeholder="Status"
-                value={status}
-                onValueChange={(v) => {
-                  setStatus(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={[
-                  { label: "Due date: latest", value: "-due_date" },
-                  { label: "Due date: soonest", value: "due_date" },
-                  { label: "Recently created", value: "-created_at" },
-                ]}
-                placeholder="Sort"
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
-        ]}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
+        filters={filters.filters}
       />
 
       <DataTable
         columns={columns}
         data={data}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        {...list.tableProps}
         onRowClick={(b) => setViewingId(b.id)}
         emptyIcon={FileText}
         emptyTitle="No vendor bills"
@@ -461,7 +405,7 @@ const VendorBills = () => {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSaved={(bill) => {
-          load()
+          list.reload()
           setViewingId(bill.id)
         }}
       />

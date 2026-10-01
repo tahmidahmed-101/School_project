@@ -1,35 +1,34 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Boxes, Package, PlusIcon, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react"
+import { Boxes, Package, PlusIcon, ToggleLeft, ToggleRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { PageHeading } from "@/components/common/PageHeading"
-import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
+import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
+import { BulkActionBar } from "@/components/common/BulkActionBar"
+import { SortSelect } from "@/components/common/SortSelect"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan } from "@/hooks/use-can"
+import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
+import { createImportLookup, splitList } from "@/lib/importLookup"
+import type { Option } from "@/lib/types"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
 import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
-import { usePermission } from "../lib/usePermission"
-import { useDebounced } from "../lib/useDebounced"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
-import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { createImportLookup, splitList } from "../lib/importLookup"
-
-type Option = { label: string; value: string }
-
-const PAGE_SIZE = 20
+import { useRowSelection } from "../lib/useRowSelection"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -47,8 +46,9 @@ const Products = () => {
   useDocumentTitle("Products")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const canManage = usePermission("catalog.manage")
-  const { data: products, isFetchingList, error, totalItems } = useAppSelector((s) => s.products)
+  const canManage = useCan("catalog.manage")
+  const productState = useAppSelector((s) => s.products)
+  const products = productState.data
   const { options: categoryOptions, nameById } = useCategoryOptions()
 
   // CSV import: simple products only (one variant created from price/SKU in the same call).
@@ -85,60 +85,34 @@ const Products = () => {
     [categoryLookup]
   )
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search)
   const [category, setCategory] = useState<Option | null>(null)
   const [productType, setProductType] = useState<Option | null>(null)
   const [categoryType, setCategoryType] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
-  const [selected, setSelected] = useState<string[]>([])
   const [bulkBusy, setBulkBusy] = useState(false)
 
-  const params = useMemo(
-    () => ({
-      page,
-      page_size: PAGE_SIZE,
-      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
-      ...(category ? { category_id: category.value } : {}),
-      ...(productType ? { product_type: productType.value } : {}),
-      ...(categoryType ? { category_type: categoryType.value } : {}),
-      ...(status ? { is_active: status.value } : {}),
-      ...(ordering ? { ordering: ordering.value } : {}),
-      ...(includeDeleted ? { include_deleted: true } : {}),
-    }),
-    [page, debouncedSearch, category, productType, categoryType, status, ordering, includeDeleted]
-  )
-
-  const load = useCallback(() => {
-    dispatch(fetchAll(params))
-  }, [dispatch, params])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  // Any filter change returns to page 1 and drops a selection that may no longer be visible.
-  const resetPaging = () => {
-    setPage(1)
-    setSelected([])
-  }
-
-  const toggleSelected = (id: string, checked: boolean) =>
-    setSelected((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
-
-  const selectable = products.filter((p) => !p.deleted_at)
-  const allSelected = selectable.length > 0 && selectable.every((p) => selected.includes(p.id))
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state: productState,
+    params: {
+      category_id: category?.value,
+      product_type: productType?.value,
+      category_type: categoryType?.value,
+      is_active: status?.value,
+      ordering: ordering?.value,
+    },
+  })
+  // Any page or filter change drops a selection that may no longer be visible.
+  const selection = useRowSelection(products, `${list.page}|${JSON.stringify(list.query)}`)
 
   const runBulk = async (isActive: boolean) => {
     setBulkBusy(true)
     try {
-      const res = await bulkProductStatus(selected, isActive)
+      const res = await bulkProductStatus(selection.selected, isActive)
       toast.success(`${res.affected} product(s) ${isActive ? "activated" : "deactivated"}`)
-      setSelected([])
-      load()
+      selection.clear()
+      list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Bulk update failed"))
     } finally {
@@ -150,35 +124,24 @@ const Products = () => {
     try {
       await restoreProduct(product.id)
       toast.success(`${product.name} restored`)
-      load()
+      list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to restore product"))
     }
   }
 
+  const handleDelete = async (product: Product) => {
+    try {
+      await dispatch(deleteData(product.id)).unwrap()
+      toast.success(`${product.name} deleted`)
+      if (list.includeDeleted) list.reload()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete product"))
+    }
+  }
+
   const columns: ColumnDef<Product>[] = [
-    ...(canManage
-      ? [
-          {
-            id: "select",
-            header: () => (
-              <Checkbox
-                aria-label="Select all on this page"
-                checked={allSelected}
-                onCheckedChange={(v) => setSelected(v ? selectable.map((p) => p.id) : [])}
-              />
-            ),
-            cell: ({ row }: { row: { original: Product } }) =>
-              row.original.deleted_at ? null : (
-                <Checkbox
-                  aria-label={`Select ${row.original.name}`}
-                  checked={selected.includes(row.original.id)}
-                  onCheckedChange={(v) => toggleSelected(row.original.id, Boolean(v))}
-                />
-              ),
-          } as ColumnDef<Product>,
-        ]
-      : []),
+    ...(canManage ? [selection.column] : []),
     {
       id: "image",
       header: "IMAGE",
@@ -201,12 +164,10 @@ const Products = () => {
       accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{row.original.name}</div>
-          <div className="truncate text-xs text-muted-foreground">
-            {row.original.variants.length} variant{row.original.variants.length === 1 ? "" : "s"}
-          </div>
-        </div>
+        <ProductCell
+          name={row.original.name}
+          sub={`${row.original.variants.length} variant${row.original.variants.length === 1 ? "" : "s"}`}
+        />
       ),
     },
     {
@@ -252,49 +213,21 @@ const Products = () => {
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) =>
-        row.original.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" />
-        ) : (
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-        ),
+      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => {
         const product = row.original
-        if (product.deleted_at) {
-          return canManage ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                void handleRestore(product)
-              }}
-            >
-              <RotateCcw /> Restore
-            </Button>
-          ) : null
-        }
         return (
           <TableActions
             itemName={product.name}
+            deleted={Boolean(product.deleted_at)}
+            onRestore={canManage ? () => handleRestore(product) : undefined}
             viewUrl={`/product_detail/${product.id}`}
             editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
-            onDelete={
-              canManage
-                ? async () => {
-                    try {
-                      await dispatch(deleteData(product.id)).unwrap()
-                      toast.success(`${product.name} deleted`)
-                    } catch (err) {
-                      toast.error(getApiErrorMessage(err, "Failed to delete product"))
-                    }
-                  }
-                : undefined
-            }
+            onDelete={canManage ? () => handleDelete(product) : undefined}
           />
         )
       },
@@ -315,36 +248,36 @@ const Products = () => {
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Products" description="Manage your product catalog, pricing and variants" />
-        {canManage && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
-              <Boxes className="size-5" /> New Bundle
-            </Button>
-            <CsvImportButton
-              entityName="products"
-              fields={importFields}
-              createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
-              onComplete={() => {
-                categoryLookup.reset()
-                load()
-              }}
-            />
-            <Button size="action" onClick={() => navigate("/product_form/new")}>
-              <PlusIcon className="size-5" /> Add Product
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Products"
+        description="Manage your product catalog, pricing and variants"
+        actions={
+          canManage && (
+            <>
+              <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
+                <Boxes className="size-5" /> New Bundle
+              </Button>
+              <CsvImportButton
+                entityName="products"
+                fields={importFields}
+                createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
+                onComplete={() => {
+                  categoryLookup.reset()
+                  list.reload()
+                }}
+              />
+              <Button size="action" onClick={() => navigate("/product_form/new")}>
+                <PlusIcon className="size-5" /> Add Product
+              </Button>
+            </>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search products by name…"
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          resetPaging()
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -352,10 +285,7 @@ const Products = () => {
                 placeholder="Category"
                 frameworks={categoryOptions.map((o) => ({ label: `${"— ".repeat(o.depth)}${o.label}`, value: o.value }))}
                 value={category}
-                onValueChange={(v) => {
-                  setCategory(v)
-                  resetPaging()
-                }}
+                onValueChange={setCategory}
               />
             ),
           },
@@ -365,10 +295,7 @@ const Products = () => {
                 placeholder="Type"
                 frameworks={productTypeOptions}
                 value={productType}
-                onValueChange={(v) => {
-                  setProductType(v)
-                  resetPaging()
-                }}
+                onValueChange={setProductType}
               />
             ),
           },
@@ -378,10 +305,7 @@ const Products = () => {
                 placeholder="Category type"
                 frameworks={categoryTypeOptions}
                 value={categoryType}
-                onValueChange={(v) => {
-                  setCategoryType(v)
-                  resetPaging()
-                }}
+                onValueChange={setCategoryType}
               />
             ),
           },
@@ -391,71 +315,32 @@ const Products = () => {
                 placeholder="Status"
                 frameworks={statusOptions}
                 value={status}
-                onValueChange={(v) => {
-                  setStatus(v)
-                  resetPaging()
-                }}
+                onValueChange={setStatus}
               />
             ),
           },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                placeholder="Sort"
-                frameworks={orderingOptions}
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  resetPaging()
-                }}
-              />
-            ),
-          },
+          { component: <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} /> },
           ...(canManage
-            ? [
-                {
-                  component: (
-                    <DeletedToggle pressed={includeDeleted} onPressedChange={(v) => {
-                          setIncludeDeleted(v)
-                          resetPaging()
-                        }} />
-                  ),
-                },
-              ]
+            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
             : []),
         ]}
       />
 
-      {canManage && selected.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm">
-          <span className="font-medium">{selected.length} selected</span>
+      {canManage && (
+        <BulkActionBar count={selection.selected.length} onClear={selection.clear}>
           <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(true)}>
             <ToggleRight /> Activate
           </Button>
           <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(false)}>
             <ToggleLeft /> Deactivate
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
-            Clear
-          </Button>
-        </div>
+        </BulkActionBar>
       )}
 
       <DataTable
         columns={columns}
         data={products}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={load}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
-        totalCount={totalItems}
-        onPageChange={(i) => {
-          setPage(i + 1)
-          setSelected([])
-        }}
+        {...list.tableProps}
         getRowLink={(p) => `/product_detail/${p.id}`}
         unlabelledColumns={["select", "image"]}
         emptyIcon={Package}

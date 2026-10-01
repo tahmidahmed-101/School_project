@@ -1,6 +1,5 @@
-import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
+import { createActionThunk, createSliceFactory, replaceOnFulfilled, withExtraCases } from "@/lib/sliceFactory"
 import type { Account } from "../types"
-import { createRestoreThunk } from "./restore"
 
 const ENDPOINT = "/admin/accounting/accounts/"
 
@@ -10,12 +9,10 @@ const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = crea
   initialSingleData: null,
 })
 
-export const restoreAccount = createRestoreThunk<Account>("ledgerAccounts", ENDPOINT)
+export const restoreAccount = createActionThunk<Account>("ledgerAccounts/restore", ENDPOINT, "restore")
 
 export { fetchAll, fetchSingle, postData, patchData, deleteData }
 
 export default withExtraCases(reducer, (builder) => {
-  builder.addCase(restoreAccount.fulfilled, (state, action) => {
-    state.data = state.data.map((item) => (item.id === action.payload.id ? action.payload : item))
-  })
+  replaceOnFulfilled(builder, restoreAccount)
 })

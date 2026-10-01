@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { hasPermission } from "@/app/modules"
-import type { ApiError } from "@/lib/api/client"
 import { rangeKey } from "./dateRange"
 import {
   fetchDashboard,
@@ -12,18 +10,11 @@ import {
 } from "./slices/reportingSlice"
 import type { DateRangeParams } from "./types"
 
-export function isForbidden(error: unknown): boolean {
-  return !!error && typeof error === "object" && (error as Partial<ApiError>).status === 403
-}
-
 /**
  * The reporting endpoints accept reports.view OR accounting.view
- * (require_any_staff_permission in api/v1/admin/reporting/views.py).
+ * (require_any_staff_permission in api/v1/admin/reporting/views.py); pass to useCan.
  */
-export function useCanViewReports(): boolean {
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
-  return hasPermission(permissions, "reports.view") || hasPermission(permissions, "accounting.view")
-}
+export const REPORT_PERMISSIONS = ["reports.view", "accounting.view"] as const
 
 export interface ReportView<T> {
   /** Data for the requested window only (never a previous window's numbers). */

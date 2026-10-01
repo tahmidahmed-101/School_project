@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Loader2, Package, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { useDebounced } from "@/hooks/use-debounced"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/lib/format"
 import { searchVariants } from "../api"
@@ -41,26 +42,27 @@ export function VariantPicker({
   const [results, setResults] = useState<ProductVariant[]>([])
   const boxRef = useRef<HTMLDivElement>(null)
   const filtersKey = JSON.stringify(filters ?? {})
+  const debouncedQuery = useDebounced(query.trim(), 250)
 
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    const handle = setTimeout(async () => {
+    const run = async () => {
       setLoading(true)
       try {
-        const items = await searchVariants(query.trim(), JSON.parse(filtersKey))
+        const items = await searchVariants(debouncedQuery, JSON.parse(filtersKey))
         if (!cancelled) setResults(items)
       } catch {
         if (!cancelled) setResults([])
       } finally {
         if (!cancelled) setLoading(false)
       }
-    }, 250)
+    }
+    void run()
     return () => {
       cancelled = true
-      clearTimeout(handle)
     }
-  }, [query, open, filtersKey])
+  }, [debouncedQuery, open, filtersKey])
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {

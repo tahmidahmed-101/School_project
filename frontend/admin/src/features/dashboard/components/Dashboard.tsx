@@ -1,12 +1,13 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { BarChart3 } from "lucide-react"
-import { useAppSelector } from "@/app/hooks"
 import { getNavGroups } from "@/app/modules"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useCan, usePermissions } from "@/hooks/use-can"
+import { isForbidden } from "@/lib/api/client"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
-import { isForbidden, useCanViewReports, useDashboardReport } from "@/features/analytics/hooks"
+import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hooks"
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
 import { KpiCards } from "@/features/analytics/components/KpiCards"
 import { RevenueComparisonChart } from "@/features/analytics/components/RevenueComparisonChart"
@@ -20,8 +21,8 @@ import { ReportsUnavailable } from "@/features/analytics/components/ReportsUnava
 const Dashboard = () => {
   useDocumentTitle("Overview")
 
-  const canView = useCanViewReports()
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
+  const canView = useCan(...REPORT_PERMISSIONS)
+  const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
   const report = useDashboardReport(range, canView)
   const blocked = !canView || isForbidden(report.error)
@@ -42,18 +43,21 @@ const Dashboard = () => {
 
   return (
     <div className="section-container flex flex-col gap-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <PageHeading title="Overview" description="How the store is doing in the selected period." />
-        {!blocked && (
-          <DateRangeControl
-            preset={preset}
-            range={range}
-            onPreset={setPreset}
-            onCustom={setCustom}
-            busy={report.isRefreshing}
-          />
-        )}
-      </div>
+      <PageHeader
+        title="Overview"
+        description="How the store is doing in the selected period."
+        actions={
+          !blocked && (
+            <DateRangeControl
+              preset={preset}
+              range={range}
+              onPreset={setPreset}
+              onCustom={setCustom}
+              busy={report.isRefreshing}
+            />
+          )
+        }
+      />
 
       {blocked ? (
         <ReportsUnavailable links={fallbackLinks} />

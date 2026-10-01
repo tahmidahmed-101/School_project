@@ -4,8 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import type { StatusTone } from "@/components/common/status-tones"
-import { useAppSelector } from "@/app/hooks"
-import { hasPermission } from "@/app/modules"
+import { useCan } from "@/hooks/use-can"
 import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
 import type { DashboardOrder } from "../types"
 import { ReportWidget } from "./ReportWidget"
@@ -28,8 +27,7 @@ interface Props {
 }
 
 export function RecentOrders({ orders, isLoading, error, onRetry, className }: Props) {
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
-  const canOpenOrders = hasPermission(permissions, "orders.view")
+  const canOpenOrders = useCan("orders.view")
 
   return (
     <ReportWidget

@@ -1,28 +1,26 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { BanIcon, RotateCcwIcon } from "lucide-react"
+import { BanIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
-import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { ActiveStatusBadge, DateCell, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { bulkDeactivateUsers, fetchAll, postData, restoreUser } from "@/features/users/slices/customerSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
-import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatDate } from "@/lib/format"
+import type { Option } from "@/lib/types"
 import { UserAvatar } from "./UserAvatar"
 import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-
-const PAGE_SIZE = 20
 
 // Mirrors AdminUserCreateSerializer (POST /admin/users/); role is always sent as "customer".
 const CUSTOMER_IMPORT_FIELDS: ImportField[] = [
@@ -44,7 +42,7 @@ const CUSTOMER_IMPORT_FIELDS: ImportField[] = [
   { key: "is_active", label: "Active", type: "boolean", aliases: ["status"], example: "yes" },
 ]
 
-const statusOptions = [
+const statusOptions: Option[] = [
   { label: "Active", value: "true" },
   { label: "Inactive", value: "false" },
 ]
@@ -54,36 +52,17 @@ const Customers = () => {
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: customers, isFetchingList, isMutating, error, totalItems, meta } = useAppSelector(
-    (state) => state.customers
-  )
+  const customerState = useAppSelector((state) => state.customers)
+  const { data: customers, isMutating } = customerState
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebounced(search.trim())
-  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<Option | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const loadCustomers = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          role: "customer",
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(statusFilter ? { is_active: statusFilter.value } : {}),
-          ...(includeDeleted ? { include_deleted: "true" } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, statusFilter, includeDeleted]
-  )
-
-  useEffect(() => {
-    const request = loadCustomers()
-    return () => request.abort()
-  }, [loadCustomers])
+  const list = useListPage({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: customerState,
+    params: { role: "customer", is_active: statusFilter?.value },
+  })
 
   const toggleRow = (id: string) =>
     setSelected((prev) => {
@@ -103,7 +82,7 @@ const Customers = () => {
       const result = await dispatch(bulkDeactivateUsers(ids)).unwrap()
       toast.success(`${result.affected} customer${result.affected === 1 ? "" : "s"} deactivated`)
       setSelected(new Set())
-      loadCustomers()
+      list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Couldn't deactivate the selected customers"))
     }
@@ -113,7 +92,7 @@ const Customers = () => {
     try {
       await dispatch(restoreUser(user.id)).unwrap()
       toast.success(`${displayNameOf(user)} restored`)
-      loadCustomers()
+      list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Couldn't restore this customer"))
     }
@@ -161,76 +140,60 @@ const Customers = () => {
     {
       accessorKey: "contact_phone",
       header: "PHONE",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.contact_phone || row.original.phone || "—"}</span>
-      ),
+      cell: ({ row }) => <TextCell muted value={row.original.contact_phone || row.original.phone} />,
     },
     {
       accessorKey: "date_joined",
       header: "JOINED",
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.date_joined)}</span>,
+      cell: ({ row }) => <DateCell value={row.original.date_joined} className="text-muted-foreground" />,
     },
     {
       accessorKey: "is_active",
       header: "STATUS",
-      cell: ({ row }) =>
-        row.original.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" label="Deleted" />
-        ) : (
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-        ),
+      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
     },
     {
       id: "actions",
-      header: "ACTION",
-      cell: ({ row }) =>
-        row.original.deleted_at ? (
-          <Button
-            variant="outline"
-            size="sm"
-            data-no-row-click="true"
-            disabled={isMutating}
-            onClick={(e) => {
-              e.stopPropagation()
-              handleRestore(row.original)
-            }}
-          >
-            <RotateCcwIcon className="size-3.5" /> Restore
-          </Button>
-        ) : (
-          <TableActions itemName={displayNameOf(row.original)} viewUrl={`/customer_detail/${row.original.id}`} />
-        ),
+      header: "ACTIONS",
+      cell: ({ row }) => (
+        <TableActions
+          itemName={displayNameOf(row.original)}
+          viewUrl={`/customer_detail/${row.original.id}`}
+          deleted={!!row.original.deleted_at}
+          onRestore={() => handleRestore(row.original)}
+        />
+      ),
     },
   ]
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Customers" description="Manage your registered customer accounts." />
-        <div className="flex items-center gap-3">
-          {selected.size > 0 && (
-            <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
-              <BanIcon className="size-4" /> Deactivate {selected.size} selected
-            </Button>
-          )}
-          <CsvImportButton
-            entityName="customers"
-            fields={CUSTOMER_IMPORT_FIELDS}
-            createRow={(payload) =>
-              dispatch(postData({ payload: { ...payload, role: "customer" } as Partial<AdminUser> })).unwrap()
-            }
-            onComplete={() => void loadCustomers()}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title="Customers"
+        description="Manage your registered customer accounts."
+        actions={
+          <>
+            {selected.size > 0 && (
+              <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
+                <BanIcon className="size-4" /> Deactivate {selected.size} selected
+              </Button>
+            )}
+            <CsvImportButton
+              entityName="customers"
+              fields={CUSTOMER_IMPORT_FIELDS}
+              createRow={(payload) =>
+                dispatch(postData({ payload: { ...payload, role: "customer" } as Partial<AdminUser> })).unwrap()
+              }
+              onComplete={list.reload}
+            />
+          </>
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search by name, email or phone..."
-        searchValue={search}
-        onSearchChange={(value) => {
-          setSearch(value)
-          setPage(1)
-        }}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -238,20 +201,12 @@ const Customers = () => {
                 frameworks={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value)
-                  setPage(1)
-                }}
+                onValueChange={setStatusFilter}
               />
             ),
           },
           {
-            component: (
-              <DeletedToggle pressed={includeDeleted} onPressedChange={(checked) => {
-                    setIncludeDeleted(checked)
-                    setPage(1)
-                  }} />
-            ),
+            component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
           },
         ]}
       />
@@ -259,16 +214,9 @@ const Customers = () => {
       <DataTable
         columns={columns}
         data={customers}
-        pageSize={PAGE_SIZE}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={loadCustomers}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
+        {...list.tableProps}
         onPageChange={(index) => {
-          setPage(index + 1)
+          list.tableProps.onPageChange(index)
           setSelected(new Set())
         }}
         onRowClick={(customer) => {

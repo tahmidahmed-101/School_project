@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, MapPin, Package, Search, Trash2Icon, User, X } from "lucide-react"
+import { Loader2, MapPin, Package, Search, Trash2Icon, User, X } from "lucide-react"
 
+import { PageHeader } from "@/components/common/PageHeader"
+import { ProductCell } from "@/components/common/cells"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +19,7 @@ import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
 import type { Carrier } from "@/features/shipping/types"
 import { METHODS_WITHOUT_REFERENCE, PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/features/payments/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useDebounced } from "@/hooks/use-debounced"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapEnvelope, unwrapList } from "@/lib/api/envelope"
 import { formatCurrency } from "@/lib/format"
@@ -56,36 +59,29 @@ const NONE = "__none__"
 
 /** Debounced search against a paginated admin list endpoint. */
 function useSearch<T>(url: string, query: string, extraParams: Record<string, string> = {}) {
-  const [results, setResults] = useState<T[]>([])
-  const [loading, setLoading] = useState(false)
+  const q = query.trim()
+  const debounced = useDebounced(q)
   const paramsKey = JSON.stringify(extraParams)
+  const key = JSON.stringify([url, debounced, paramsKey])
+  const [result, setResult] = useState<{ key: string; items: T[] }>({ key: "", items: [] })
 
   useEffect(() => {
-    const q = query.trim()
-    if (!q) return
+    if (!debounced) return
     const controller = new AbortController()
-    const t = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const res = await api.get(url, {
-          params: { search: q, page: 1, page_size: 8, ...JSON.parse(paramsKey) },
-          signal: controller.signal,
-        })
-        setResults(unwrapList<T>(res.data, 1, 8).items)
-      } catch {
-        if (!controller.signal.aborted) setResults([])
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }, 300)
-    return () => {
-      clearTimeout(t)
-      controller.abort()
-    }
-  }, [url, query, paramsKey])
+    api
+      .get(url, {
+        params: { search: debounced, page: 1, page_size: 8, ...JSON.parse(paramsKey) },
+        signal: controller.signal,
+      })
+      .then((res) => setResult({ key, items: unwrapList<T>(res.data, 1, 8).items }))
+      .catch(() => {
+        if (!controller.signal.aborted) setResult({ key, items: [] })
+      })
+    return () => controller.abort()
+  }, [url, debounced, paramsKey, key])
 
   // Stale hits from a previous query are hidden once the box is cleared.
-  return { results: query.trim() ? results : [], loading: query.trim() ? loading : false }
+  return { results: q ? result.items : [], loading: !!q && !!debounced && result.key !== key }
 }
 
 const CreateOrder = () => {
@@ -178,15 +174,11 @@ const CreateOrder = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" onClick={() => navigate("/orders")} aria-label="Back to orders">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">New order</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Phone or manual order placed on a customer's behalf.</p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ to: "/orders", label: "Back to orders" }}
+        title="New order"
+        description="Phone or manual order placed on a customer's behalf."
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -289,7 +281,7 @@ const CreateOrder = () => {
                               <span className="text-muted-foreground"> · {[v.size, v.color].filter(Boolean).join(" / ")}</span>
                             )}
                           </span>
-                          <span className="font-mono text-xs uppercase text-muted-foreground">{v.sku}</span>
+                          <span className="font-mono text-xs text-muted-foreground">{v.sku}</span>
                         </span>
                         <span className="shrink-0 text-right text-xs">
                           <span className="block font-semibold">{formatCurrency(v.effective_price)}</span>
@@ -316,8 +308,7 @@ const CreateOrder = () => {
                       {lines.map((l) => (
                         <TableRow key={l.variant.id}>
                           <TableCell>
-                            <p className="text-sm font-medium">{l.variant.product_name}</p>
-                            <p className="font-mono text-xs uppercase text-muted-foreground">{l.variant.sku}</p>
+                            <ProductCell name={l.variant.product_name} sku={l.variant.sku} />
                           </TableCell>
                           <TableCell className="text-right text-sm">{formatCurrency(l.variant.effective_price)}</TableCell>
                           <TableCell className="text-right">

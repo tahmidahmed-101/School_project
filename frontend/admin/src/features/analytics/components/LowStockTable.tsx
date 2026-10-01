@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { useAppSelector } from "@/app/hooks"
-import { hasPermission } from "@/app/modules"
+import { useCan } from "@/hooks/use-can"
 import { formatCount } from "../measure"
 import type { LowStockItem } from "../types"
 import { WidgetError } from "./ReportWidget"
@@ -28,8 +27,7 @@ interface Props {
 
 export function LowStockTable({ items, isLoading, error, onRetry }: Props) {
   const [query, setQuery] = useState("")
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
-  const canOpenInventory = hasPermission(permissions, "inventory.view")
+  const canOpenInventory = useCan("inventory.view")
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { fetchAllCategories } from "../api"
+import { useMemo } from "react"
+import { useAllPages } from "@/hooks/use-all-pages"
+import { CATEGORIES_ENDPOINT, categoryListParams } from "../api"
 import type { Category } from "../types"
 
 export interface CategoryOption {
@@ -35,35 +36,10 @@ export function buildCategoryTree(categories: Category[]): CategoryOption[] {
 
 /** All categories (every page) as tree-ordered options, for pickers and filters. */
 export function useCategoryOptions(includeDeleted = false) {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<unknown>(null)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      try {
-        const items = await fetchAllCategories({ include_deleted: includeDeleted })
-        if (cancelled) return
-        setCategories(items)
-        setError(null)
-      } catch (err) {
-        if (!cancelled) setError(err)
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [includeDeleted, reloadKey])
-
-  const reload = useCallback(() => {
-    setIsLoading(true)
-    setReloadKey((k) => k + 1)
-  }, [])
+  const { items: categories, isLoading, error, reload } = useAllPages<Category>(
+    CATEGORIES_ENDPOINT,
+    categoryListParams(includeDeleted)
+  )
 
   const options = useMemo(() => buildCategoryTree(categories), [categories])
   const nameById = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories])

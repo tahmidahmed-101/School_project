@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, PackageCheck } from "lucide-react"
@@ -14,24 +14,29 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { SortSelect } from "@/components/common/SortSelect"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { DateCell } from "@/components/common/cells"
 import { api } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
 import { formatDate } from "@/lib/format"
+import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useListPage } from "@/hooks/use-list-page"
 
 import { fetchAll } from "../slices/goodsReceiptSlice"
 import type { GoodsReceipt, PurchaseOrder } from "../types"
-import { useCanManagePurchasing, useDebouncedValue, useProcurementSelector } from "../hooks/useProcurement"
+import { useCanManagePurchasing, useProcurementSelector } from "../hooks/useProcurement"
 import { GRN_STATUS_LABEL, GRN_STATUS_TONE } from "../utils"
 import { GoodsReceiptDialog } from "./GoodsReceiptDialog"
 
-const PAGE_SIZE = 20
-type Option = { label: string; value: string }
+const SORT_OPTIONS: Option[] = [
+  { label: "Newest first", value: "-received_date" },
+  { label: "Oldest first", value: "received_date" },
+]
 
 const unitsOf = (grn: GoodsReceipt) => grn.lines.reduce((s, l) => s + l.quantity_received, 0)
 
@@ -114,39 +119,19 @@ function ReceiptDetailDialog({ grn, onClose }: { grn: GoodsReceipt | null; onClo
 const GoodsReceipts = () => {
   useDocumentTitle("Goods Receipts")
   const dispatch = useAppDispatch()
-  const { data, isFetchingList, error, totalItems, meta } = useProcurementSelector((state) => state.goodsReceipts)
+  const state = useProcurementSelector((state) => state.goodsReceipts)
   const canManage = useCanManagePurchasing()
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const debouncedSearch = useDebouncedValue(search)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [viewing, setViewing] = useState<GoodsReceipt | null>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)
-
-  const load = useCallback(
-    () =>
-      dispatch(
-        fetchAll({
-          page,
-          page_size: PAGE_SIZE,
-          ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          ...(ordering ? { ordering: ordering.value } : {}),
-        })
-      ),
-    [dispatch, page, debouncedSearch, ordering]
-  )
-
-  useEffect(() => {
-    const request = load()
-    return () => request.abort()
-  }, [load])
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ordering: ordering?.value } })
 
   const columns: ColumnDef<GoodsReceipt>[] = [
     {
       accessorKey: "received_date",
       header: "RECEIVED",
-      cell: ({ row }) => <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.original.received_date)}</span>,
+      cell: ({ row }) => <DateCell value={row.original.received_date} className="text-muted-foreground" />,
     },
     {
       accessorKey: "purchase_order_number",
@@ -184,63 +169,36 @@ const GoodsReceipts = () => {
     },
     {
       id: "actions",
-      header: "ACTION",
+      header: "ACTIONS",
       cell: ({ row }) => <TableActions itemName="goods receipt" onView={() => setViewing(row.original)} />,
     },
   ]
 
   return (
     <div className="section-container">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading title="Goods Receipts" description="Deliveries received against purchase orders (GRNs)." />
-        {canManage && (
-          <Button size="action" onClick={() => setReceiveOpen(true)}>
-            <PackageCheck className="size-5" /> Receive Goods
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Goods Receipts"
+        description="Deliveries received against purchase orders (GRNs)."
+        actions={
+          canManage && (
+            <Button size="action" onClick={() => setReceiveOpen(true)}>
+              <PackageCheck className="size-5" /> Receive Goods
+            </Button>
+          )
+        }
+      />
 
       <FilterToolbar
         searchPlaceholder="Search PO number or supplier..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={[
-                  { label: "Newest first", value: "-received_date" },
-                  { label: "Oldest first", value: "received_date" },
-                ]}
-                placeholder="Sort"
-                value={ordering}
-                onValueChange={(v) => {
-                  setOrdering(v)
-                  setPage(1)
-                }}
-              />
-            ),
-          },
-        ]}
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
+        filters={[{ component: <SortSelect options={SORT_OPTIONS} value={ordering} onChange={setOrdering} /> }]}
       />
 
       <DataTable
         columns={columns}
-        data={data}
-        isLoading={isFetchingList}
-        error={error}
-        onRetry={() => {
-          load()
-        }}
-        manualPagination
-        pageSize={PAGE_SIZE}
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={state.data}
+        {...list.tableProps}
         onRowClick={setViewing}
         emptyIcon={PackageCheck}
         emptyTitle="No goods received yet"
@@ -249,7 +207,7 @@ const GoodsReceipts = () => {
       />
 
       <ReceiptDetailDialog grn={viewing} onClose={() => setViewing(null)} />
-      <GoodsReceiptDialog open={receiveOpen} onOpenChange={setReceiveOpen} onReceived={() => load()} />
+      <GoodsReceiptDialog open={receiveOpen} onOpenChange={setReceiveOpen} onReceived={list.reload} />
     </div>
   )
 }

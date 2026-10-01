@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
-  ArrowLeft,
   Ban,
   CheckCircle2,
   Clock,
@@ -22,6 +21,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeleteModal } from "@/components/common/DeleteModal"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { DetailRow } from "@/components/common/DetailRow"
+import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
   activateUser,
@@ -151,51 +152,47 @@ const CustomerDetail = () => {
 
   return (
     <div className="section-container space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="back" size="icon" onClick={() => navigate("/customers")} aria-label="Back to customers">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{name}</h1>
-            <p className="text-muted-foreground text-sm">Customer since {formatDate(customer.date_joined)}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ResetPasswordDialog userId={customer.id} userLabel={name} />
-          {customer.is_active ? (
-            <Button
-              variant="outline"
-              size="action"
-              disabled={isMutating}
-              onClick={() => runAction(deactivateUser, "Customer deactivated")}
-            >
-              <Ban className="size-4" /> Deactivate
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="action"
-              disabled={isMutating}
-              onClick={() => runAction(activateUser, "Customer activated")}
-            >
-              <CheckCircle2 className="size-4" /> Activate
-            </Button>
-          )}
-          <DeleteModal
-            title={`Delete ${name}?`}
-            description="The account is soft-deleted: the customer can no longer sign in. You can restore it from the Customers list with “Show deleted”."
-            onConfirm={async () => {
-              if (await runAction(softDeleteUser, "Customer deleted")) navigate("/customers")
-            }}
-            trigger={
-              <Button variant="destructive" size="action" disabled={isMutating}>
-                <Trash2 className="size-4" /> Delete
+      <PageHeader
+        title={name}
+        description={`Customer since ${formatDate(customer.date_joined)}`}
+        back={{ to: "/customers", label: "Back to customers" }}
+        actions={
+          <>
+            <ResetPasswordDialog userId={customer.id} userLabel={name} />
+            {customer.is_active ? (
+              <Button
+                variant="outline"
+                size="action"
+                disabled={isMutating}
+                onClick={() => runAction(deactivateUser, "Customer deactivated")}
+              >
+                <Ban className="size-4" /> Deactivate
               </Button>
-            }
-          />
-        </div>
-      </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="action"
+                disabled={isMutating}
+                onClick={() => runAction(activateUser, "Customer activated")}
+              >
+                <CheckCircle2 className="size-4" /> Activate
+              </Button>
+            )}
+            <DeleteModal
+              title={`Delete ${name}?`}
+              description="The account is soft-deleted: the customer can no longer sign in. You can restore it from the Customers list with “Show deleted”."
+              onConfirm={async () => {
+                if (await runAction(softDeleteUser, "Customer deleted")) navigate("/customers")
+              }}
+              trigger={
+                <Button variant="destructive" size="action" disabled={isMutating}>
+                  <Trash2 className="size-4" /> Delete
+                </Button>
+              }
+            />
+          </>
+        }
+      />
 
       {summary && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -222,28 +219,29 @@ const CustomerDetail = () => {
               </div>
             </div>
             <Separator />
-            <dl className="grid grid-cols-1 gap-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4" /> Email</dt>
-                <dd className="font-medium break-all text-right">{customer.email}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" /> Phone</dt>
-                <dd className="font-medium">{customer.contact_phone || customer.phone || "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-muted-foreground">Email verified</dt>
-                <dd className="font-medium">{customer.is_email_verified ? "Yes" : "No"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-muted-foreground">Phone verified</dt>
-                <dd className="font-medium">{customer.is_phone_verified ? "Yes" : "No"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-muted-foreground">Last sign-in</dt>
-                <dd className="font-medium">{formatDateTime(customer.last_login, "Never")}</dd>
-              </div>
-            </dl>
+            <div>
+              <DetailRow
+                label={
+                  <span className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" /> Email
+                  </span>
+                }
+              >
+                <span className="break-all">{customer.email}</span>
+              </DetailRow>
+              <DetailRow
+                label={
+                  <span className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" /> Phone
+                  </span>
+                }
+              >
+                {customer.contact_phone || customer.phone || "—"}
+              </DetailRow>
+              <DetailRow label="Email verified">{customer.is_email_verified ? "Yes" : "No"}</DetailRow>
+              <DetailRow label="Phone verified">{customer.is_phone_verified ? "Yes" : "No"}</DetailRow>
+              <DetailRow label="Last sign-in">{formatDateTime(customer.last_login, "Never")}</DetailRow>
+            </div>
           </CardContent>
         </Card>
 
