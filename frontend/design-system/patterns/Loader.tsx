@@ -17,7 +17,7 @@ interface LoaderProps {
 }
 
 const WRAPPER_CLASS: Record<Exclude<LoaderVariant, "inline">, string> = {
-  page: "min-h-[70vh]",
+  page: "min-h-screen",
   section: "min-h-[240px]",
 };
 
