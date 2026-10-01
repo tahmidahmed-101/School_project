@@ -39,7 +39,8 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
             <div className="flex items-center gap-1 font-semibold text-gold-800">
               <Calendar className="h-3 w-3 shrink-0 text-gold-700" />
               <span>
-                {ui("expectedDelivery")}: {product.expectedDelivery ? t(product.expectedDelivery) : "TBD"}
+                {ui("expectedDelivery")}:{" "}
+                {product.expectedDelivery ? t(product.expectedDelivery) : ui("deliveryDateTbc")}
               </span>
             </div>
             <p className="text-2xs text-fg-muted">{ui("cartPreOrderNotice")}</p>

@@ -4,7 +4,6 @@ import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { getDiscountPercent } from "@/lib/product";
-import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
@@ -21,7 +20,6 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
     <>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-widest text-gold-800">{t(product.categoryName)}</span>
-        {product.isPreOrder && <PreOrderBadge status={product.preorderStatus || "available"} size="sm" />}
       </div>
       <h1 className="ts-display mt-2.5 text-2xl font-bold leading-tight text-ink-950 sm:text-3xl">{t(product.name)}</h1>
 
@@ -88,7 +86,7 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
       ) : (
         <span className="flex items-center gap-1.5 text-gold-800">
           <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-          {ui("preOrderClosingSoon")}
+          {ui(product.preorderStatus === "closing-soon" ? "preOrderClosingSoon" : "preOrderOpen")}
         </span>
       )}
     </div>

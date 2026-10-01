@@ -17,7 +17,7 @@ export function PreOrderConfirmationModal() {
   const deliveryDate = product.expectedDelivery ? t(product.expectedDelivery) : ui("deliveryDateTbc");
 
   return (
-    <Modal open={isOpen} onClose={closePreOrderModal} label="Close modal">
+    <Modal open={isOpen} onClose={closePreOrderModal} label={ui("close")}>
       {/* Modal Dialog Card */}
       <div
         role="dialog"
@@ -52,14 +52,16 @@ export function PreOrderConfirmationModal() {
           </div>
 
           <div className="min-w-0 flex-1">
-            <span className="inline-block rounded bg-gold-500/20 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-gold-900">
-              {ui("preOrderClosingSoon")}
+            <span className="inline-block rounded-full bg-gold-500/20 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-gold-900">
+              {ui(product.preorderStatus === "closing-soon" ? "preOrderClosingSoon" : "preOrderBadge")}
             </span>
             <h4 className="line-clamp-1 text-xs font-bold text-fg">{t(product.name)}</h4>
             {selectedVariant && Object.keys(selectedVariant).length > 0 && (
               <p className="text-2xs text-fg-subtle">
                 {Object.entries(selectedVariant)
-                  .map(([k, v]) => `${k}: ${v}`)
+                  .map(
+                    ([k, v]) => `${t(product.variants?.find((g) => g.name.en === k)?.name ?? { en: k, bn: k })}: ${v}`,
+                  )
                   .join(", ")}
               </p>
             )}

@@ -32,7 +32,6 @@ export function PreOrderBadge({
     );
   }
 
-  // Active / closing soon pre-orders just say "Closing soon"
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border border-gold-400/90 bg-accent font-bold uppercase tracking-wider text-ink-950 shadow-2xs ${
@@ -40,7 +39,7 @@ export function PreOrderBadge({
       } ${className}`}
     >
       {showIcon && <Clock className="h-3 w-3 shrink-0 text-ink-950" />}
-      <span>{ui("preOrderClosingSoon")}</span>
+      <span>{ui(status === "closing-soon" ? "preOrderClosingSoon" : "preOrderBadge")}</span>
     </span>
   );
 }

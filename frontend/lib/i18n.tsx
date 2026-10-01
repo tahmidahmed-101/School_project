@@ -202,6 +202,8 @@ const DICT = {
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "Pre-order sold out", bn: "প্রি-অর্ডার স্টক শেষ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
+  preOrderBadge: { en: "Pre-order", bn: "প্রি-অর্ডার" },
+  preOrderOpen: { en: "Pre-order open", bn: "প্রি-অর্ডার চলছে" },
   preOrderCapacityReached: {
     en: "Pre-order capacity has been reached.",
     bn: "প্রি-অর্ডারের সর্বোচ্চ সীমা পূর্ণ হয়েছে।",
@@ -286,6 +288,13 @@ const DICT = {
   },
   checkoutPaymentMethod: { en: "Payment method", bn: "পেমেন্ট মাধ্যম" },
   checkoutCodLabel: { en: "Cash on delivery", bn: "ক্যাশ অন ডেলিভারি" },
+  payCash: { en: "Cash", bn: "ক্যাশ" },
+  payCard: { en: "Card", bn: "কার্ড" },
+  payBkash: { en: "bKash", bn: "বিকাশ" },
+  payNagad: { en: "Nagad", bn: "নগদ" },
+  payRocket: { en: "Rocket", bn: "রকেট" },
+  payBankTransfer: { en: "Bank transfer", bn: "ব্যাংক ট্রান্সফার" },
+  payManual: { en: "Manual / other", bn: "অন্য উপায়" },
   checkoutCodSub: {
     en: "Pay with cash after checking parcel at your door",
     bn: "পণ্য হাতে পেয়ে দেখে টাকা দিন",
@@ -489,3 +498,5 @@ const DICT = {
   facebookLink: { en: "Kull Mart on Facebook", bn: "ফেসবুকে কুল মার্ট" },
   whatsappLink: { en: "Chat with Kull Mart on WhatsApp", bn: "হোয়াটসঅ্যাপে কুল মার্টের সাথে চ্যাট করুন" },
 } satisfies Record<string, T>;
+
+export type UiKey = keyof typeof DICT;

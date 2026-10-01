@@ -1,7 +1,7 @@
 "use client";
 
 import { Banknote, CreditCard, HandCoins, Landmark, Receipt, Smartphone, type LucideIcon } from "lucide-react";
-import { useLang } from "@/lib/i18n";
+import { useLang, type UiKey } from "@/lib/i18n";
 import { BD_DISTRICTS } from "../domain/districts";
 import type { FormErrors } from "../domain/checkout";
 import type { OrderForm } from "@/lib/types";
@@ -18,6 +18,18 @@ const PAYMENT_ICON: Record<string, LucideIcon> = {
   rocket: Smartphone,
   bank_transfer: Landmark,
 };
+
+// The API sends English labels; known keys are shown from the dictionary so Bangla mode stays Bangla.
+const PAYMENT_LABEL = {
+  cod: "checkoutCodLabel",
+  cash: "payCash",
+  card: "payCard",
+  bkash: "payBkash",
+  nagad: "payNagad",
+  rocket: "payRocket",
+  bank_transfer: "payBankTransfer",
+  manual: "payManual",
+} as const satisfies Record<string, UiKey>;
 
 interface CheckoutFieldsProps {
   form: OrderForm;
@@ -166,7 +178,6 @@ export function CheckoutFields({
         >
           {paymentMethods.map((method) => {
             const selected = method.key === paymentMethod;
-            const isCod = method.key === "cod";
             const Icon = PAYMENT_ICON[method.key] ?? Receipt;
             return (
               <label
@@ -193,7 +204,9 @@ export function CheckoutFields({
                   <Icon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
                 </span>
                 <span className="text-2xs font-bold leading-tight text-fg">
-                  {isCod ? ui("checkoutCodLabel") : method.label}
+                  {method.key in PAYMENT_LABEL
+                    ? ui(PAYMENT_LABEL[method.key as keyof typeof PAYMENT_LABEL])
+                    : method.label}
                 </span>
               </label>
             );
