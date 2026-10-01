@@ -13,7 +13,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "NEXT_PUBLIC_SITE_URL=https://kullmart.com NEXT_PUBLIC_API_URL=https://api.kullmart.com/api/v1/public opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "lucide-react": "^0.453.0",
@@ -23,17 +26,20 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.7",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.7.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.27.7",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.6",
     "postcss": "^8.5.0",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.3",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "wrangler": "^4.146.0"
   }
 }

@@ -44,3 +44,6 @@ skills-lock.json
 
 # Playwright MCP browser session logs
 .playwright-mcp/
+
+# Cloudflare (wrangler)
+.wrangler/
