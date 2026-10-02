@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -18,6 +20,7 @@ from apps.common.pdf import PdfRenderer, pdf_response
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.services.soft_delete import soft_delete_instance
+from apps.common.utils.export import CsvRenderer, csv_response
 from apps.procurement.models import PurchaseOrder, VendorBill
 from apps.procurement.selectors.goods_receipts import get_goods_receipt_by_id, goods_receipts_list
 from apps.procurement.selectors.purchase_orders import (
@@ -541,10 +544,9 @@ class AdminVendorBillVoidView(APIView):
         return Response({"data": VendorBillSerializer(bill).data, "message": "Success"})
 
 
-@extend_schema(tags=["Procurement"])
-class AdminVendorPaymentListView(GenericListAPIView):
-    permission_classes: ClassVar[list] = [VendorBillViewPermission]
-    serializer_class = VendorPaymentSerializer
+class VendorPaymentQuerysetMixin:
+    """Filters shared by the vendor payment list and its CSV export."""
+
     ordering_fields = ("paid_at", "amount")
     default_ordering = "-paid_at"
 
@@ -560,8 +562,38 @@ class AdminVendorPaymentListView(GenericListAPIView):
             end=end,
         )
 
+
+@extend_schema(tags=["Procurement"])
+class AdminVendorPaymentListView(VendorPaymentQuerysetMixin, GenericListAPIView):
+    permission_classes: ClassVar[list] = [VendorBillViewPermission]
+    serializer_class = VendorPaymentSerializer
+
     def get(self, request) -> Response:
         return self.list_response(request)
+
+
+VENDOR_PAYMENT_EXPORT_COLUMNS = ("paid_at", "vendor_bill_number", "amount", "method", "reference")
+
+
+@extend_schema(tags=["Procurement"])
+class AdminVendorPaymentExportView(VendorPaymentQuerysetMixin, GenericListAPIView):
+    permission_classes: ClassVar[list] = [VendorBillViewPermission]
+    serializer_class = VendorPaymentSerializer
+    renderer_classes: ClassVar[list] = [JSONRenderer, CsvRenderer]
+
+    @extend_schema(request=None, responses={(200, "text/csv"): OpenApiTypes.BINARY})
+    def get(self, request) -> HttpResponse:
+        rows = (
+            [
+                payment.paid_at,
+                payment.vendor_bill.bill_number,
+                payment.amount,
+                payment.method,
+                payment.reference,
+            ]
+            for payment in self.get_filtered_queryset(request)
+        )
+        return csv_response("vendor-payments.csv", VENDOR_PAYMENT_EXPORT_COLUMNS, rows)
 
 
 @extend_schema(tags=["Procurement"])

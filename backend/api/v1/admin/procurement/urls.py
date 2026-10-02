@@ -20,6 +20,7 @@ from .views import (
     AdminVendorBillPdfView,
     AdminVendorBillVoidView,
     AdminVendorPaymentDetailView,
+    AdminVendorPaymentExportView,
     AdminVendorPaymentListView,
     AdminVendorPaymentView,
 )
@@ -91,6 +92,11 @@ urlpatterns = [
         name="vendor-bill-payment",
     ),
     path("vendor-payments/", AdminVendorPaymentListView.as_view(), name="vendor-payment-list"),
+    path(
+        "vendor-payments/export/",
+        AdminVendorPaymentExportView.as_view(),
+        name="vendor-payment-export",
+    ),
     path(
         "vendor-payments/<uuid:payment_id>/",
         AdminVendorPaymentDetailView.as_view(),

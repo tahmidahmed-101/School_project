@@ -119,3 +119,34 @@ def test_rejects_non_expense_account_as_expense_account(api_client):
     )
 
     assert response.status_code == 400
+
+
+def test_expense_export_returns_filtered_csv(api_client):
+    admin = create_user(email="expense-admin-export@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    matching_account = AccountFactory(type=Account.Type.EXPENSE, code="9508", name="Utilities")
+    other_account = AccountFactory(type=Account.Type.EXPENSE, code="9509")
+    ExpenseFactory(expense_account=matching_account, payee="City Power Co", amount="150.00")
+    ExpenseFactory(expense_account=other_account, payee="Other Payee")
+
+    response = api_client.get(
+        "/api/v1/admin/accounting/expenses/export/", {"account_id": str(matching_account.id)}
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("text/csv")
+    lines = response.content.decode().splitlines()
+    assert lines[0].startswith("expense_date,payee,description,category,expense_account")
+    assert len(lines) == 2
+    assert "City Power Co" in lines[1]
+    assert "Utilities" in lines[1]
+    assert "150.00" in lines[1]
+
+
+def test_staff_without_permission_cannot_export_expenses(api_client):
+    staff = create_user(email="expense-staff-export@example.com", role=UserRole.STAFF)
+    api_client.force_authenticate(user=staff)
+
+    response = api_client.get("/api/v1/admin/accounting/expenses/export/")
+
+    assert response.status_code == 403

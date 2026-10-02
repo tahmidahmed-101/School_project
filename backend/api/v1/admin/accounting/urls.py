@@ -10,6 +10,7 @@ from .views import (
     AdminExpenseCategoryListCreateView,
     AdminExpenseCategoryRestoreView,
     AdminExpenseDetailView,
+    AdminExpenseExportView,
     AdminExpenseListCreateView,
     AdminExpenseRestoreView,
     AdminJournalEntryDetailView,
@@ -46,6 +47,7 @@ urlpatterns = [
         name="journal-entry-reverse",
     ),
     path("expenses/", AdminExpenseListCreateView.as_view(), name="expense-list"),
+    path("expenses/export/", AdminExpenseExportView.as_view(), name="expense-export"),
     path("expenses/<uuid:expense_id>/", AdminExpenseDetailView.as_view(), name="expense-detail"),
     path(
         "expenses/<uuid:expense_id>/restore/",

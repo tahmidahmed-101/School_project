@@ -125,7 +125,8 @@ class AdminNewsletterSubscriberExportView(APIView):
 
     @extend_schema(request=None, responses={(200, "text/csv"): OpenApiTypes.BINARY})
     def get(self, request):
-        queryset = filter_search(subscribers_list(), request, SEARCH_FIELDS)
+        is_active = get_bool(request.query_params, "is_active", default=None)
+        queryset = filter_search(subscribers_list(is_active=is_active), request, SEARCH_FIELDS)
         queryset = apply_ordering(
             queryset, request, ordering_fields=ORDERING_FIELDS, default_ordering="-created_at"
         )

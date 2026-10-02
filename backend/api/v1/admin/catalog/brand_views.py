@@ -59,6 +59,9 @@ class AdminBrandListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gene
             include_deleted=self.include_deleted(),
         )
 
+    def get(self, request) -> Response:
+        return self.list_response(request)
+
     def post(self, request) -> Response:
         serializer = BrandCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

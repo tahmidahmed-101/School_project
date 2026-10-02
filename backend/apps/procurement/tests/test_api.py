@@ -603,3 +603,32 @@ def test_purchase_order_lines_expose_product_image_without_n_plus_one(api_client
         api_client.get("/api/v1/admin/procurement/purchase-orders/")
 
     assert len(many_rows) == len(single_row)
+
+
+def test_vendor_payment_export_returns_filtered_csv(api_client):
+    _admin(api_client, "payment-export@example.com")
+    bill = _matched_bill()
+    VendorPaymentFactory(vendor_bill=bill, amount=Decimal("5.00"), method="bank", reference="TX-1")
+    VendorPaymentFactory(method="cash", reference="TX-2")
+
+    response = api_client.get(
+        "/api/v1/admin/procurement/vendor-payments/export/", {"method": "bank"}
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("text/csv")
+    lines = response.content.decode().splitlines()
+    assert lines[0] == "paid_at,vendor_bill_number,amount,method,reference"
+    assert len(lines) == 2
+    assert bill.bill_number in lines[1]
+    assert "TX-1" in lines[1]
+
+
+def test_staff_without_permission_cannot_export_vendor_payments(api_client):
+    api_client.force_authenticate(
+        user=create_user(email="payment-export-staff@example.com", role=UserRole.STAFF)
+    )
+
+    response = api_client.get("/api/v1/admin/procurement/vendor-payments/export/")
+
+    assert response.status_code == 403

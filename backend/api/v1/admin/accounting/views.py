@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -248,12 +249,10 @@ class AdminJournalEntryReverseView(APIView):
         )
 
 
-@extend_schema(tags=["Accounting"])
-class AdminExpenseListCreateView(
-    IncludeDeletedMixin, AccountingPermissionMixin, GenericListAPIView
-):
+class ExpenseQuerysetMixin(IncludeDeletedMixin):
+    """Filters shared by the expense list and its CSV export."""
+
     include_deleted_permission = AccountingPostPermission
-    serializer_class = ExpenseSerializer
     search_fields = ("payee", "description", "reference_number")
     ordering_fields = ("expense_date", "amount")
     default_ordering = "-expense_date"
@@ -272,6 +271,13 @@ class AdminExpenseListCreateView(
             end=end,
             include_deleted=self.include_deleted(),
         )
+
+
+@extend_schema(tags=["Accounting"])
+class AdminExpenseListCreateView(
+    ExpenseQuerysetMixin, AccountingPermissionMixin, GenericListAPIView
+):
+    serializer_class = ExpenseSerializer
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -316,6 +322,44 @@ class AdminExpenseListCreateView(
             {"data": ExpenseSerializer(expense).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
         )
+
+
+EXPENSE_EXPORT_COLUMNS = (
+    "expense_date",
+    "payee",
+    "description",
+    "category",
+    "expense_account",
+    "payment_account",
+    "amount",
+    "reference_number",
+)
+
+
+@extend_schema(tags=["Accounting"])
+class AdminExpenseExportView(ExpenseQuerysetMixin, AccountingPermissionMixin, GenericListAPIView):
+    serializer_class = ExpenseSerializer
+    renderer_classes: ClassVar[list] = [JSONRenderer, CsvRenderer]
+
+    @extend_schema(request=None, responses={(200, "text/csv"): OpenApiTypes.BINARY})
+    def get(self, request) -> HttpResponse:
+        expenses = self.get_filtered_queryset(request).select_related(
+            "category", "expense_account", "payment_account"
+        )
+        rows = (
+            [
+                expense.expense_date,
+                expense.payee,
+                expense.description,
+                expense.category.name if expense.category else "",
+                expense.expense_account.name,
+                expense.payment_account.name,
+                expense.amount,
+                expense.reference_number,
+            ]
+            for expense in expenses
+        )
+        return csv_response("expenses.csv", EXPENSE_EXPORT_COLUMNS, rows)
 
 
 @extend_schema(tags=["Accounting"])

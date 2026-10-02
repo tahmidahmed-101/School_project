@@ -11,7 +11,7 @@ from apps.catalog.factories import (
     ProductImageFactory,
     ProductVariantFactory,
 )
-from apps.catalog.models import Product
+from apps.catalog.models import Brand, Product
 
 pytestmark = pytest.mark.django_db
 
@@ -922,3 +922,17 @@ def test_invalid_category_type_filter_is_rejected(api_client):
     response = api_client.get("/api/v1/admin/catalog/categories/?category_type=bogus")
 
     assert response.status_code == 400
+
+
+def test_admin_can_list_brands_filtered_by_status(api_client):
+    admin = create_user(email="catalog-brand-list-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    Brand.objects.create(name="Active Brand", slug="active-brand", is_active=True)
+    Brand.objects.create(name="Inactive Brand", slug="inactive-brand", is_active=False)
+
+    all_response = api_client.get("/api/v1/admin/catalog/brands/")
+    active_response = api_client.get("/api/v1/admin/catalog/brands/?is_active=true")
+
+    assert all_response.status_code == 200
+    assert all_response.data["data"]["count"] == 2
+    assert [b["name"] for b in active_response.data["data"]["results"]] == ["Active Brand"]

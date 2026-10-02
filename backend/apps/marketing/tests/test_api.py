@@ -142,3 +142,17 @@ def test_customer_cannot_list_admin_subscribers(api_client):
     response = api_client.get("/api/v1/admin/marketing/subscribers/")
 
     assert response.status_code == 403
+
+
+def test_subscriber_export_honours_is_active_filter(api_client):
+    admin = create_user(email="marketing-export-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    NewsletterSubscriberFactory(email="active-sub@example.com", is_active=True)
+    NewsletterSubscriberFactory(email="inactive-sub@example.com", is_active=False)
+
+    response = api_client.get("/api/v1/admin/marketing/subscribers/export/?is_active=true")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "active-sub@example.com" in body
+    assert "inactive-sub@example.com" not in body
