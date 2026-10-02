@@ -39,7 +39,7 @@ resolved=$(dig +short "$SITE_HOST" | head -1)
 step "Sync backend via rsync"
 rsync -az --delete \
     --exclude '.env' --exclude '.venv' --exclude '__pycache__' --exclude 'db.sqlite3' \
-    --exclude 'media' --exclude 'staticfiles' --exclude 'logs' --exclude '*.log' \
+    --exclude '/media' --exclude '/staticfiles' --exclude '/logs' --exclude '*.log' \
     -e "ssh -p $SSH_PORT -i $SSH_KEY" \
     "$LOCAL_ROOT/backend/" "$SSH_HOST:$REMOTE_DIR/backend/"
 rsync -az -e "ssh -p $SSH_PORT -i $SSH_KEY" "$LOCAL_ROOT/docker-compose.prod.yml" "$SSH_HOST:$REMOTE_DIR/"
