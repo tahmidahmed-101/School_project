@@ -61,7 +61,7 @@ export function Hero({
           {/* Left: shop-by-category rail (desktop only; mobile shows just the banner). Absolutely positioned so a long
               category list scrolls inside the rail instead of stretching the row past the banner's height. */}
           {hasRail && (
-            <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-2 lg:block">
+            <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-3 lg:block">
               <div className="absolute inset-0">
                 <HeroCategoryRail preorder={preorder} />
               </div>
@@ -69,7 +69,7 @@ export function Hero({
           )}
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
-          <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-8" : "lg:col-span-10"}`}>
+          <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-6" : "lg:col-span-9"}`}>
             <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-3xl lg:min-h-[360px]">
               {HERO_SLIDES.map((s, i) =>
                 i > mounted ? null : (
@@ -79,7 +79,7 @@ export function Hero({
                     alt={s.alt}
                     fill
                     priority={i === 0}
-                    sizes="(max-width: 1024px) 100vw, 810px"
+                    sizes="(max-width: 1024px) 100vw, 620px"
                     aria-hidden={i !== index}
                     className={`object-cover transition-opacity duration-700 ease-in-out ${
                       i === index ? "opacity-100" : "opacity-0"
@@ -158,7 +158,7 @@ export function Hero({
           </div>
 
           {/* Right: welcome card + quick links (desktop only; mobile shows just the banner) */}
-          <ScrollReveal y={24} duration={0.85} delay={0.1} className="hidden lg:order-3 lg:col-span-2 lg:block">
+          <ScrollReveal y={24} duration={0.85} delay={0.1} className="hidden lg:order-3 lg:col-span-3 lg:block">
             <HeroWelcomePanel />
           </ScrollReveal>
         </div>
