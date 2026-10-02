@@ -12,9 +12,9 @@ The storefront build fetches the live API, so deploy in this order: API, then st
 
 1. Registrar: point `kullmart.com` at the Cloudflare nameservers shown in the dashboard; wait for the zone to be **Active**.
 2. Cloudflare DNS: `A api -> 169.58.218.225`, **DNS-only** (grey cloud). Caddy gets its certificate over HTTP-01.
-3. Cloudflare: enable R2, then from `frontend/`:
+3. Cloudflare, from `frontend/` (the page cache is Workers KV, so R2 isn't needed):
    ```bash
-   npx wrangler r2 bucket create kull-mart-web-cache
+   npx wrangler kv namespace create kull-mart-web-cache   # put the id into wrangler.jsonc
    npx wrangler d1 create kull-mart-web-tags   # put the database_id into wrangler.jsonc
    npx wrangler secret put REVALIDATE_SECRET   # 16+ chars
    ```

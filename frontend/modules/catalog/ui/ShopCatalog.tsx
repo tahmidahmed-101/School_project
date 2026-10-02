@@ -85,7 +85,7 @@ export function ShopCatalog() {
           title={activeCategoryTitle}
         />
 
-        <div className="flex flex-col items-start gap-8 lg:flex-row">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <ShopFilterSidebar
             filters={filters}
             onFilterChange={handleFilterChange}
