@@ -57,14 +57,17 @@ export function DeltaBadge({
 function KpiCard({ kpi }: { kpi: DashboardKpi }) {
   const Icon = ICONS[kpi.label] ?? BarChart3
   return (
-    <Card className="gap-3 p-5">
-      {/* Label and badge share a line when they fit; in a narrow card the badge drops under the
-          label instead of being squeezed on top of it. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-        <span className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" aria-hidden />
-          </span>
+    <Card className="relative isolate gap-3 overflow-hidden p-4">
+      {/* The metric's icon is a faint watermark in the bottom-right corner, behind the content, so
+          it costs the label and badge no width. */}
+      <Icon
+        className="pointer-events-none absolute -right-5 -bottom-5 -z-10 size-24 -rotate-12 text-primary/10"
+        aria-hidden
+      />
+      {/* Label and badge always share one line; in a narrow card the label is cut short with an
+          ellipsis rather than the badge overlapping it or dropping to a second line. */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm text-muted-foreground" title={kpi.label}>
           {kpi.label}
         </span>
         <DeltaBadge delta={kpi.delta_pct} sign={kpi.sign} good={kpi.good} />
@@ -110,7 +113,7 @@ export function KpiCards({
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Loading">
         {Array.from({ length: 4 }, (_, i) => (
-          <Card key={i} className="gap-3 p-5">
+          <Card key={i} className="gap-3 p-4">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-7 w-40" />
             <Skeleton className="h-10 w-full" />
