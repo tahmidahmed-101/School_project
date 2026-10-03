@@ -350,11 +350,14 @@ const OrderDetail = () => {
                 <p className="whitespace-pre-line text-xs text-muted-foreground">{order.notes}</p>
               </div>
             )}
-            <div className="pt-2">
-              <Button variant="link" size="sm" className="px-0" asChild>
-                <Link to={`/orders?customer_id=${order.customer_id}`}><ListOrdered className="size-4" /> All orders from this customer</Link>
-              </Button>
-            </div>
+            {/* A guest cart has no customer to list orders for. */}
+            {order.customer_id && (
+              <div className="pt-2">
+                <Button variant="link" size="sm" className="px-0" asChild>
+                  <Link to={`/orders?customer_id=${order.customer_id}`}><ListOrdered className="size-4" /> All orders from this customer</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

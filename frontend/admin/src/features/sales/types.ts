@@ -59,7 +59,8 @@ export interface OrderShippingAddress {
 export interface Order {
   id: string
   order_number: string
-  customer_id: string
+  /** Null only on an anonymous guest cart (a pending order nobody has checked out yet). */
+  customer_id: string | null
   customer_email: string
   customer_name: string
   customer_phone: string
@@ -109,4 +110,34 @@ export interface OrderCreatePayload {
   lines: { variant_id: string; quantity: number }[]
   capture_payment?: boolean
   payment_method?: PaymentMethod
+}
+
+/** AdminCartItemSerializer — a cart line's product name and SKU snapshots. */
+export interface CustomerCartItem {
+  id: string
+  variant_id: string
+  product_name: string
+  sku: string
+  quantity: number
+  unit_price: string
+  is_preorder: boolean
+}
+
+/**
+ * GET /admin/orders/carts/ (AdminCustomerCartSerializer) — an open, non-empty cart.
+ * A guest cart has no customer, so its customer fields are null.
+ */
+export interface CustomerCart {
+  id: string
+  is_guest_cart: boolean
+  customer_id: string | null
+  customer_email: string | null
+  customer_name: string | null
+  customer_phone: string | null
+  items: CustomerCartItem[]
+  item_count: number
+  subtotal: string
+  created_at: string
+  /** The last cart change: every line edit saves the cart. */
+  updated_at: string
 }

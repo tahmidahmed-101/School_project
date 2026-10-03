@@ -14,6 +14,7 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "Sales",
     items: [
       { title: "Orders", url: "/orders", heading: "Orders" },
+      { title: "Carts", url: "/carts", heading: "Customer Carts" },
       { title: "Payments", url: "/payments", heading: "Payments" },
       { title: "Returns", url: "/returns", heading: "Returns" },
     ],

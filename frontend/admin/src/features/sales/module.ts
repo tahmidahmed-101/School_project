@@ -6,6 +6,7 @@ export const salesModule: FeatureModule = {
     { path: "orders", lazy: page(() => import("./components/Orders")) },
     { path: "orders/new", lazy: page(() => import("./components/CreateOrder")) },
     { path: "order_detail/:id", lazy: page(() => import("./components/OrderDetail")) },
+    { path: "carts", lazy: page(() => import("./components/Carts")) },
     { path: "payments", lazy: page(() => import("../payments/components/Payments")) },
     { path: "payment_detail/:id", lazy: page(() => import("../payments/components/PaymentDetail")) },
     { path: "returns", lazy: page(() => import("../returns/components/Returns")) },
@@ -24,6 +25,7 @@ export const salesModule: FeatureModule = {
       order: 10,
       items: [
         { title: "Orders", url: "/orders", permission: ["orders.view", "orders.manage"] },
+        { title: "Carts", url: "/carts", permission: ["orders.view", "orders.manage"] },
         { title: "Payments", url: "/payments", permission: ["orders.view", "orders.manage"] },
         // The RMA endpoints require returns.manage even for reading.
         { title: "Returns", url: "/returns", permission: "returns.manage" },
