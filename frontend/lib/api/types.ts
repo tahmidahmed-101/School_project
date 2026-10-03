@@ -177,6 +177,24 @@ export interface ApiCheckoutRequest {
   notes?: string;
 }
 
+interface ApiGuestCartLine {
+  id: string;
+  variant_id: string;
+  quantity: number;
+}
+
+/** GET /cart/ and every /cart/lines/ call: the visitor's server-side cart (a pending order). */
+export interface ApiGuestCart {
+  id: string;
+  lines: ApiGuestCartLine[];
+}
+
+/** POST /cart/. The token addresses the cart from then on and is returned only here. */
+export interface ApiGuestCartCreated {
+  token: string;
+  cart: ApiGuestCart;
+}
+
 /** POST /checkout/coupon/ */
 export interface ApiCouponPreview {
   code: string;

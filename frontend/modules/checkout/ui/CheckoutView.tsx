@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
-import { useCart } from "@/modules/cart";
+import { forgetGuestCart, syncedGuestCartToken, useCart } from "@/modules/cart";
 import { ApiError } from "@/lib/api/client";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
@@ -76,9 +76,13 @@ export function CheckoutView() {
     setFieldErrors({});
     try {
       // The backend prices the order (shipping zone, tax, discounts); its response is what the shopper sees.
+      // Check out the shopper's saved cart when the backend holds exactly these items, so it stops being an open cart.
+      const cartToken = await syncedGuestCartToken(items);
       const order = await placeOrder(
         buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code }),
+        cartToken,
       );
+      if (cartToken) forgetGuestCart();
       setOrderResult(
         toOrderResult(order, {
           name: form.name.trim(),

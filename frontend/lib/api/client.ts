@@ -57,9 +57,11 @@ function flattenFields(input: unknown, prefix = "", out: Record<string, string> 
 }
 
 export interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   query?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
+  /** Extra request headers (e.g. the guest cart token). */
+  headers?: Record<string, string>;
   /** Server-side cache lifetime in seconds for GETs (ignored in the browser). Omit for no caching. */
   revalidate?: number;
   tags?: string[];
@@ -89,7 +91,7 @@ function buildUrl(path: string, query: RequestOptions["query"]): string {
  * `path` is relative to /api/v1/public and keeps its trailing slash, exactly as in the OpenAPI document.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", query, body, revalidate, tags, signal, timeoutMs = 10_000 } = options;
+  const { method = "GET", query, body, headers, revalidate, tags, signal, timeoutMs = 10_000 } = options;
 
   if (typeof window === "undefined" && !SERVER_BASE) {
     throw new ApiError({
@@ -111,6 +113,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: combined,

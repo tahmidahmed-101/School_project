@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { CartItem, Product } from "@/lib/types";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
+import { syncGuestCart } from "./data/guestCart";
+import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
   items: CartItem[];
@@ -35,6 +37,8 @@ const CartContext = createContext<CartContextType | null>(null);
  */
 const CART_KEY = "kullmart:cart:v2";
 const LEGACY_CART_KEY = "kullmart:cart";
+/** Quiet time after the last cart change before it is mirrored to the backend, so a run of +/- taps is one sync. */
+const SYNC_DELAY_MS = 600;
 
 function variantMatches(a?: Record<string, string>, b?: Record<string, string>): boolean {
   const keysA = Object.keys(a ?? {});
@@ -81,7 +85,7 @@ function sanitizeCart(raw: unknown): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [storedItems, setStoredItems] = usePersistedState<unknown>(CART_KEY, []);
+  const [storedItems, setStoredItems, isHydrated] = usePersistedState<unknown>(CART_KEY, []);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const items = useMemo(() => sanitizeCart(storedItems), [storedItems]);
@@ -97,6 +101,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Storage blocked: nothing to clean up.
     }
   }, []);
+
+  // Mirror the cart to the backend's guest cart. Not before the saved cart has loaded: the empty first render
+  // would otherwise wipe the server copy.
+  useEffect(() => {
+    if (!isHydrated) return;
+    const timer = setTimeout(() => void syncGuestCart(toCartTargets(items)), SYNC_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [items, isHydrated]);
 
   const addItem = useCallback(
     (
