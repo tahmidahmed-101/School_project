@@ -97,7 +97,7 @@ independent trees:
 - **Services**: `accounts.py` (CoA CRUD, protected-relation guards) · `expenses.py` / `expense_categories.py` · `journal.py` · `money.py` (decimal helpers) · `postings.py` — the posting engine (`post_goods_received`, `post_vendor_bill`, `post_vendor_payment`, `post_sales_shipment`, `post_sales_return`, `post_customer_payment`, `post_customer_refund`, `post_stock_adjustment`, `post_stock_writeoff`) · `exports.py`
 
 ### accounts
-- **Models**: `User` (email-keyed, `role`: admin/staff/customer) · `Address` (soft-deletable) · `UserOTP` (6-digit, rate-limited) · `StaffPermission` (granular permission codes)
+- **Models**: `User` (email-keyed, `role`: admin/staff/customer; `is_guest` marks guest-checkout identities, §13) · `Address` (soft-deletable) · `UserOTP` (6-digit, rate-limited) · `StaffPermission` (granular permission codes)
 - **Services**: `authentication.py` (login/JWT) · `sessions.py` (refresh-token/device sessions) · `phone_verification.py` (OTP send/verify) · `addresses.py` · `staff_permissions.py` · `groups.py`, `users.py`
 
 ### audit
@@ -286,7 +286,7 @@ matching `StaffPermission` code.
 **Marketing** `marketing/`
 - `POST subscribe/`, `POST unsubscribe/`
 
-**Checkout** `checkout/` (guest, no auth)
+**Checkout** `checkout/` (`AllowAny`: anonymous → guest identity, signed in → `request.user`; see §13)
 - `POST ""`, `POST coupon/`, `POST shipping-quote/`, `GET shipping-options/`, `GET shipping-zones/`
 
 **Tracking** `tracking/`
@@ -519,3 +519,29 @@ the test actually catches the N+1).
 
 Full suite: 1592 tests green (1588 + 4 new). `ruff`, `mypy` (same one pre-existing unrelated
 `api/v1/webhooks` error), `manage.py check` all clean.
+
+
+## 13. Recent changes (2026-10-03): guest checkout identities
+
+**Rule.** Anonymous `POST /api/v1/public/checkout/` never attaches an order to — or edits — a
+registered account because of a typed email or phone. It goes to the **guest identity** for the
+normalised phone (`01XXXXXXXXX`): a `User` with `is_guest=True`, no email, an unusable password
+(cannot log in or reset), created by `accounts.services.users.get_or_create_guest_customer`. A
+partial unique constraint (`user_unique_live_guest_phone`: one live guest per phone) makes
+concurrent first checkouts reuse one row. Typed contact details stay on the order
+(`contact_email`, `contact_phone`, address snapshot). A signed-in request's order goes to
+`request.user`, whose phone and default address are left alone. Guest identities never block a
+real owner verifying that number (`phone_verification._assert_phone_available`). The admin user
+API exposes `is_guest` read-only (list + detail); nothing writable can change it.
+
+**Legacy limitation — email guest accounts.** Before this change, guest checkout created an
+ordinary customer account from the typed email with a random password. Those accounts carry **no
+reliable marker**: no source/channel field on users or orders, no audit entry at creation
+(registration doesn't log one either), and the password is hashed like any other. Signals such as
+"never logged in", "email unverified" or "only guest-style orders" also describe real customers
+who registered and never came back, so classifying on them would misclassify. They are therefore
+**left unchanged** and treated as registered accounts: new anonymous orders never attach to them,
+and their earlier orders stay where they are. Order history from before and after this change is
+therefore separate for those people; staff still see every order. Migration `0021_user_is_guest`
+converts only accounts with **no email** — which only the short-lived phone-only checkout (0020)
+created — into guest identities, normalising their phones and soft-deleting any race duplicates.

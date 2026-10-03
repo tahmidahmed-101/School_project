@@ -69,6 +69,7 @@ def _admin_user_data(user) -> dict:
             "is_email_verified": user.is_email_verified,
             "is_phone_verified": user.is_phone_verified,
             "is_superuser": user.is_superuser,
+            "is_guest": user.is_guest,
             "date_joined": user.date_joined,
             "last_login": user.last_login,
             "permissions": user_permissions(user),
