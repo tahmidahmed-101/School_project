@@ -286,7 +286,12 @@ def recent_orders(*, start: date, end: date, limit: int = 8) -> list[dict]:
             {
                 "id": order.order_number,
                 "order_id": str(order.id),
-                "customer": {"name": order.customer.get_full_name() or order.customer.email or ""},
+                # An anonymous guest cart has no customer yet.
+                "customer": {
+                    "name": (order.customer.get_full_name() or order.customer.email or "")
+                    if order.customer
+                    else ""
+                },
                 "items": [
                     {
                         "name": line.variant.product.name,

@@ -66,8 +66,12 @@ def assess_order_risk(*, order) -> RiskAssessment:
         risk_score += Decimal("30.00")
         risk_reasons.append(f"Very high value order (over {very_high_value:,.0f})")
 
+    # A guest cart has no customer yet; filtering on customer_id=None would
+    # count every other guest cart as this "customer's" history.
     previous_orders = (
         SalesOrder.objects.filter(customer_id=order.customer_id).exclude(id=order.id).count()
+        if order.customer_id
+        else 0
     )
     if previous_orders == 0:
         risk_score += Decimal("15.00")

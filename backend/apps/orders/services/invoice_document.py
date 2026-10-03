@@ -83,9 +83,10 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
         "doc_meta": doc_meta,
         "doc_status": payment_label,
         "doc_status_class": STATUS_CLASSES.get(payment_label, ""),
-        "customer_name": _person_name(order.customer),
-        "customer_email": order.customer.email or "",
-        "customer_phone": order.customer.phone,
+        # An anonymous guest cart has no customer until checkout.
+        "customer_name": _person_name(order.customer) if order.customer else "",
+        "customer_email": (order.customer.email or "") if order.customer else "",
+        "customer_phone": order.customer.phone if order.customer else "",
         "ship_name": address.get("full_name", ""),
         "ship_lines": _address_lines(address),
         "lines": lines,

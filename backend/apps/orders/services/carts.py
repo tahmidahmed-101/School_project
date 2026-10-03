@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from decimal import Decimal
 
 from django.db import transaction
@@ -9,7 +10,7 @@ from apps.accounting.selectors.tax_rates import get_default_tax_rate
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.utils.codes import generate_document_number
+from apps.common.utils.codes import generate_document_number, hash_code
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.sales_orders import get_cart
 
@@ -45,7 +46,7 @@ def get_or_create_cart(customer) -> SalesOrder:
 
 
 @transaction.atomic
-def create_order(*, customer, created_by=None) -> SalesOrder:
+def create_order(*, customer, created_by=None, guest_token_hash: str | None = None) -> SalesOrder:
     """Start a brand-new pending order, never reusing an existing one.
 
     Staff-entered orders must use this rather than `get_or_create_cart`: that
@@ -59,9 +60,19 @@ def create_order(*, customer, created_by=None) -> SalesOrder:
     return SalesOrder.objects.create(
         customer=customer,
         order_number=order_number,
+        guest_token_hash=guest_token_hash,
         created_by=created_by,
         updated_by=created_by,
     )
+
+
+def create_guest_cart() -> tuple[SalesOrder, str]:
+    """An empty cart for an anonymous visitor, and the raw bearer token that
+    addresses it. Only the token's SHA-256 is stored; the raw token is
+    returned this once. 256 random bits, so no two carts share one, and the
+    unique column would refuse it if they did."""
+    token = secrets.token_urlsafe(32)
+    return create_order(customer=None, guest_token_hash=hash_code(token)), token
 
 
 def get_preordered_quantity(variant) -> int:

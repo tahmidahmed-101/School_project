@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.v1.public.cart.views import guest_cart_token, resolve_guest_cart
 from apps.common.exceptions import DomainError
 from apps.common.responses import error_from_exception, not_found
 from apps.common.throttling import (
@@ -27,6 +28,7 @@ from apps.orders.services.guest_checkout import guest_checkout, subtotal_for_ite
 from apps.risk.request_ip import client_ip
 
 from .serializers import (
+    GuestCartCheckoutSerializer,
     GuestCheckoutSerializer,
     GuestCouponValidationSerializer,
     GuestOrderSerializer,
@@ -42,9 +44,19 @@ class GuestCheckoutView(APIView):
     throttle_classes: ClassVar[list] = [GuestCheckoutRateThrottle]
 
     def post(self, request) -> Response:
-        serializer = GuestCheckoutSerializer(data=request.data)
+        # With a guest-cart token, the saved cart is checked out; without
+        # one, the request's own item list is, exactly as before.
+        cart = None
+        if guest_cart_token(request):
+            cart, error = resolve_guest_cart(request)
+            if error:
+                return error
+        serializer_class = GuestCartCheckoutSerializer if cart else GuestCheckoutSerializer
+        serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
+        if cart is not None:
+            data["cart"] = cart
 
         # AllowAny: a signed-in customer's order belongs to them; an anonymous
         # one goes to a guest identity, whatever email or phone was typed.

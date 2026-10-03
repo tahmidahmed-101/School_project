@@ -4,8 +4,9 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from django.db.models import Count, Q, QuerySet, Sum
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
 
+from apps.common.utils.codes import hash_code
 from apps.common.utils.dates import day_after, day_start
 from apps.orders.models import SalesOrder, SalesOrderLine
 
@@ -101,6 +102,34 @@ def get_cart(customer) -> SalesOrder | None:
     return SalesOrder.objects.filter(
         customer=customer, status=SalesOrder.Status.PENDING, deleted_at__isnull=True
     ).first()
+
+
+def get_guest_cart(token: str | None) -> SalesOrder | None:
+    """The open guest cart a bearer token addresses. None for an unknown
+    token, and once the cart is checked out (it is no longer pending, and has
+    an owner), so a used token can't reach the order it became."""
+    if not token:
+        return None
+    return SalesOrder.objects.filter(
+        guest_token_hash=hash_code(token),
+        customer__isnull=True,
+        status=SalesOrder.Status.PENDING,
+        deleted_at__isnull=True,
+    ).first()
+
+
+def customer_carts_list() -> QuerySet[SalesOrder]:
+    """Every customer's open cart that has something in it — the same
+    `pending` order `get_cart` returns, so a checked-out order (anything past
+    pending) never appears. `updated_at` is the last cart change: every line
+    edit recalculates and saves the order."""
+    return (
+        SalesOrder.objects.filter(status=SalesOrder.Status.PENDING, deleted_at__isnull=True)
+        .filter(Exists(SalesOrderLine.objects.filter(order=OuterRef("pk"))))
+        .select_related("customer")
+        # Lines carry product name and SKU snapshots, so no variant join.
+        .prefetch_related(Prefetch("lines", queryset=SalesOrderLine.objects.order_by("created_at")))
+    )
 
 
 def get_checked_out_order(customer) -> SalesOrder | None:

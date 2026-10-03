@@ -40,6 +40,12 @@ class GuestCheckoutSerializer(serializers.Serializer):
     notes = serializers.CharField(allow_blank=True, required=False)
 
 
+class GuestCartCheckoutSerializer(GuestCheckoutSerializer):
+    """Checkout of a saved guest cart: the cart supplies the items."""
+
+    items = None
+
+
 class GuestOrderSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_number = serializers.CharField(read_only=True)

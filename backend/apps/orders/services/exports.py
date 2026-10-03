@@ -25,7 +25,7 @@ def export_orders(queryset: QuerySet[SalesOrder]) -> tuple[list[str], list[list[
     rows = [
         [
             order.order_number,
-            (order.customer.email or "") if order.customer_id else "",
+            (order.customer.email or "") if order.customer else "",
             order.status,
             str(order.subtotal),
             str(order.tax_total),

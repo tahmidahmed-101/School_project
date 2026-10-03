@@ -125,6 +125,46 @@ class AdminSalesOrderSerializer(serializers.Serializer):
         return AdminRMASerializer(obj.rmas.all(), many=True).data
 
 
+class AdminCartItemSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    variant_id = serializers.UUIDField(read_only=True)
+    product_name = serializers.CharField(read_only=True)
+    sku = serializers.CharField(source="variant_sku", read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    is_preorder = serializers.BooleanField(read_only=True)
+
+
+class AdminCustomerCartSerializer(serializers.Serializer):
+    """An open cart: who, what, and when they last touched it. An anonymous
+    guest cart has no customer, so its customer fields are null and
+    `is_guest_cart` is true; its access token is never exposed."""
+
+    id = serializers.UUIDField(read_only=True)
+    is_guest_cart = serializers.SerializerMethodField()
+    customer_id = serializers.UUIDField(read_only=True, allow_null=True)
+    # allow_null: through a missing customer DRF would otherwise drop the field.
+    customer_email = serializers.EmailField(
+        source="customer.email", read_only=True, allow_null=True
+    )
+    customer_name = serializers.SerializerMethodField()
+    customer_phone = serializers.CharField(source="customer.phone", read_only=True, allow_null=True)
+    items = AdminCartItemSerializer(source="lines", many=True, read_only=True)
+    item_count = serializers.SerializerMethodField()
+    subtotal = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_is_guest_cart(self, obj) -> bool:
+        return obj.customer_id is None
+
+    def get_customer_name(self, obj) -> str | None:
+        return obj.customer.get_full_name() if obj.customer else None
+
+    def get_item_count(self, obj) -> int:
+        return sum(line.quantity for line in obj.lines.all())
+
+
 class AdminOrderCreateLineSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.urls import path
 
 from .views import (
+    AdminCustomerCartListView,
     AdminOrderCancelView,
     AdminOrderCapturePaymentView,
     AdminOrderDetailView,
@@ -81,6 +82,7 @@ urlpatterns = [
         AdminPaymentDetailView.as_view(),
         name="payment-detail",
     ),
+    path("carts/", AdminCustomerCartListView.as_view(), name="customer-cart-list"),
     path("reservations/", AdminReservationListView.as_view(), name="reservation-list"),
     path(
         "reservations/<uuid:reservation_id>/release/",

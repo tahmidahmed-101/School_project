@@ -59,7 +59,7 @@ class PublicTrackOrderView(APIView):
 
         # Verify phone matches either contact_phone or customer phone
         order_phone = (order.contact_phone or "").strip()
-        customer_phone = (order.customer.phone or "").strip()
+        customer_phone = (order.customer.phone or "").strip() if order.customer else ""
         shipping_phone = ""
         if order.shipping_address_snapshot:
             shipping_phone = (order.shipping_address_snapshot.get("phone") or "").strip()

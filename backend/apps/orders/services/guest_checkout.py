@@ -20,6 +20,7 @@ from apps.orders.services.carts import (
     compute_line_tax,
     default_tax_percent,
 )
+from apps.orders.services.orders import lock_order
 
 
 def _variants_by_id(items: list[dict]) -> dict:
@@ -112,9 +113,9 @@ def guest_checkout(
     *,
     phone: str,
     first_name: str,
-    items: list[dict],
     shipping_address: dict,
     payment_method: str,
+    items: list[dict] | None = None,
     email: str = "",
     last_name: str = "",
     carrier_id: str | None = None,
@@ -122,9 +123,11 @@ def guest_checkout(
     notes: str = "",
     ip_address: str = "",
     customer: User | None = None,
+    cart: SalesOrder | None = None,
 ) -> SalesOrder:
     """`customer` is the authenticated requester, if any — the only way an
-    order reaches a registered account from here."""
+    order reaches a registered account from here. `cart` is a saved guest
+    cart to check out instead of building an order from `items`."""
     if customer is not None:
         user = customer
     else:
@@ -145,11 +148,74 @@ def guest_checkout(
         country=shipping_address.get("country", "Bangladesh"),
     )
 
-    order_number = _generate_order_number()
+    if cart is not None:
+        order = _claim_guest_cart(cart, owner=user, email=email, phone=phone, notes=notes)
+    else:
+        order = _order_from_items(items or [], owner=user, email=email, phone=phone, notes=notes)
 
+    if coupon_code:
+        from apps.orders.services.coupons import apply_coupon
+
+        try:
+            apply_coupon(order=order, code=coupon_code, actor=user)
+        except DomainError as exc:
+            # A guest checkout is one irreversible form submission — a bad
+            # coupon code shouldn't cost the customer their whole order, so
+            # these fall back to no discount rather than aborting checkout.
+            if exc.code not in (
+                "invalid_coupon",
+                "coupon_expired",
+                "coupon_usage_limit_reached",
+                "coupon_minimum_not_met",
+            ):
+                raise
+
+    carrier = None
+    if carrier_id:
+        carrier = get_carrier_by_id(carrier_id)
+        if carrier is None:
+            order.delete()
+            raise BusinessRuleViolationError("Carrier not found.", code="carrier_not_found")
+
+    from apps.orders.services.checkout import checkout
+
+    order = checkout(order=order, shipping_address=address, carrier=carrier, ip_address=ip_address)
+
+    from apps.orders.services.payments import capture_payment
+
+    capture_payment(order=order, amount=order.grand_total, method=payment_method)
+    order.refresh_from_db()
+    return order
+
+
+def _claim_guest_cart(
+    cart: SalesOrder, *, owner: User, email: str, phone: str, notes: str
+) -> SalesOrder:
+    """Give a saved guest cart its owner and contact details. Locked first,
+    so two checkouts of one cart can't both claim it; the lines and their
+    prices stay exactly as the guest's cart services left them."""
+    lock_order(cart)
+    if cart.status != SalesOrder.Status.PENDING or cart.customer_id is not None:
+        raise BusinessRuleViolationError(
+            "Only a pending order can be checked out.", code="not_pending"
+        )
+    if not cart.lines.exists():
+        raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
+    cart.customer = owner
+    cart.contact_email = email
+    cart.contact_phone = phone
+    cart.notes = notes
+    cart.save(update_fields=["customer", "contact_email", "contact_phone", "notes", "updated_at"])
+    return cart
+
+
+def _order_from_items(
+    items: list[dict], *, owner: User, email: str, phone: str, notes: str
+) -> SalesOrder:
+    """A one-shot order built from the checkout form's item list."""
     order = SalesOrder.objects.create(
-        customer=user,
-        order_number=order_number,
+        customer=owner,
+        order_number=_generate_order_number(),
         contact_email=email,
         contact_phone=phone,
         notes=notes,
@@ -215,36 +281,4 @@ def guest_checkout(
         )
 
     order.recalculate_totals()
-
-    if coupon_code:
-        from apps.orders.services.coupons import apply_coupon
-        try:
-            apply_coupon(order=order, code=coupon_code, actor=user)
-        except DomainError as exc:
-            # A guest checkout is one irreversible form submission — a bad
-            # coupon code shouldn't cost the customer their whole order, so
-            # these fall back to no discount rather than aborting checkout.
-            if exc.code not in (
-                "invalid_coupon",
-                "coupon_expired",
-                "coupon_usage_limit_reached",
-                "coupon_minimum_not_met",
-            ):
-                raise
-
-    carrier = None
-    if carrier_id:
-        carrier = get_carrier_by_id(carrier_id)
-        if carrier is None:
-            order.delete()
-            raise BusinessRuleViolationError("Carrier not found.", code="carrier_not_found")
-
-    from apps.orders.services.checkout import checkout
-    order = checkout(
-        order=order, shipping_address=address, carrier=carrier, ip_address=ip_address
-    )
-
-    from apps.orders.services.payments import capture_payment
-    capture_payment(order=order, amount=order.grand_total, method=payment_method)
-    order.refresh_from_db()
     return order

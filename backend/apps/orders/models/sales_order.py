@@ -30,8 +30,19 @@ class SalesOrder(FullAuditModel):
         CLOSED = "closed", "Closed"
 
     order_number = models.CharField(max_length=32, unique=True)
+    # Null only on an anonymous guest cart (see `guest_token_hash`); checkout
+    # assigns the owner, so every checked-out order has one.
     customer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sales_orders"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="sales_orders",
+    )
+    # SHA-256 of an anonymous guest cart's bearer token. The raw token is
+    # handed to the guest once and never stored.
+    guest_token_hash = models.CharField(
+        max_length=64, unique=True, null=True, blank=True, editable=False
     )
     shipping_address = models.ForeignKey(
         "accounts.Address", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
@@ -69,6 +80,15 @@ class SalesOrder(FullAuditModel):
             models.Index(fields=["created_at"]),
             models.Index(fields=["customer", "deleted_at"], name="so_cust_del_idx"),
             models.Index(fields=["deleted_at", "status"], name="so_del_status_idx"),
+        ]
+        constraints: ClassVar[list] = [
+            # An order without a customer must be a token-addressed guest cart.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(customer__isnull=False) | models.Q(guest_token_hash__isnull=False)
+                ),
+                name="so_customer_or_guest_token",
+            ),
         ]
 
     def __str__(self) -> str:

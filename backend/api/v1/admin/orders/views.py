@@ -29,6 +29,7 @@ from apps.orders.selectors.payments import get_payment_by_id, payments_list
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
+    customer_carts_list,
     get_order_by_id,
     get_order_for_document,
     get_order_line_by_id,
@@ -68,6 +69,7 @@ from apps.orders.services.shipments import (
 
 from .serializers import (
     SHIP_TO_API_FIELDS,
+    AdminCustomerCartSerializer,
     AdminOrderCreateSerializer,
     AdminOrderLineUpdateSerializer,
     AdminOrderStatusSerializer,
@@ -419,6 +421,29 @@ class AdminPaymentDetailView(APIView):
         if payment is None:
             return not_found("payment_not_found", "Payment not found.")
         return Response({"data": AdminPaymentSerializer(payment).data, "message": "Success"})
+
+
+@extend_schema(tags=["Orders"])
+class AdminCustomerCartListView(GenericListAPIView):
+    """Customers' open, non-empty carts that haven't been checked out.
+    Read-only: carts are only ever changed by their customers."""
+
+    permission_classes: ClassVar[list] = [OrdersViewPermission]
+    serializer_class = AdminCustomerCartSerializer
+    search_fields = (
+        "customer__email",
+        "customer__phone",
+        "customer__first_name",
+        "customer__last_name",
+    )
+    ordering_fields = ("updated_at", "created_at", "subtotal")
+    default_ordering = "-updated_at"
+
+    def get_queryset(self):
+        return customer_carts_list()
+
+    def get(self, request) -> Response:
+        return self.list_response(request)
 
 
 @extend_schema(tags=["Orders"])
