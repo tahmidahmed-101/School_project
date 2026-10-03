@@ -1,3 +1,4 @@
+import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, SlidersHorizontal, Truck, Undo2 } from "lucide-react"
@@ -20,9 +21,10 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 import type { PickedVariant } from "@/features/catalog/components/VariantPicker"
+import { getApiErrorMessage } from "@/lib/api/client"
 
 import { fetchAll } from "../slices/stockItemSlice"
-import { fetchStockStatus } from "../api"
+import { deleteStockItem, fetchStockStatus } from "../api"
 import type { StockItem, StockStatusSummary } from "../types"
 import { useWarehouses } from "../lib/useWarehouses"
 import { StockMovementDialog, type MovementMode } from "./StockMovementDialog"
@@ -112,7 +114,7 @@ const StockOverview = () => {
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
             {row.original.product_image ? (
-              <img src={row.original.product_image} alt="" className="size-full object-cover" />
+              <img loading="lazy" decoding="async" src={row.original.product_image} alt="" className="size-full object-cover" />
             ) : (
               <Package className="size-4 text-muted-foreground" />
             )}
@@ -167,7 +169,20 @@ const StockOverview = () => {
         const s = row.original
         return (
           <TableActions
-            itemName={s.variant_sku}
+            itemName={`the stock record for ${s.variant_sku} in ${s.warehouse_name}`}
+            onDelete={
+              canAdjust
+                ? async () => {
+                    try {
+                      await deleteStockItem(s.id)
+                      toast.success(`Stock record for ${s.variant_sku} removed`)
+                      refreshAll()
+                    } catch (err) {
+                      toast.error(getApiErrorMessage(err, "Failed to remove the stock record"))
+                    }
+                  }
+                : undefined
+            }
             actions={[
               ...(canAdjust
                 ? [

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { EyeIcon, MoreVertical, PencilIcon, RotateCcw, Trash2Icon, type LucideIcon } from "lucide-react"
+import { EyeIcon, MoreVertical, PencilIcon, Trash2Icon, type LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -30,40 +30,9 @@ type Props = {
   editUrl?: string
   onEdit?: () => void
   onDelete?: () => void | Promise<unknown>
-  /** Soft-deleted rows offer only Restore (when `onRestore` is given). */
-  deleted?: boolean
-  onRestore?: () => void | Promise<unknown>
-  /** Disables Restore, e.g. while a mutation is in flight. */
-  restoreDisabled?: boolean
   /** Row-specific actions beyond view / edit / delete. */
   actions?: TableAction[]
   itemName: string
-}
-
-/** Restore button for a soft-deleted row; clicks don't trigger the row's own link. */
-export function RestoreButton({
-  onClick,
-  label,
-  disabled = false,
-}: {
-  onClick: () => void | Promise<unknown>
-  label: string
-  disabled?: boolean
-}) {
-  return (
-    <div onClick={(e) => e.stopPropagation()} data-no-row-click="true">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled}
-        onClick={() => void onClick()}
-        aria-label={`Restore ${label}`}
-      >
-        <RotateCcw className="size-3.5" /> Restore
-      </Button>
-    </div>
-  )
 }
 
 /** The row's action menu: a three-dot button that opens the actions by name. */
@@ -73,9 +42,6 @@ export function TableActions({
   editUrl,
   onEdit,
   onDelete,
-  deleted = false,
-  onRestore,
-  restoreDisabled = false,
   actions = [],
   itemName,
 }: Props) {
@@ -83,16 +49,12 @@ export function TableActions({
   // would be unmounted as soon as the menu closes.
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const items: TableAction[] = deleted
-    ? onRestore
-      ? [{ label: "Restore", icon: RotateCcw, onSelect: () => void onRestore(), disabled: restoreDisabled }]
-      : []
-    : [
-        ...(viewUrl || onView ? [{ label: "View", icon: EyeIcon, to: viewUrl, onSelect: onView }] : []),
-        ...(editUrl || onEdit ? [{ label: "Edit", icon: PencilIcon, to: editUrl, onSelect: onEdit }] : []),
-        ...actions,
-      ]
-  const canDelete = !deleted && Boolean(onDelete)
+  const items: TableAction[] = [
+    ...(viewUrl || onView ? [{ label: "View", icon: EyeIcon, to: viewUrl, onSelect: onView }] : []),
+    ...(editUrl || onEdit ? [{ label: "Edit", icon: PencilIcon, to: editUrl, onSelect: onEdit }] : []),
+    ...actions,
+  ]
+  const canDelete = Boolean(onDelete)
 
   if (items.length === 0 && !canDelete) return null
 

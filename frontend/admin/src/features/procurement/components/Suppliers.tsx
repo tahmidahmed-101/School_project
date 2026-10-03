@@ -15,6 +15,7 @@ import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { TextField } from "@/components/common/form-fields"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
@@ -151,14 +152,6 @@ const Suppliers = () => {
     }
   }
 
-  const handleRestore = async (supplier: Supplier) => {
-    try {
-      await dispatch(restoreSupplier(supplier.id)).unwrap()
-      toast.success("Supplier restored")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore supplier"))
-    }
-  }
 
   const openForm = (supplier: Supplier | null) => {
     setEditing(supplier)
@@ -211,8 +204,6 @@ const Suppliers = () => {
         return (
           <TableActions
             itemName={supplier.name}
-            deleted={!!supplier.deleted_at}
-            onRestore={() => handleRestore(supplier)}
             onEdit={() => openForm(supplier)}
             onDelete={() => handleDelete(supplier)}
           />
@@ -228,6 +219,13 @@ const Suppliers = () => {
         actions={
           canManage && (
             <>
+              <RestoreDeletedButton<Supplier>
+                noun="suppliers"
+                endpoint="/admin/procurement/suppliers/"
+                restore={(item) => dispatch(restoreSupplier(item.id)).unwrap()}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
               <CsvImportButton
                 entityName="suppliers"
                 fields={IMPORT_FIELDS}

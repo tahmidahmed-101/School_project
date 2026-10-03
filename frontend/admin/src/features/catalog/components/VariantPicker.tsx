@@ -150,7 +150,7 @@ export function VariantPicker({
                   >
                     <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
                       {v.primary_image ? (
-                        <img src={v.primary_image} alt="" className="size-full object-cover" />
+                        <img loading="lazy" decoding="async" src={v.primary_image} alt="" className="size-full object-cover" />
                       ) : (
                         <Package className="size-4 text-muted-foreground" />
                       )}

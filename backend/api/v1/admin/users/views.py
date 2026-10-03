@@ -130,6 +130,9 @@ class AdminUserListCreateView(UsersPermissionMixin, APIView):
             search=get_search(params),
             include_deleted=bool(get_bool(params, "include_deleted", default=False)),
         )
+        # With include_deleted, narrows to the deleted accounts (the restore list).
+        if get_bool(params, "deleted_only", default=False):
+            queryset = queryset.filter(deleted_at__isnull=False)
         return list_response(request, queryset, _AdminUserListSerializer, view=self)
 
     @extend_schema(

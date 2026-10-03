@@ -137,6 +137,20 @@ def delete_product(*, product: Product, actor=None) -> Product:
     return product
 
 
+@transaction.atomic
+def restore_product(product: Product) -> Product:
+    """Undo `delete_product`: bring back the product and the variants deleted with it.
+
+    Variants removed on their own before the product was deleted stay deleted.
+    """
+    from apps.common.services.soft_delete import restore_instance
+
+    deleted_at = product.deleted_at
+    restore_instance(product)
+    product.variants.filter(deleted_at__gte=deleted_at).update(deleted_at=None, is_active=True)
+    return product
+
+
 def stage_product_status(*, product: Product, is_active: bool) -> None:
     """Set the status in memory only; the caller writes the whole batch with a
     single `bulk_update`, which does not run `auto_now` on `updated_at`."""

@@ -120,8 +120,20 @@ class GenericListAPIView(APIView):
 
     def get_filtered_queryset(self, request) -> QuerySet:
         queryset = self.get_queryset()
+        queryset = self.filter_deleted_only(queryset, request)
         queryset = self.filter_search(queryset, request)
         return self.apply_ordering(queryset, request)
+
+    def filter_deleted_only(self, queryset: QuerySet, request) -> QuerySet:
+        """`?deleted_only=true` narrows a soft-delete list to its deleted rows (the
+        dashboard's restore lists). It only ever narrows: whether deleted rows are
+        in the queryset at all is still decided by the view's `include_deleted`
+        handling and its permission, so on its own it returns nothing."""
+        if not get_bool(request.query_params, "deleted_only", default=False):
+            return queryset
+        if not any(field.name == "deleted_at" for field in queryset.model._meta.get_fields()):
+            return queryset
+        return queryset.filter(deleted_at__isnull=False)
 
     def get_serializer_context(self, items: list) -> dict:
         """Override to batch per-row lookups for the page being serialized."""
@@ -171,10 +183,12 @@ class RestoreAPIView(APIView):
     """`POST <resource>/<id>/restore/` for any soft-delete model.
 
     Subclasses set `get_object_fn` (a selector accepting `include_deleted=True`),
-    `serializer_class` and the not-found code/message.
+    `serializer_class` and the not-found code/message. Set `restore_fn` when
+    restoring must also bring back records that were deleted along with it.
     """
 
     get_object_fn: Callable[..., Any] | None = None
+    restore_fn: Callable[..., Any] | None = None
     serializer_class: type | None = None
     not_found_code = "not_found"
     not_found_message = "Not found."
@@ -188,7 +202,7 @@ class RestoreAPIView(APIView):
         if instance is None:
             return not_found(self.not_found_code, self.not_found_message)
         try:
-            restore_instance(instance)
+            (type(self).restore_fn or restore_instance)(instance)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(

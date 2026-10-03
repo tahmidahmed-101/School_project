@@ -74,7 +74,7 @@ export function ProductPickerDialog({ open, onOpenChange, title, description, on
               >
                 <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
                   {product.primary_image ? (
-                    <img src={product.primary_image} alt="" className="size-full object-cover" />
+                    <img loading="lazy" decoding="async" src={product.primary_image} alt="" className="size-full object-cover" />
                   ) : (
                     <Package className="size-4 text-muted-foreground" />
                   )}

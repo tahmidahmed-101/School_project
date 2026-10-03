@@ -77,6 +77,9 @@ class StaffListCreateView(UsersPermissionMixin, APIView):
     def get(self, request) -> Response:
         include_deleted = bool(get_bool(request.query_params, "include_deleted", default=False))
         queryset = staff_users(include_inactive=True, include_deleted=include_deleted)
+        # With include_deleted, narrows to the deleted accounts (the restore list).
+        if get_bool(request.query_params, "deleted_only", default=False):
+            queryset = queryset.filter(deleted_at__isnull=False)
         queryset = filter_search(queryset, request, STAFF_SEARCH_FIELDS)
         return list_response(request, queryset, _AdminUserListSerializer, view=self)
 

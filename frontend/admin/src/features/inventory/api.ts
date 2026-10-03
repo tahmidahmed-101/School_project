@@ -2,11 +2,9 @@ import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope } from "@/lib/api/envelope"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import type {
-  QuickProductPayload,
   StockAdjustmentPayload,
   StockIntakePayload,
   StockLedgerEntry,
-  StockLookupResult,
   StockReservation,
   StockStatusSummary,
   StockWriteOffPayload,
@@ -25,8 +23,8 @@ export async function fetchStockStatus(): Promise<StockStatusSummary> {
   }
 }
 
-/** Exact SKU or barcode lookup. */
-export const lookupStock = (q: string) => apiCall<StockLookupResult>(() => api.get(`${I}/lookup/`, { params: { q } }))
+/** Removes a stock record. The backend refuses while it still holds on-hand or reserved quantity. */
+export const deleteStockItem = (id: string) => apiCall<unknown>(() => api.delete(`${I}/stock-items/${id}/`))
 
 export const postIntake = (payload: StockIntakePayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/intake/`, payload))
@@ -39,8 +37,6 @@ export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[]) =>
   )
 export const postWriteOff = (payload: StockWriteOffPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/write-offs/`, payload))
-export const createQuickProduct = (payload: QuickProductPayload) =>
-  apiCall<StockLookupResult>(() => api.post(`${I}/quick-products/`, payload))
 
 // ---- warehouses ----
 export const WAREHOUSES_ENDPOINT = `${I}/warehouses/`

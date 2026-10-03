@@ -17,6 +17,7 @@ import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon,
 
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { EmptyState } from "./EmptyState"
 import { AlertCircleIcon, Loader2Icon, ToggleLeft, ToggleRight, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
@@ -167,6 +168,9 @@ export function DataTable<TData, TValue>({
   const selectable = selectableProp ?? (Boolean(bulk) || !embedded)
   const navigate = useNavigate()
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  // Only the layout for this screen size is rendered: building both the table and the
+  // card list for every row, then hiding one with CSS, doubled the work of every list page.
+  const isDesktop = useMediaQuery("(min-width: 640px)")
 
   // Rows without an id of their own (report rows) are told apart by their position.
   const getId =
@@ -426,7 +430,8 @@ export function DataTable<TData, TValue>({
       )}
       {/* ---- Desktop: one table in one scroll container. The header is sticky, so it stays
            pinned while rows scroll vertically and moves with them horizontally. ---- */}
-      <div className="hidden sm:block">
+      {isDesktop ? (
+      <div>
         {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
         {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
@@ -558,9 +563,9 @@ export function DataTable<TData, TValue>({
           </table>
         </div>
       </div>
-
-      {/* ---- Mobile (< sm): stacked cards, so no horizontal scrolling is needed ---- */}
-      <div className="sm:hidden">
+      ) : (
+      // ---- Mobile (< sm): stacked cards, so no horizontal scrolling is needed ----
+      <div>
         {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
         <div className={cn(!embedded && "overflow-y-auto", !embedded && LIST_HEIGHT)}>
@@ -672,6 +677,7 @@ export function DataTable<TData, TValue>({
           )}
         </div>
       </div>
+      )}
 
       {/* Pagination */}
       {showPagination && (

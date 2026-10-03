@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge } from "@/components/common/cells"
 import { TextField, TextareaField } from "@/components/common/form-fields"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -162,14 +163,6 @@ const ExpenseCategories = () => {
     }
   }
 
-  const handleRestore = async (category: ExpenseCategory) => {
-    try {
-      await dispatch(restoreExpenseCategory(category.id)).unwrap()
-      toast.success("Category restored")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore category"))
-    }
-  }
 
   const columns: ColumnDef<ExpenseCategory>[] = [
     {
@@ -205,8 +198,6 @@ const ExpenseCategories = () => {
         return (
           <TableActions
             itemName={cat.name}
-            deleted={!!cat.deleted_at}
-            onRestore={() => handleRestore(cat)}
             onEdit={() => {
               setEditing(cat)
               setFormOpen(true)
@@ -225,15 +216,24 @@ const ExpenseCategories = () => {
         back={{ to: "/expenses", label: "Expenses" }}
         actions={
           canPost && (
-            <Button
-              size="action"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <Plus className="size-5" /> New Category
-            </Button>
+            <>
+              <RestoreDeletedButton<ExpenseCategory>
+                noun="expense categories"
+                endpoint="/admin/accounting/expense-categories/"
+                restore={(item) => dispatch(restoreExpenseCategory(item.id)).unwrap()}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
+              <Button
+                size="action"
+                onClick={() => {
+                  setEditing(null)
+                  setFormOpen(true)
+                }}
+              >
+                <Plus className="size-5" /> New Category
+              </Button>
+            </>
           )
         }
       />

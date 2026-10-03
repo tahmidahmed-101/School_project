@@ -229,3 +229,17 @@ export interface BundlePayload {
 export interface BulkActionResult {
   affected: number
 }
+
+/** AdminProductReviewSerializer — a customer's review of a product, written on the storefront. */
+export interface ProductReview {
+  id: string
+  product_id: string
+  product_name: string
+  customer_id: string
+  customer_name: string
+  /** 1 to 5. */
+  rating: number
+  comment: string
+  is_verified_purchase: boolean
+  created_at: string
+}

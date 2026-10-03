@@ -106,7 +106,7 @@ export function AppSidebar() {
           </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
             <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
-              NestmartIT
+              Kull Mart
             </span>
             <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-400">
               Admin Workspace

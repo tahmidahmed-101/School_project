@@ -136,7 +136,7 @@ const Navbar = () => {
                 <span className="hidden sm:block">Quick Create</span>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-48 p-1.5">
+            <DropdownMenuContent align="end" collisionPadding={16} className="min-w-48 p-1.5">
               <DropdownMenuGroup>
                 {visibleQuickCreate.map((item) => (
                   <DropdownMenuItem
@@ -177,7 +177,7 @@ const Navbar = () => {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
+            <DropdownMenuContent align="end" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
               <DropdownMenuLabel className="border-b border-gray-200 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
                 Notifications
               </DropdownMenuLabel>
@@ -228,7 +228,7 @@ const Navbar = () => {
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 overflow-hidden">
+            <DropdownMenuContent align="end" collisionPadding={16} className="w-56 overflow-hidden">
               <DropdownMenuLabel className="flex items-center gap-3 px-4 py-3">
                 <Avatar className="size-10 shrink-0 ring-2 ring-primary-500/20">
                   {user?.profile_picture ? (

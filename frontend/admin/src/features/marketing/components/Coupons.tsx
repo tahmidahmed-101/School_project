@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { DateCell } from "@/components/common/cells"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import type { Coupon } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteData, fetchAll, restoreCoupon } from "@/features/marketing/slices/couponSlice"
@@ -67,14 +68,6 @@ const Coupons = () => {
     }
   }
 
-  const handleRestore = async (coupon: Coupon) => {
-    try {
-      await dispatch(restoreCoupon(coupon.id)).unwrap()
-      toast.success(`Coupon ${coupon.code} restored`)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't restore this coupon"))
-    }
-  }
 
   const columns: ColumnDef<Coupon>[] = [
     {
@@ -140,8 +133,6 @@ const Coupons = () => {
           {...(canManage
             ? { editUrl: `/coupon_form/${row.original.id}`, onDelete: () => handleDelete(row.original) }
             : { viewUrl: `/coupon_form/${row.original.id}` })}
-          deleted={!!row.original.deleted_at}
-          onRestore={canManage ? () => handleRestore(row.original) : undefined}
         />
       ),
     },
@@ -153,9 +144,18 @@ const Coupons = () => {
         title="Coupons"
         actions={
           canManage && (
-            <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
-              <PlusIcon className="size-5" /> Add Coupon
-            </Button>
+            <>
+              <RestoreDeletedButton<Coupon>
+                noun="coupons"
+                endpoint="/admin/coupons/"
+                restore={(item) => dispatch(restoreCoupon(item.id)).unwrap()}
+                label={(item) => item.code}
+                onRestored={list.reload}
+              />
+              <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
+                <PlusIcon className="size-5" /> Add Coupon
+              </Button>
+            </>
           )
         }
       />

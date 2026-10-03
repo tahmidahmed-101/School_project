@@ -67,7 +67,33 @@ export const fetchUserAddresses = createAsyncThunk(
   }
 )
 
-const actionThunks = [activateUser, deactivateUser, softDeleteUser, restoreUser]
+/** POST /admin/users/{id}/set-role/ — e.g. promote a customer to staff. */
+export const setUserRole = createAsyncThunk(
+  "customers/setRole",
+  async ({ id, role }: { id: string; role: AdminUser["role"] }, { rejectWithValue }) => {
+    try {
+      const res = await api.post(`/admin/users/${id}/set-role/`, { role })
+      return unwrapItem<AdminUser>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+/** POST /admin/users/{id}/addresses/ */
+export const addUserAddress = createAsyncThunk(
+  "customers/addAddress",
+  async ({ id, payload }: { id: string; payload: Partial<AdminAddress> }, { rejectWithValue }) => {
+    try {
+      const res = await api.post(`/admin/users/${id}/addresses/`, payload)
+      return unwrapItem<AdminAddress>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+const actionThunks = [activateUser, deactivateUser, softDeleteUser, restoreUser, setUserRole]
 
 export default withExtraCases(reducer, (builder) => {
   for (const thunk of actionThunks) {

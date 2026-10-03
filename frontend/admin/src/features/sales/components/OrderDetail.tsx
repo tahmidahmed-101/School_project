@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Ban, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered } from "lucide-react"
+import { Ban, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered, ShieldAlert, Trash2 } from "lucide-react"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { cancelOrder, fetchSingle, selectOrderDetail, updateOrderStatus } from "@/features/sales/slices/orderSlice"
+import {
+  cancelOrder,
+  deleteData,
+  fetchSingle,
+  selectOrderDetail,
+  updateOrderStatus,
+} from "@/features/sales/slices/orderSlice"
 import {
   NON_RETURNABLE_STATUSES,
   ORDER_STATUS_OPTIONS,
@@ -28,16 +34,31 @@ import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
-import { formatCurrency, formatDateTime } from "@/lib/format"
+import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { api } from "@/lib/api/client"
+import { unwrapItem } from "@/lib/api/envelope"
+import { useLastValue } from "@/hooks/use-dialog-presence"
 import { OrderEditDialog } from "./order/OrderEditDialog"
 import { CapturePaymentDialog } from "./order/CapturePaymentDialog"
 import { CreateShipmentDialog } from "./order/CreateShipmentDialog"
 import { CreateReturnDialog } from "./order/CreateReturnDialog"
 import { OrderLinesCard } from "./order/OrderLinesCard"
 
+/** POST /admin/risk/orders/{id}/assess/ — a fresh risk assessment of one order. */
+interface RiskAssessment {
+  risk_level: string
+  risk_score: string
+  risk_reasons: string[]
+  recommended_action: string
+  auto_blocked: boolean
+  guidance: string
+}
+
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
 
   const singleData = useAppSelector(selectOrderDetail)
   const { singleStatus, singleError } = useAppSelector((state) => state.orders)
@@ -47,6 +68,9 @@ const OrderDetail = () => {
   const canShip = useCan("shipments.update")
   const canReturn = useCan("returns.manage")
   const canRefund = useCan("refunds.approve")
+  const canAssessRisk = useCan("risk.manage")
+  const [risk, setRisk] = useState<RiskAssessment | null>(null)
+  const riskShown = useLastValue(risk)
 
   useDocumentTitle(order?.order_number ? `${order.order_number} — Order` : "Order Details")
 
@@ -108,6 +132,26 @@ const OrderDetail = () => {
   const handleCancel = () =>
     run(() => dispatch(cancelOrder({ id: order.id })).unwrap(), `Order ${order.order_number} cancelled`, "Failed to cancel order")
 
+  const handleDelete = async () => {
+    try {
+      await dispatch(deleteData(order.id)).unwrap()
+      toast.success(`Order ${order.order_number} deleted`)
+      navigate("/orders")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete order"))
+    }
+  }
+
+  const handleRiskCheck = () =>
+    run(
+      async () => {
+        const res = await api.post(`/admin/risk/orders/${order.id}/assess/`)
+        setRisk(unwrapItem<RiskAssessment>(res.data))
+      },
+      "Risk check complete",
+      "Risk check failed"
+    )
+
   const handleInvoice = async () => {
     setDownloading(true)
     try {
@@ -140,11 +184,34 @@ const OrderDetail = () => {
             <SubmitButton type="button" loading={downloading} icon={FileText} variant="outline" onClick={handleInvoice}>
               Invoice PDF
             </SubmitButton>
+            {canAssessRisk && (
+              <Button variant="outline" onClick={handleRiskCheck} disabled={busy}>
+                <ShieldAlert className="size-4" />
+                Check risk
+              </Button>
+            )}
             {canManage && (
               <Button variant="outline" onClick={() => setDialog("edit")}>
                 <PencilIcon className="size-4" />
                 Edit details
               </Button>
+            )}
+            {canManage && (
+              <ConfirmDialog
+                destructive
+                icon={<Trash2 />}
+                title={`Delete order ${order.order_number}?`}
+                description="This permanently removes the order together with its payments, shipments and returns, and releases any stock it holds. It can't be undone. To keep the record, cancel the order instead."
+                confirmLabel="Delete order"
+                cancelLabel="Keep order"
+                onConfirm={handleDelete}
+                trigger={
+                  <Button variant="destructive">
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                }
+              />
             )}
           </>
         }
@@ -435,6 +502,39 @@ const OrderDetail = () => {
         onOpenChange={(o) => setDialog(o ? "return" : null)}
         onCreated={refresh}
       />
+
+      <Dialog open={!!risk} onOpenChange={(open) => !open && setRisk(null)}>
+        {riskShown && (
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                Risk check
+                <StatusBadge
+                  status={riskShown.risk_level}
+                  tone={riskShown.risk_level === "low" ? "success" : riskShown.risk_level === "high" ? "destructive" : "warning"}
+                />
+              </DialogTitle>
+              <DialogDescription>{riskShown.guidance}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p>
+                Score <span className="font-semibold tabular-nums">{riskShown.risk_score}</span> · recommended:{" "}
+                <span className="font-medium">{humanize(riskShown.recommended_action)}</span>
+                {riskShown.auto_blocked && " · automatically blocked"}
+              </p>
+              {riskShown.risk_reasons.length > 0 ? (
+                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                  {riskShown.risk_reasons.map((reason, i) => (
+                    <li key={i}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No risk signals found.</p>
+              )}
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }

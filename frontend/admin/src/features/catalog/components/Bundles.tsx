@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -44,15 +45,6 @@ const Bundles = () => {
     params: { ordering: ordering?.value },
   })
 
-  const handleRestore = async (b: Bundle) => {
-    try {
-      await restoreBundle(b.id)
-      toast.success(`${b.name} restored`)
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore bundle"))
-    }
-  }
 
   const handleDelete = async (b: Bundle) => {
     try {
@@ -72,7 +64,7 @@ const Bundles = () => {
         return (
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-              {img ? <img src={img} alt="" className="size-full object-cover" /> : <Boxes className="size-5 text-muted-foreground" />}
+              {img ? <img loading="lazy" decoding="async" src={img} alt="" className="size-full object-cover" /> : <Boxes className="size-5 text-muted-foreground" />}
             </div>
             <ProductCell name={row.original.name} sku={row.original.sku} />
           </div>
@@ -122,8 +114,6 @@ const Bundles = () => {
         return (
           <TableActions
             itemName={b.name}
-            deleted={Boolean(b.deleted_at)}
-            onRestore={canManage ? () => handleRestore(b) : undefined}
             viewUrl={`/product_detail/${b.product_id}`}
             editUrl={canManage ? `/bundles/${b.id}` : undefined}
             onDelete={canManage ? () => handleDelete(b) : undefined}
@@ -139,9 +129,19 @@ const Bundles = () => {
         title="Bundles"
         actions={
           canManage && (
-            <Button size="action" onClick={() => navigate("/bundles/new")}>
-              <PlusIcon className="size-5" /> New Bundle
-            </Button>
+            <>
+              <RestoreDeletedButton<Bundle>
+                noun="bundles"
+                endpoint="/admin/catalog/bundles/"
+                restore={(item) => restoreBundle(item.id)}
+                label={(item) => item.name}
+                sub={(item) => item.sku}
+                onRestored={list.reload}
+              />
+              <Button size="action" onClick={() => navigate("/bundles/new")}>
+                <PlusIcon className="size-5" /> New Bundle
+              </Button>
+            </>
           )
         }
       />

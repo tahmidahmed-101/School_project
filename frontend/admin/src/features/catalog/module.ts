@@ -12,6 +12,7 @@ export const catalogModule: FeatureModule = {
     { path: "categories", lazy: page(() => import("./components/Categories")) },
     { path: "category_form/:id", lazy: page(() => import("./components/CategoryForm")) },
     { path: "brands", lazy: page(() => import("./components/Brands")) },
+    { path: "reviews", lazy: page(() => import("./components/Reviews")) },
   ],
   nav: [
     {
@@ -25,6 +26,7 @@ export const catalogModule: FeatureModule = {
         { title: "Bundles", url: "/bundles", permission: ["catalog.view", "catalog.manage"] },
         { title: "Categories", url: "/categories", permission: ["catalog.view", "catalog.manage"] },
         { title: "Brands", url: "/brands", permission: ["catalog.view", "catalog.manage"] },
+        { title: "Reviews", url: "/reviews", permission: ["catalog.view", "catalog.manage"] },
       ],
     },
   ],

@@ -107,7 +107,7 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
   const tile = (img: ProductImage, caption?: string) => (
     <div key={img.id} className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="relative aspect-square bg-muted">
-        <img
+        <img loading="lazy" decoding="async"
           src={img.url}
           alt={img.alt_text || "Product image"}
           className="size-full object-cover"

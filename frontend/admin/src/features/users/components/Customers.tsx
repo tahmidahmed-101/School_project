@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
 import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -13,10 +12,13 @@ import { bulkDeactivateUsers, fetchAll, postData, restoreUser, activateUser } fr
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
-import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { UserAvatar } from "./UserAvatar"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { Button } from "@/components/ui/button"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
+import { PlusIcon } from "lucide-react"
+import { CustomerFormDialog } from "./CustomerDialogs"
 
 // Mirrors AdminUserCreateSerializer (POST /admin/users/); role is always sent as "customer".
 const CUSTOMER_IMPORT_FIELDS: ImportField[] = [
@@ -52,6 +54,7 @@ const Customers = () => {
   const { data: customers } = customerState
 
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
 
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
@@ -59,15 +62,6 @@ const Customers = () => {
     params: { role: "customer", is_active: statusFilter?.value },
   })
 
-  const handleRestore = async (user: AdminUser) => {
-    try {
-      await dispatch(restoreUser(user.id)).unwrap()
-      toast.success(`${displayNameOf(user)} restored`)
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't restore this customer"))
-    }
-  }
 
   const columns: ColumnDef<AdminUser>[] = [
     {
@@ -108,8 +102,6 @@ const Customers = () => {
         <TableActions
           itemName={displayNameOf(row.original)}
           viewUrl={`/customer_detail/${row.original.id}`}
-          deleted={!!row.original.deleted_at}
-          onRestore={() => handleRestore(row.original)}
         />
       ),
     },
@@ -121,6 +113,15 @@ const Customers = () => {
         title="Customers"
         actions={
           <>
+            <RestoreDeletedButton<AdminUser>
+              noun="customers"
+              endpoint="/admin/users/"
+              params={{ role: "customer" }}
+              restore={(item) => dispatch(restoreUser(item.id)).unwrap()}
+              label={(item) => displayNameOf(item)}
+              sub={(item) => item.email}
+              onRestored={list.reload}
+            />
             <CsvImportButton
               entityName="customers"
               fields={CUSTOMER_IMPORT_FIELDS}
@@ -129,6 +130,9 @@ const Customers = () => {
               }
               onComplete={list.reload}
             />
+            <Button size="action" onClick={() => setAddOpen(true)}>
+              <PlusIcon className="size-5" /> Add Customer
+            </Button>
           </>
         }
       />
@@ -168,6 +172,11 @@ const Customers = () => {
         emptyDescription="No customer accounts match these filters."
         minWidth="900px"
         columnWidths={["300px", "160px", "130px", "120px", "80px"]}
+      />
+      <CustomerFormDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSaved={(created) => navigate(`/customer_detail/${created.id}`)}
       />
     </div>
   )

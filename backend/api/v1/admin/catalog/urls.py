@@ -21,7 +21,7 @@ from .product_views import (
     AdminProductListCreateView,
     AdminProductRestoreView,
 )
-from .review_views import AdminProductReviewDetailView
+from .review_views import AdminProductReviewDetailView, AdminProductReviewListView
 from .variant_views import (
     AdminProductVariantDetailView,
     AdminProductVariantGenerateView,
@@ -89,6 +89,7 @@ urlpatterns = [
         name="product-image-list",
     ),
     path("images/<uuid:image_id>/", AdminProductImageDetailView.as_view(), name="image-detail"),
+    path("reviews/", AdminProductReviewListView.as_view(), name="review-list"),
     path(
         "reviews/<uuid:review_id>/",
         AdminProductReviewDetailView.as_view(),

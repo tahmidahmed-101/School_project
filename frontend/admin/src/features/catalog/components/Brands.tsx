@@ -17,6 +17,7 @@ import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
 import { ImagePicker } from "@/components/common/ImagePicker"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -59,15 +60,6 @@ const Brands = () => {
     []
   )
 
-  const handleRestore = async (brand: Brand) => {
-    try {
-      await restoreBrand(brand.id)
-      toast.success(`${brand.name} restored`)
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore brand"))
-    }
-  }
 
   const handleDelete = async (brand: Brand) => {
     try {
@@ -86,7 +78,7 @@ const Brands = () => {
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
             {row.original.image ? (
-              <img src={row.original.image} alt="" className="size-full object-cover" />
+              <img loading="lazy" decoding="async" src={row.original.image} alt="" className="size-full object-cover" />
             ) : (
               <ImageIcon className="size-4 text-muted-foreground" />
             )}
@@ -109,8 +101,6 @@ const Brands = () => {
         return (
           <TableActions
             itemName={brand.name}
-            deleted={Boolean(brand.deleted_at)}
-            onRestore={() => handleRestore(brand)}
             onEdit={() => {
               setEditing(brand)
               setFormOpen(true)
@@ -129,6 +119,13 @@ const Brands = () => {
         actions={
           canManage && (
             <>
+              <RestoreDeletedButton<Brand>
+                noun="brands"
+                endpoint="/admin/catalog/brands/"
+                restore={(item) => restoreBrand(item.id)}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
               <CsvImportButton
                 entityName="brands"
                 fields={importFields}

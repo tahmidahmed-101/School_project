@@ -1,8 +1,9 @@
-import { Children, Fragment, isValidElement, useState, useSyncExternalStore, type ReactNode } from "react"
+import { Children, Fragment, isValidElement, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronDown, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { PageHeading } from "./PageHeading"
 
@@ -67,13 +68,6 @@ function flattenActions(node: ReactNode): ReactNode[] {
   )
 }
 
-const PHONE_QUERY = "(max-width: 639px)"
-const subscribePhone = (onChange: () => void) => {
-  const mq = window.matchMedia(PHONE_QUERY)
-  mq.addEventListener("change", onChange)
-  return () => mq.removeEventListener("change", onChange)
-}
-
 /**
  * The header's buttons. From `sm` up they sit in a row. On phones the main action (the last
  * one) takes the width and the rest fold behind a "More" toggle, so a page with three or four
@@ -81,7 +75,7 @@ const subscribePhone = (onChange: () => void) => {
  * one of them opened keeps its state.
  */
 function HeaderActions({ children }: { children: ReactNode }) {
-  const isPhone = useSyncExternalStore(subscribePhone, () => window.matchMedia(PHONE_QUERY).matches)
+  const isPhone = useMediaQuery("(max-width: 639px)")
   const [open, setOpen] = useState(false)
   const items = flattenActions(children)
   if (items.length === 0) return null

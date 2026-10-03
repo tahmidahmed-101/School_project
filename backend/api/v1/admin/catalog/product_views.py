@@ -17,6 +17,7 @@ from apps.catalog.selectors.products import (
 from apps.catalog.services.products import (
     create_product,
     delete_product,
+    restore_product,
     stage_product_status,
     update_product,
 )
@@ -205,6 +206,7 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
 class AdminProductRestoreView(RestoreAPIView):
     permission_classes: ClassVar[list] = [CatalogManagePermission]
     get_object_fn = staticmethod(get_product_by_id)
+    restore_fn = staticmethod(restore_product)
     serializer_class = ProductSerializer
     not_found_code = "product_not_found"
     not_found_message = "Product not found."

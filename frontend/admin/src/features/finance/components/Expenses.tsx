@@ -17,8 +17,8 @@ import { DatePicker } from "@/components/common/DatePicker"
 import { toISODate } from "@/lib/format"
 import { DateCell, MoneyCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { exportToCSV } from "@/lib/csv"
-import { fetchAllPages } from "@/lib/api/fetchAll"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
+import { downloadFile } from "@/lib/download"
 import type { Option } from "@/lib/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -126,14 +126,6 @@ const Expenses = () => {
     }
   }
 
-  const handleRestore = async (expense: Expense) => {
-    try {
-      await dispatch(restoreExpense(expense.id)).unwrap()
-      toast.success("Expense restored")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore expense"))
-    }
-  }
 
   const columns: ColumnDef<Expense>[] = [
     {
@@ -199,8 +191,6 @@ const Expenses = () => {
         return (
           <TableActions
             itemName={exp.payee}
-            deleted={!!exp.deleted_at}
-            onRestore={canPost ? () => handleRestore(exp) : undefined}
             onView={() => setViewing(exp)}
             onEdit={
               canPost
@@ -217,22 +207,8 @@ const Expenses = () => {
     },
   ]
 
-  const exportAll = async () => {
-    const rows = await fetchAllPages<Expense>("/admin/accounting/expenses/", list.query)
-    exportToCSV(
-      rows.map((e) => ({
-        Date: e.expense_date,
-        Payee: e.payee,
-        Description: e.description,
-        Category: e.category_id ? categoriesById.get(e.category_id)?.name ?? "" : "",
-        ExpenseAccount: accountLabel(accountsById.get(e.expense_account_id), ""),
-        PaidFrom: accountLabel(accountsById.get(e.payment_account_id), ""),
-        Amount: e.amount,
-        Reference: e.reference_number,
-      })),
-      "Expenses"
-    )
-  }
+  // The server builds the file from the same filters the list is showing.
+  const exportAll = () => downloadFile("/admin/accounting/expenses/export/", "expenses.csv", list.query)
 
   return (
     <div className="section-container">
@@ -240,6 +216,16 @@ const Expenses = () => {
         title="Expenses"
         actions={
           <>
+            {canPost && (
+              <RestoreDeletedButton<Expense>
+                noun="expenses"
+                endpoint="/admin/accounting/expenses/"
+                restore={(item) => dispatch(restoreExpense(item.id)).unwrap()}
+                label={(item) => item.payee}
+                sub={(item) => item.expense_date}
+                onRestored={list.reload}
+              />
+            )}
             <ExportButton onExport={exportAll} />
             {canPost && (
               <CsvImportButton

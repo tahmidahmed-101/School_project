@@ -7,6 +7,7 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteCarrier, fetchCarriers, restoreCarrier, updateCarrier } from "@/features/shipping/slices/carrierSlice"
 import { CARRIER_PROVIDER_OPTIONS, type Carrier } from "@/features/shipping/types"
@@ -37,7 +38,6 @@ const Carriers = () => {
     noun: "carrier",
     canUpdate,
     remove: (id) => dispatch(deleteCarrier(id)).unwrap(),
-    restore: (id) => dispatch(restoreCarrier(id)).unwrap(),
     setActive: (id, is_active) => dispatch(updateCarrier({ id, payload: { is_active } })).unwrap(),
     onEdit: openForm,
   })
@@ -87,9 +87,18 @@ const Carriers = () => {
         title="Carriers"
         actions={
           canUpdate && (
-            <Button size="action" onClick={() => openForm(null)}>
-              <PlusIcon className="size-5" /> Add Carrier
-            </Button>
+            <>
+              <RestoreDeletedButton<Carrier>
+                noun="carriers"
+                endpoint="/admin/logistics/carriers/"
+                restore={(item) => dispatch(restoreCarrier(item.id)).unwrap()}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
+              <Button size="action" onClick={() => openForm(null)}>
+                <PlusIcon className="size-5" /> Add Carrier
+              </Button>
+            </>
           )
         }
       />

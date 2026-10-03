@@ -81,7 +81,7 @@ const SearchField = ({
         onKeyDown={onKeyDown}
         placeholder="Search product, order, customer..."
         className={cn(
-          "w-full rounded-lg border border-gray-300 bg-gray-100 pl-9 text-sm text-gray-900 transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-500 dark:border-border dark:bg-transparent dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:bg-gray-700",
+          "w-full rounded-lg border border-gray-300 bg-gray-100 pl-9 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-500 dark:border-border dark:bg-transparent dark:text-gray-200 dark:placeholder:text-gray-500",
           variant === "sheet" ? "h-12 pr-10 text-base" : "h-10 pr-13"
         )}
       />
@@ -251,7 +251,7 @@ const SearchResults = ({
       <div className="border-t border-border/60 bg-muted/20 px-3 py-2 flex items-center justify-between text-[11px] text-muted-foreground">
         <span>Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Esc</kbd> to close</span>
         <span className="text-primary font-medium flex items-center gap-1">
-          NestmartIT Workspace
+          Kull Mart Workspace
         </span>
       </div>
     </div>

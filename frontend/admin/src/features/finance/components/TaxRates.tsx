@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { TextField } from "@/components/common/form-fields"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -161,14 +162,6 @@ const TaxRates = () => {
     }
   }
 
-  const handleRestore = async (rate: TaxRate) => {
-    try {
-      await dispatch(restoreTaxRate(rate.id)).unwrap()
-      toast.success("Tax rate restored")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore tax rate"))
-    }
-  }
 
   const columns: ColumnDef<TaxRate>[] = [
     {
@@ -207,8 +200,6 @@ const TaxRates = () => {
         return (
           <TableActions
             itemName={rate.name}
-            deleted={!!rate.deleted_at}
-            onRestore={() => handleRestore(rate)}
             onEdit={() => {
               setEditing(rate)
               setFormOpen(true)
@@ -226,15 +217,24 @@ const TaxRates = () => {
         title="Tax Rates"
         actions={
           canPost && (
-            <Button
-              size="action"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <Plus className="size-5" /> New Tax Rate
-            </Button>
+            <>
+              <RestoreDeletedButton<TaxRate>
+                noun="tax rates"
+                endpoint="/admin/accounting/tax-rates/"
+                restore={(item) => dispatch(restoreTaxRate(item.id)).unwrap()}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
+              <Button
+                size="action"
+                onClick={() => {
+                  setEditing(null)
+                  setFormOpen(true)
+                }}
+              >
+                <Plus className="size-5" /> New Tax Rate
+              </Button>
+            </>
           )
         }
       />

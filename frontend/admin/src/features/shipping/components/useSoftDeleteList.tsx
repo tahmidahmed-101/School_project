@@ -24,7 +24,6 @@ export function useSoftDeleteList<T extends SoftDeletable>({
   noun,
   canUpdate,
   remove,
-  restore,
   setActive,
   onEdit,
 }: {
@@ -34,7 +33,6 @@ export function useSoftDeleteList<T extends SoftDeletable>({
   noun: string
   canUpdate: boolean
   remove: (id: string) => Promise<unknown>
-  restore: (id: string) => Promise<unknown>
   setActive: (id: string, active: boolean) => Promise<unknown>
   onEdit: (record: T) => void
 }) {
@@ -50,14 +48,6 @@ export function useSoftDeleteList<T extends SoftDeletable>({
     }
   }
 
-  const handleRestore = async (record: T) => {
-    try {
-      await restore(record.id)
-      toast.success(`${record.name} restored`)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, `Failed to restore ${noun}`))
-    }
-  }
 
   /** STATUS and (for editors) ACTIONS, appended after the page's own columns. */
   const trailingColumns: ColumnDef<T>[] = [
@@ -74,8 +64,6 @@ export function useSoftDeleteList<T extends SoftDeletable>({
             cell: ({ row }) => (
               <TableActions
                 itemName={row.original.name}
-                deleted={!!row.original.deleted_at}
-                onRestore={() => handleRestore(row.original)}
                 onEdit={() => onEdit(row.original)}
                 onDelete={() => handleDelete(row.original)}
               />

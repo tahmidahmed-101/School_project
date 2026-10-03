@@ -10,8 +10,7 @@ import { SortSelect } from "@/components/common/SortSelect"
 import { ExportButton } from "@/components/common/ExportButton"
 import { DateRangeInputs } from "@/components/common/DateRangeInputs"
 import { DateCell, MoneyCell, TextCell } from "@/components/common/cells"
-import { fetchAllPages } from "@/lib/api/fetchAll"
-import { exportToCSV } from "@/lib/csv"
+import { downloadFile } from "@/lib/download"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -79,19 +78,8 @@ const VendorPayments = () => {
     params: { method: debouncedMethod, start, end, ordering: ordering?.value },
   })
 
-  const handleExport = async () => {
-    const payments = await fetchAllPages<VendorPayment>(VENDOR_PAYMENTS_ENDPOINT, list.query)
-    exportToCSV(
-      payments.map((p) => ({
-        PaidAt: p.paid_at,
-        Bill: p.vendor_bill_number,
-        Amount: p.amount,
-        Method: p.method,
-        Reference: p.reference,
-      })),
-      "VendorPayments"
-    )
-  }
+  // The server builds the file from the same filters the list is showing.
+  const handleExport = () => downloadFile(`${VENDOR_PAYMENTS_ENDPOINT}export/`, "vendor-payments.csv", list.query)
 
   return (
     <div className="section-container">

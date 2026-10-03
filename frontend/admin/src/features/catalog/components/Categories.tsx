@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -87,15 +88,6 @@ const Categories = () => {
     }
   }
 
-  const handleRestore = async (o: CategoryOption) => {
-    try {
-      await restoreCategory(o.value)
-      toast.success(`${o.label} restored`)
-      reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore category"))
-    }
-  }
 
   const columns: ColumnDef<CategoryOption>[] = [
     {
@@ -107,7 +99,7 @@ const Categories = () => {
           <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: depth * 20 }}>
             {depth > 0 && <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" />}
             {row.original.category.image ? (
-              <img
+              <img loading="lazy" decoding="async"
                 src={row.original.category.image}
                 alt=""
                 className="size-8 shrink-0 rounded-md border border-border object-cover"
@@ -150,8 +142,6 @@ const Categories = () => {
         return (
           <TableActions
             itemName={o.label}
-            deleted={Boolean(o.category.deleted_at)}
-            onRestore={() => handleRestore(o)}
             editUrl={`/category_form/${o.value}`}
             onDelete={() => handleDelete(o)}
           />
@@ -167,6 +157,13 @@ const Categories = () => {
         actions={
           canManage && (
             <>
+              <RestoreDeletedButton<Category>
+                noun="categories"
+                endpoint="/admin/catalog/categories/"
+                restore={(item) => restoreCategory(item.id)}
+                label={(item) => item.name}
+                onRestored={reload}
+              />
               <CsvImportButton
                 entityName="categories"
                 fields={importFields}

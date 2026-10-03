@@ -1,7 +1,8 @@
-import React, { useState, useSyncExternalStore, isValidElement } from "react"
+import React, { useState, isValidElement } from "react"
 import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SortSelect } from "./SortSelect"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface FilterItem {
   component: React.ReactNode
@@ -30,19 +31,6 @@ const SEARCH_INPUT_CLASS =
 
 const TOGGLE_CLASS =
   "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-field-border bg-transparent px-4 text-sm font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-
-/** Tailwind `sm` / `lg` breakpoints, evaluated in JS so each control renders exactly once. */
-function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mql = window.matchMedia(query)
-      mql.addEventListener("change", onChange)
-      return () => mql.removeEventListener("change", onChange)
-    },
-    () => window.matchMedia(query).matches,
-    () => false
-  )
-}
 
 /**
  * Animated open/close: grid rows go 0fr -> 1fr so the panel eases to its natural height.

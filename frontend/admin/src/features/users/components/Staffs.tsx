@@ -8,6 +8,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteData, fetchAll, restoreStaff, patchData } from "@/features/users/slices/staffSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
@@ -43,15 +44,6 @@ const Staffs = () => {
     }
   }
 
-  const handleRestore = async (staff: AdminUser) => {
-    try {
-      await dispatch(restoreStaff(staff.id)).unwrap()
-      toast.success(`${displayNameOf(staff)} restored`)
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't restore this staff member"))
-    }
-  }
 
   const columns: ColumnDef<AdminUser>[] = [
     {
@@ -104,8 +96,6 @@ const Staffs = () => {
           itemName={displayNameOf(row.original)}
           editUrl={`/staff_form/${row.original.id}`}
           onDelete={() => handleDelete(row.original)}
-          deleted={!!row.original.deleted_at}
-          onRestore={() => handleRestore(row.original)}
         />
       ),
     },
@@ -116,9 +106,19 @@ const Staffs = () => {
       <PageHeader
         title="Staff Members"
         actions={
-          <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
-            <PlusIcon className="size-5" /> Add Staff
-          </Button>
+          <>
+            <RestoreDeletedButton<AdminUser>
+              noun="staff members"
+              endpoint="/admin/staff/"
+              restore={(item) => dispatch(restoreStaff(item.id)).unwrap()}
+              label={(item) => displayNameOf(item)}
+              sub={(item) => item.email}
+              onRestored={list.reload}
+            />
+            <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
+              <PlusIcon className="size-5" /> Add Staff
+            </Button>
+          </>
         }
       />
 

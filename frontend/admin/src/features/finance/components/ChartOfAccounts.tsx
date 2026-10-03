@@ -19,6 +19,7 @@ import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { SelectField, TextField } from "@/components/common/form-fields"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { humanize } from "@/lib/format"
@@ -216,15 +217,6 @@ const ChartOfAccounts = () => {
     }
   }
 
-  const handleRestore = async (account: Account) => {
-    try {
-      await dispatch(restoreAccount(account.id)).unwrap()
-      toast.success("Account restored")
-      reloadLookup()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore account"))
-    }
-  }
 
   const columns: ColumnDef<Account>[] = [
     {
@@ -266,8 +258,6 @@ const ChartOfAccounts = () => {
         return (
           <TableActions
             itemName={`${acc.code} ${acc.name}`}
-            deleted={!!acc.deleted_at}
-            onRestore={() => handleRestore(acc)}
             onEdit={() => {
               setEditing(acc)
               setFormOpen(true)
@@ -286,6 +276,17 @@ const ChartOfAccounts = () => {
         actions={
           canPost && (
             <>
+              <RestoreDeletedButton<Account>
+                noun="accounts"
+                endpoint="/admin/accounting/accounts/"
+                restore={(item) => dispatch(restoreAccount(item.id)).unwrap()}
+                label={(item) => item.name}
+                sub={(item) => item.code}
+                onRestored={() => {
+      reloadLookup()
+      list.reload()
+    }}
+              />
               <CsvImportButton
                 entityName="accounts"
                 fields={importFields}

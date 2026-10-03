@@ -114,7 +114,7 @@ const Variants = () => {
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
             {row.original.primary_image ? (
-              <img src={row.original.primary_image} alt="" className="size-full object-cover" />
+              <img loading="lazy" decoding="async" src={row.original.primary_image} alt="" className="size-full object-cover" />
             ) : (
               <Package className="size-4 text-muted-foreground" />
             )}

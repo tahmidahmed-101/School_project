@@ -2,9 +2,9 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Ban, CheckCircle2, Clock, MapPin, Mail, Phone, ShoppingBag, Trash2, User, Wallet, XCircle, ListOrdered, RotateCcw } from "lucide-react"
+import { Ban, CheckCircle2, Clock, MapPin, Mail, Phone, ShoppingBag, Trash2, User, Wallet, XCircle, ListOrdered, RotateCcw, Pencil, Plus, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -26,6 +26,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { AddressFormDialog, CustomerFormDialog, SetRoleDialog } from "./CustomerDialogs"
 import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { UserAvatar } from "./UserAvatar"
 
@@ -59,6 +60,7 @@ const CustomerDetail = () => {
 
   const [addresses, setAddresses] = useState<Loadable<AdminAddress> | null>(null)
   const [orders, setOrders] = useState<Loadable<CustomerOrderRow> | null>(null)
+  const [dialog, setDialog] = useState<"edit" | "role" | "address" | null>(null)
 
   const loadCustomer = useCallback(() => dispatch(fetchSingle(id)), [dispatch, id])
 
@@ -158,6 +160,12 @@ const CustomerDetail = () => {
         back={{ to: "/customers", label: "Back to customers" }}
         actions={
           <>
+            <Button variant="outline" size="action" onClick={() => setDialog("edit")}>
+              <Pencil className="size-4" /> Edit
+            </Button>
+            <Button variant="outline" size="action" onClick={() => setDialog("role")}>
+              <ShieldCheck className="size-4" /> Change Role
+            </Button>
             <ResetPasswordDialog userId={customer.id} userLabel={name} />
             {customer.is_active ? (
               <Button
@@ -249,6 +257,11 @@ const CustomerDetail = () => {
             <CardTitle level={2} className="flex items-center gap-2 text-lg">
               <MapPin className="h-5 w-5 text-primary" /> Addresses
             </CardTitle>
+            <CardAction>
+              <Button variant="outline" size="sm" onClick={() => setDialog("address")}>
+                <Plus className="size-4" /> Add address
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             {!addressRows ? (
@@ -326,6 +339,28 @@ const CustomerDetail = () => {
           />
         </CardContent>
       </Card>
+
+      <CustomerFormDialog
+        open={dialog === "edit"}
+        onOpenChange={(open) => setDialog(open ? "edit" : null)}
+        customer={customer}
+        onSaved={loadCustomer}
+      />
+      <SetRoleDialog
+        open={dialog === "role"}
+        onOpenChange={(open) => setDialog(open ? "role" : null)}
+        user={customer}
+        // Staff and admins are managed under Staff; this page is for customers.
+        onChanged={(role) => {
+          if (role !== "customer") navigate("/staffs")
+        }}
+      />
+      <AddressFormDialog
+        open={dialog === "address"}
+        onOpenChange={(open) => setDialog(open ? "address" : null)}
+        customer={customer}
+        onSaved={loadAddresses}
+      />
     </div>
   )
 }

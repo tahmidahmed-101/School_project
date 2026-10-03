@@ -1,4 +1,3 @@
-import { toast } from "sonner"
 import { saveBlob } from "./download"
 
 /**
@@ -73,7 +72,7 @@ function escapeCell(value: unknown): string {
 }
 
 /** Serialises rows to CSV (with a BOM so Excel reads UTF-8 — names with accents, ৳ — correctly). */
-export function toCsv(rows: unknown[][]): string {
+function toCsv(rows: unknown[][]): string {
   return "﻿" + rows.map((r) => r.map(escapeCell).join(",")).join("\r\n")
 }
 
@@ -81,18 +80,4 @@ export function toCsv(rows: unknown[][]): string {
 export function downloadCsv(rows: unknown[][], filename: string): void {
   const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8;" })
   saveBlob(blob, filename.endsWith(".csv") ? filename : `${filename}.csv`)
-}
-
-/**
- * Downloads objects as CSV, one column per key (the union of keys, so rows with optional
- * fields don't drop columns). Returns false — and tells the user — when there is nothing to export.
- */
-export function exportToCSV(data: Record<string, unknown>[], filename: string): boolean {
-  if (!data.length) {
-    toast.info("Nothing to export")
-    return false
-  }
-  const headers = Array.from(new Set(data.flatMap((row) => Object.keys(row))))
-  downloadCsv([headers, ...data.map((row) => headers.map((h) => row[h]))], filename)
-  return true
 }

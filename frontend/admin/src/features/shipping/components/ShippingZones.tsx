@@ -9,6 +9,7 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TextCell } from "@/components/common/cells"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteZone, fetchZones, restoreZone, updateZone } from "@/features/shipping/slices/zoneSlice"
 import type { ShippingZone } from "@/features/shipping/types"
@@ -40,7 +41,6 @@ const ShippingZones = () => {
     noun: "zone",
     canUpdate,
     remove: (id) => dispatch(deleteZone(id)).unwrap(),
-    restore: (id) => dispatch(restoreZone(id)).unwrap(),
     setActive: (id, is_active) => dispatch(updateZone({ id, payload: { is_active } })).unwrap(),
     onEdit: openForm,
   })
@@ -99,9 +99,18 @@ const ShippingZones = () => {
         title="Delivery Zones"
         actions={
           canUpdate && (
-            <Button size="action" onClick={() => openForm(null)}>
-              <PlusIcon className="size-5" /> New Zone
-            </Button>
+            <>
+              <RestoreDeletedButton<ShippingZone>
+                noun="delivery zones"
+                endpoint="/admin/logistics/zones/"
+                restore={(item) => dispatch(restoreZone(item.id)).unwrap()}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
+              <Button size="action" onClick={() => openForm(null)}>
+                <PlusIcon className="size-5" /> New Zone
+              </Button>
+            </>
           )
         }
       />

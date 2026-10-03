@@ -14,6 +14,7 @@ import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -102,15 +103,6 @@ const Products = () => {
     },
   })
 
-  const handleRestore = async (product: Product) => {
-    try {
-      await restoreProduct(product.id)
-      toast.success(`${product.name} restored`)
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to restore product"))
-    }
-  }
 
   const handleDelete = async (product: Product) => {
     try {
@@ -128,7 +120,7 @@ const Products = () => {
       cell: ({ row }) => (
         <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted/40">
           {row.original.primary_image ? (
-            <img
+            <img loading="lazy" decoding="async"
               src={row.original.primary_image}
               alt={row.original.name}
               className="size-full object-cover"
@@ -208,8 +200,6 @@ const Products = () => {
         return (
           <TableActions
             itemName={product.name}
-            deleted={Boolean(product.deleted_at)}
-            onRestore={canManage ? () => handleRestore(product) : undefined}
             viewUrl={`/product_detail/${product.id}`}
             editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
             onDelete={canManage ? () => handleDelete(product) : undefined}
@@ -237,6 +227,13 @@ const Products = () => {
         actions={
           canManage && (
             <>
+              <RestoreDeletedButton<Product>
+                noun="products"
+                endpoint="/admin/catalog/products/"
+                restore={(item) => restoreProduct(item.id)}
+                label={(item) => item.name}
+                onRestored={list.reload}
+              />
               <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
                 <Boxes className="size-5" /> New Bundle
               </Button>
