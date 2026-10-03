@@ -407,6 +407,7 @@ export function CsvImportDialog({
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
               <DataTable
+                surface="card"
                 showPagination={false}
                 selectable={false}
                 columns={previewColumns}
@@ -459,6 +460,7 @@ export function CsvImportDialog({
             </div>
             {failed.length > 0 && (
               <DataTable
+                surface="card"
                 showPagination={false}
                 selectable={false}
                 columns={failedColumns}

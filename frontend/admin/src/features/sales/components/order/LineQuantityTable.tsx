@@ -55,6 +55,7 @@ export function LineQuantityTable({ lines, maxFor, maxLabel, values, onChange }:
 
   return (
     <DataTable
+      surface="card"
       showPagination={false}
       selectable={false}
       columns={columns}

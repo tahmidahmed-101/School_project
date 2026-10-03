@@ -124,6 +124,9 @@ export interface CategoryPayload {
 export interface Product {
   id: string
   category_id: string
+  brand_id: string | null
+  /** Shown in the storefront's featured sections. */
+  featured: boolean
   name: string
   slug: string
   description: string
@@ -145,6 +148,9 @@ export interface Product {
 /** ProductCreateSerializer (+ is_active on ProductUpdateSerializer; sku only on create). */
 export interface ProductPayload {
   category_id?: string
+  /** null clears the brand. */
+  brand_id?: string | null
+  featured?: boolean
   name?: string
   description?: string
   product_type?: ProductType

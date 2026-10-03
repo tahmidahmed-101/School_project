@@ -26,8 +26,9 @@ const DashboardLayout = () => {
         <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* sticky navbar — same surface as sidebar, no border */}
-          <div className="sticky top-0 z-10 bg-background">
+          {/* sticky navbar — same surface as sidebar, no border. Above the page content, so its
+              search results and menus are never covered by a table's pinned header. */}
+          <div className="sticky top-0 z-30 bg-background">
             {isNavigating && (
               <div
                 role="progressbar"
@@ -38,10 +39,13 @@ const DashboardLayout = () => {
             <Navbar />
           </div>
 
-          {/* floating content panel */}
+          {/* floating content panel. `relative` makes it the containing block for absolutely
+              positioned children (screen-reader-only labels and the like); without it they are
+              laid out against the document, escape this scroll area and add blank space below
+              the whole page. */}
           <main
             data-scroll-container
-            className="m-3 flex-1 overflow-y-auto rounded-xl border border-border bg-muted p-0 mt-0 dark:bg-background"
+            className="relative isolate m-3 flex-1 overflow-y-auto rounded-xl border border-border bg-muted p-0 mt-0 dark:bg-background"
           >
             <ScrollToTop />
             <Outlet />

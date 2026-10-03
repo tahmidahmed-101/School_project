@@ -1,6 +1,6 @@
-import type { ReactNode } from "react"
+import { Children, Fragment, isValidElement, useState, useSyncExternalStore, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ChevronDown, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Breadcrumbs } from "./Breadcrumbs"
@@ -34,9 +34,10 @@ export function PageHeader({ title, description, actions, back, badges, classNam
   )
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <Breadcrumbs title={title} backTo={back?.to} />
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between", className)}>
+      {/* Left: breadcrumb and title together. Right: the page's buttons, centred against them. */}
+      <div className="flex min-w-0 flex-col gap-2">
+        <Breadcrumbs title={title} backTo={back?.to} />
         <div className="flex min-w-0 items-start gap-4">
           {back && (
             <Button
@@ -51,13 +52,76 @@ export function PageHeader({ title, description, actions, back, badges, classNam
           )}
           <PageHeading title={heading} description={description} className="min-w-0" />
         </div>
-        {actions && (
-          // Phones: two buttons per row, and a button left alone on its row (a single action, or
-          // the last of an odd number) takes the full width.
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center lg:shrink-0 lg:justify-end [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-            {actions}
-          </div>
+      </div>
+      {actions && <HeaderActions>{actions}</HeaderActions>}
+    </div>
+  )
+}
+
+/** Top-level action elements, with fragments (`<>…</>`) opened up and empty slots dropped. */
+function flattenActions(node: ReactNode): ReactNode[] {
+  return Children.toArray(node).flatMap((child) =>
+    isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
+      ? flattenActions(child.props.children)
+      : [child]
+  )
+}
+
+const PHONE_QUERY = "(max-width: 639px)"
+const subscribePhone = (onChange: () => void) => {
+  const mq = window.matchMedia(PHONE_QUERY)
+  mq.addEventListener("change", onChange)
+  return () => mq.removeEventListener("change", onChange)
+}
+
+/**
+ * The header's buttons. From `sm` up they sit in a row. On phones the main action (the last
+ * one) takes the width and the rest fold behind a "More" toggle, so a page with three or four
+ * actions doesn't push its content down the screen. Folded buttons stay mounted, so a dialog
+ * one of them opened keeps its state.
+ */
+function HeaderActions({ children }: { children: ReactNode }) {
+  const isPhone = useSyncExternalStore(subscribePhone, () => window.matchMedia(PHONE_QUERY).matches)
+  const [open, setOpen] = useState(false)
+  const items = flattenActions(children)
+  if (items.length === 0) return null
+
+  if (!isPhone || items.length < 3) {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center lg:shrink-0 lg:justify-end [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        {items}
+      </div>
+    )
+  }
+
+  const primary = items[items.length - 1]
+  const others = items.slice(0, -1)
+  return (
+    <div className="flex flex-col">
+      <div className="flex gap-3 [&>*:first-child]:flex-1">
+        {primary}
+        <Button
+          type="button"
+          variant="outline"
+          size="action"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <MoreHorizontal className="size-4" /> More
+          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
+        </Button>
+      </div>
+      {/* Animating the grid row from 0fr to 1fr slides the folded buttons open at their natural height. */}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
+        inert={!open}
+      >
+        <div className="overflow-hidden">
+          <div className="grid grid-cols-2 gap-3 pt-3 [&>*:last-child:nth-child(odd)]:col-span-2">{others}</div>
+        </div>
       </div>
     </div>
   )

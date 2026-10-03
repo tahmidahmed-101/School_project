@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { PlusIcon, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
@@ -26,8 +26,11 @@ import { formatCurrency } from "@/lib/format"
 import { fetchSingle } from "../slices/bundleSlice"
 import { createBundle, updateBundle } from "../api"
 import type { Bundle, BundlePayload } from "../types"
+import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
+import { ProductImagesSection } from "./ProductImagesSection"
+import { StagedImagesCard } from "./StagedImagesCard"
 import { VariantPicker, type PickedVariant } from "./VariantPicker"
 
 const schema = z.object({
@@ -86,6 +89,8 @@ const BundleForm = () => {
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: "components" })
+  // Create only: images picked before the bundle exists, uploaded right after it is created.
+  const staged = useStagedImages()
   const components = useWatch({ control, name: "components" })
 
   useEffect(() => {
@@ -94,27 +99,32 @@ const BundleForm = () => {
 
   useEffect(() => {
     if (isEditing && bundle && bundle.id === id) {
-      reset({
-        name: bundle.name,
-        category_id: bundle.category_id ?? "",
-        sku: bundle.sku,
-        barcode: bundle.barcode ?? "",
-        price: bundle.price ?? "",
-        discount_price: bundle.discount_price ?? "",
-        cost_price: bundle.cost_price ?? "",
-        description: bundle.description ?? "",
-        is_active: bundle.is_active,
-        components: bundle.components.map((c) => ({
-          variant: {
-            id: c.component_variant_id,
-            sku: c.component_sku,
-            product_name: c.component_name,
-            price: c.component_price,
-            stock: c.component_available,
-          },
-          quantity: c.quantity,
-        })),
-      })
+      // The bundle is refetched whenever an image changes below; keepDirtyValues stops that
+      // refetch from wiping edits the user has not saved yet.
+      reset(
+        {
+          name: bundle.name,
+          category_id: bundle.category_id ?? "",
+          sku: bundle.sku,
+          barcode: bundle.barcode ?? "",
+          price: bundle.price ?? "",
+          discount_price: bundle.discount_price ?? "",
+          cost_price: bundle.cost_price ?? "",
+          description: bundle.description ?? "",
+          is_active: bundle.is_active,
+          components: bundle.components.map((c) => ({
+            variant: {
+              id: c.component_variant_id,
+              sku: c.component_sku,
+              product_name: c.component_name,
+              price: c.component_price,
+              stock: c.component_available,
+            },
+            quantity: c.quantity,
+          })),
+        },
+        { keepDirtyValues: true }
+      )
     }
   }, [bundle, id, isEditing, reset])
 
@@ -168,8 +178,12 @@ const BundleForm = () => {
         await updateBundle(id, payload)
         toast.success(`${values.name} updated`)
       } else {
-        await createBundle(payload)
-        toast.success(`${values.name} created`)
+        const created = await createBundle(payload)
+        // The bundle now exists, so a failed image is reported and left to be retried from
+        // the edit page rather than failing the whole form.
+        const failed = await uploadStagedImages(created.product_id, staged.images)
+        if (failed) toast.warning(`${values.name} created, but ${failed} image${failed === 1 ? "" : "s"} could not be added`)
+        else toast.success(`${values.name} created`)
       }
       navigate("/bundles")
     } catch (err) {
@@ -281,6 +295,34 @@ const BundleForm = () => {
           </CardContent>
         </Card>
 
+        {isEditing && bundle ? (
+          // The gallery saves on its own; Enter in one of its inputs commits that field
+          // instead of submitting the bundle form around it.
+          <div
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
+                e.preventDefault()
+                e.target.blur()
+              }
+            }}
+          >
+            <ProductImagesSection
+              productId={bundle.product_id}
+              variants={[]}
+              canManage={canManage}
+              onChanged={() => dispatch(fetchSingle(bundle.id))}
+            />
+          </div>
+        ) : (
+          <StagedImagesCard
+            images={staged.images}
+            onAdd={staged.add}
+            onRemove={staged.remove}
+            onMove={staged.move}
+            description="Uploaded when the bundle is created. The first image is the main one."
+          />
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Pricing</CardTitle>
@@ -310,14 +352,13 @@ const BundleForm = () => {
               {...register("cost_price")}
             />
           </CardContent>
-          <CardFooter className="justify-end border-t p-4">
-            <FormActions
-              onCancel={() => navigate("/bundles")}
-              submitLabel={isEditing ? "Save bundle" : "Create bundle"}
-              submitting={isSubmitting}
-            />
-          </CardFooter>
         </Card>
+        <FormActions
+          sticky
+          onCancel={() => navigate("/bundles")}
+          submitLabel={isEditing ? "Save bundle" : "Create bundle"}
+          submitting={isSubmitting}
+        />
       </form>
     </div>
   )

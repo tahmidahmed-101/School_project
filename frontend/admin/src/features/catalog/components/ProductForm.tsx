@@ -1,10 +1,10 @@
-import { useEffect, useId, useRef, useState } from "react"
-import { useFieldArray, useForm, useWatch } from "react-hook-form"
+import { useEffect, useId, useState } from "react"
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { CalendarClock, ImageIcon, Layers, Plus, Trash2, X } from "lucide-react"
+import { CalendarClock, Layers, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +15,8 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
 import { FormActions } from "@/components/common/FormActions"
 import { NoPermission } from "@/components/common/NoPermission"
-import { DateField, MoneyField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
+import { DateField, FormField, MoneyField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
+import { Combobox } from "@/components/common/ComboBox"
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -23,19 +24,30 @@ import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { moneySchema, reportFormError } from "@/lib/forms"
+import type { Option } from "@/lib/types"
 
 import { fetchSingle } from "../slices/productSlice"
-import { createProduct, createProductImage, createVariant, updateProduct, updateVariant, uploadMedia } from "../api"
+import {
+  createProduct,
+  createVariant,
+  fetchAllBrands,
+  updateProduct,
+  updateVariant,
+} from "../api"
 import type { Product, ProductPayload, ProductVariantPayload } from "../types"
+import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
-import { ImageDropzone } from "./ImageDropzone"
 import { ProductImagesSection } from "./ProductImagesSection"
+import { StagedImagesCard } from "./StagedImagesCard"
 
 const schema = z
   .object({
     name: z.string().trim().min(1, "Name is required"),
     category_id: z.string().min(1, "Choose a category"),
+    /** "" means no brand. */
+    brand_id: z.string(),
+    featured: z.boolean(),
     product_type: z.enum(["simple", "variant"]),
     description: z.string(),
     highlights: z.string(),
@@ -130,6 +142,20 @@ const ProductForm = () => {
   const product = singleData as Product | null
   const { options: categoryOptions } = useCategoryOptions()
 
+  // Brands for the searchable picker. A failed load just leaves the list empty: brand is optional.
+  const [brandOptions, setBrandOptions] = useState<Option[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchAllBrands()
+      .then((brands) => {
+        if (!cancelled) setBrandOptions(brands.map((b) => ({ label: b.name, value: b.id })))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useDocumentTitle(isEditing ? (product?.name ? `Edit ${product.name}` : "Edit Product") : "Add Product")
 
   const {
@@ -153,6 +179,8 @@ const ProductForm = () => {
       discount_price: "",
       sku: "",
       is_active: true,
+      brand_id: "",
+      featured: false,
       is_preorder: false,
       preorder_price: "",
       preorder_start_date: "",
@@ -168,19 +196,7 @@ const ProductForm = () => {
   const isPreorder = useWatch({ control, name: "is_preorder" })
 
   // Create only: images picked before the product exists, uploaded right after it is created.
-  const [stagedImages, setStagedImages] = useState<{ file: File; preview: string }[]>([])
-  const stagedRef = useRef(stagedImages)
-  useEffect(() => {
-    stagedRef.current = stagedImages
-  }, [stagedImages])
-  useEffect(() => () => stagedRef.current.forEach((img) => URL.revokeObjectURL(img.preview)), [])
-
-  const stageImages = (files: File[]) =>
-    setStagedImages((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))])
-  const unstageImage = (index: number) => {
-    URL.revokeObjectURL(stagedImages[index].preview)
-    setStagedImages((prev) => prev.filter((_, i) => i !== index))
-  }
+  const staged = useStagedImages()
 
   useEffect(() => {
     if (isEditing && id) dispatch(fetchSingle(id))
@@ -205,6 +221,8 @@ const ProductForm = () => {
           discount_price: product.discount_price ?? "",
           sku: "",
           is_active: product.is_active,
+          brand_id: product.brand_id ?? "",
+          featured: product.featured,
           is_preorder: Boolean(preorderSource?.is_preorder_enabled),
           preorder_price: preorderSource?.preorder_price ?? "",
           preorder_start_date: toDatetimeLocal(preorderSource?.preorder_start_date),
@@ -255,6 +273,8 @@ const ProductForm = () => {
     const payload: ProductPayload = {
       name: values.name,
       category_id: values.category_id,
+      brand_id: values.brand_id || null,
+      featured: values.featured,
       product_type: values.product_type,
       description: values.description,
       highlights: values.highlights
@@ -337,21 +357,7 @@ const ProductForm = () => {
       }
     }
 
-    let failedImages = 0
-    for (const [i, { file }] of stagedImages.entries()) {
-      try {
-        const url = await uploadMedia(file)
-        await createProductImage(productId, {
-          url,
-          alt_text: file.name.replace(/\.[^/.]+$/, ""),
-          sort_order: i,
-          variant_id: null,
-        })
-      } catch (err) {
-        failedImages += 1
-        toast.error(`${file.name}: ${getApiErrorMessage(err, "upload failed")}`)
-      }
-    }
+    const failedImages = await uploadStagedImages(productId, staged.images)
 
     const parts = [
       failedVariants && `${failedVariants} variant${failedVariants === 1 ? "" : "s"}`,
@@ -377,7 +383,7 @@ const ProductForm = () => {
           <CardHeader>
             <CardTitle>Basic information</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <TextField
               className="md:col-span-2"
               label="Product name"
@@ -410,6 +416,35 @@ const ProductForm = () => {
               options={[{ label: "Simple — one sellable SKU", value: "simple" }, { label: "Variant — colours / sizes", value: "variant" }]}
             />
 
+            <FormField label="Brand" htmlFor="brand_id" description="Optional. Type to search.">
+              <Controller
+                control={control}
+                name="brand_id"
+                render={({ field }) => (
+                  <Combobox
+                    id="brand_id"
+                    placeholder="No brand"
+                    options={brandOptions}
+                    value={brandOptions.find((o) => o.value === field.value) ?? null}
+                    onValueChange={(option) => field.onChange(option?.value ?? "")}
+                  />
+                )}
+              />
+            </FormField>
+
+            <div className="self-center">
+              <SwitchField control={control} name="featured" label="Featured" />
+            </div>
+
+            <TextField
+              className="md:col-span-2"
+              label="Meta keywords"
+              id="meta_keywords"
+              placeholder="comma, separated, keywords"
+              error={errors.meta_keywords}
+              {...register("meta_keywords")}
+            />
+
             <TextareaField
               className="md:col-span-2"
               label="Description"
@@ -420,20 +455,13 @@ const ProductForm = () => {
             />
 
             <TextareaField
+              className="md:col-span-2"
               label="Highlights"
               id="highlights"
               rows={4}
               placeholder="One highlight per line"
               error={errors.highlights}
               {...register("highlights")}
-            />
-
-            <TextField
-              label="Meta keywords"
-              id="meta_keywords"
-              placeholder="comma, separated, keywords"
-              error={errors.meta_keywords}
-              {...register("meta_keywords")}
             />
 
             {isEditing && (
@@ -458,7 +486,7 @@ const ProductForm = () => {
                   : "Setting a price creates the product's first variant now, so it can be stocked and sold immediately."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MoneyField
               label="Price (BDT)"
               id="price"
@@ -493,37 +521,33 @@ const ProductForm = () => {
         </Card>
 
         {!isEditing && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="size-4" /> Images
-              </CardTitle>
-              <CardDescription>Uploaded when the product is created. The first image is the main one.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ImageDropzone onFiles={stageImages} />
-              {stagedImages.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {stagedImages.map((img, i) => (
-                    <div key={img.preview} className="overflow-hidden rounded-lg border border-border bg-card">
-                      <div className="relative aspect-square bg-muted">
-                        <img src={img.preview} alt={img.file.name} className="size-full object-cover" />
-                        <button
-                          type="button"
-                          aria-label={`Remove ${img.file.name}`}
-                          onClick={() => unstageImage(i)}
-                          className="absolute right-1.5 top-1.5 rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
-                        >
-                          <X className="size-3.5" />
-                        </button>
-                      </div>
-                      <p className="truncate p-2 text-xs text-muted-foreground">{img.file.name}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <StagedImagesCard
+            images={staged.images}
+            onAdd={staged.add}
+            onRemove={staged.remove}
+            onMove={staged.move}
+            description="Uploaded when the product is created, in the order shown. Use the arrows to reorder; the first image is the main one."
+          />
+        )}
+
+        {isEditing && product && (
+          // The gallery saves on its own; Enter in one of its inputs commits that field
+          // instead of submitting the product form around it.
+          <div
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
+                e.preventDefault()
+                e.target.blur()
+              }
+            }}
+          >
+            <ProductImagesSection
+              productId={product.id}
+              variants={product.variants}
+              canManage={canManage}
+              onChanged={() => dispatch(fetchSingle(product.id))}
+            />
+          </div>
         )}
 
         {(!isEditing || (product?.variants.length ?? 0) > 0) && (
@@ -541,7 +565,7 @@ const ProductForm = () => {
             <CardContent className="space-y-4">
               <SwitchField control={control} name="is_preorder" label="Sell this product as a pre-order" />
               {isPreorder && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   <DateField
                     withTime
                     label="Pre-orders open *"
@@ -557,14 +581,12 @@ const ProductForm = () => {
                   <DateField
                     withTime
                     label="Release date"
-                    description="When the product ships."
                     error={errors.release_date}
                     {...register("release_date")}
                   />
                   <MoneyField
                     label="Pre-order price"
                     placeholder="Optional"
-                    description="Lower than the normal price."
                     error={errors.preorder_price}
                     {...register("preorder_price")}
                   />
@@ -572,7 +594,6 @@ const ProductForm = () => {
                     label="Pre-order limit"
                     inputMode="numeric"
                     placeholder="Unlimited"
-                    description="Most units that can be pre-ordered."
                     error={errors.preorder_stock_limit}
                     {...register("preorder_stock_limit")}
                   />
@@ -648,23 +669,10 @@ const ProductForm = () => {
             </CardContent>
           </Card>
         )}
-
       </form>
 
-      {/* Outside the <form>: its inputs and buttons save on their own and must not submit it. */}
-      {isEditing && product && (
-        <div className="mt-6">
-          <ProductImagesSection
-            productId={product.id}
-            variants={product.variants}
-            canManage={canManage}
-            onChanged={() => dispatch(fetchSingle(product.id))}
-          />
-        </div>
-      )}
-
       <FormActions
-        className="mt-6"
+        sticky
         form={formId}
         onCancel={() => navigate(backTo)}
         submitLabel={isEditing ? "Save changes" : "Create product"}

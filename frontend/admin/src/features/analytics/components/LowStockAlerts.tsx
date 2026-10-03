@@ -40,8 +40,9 @@ export function LowStockAlerts({ items, counts, isLoading, error, onRetry, class
         </div>
       }
       className={className}
+      contentClassName="flex min-h-0 flex-col"
     >
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div className="mb-4 grid shrink-0 grid-cols-2 gap-3">
         <div className="rounded-lg border border-border p-3">
           <p className="text-xs text-muted-foreground">Low stock</p>
           <p className="text-xl font-semibold tabular-nums">{formatCount(total)}</p>
@@ -53,7 +54,9 @@ export function LowStockAlerts({ items, counts, isLoading, error, onRetry, class
           </p>
         </div>
       </div>
-      <ul className="divide-y divide-border">
+      {/* The list takes what is left of the card and scrolls; when the cards stack (below xl)
+          it is capped instead, so the widget never grows with the number of variants. */}
+      <ul className="-mr-2 max-h-80 min-h-0 flex-1 divide-y divide-border overflow-y-auto pr-2 xl:max-h-none">
         {items?.map((item) => (
           <li key={item.sku} className="flex items-center justify-between gap-3 py-2.5">
             <div className="min-w-0">
@@ -76,7 +79,7 @@ export function LowStockAlerts({ items, counts, isLoading, error, onRetry, class
         ))}
       </ul>
       {items && total > items.length && (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 shrink-0 text-xs text-muted-foreground">
           Showing {items.length} of {formatCount(total)} lowest-stock variants.
         </p>
       )}

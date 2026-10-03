@@ -214,6 +214,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
       </CardHeader>
       <CardContent>
         <DataTable
+          surface="card"
           columns={columns}
           bulk={
             canManage

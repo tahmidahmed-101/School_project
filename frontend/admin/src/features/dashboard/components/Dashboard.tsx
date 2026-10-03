@@ -71,7 +71,17 @@ const Dashboard = () => {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <TopProductsTable products={d?.top_products} {...state} className="xl:col-span-2" />
-            <LowStockAlerts items={d?.inventory} counts={d?.low_stock} {...state} />
+            {/* Top products sets the row's height. Low stock is taken out of the flow on wide
+                screens so it matches that height and scrolls its list, instead of stretching
+                the row to fit every low-stock variant. */}
+            <div className="relative xl:min-h-[22rem]">
+              <LowStockAlerts
+                items={d?.inventory}
+                counts={d?.low_stock}
+                {...state}
+                className="xl:absolute xl:inset-0"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">

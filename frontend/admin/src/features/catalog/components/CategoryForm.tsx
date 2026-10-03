@@ -5,7 +5,7 @@ import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
@@ -234,14 +234,13 @@ const CategoryForm = () => {
               <ImagePicker id="category-image" src={existing?.image} onSelect={setImageFile} />
             </FormField>
           </CardContent>
-          <CardFooter className="justify-end border-t p-4">
-            <FormActions
-              onCancel={() => navigate("/categories")}
-              submitLabel={isEditing ? "Save changes" : "Create category"}
-              submitting={isSubmitting}
-            />
-          </CardFooter>
         </Card>
+        <FormActions
+          sticky
+          onCancel={() => navigate("/categories")}
+          submitLabel={isEditing ? "Save changes" : "Create category"}
+          submitting={isSubmitting}
+        />
       </form>
     </div>
   )

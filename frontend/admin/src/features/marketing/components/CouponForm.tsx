@@ -5,7 +5,7 @@ import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
@@ -257,17 +257,16 @@ const CouponForm = () => {
               </Field>
             </fieldset>
           </CardContent>
-          {!readOnly && (
-            <CardFooter className="justify-end border-t p-4">
-              <FormActions
-                onCancel={() => navigate("/coupons")}
-                submitLabel={isEditing ? "Save Changes" : "Create Coupon"}
-                submitting={isSubmitting}
-                submitDisabled={(isEditing && !isDirty)}
-              />
-            </CardFooter>
-          )}
         </Card>
+        {!readOnly && (
+          <FormActions
+            sticky
+            onCancel={() => navigate("/coupons")}
+            submitLabel={isEditing ? "Save Changes" : "Create Coupon"}
+            submitting={isSubmitting}
+            submitDisabled={(isEditing && !isDirty)}
+          />
+        )}
       </form>
     </div>
   )

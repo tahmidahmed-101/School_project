@@ -121,6 +121,7 @@ export function LowStockTable({ items, isLoading, error, onRetry }: Props) {
         <WidgetError error={error} onRetry={onRetry} />
       ) : (
         <DataTable
+          surface="card"
           columns={columns}
           data={rows}
           isLoading={isLoading}

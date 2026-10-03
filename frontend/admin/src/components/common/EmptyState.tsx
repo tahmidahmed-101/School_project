@@ -27,8 +27,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         className
       )}
     >
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground ring-8 ring-muted/20 mb-4 transition-transform hover:scale-105">
-        <Icon className="size-7 stroke-[1.5]" />
+      {/* A bordered chip, so the icon reads as one object. The old tinted box and halo were the
+          same colour as the table behind them, which left the icon floating in a large gap. */}
+      <div className="mb-3 flex size-12 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground">
+        <Icon className="size-6 stroke-[1.5]" />
       </div>
 
       <h3 className="text-base font-semibold text-foreground tracking-tight">

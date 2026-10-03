@@ -34,6 +34,7 @@ import { formatCurrency, formatDate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useAllPages } from "@/hooks/use-all-pages"
+import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
 
 import {
   addPurchaseOrderLine,
@@ -260,6 +261,8 @@ const PurchaseOrderDetail = () => {
     open: false,
     line: null,
   })
+  const headerMounted = useDelayedUnmount(headerOpen)
+  const lineMounted = useDelayedUnmount(lineDialog.open)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [billOpen, setBillOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -554,8 +557,9 @@ const PurchaseOrderDetail = () => {
         </Card>
       </div>
 
-      {headerOpen && <HeaderEditDialog open={headerOpen} onOpenChange={setHeaderOpen} po={po} />}
-      {lineDialog.open && (
+      {/* Unmounted when closed so each opening starts fresh, but only after the exit animation. */}
+      {headerMounted && <HeaderEditDialog open={headerOpen} onOpenChange={setHeaderOpen} po={po} />}
+      {lineMounted && (
         <LineDialog
           open={lineDialog.open}
           onOpenChange={(open) => setLineDialog((s) => ({ ...s, open }))}

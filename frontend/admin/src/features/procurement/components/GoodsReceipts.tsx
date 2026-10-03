@@ -25,6 +25,7 @@ import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
+import { useLastValue } from "@/hooks/use-dialog-presence"
 
 import { fetchAll } from "../slices/goodsReceiptSlice"
 import type { GoodsReceipt, PurchaseOrder } from "../types"
@@ -39,7 +40,9 @@ const SORT_OPTIONS: Option[] = [
 
 const unitsOf = (grn: GoodsReceipt) => grn.lines.reduce((s, l) => s + l.quantity_received, 0)
 
-function ReceiptDetailDialog({ grn, onClose }: { grn: GoodsReceipt | null; onClose: () => void }) {
+function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | null; onClose: () => void }) {
+  // Keeps the last receipt on screen while the dialog fades out.
+  const grn = useLastValue(selected)
   const [po, setPo] = useState<PurchaseOrder | null>(null)
   const poId = grn?.purchase_order_id
 
@@ -62,9 +65,9 @@ function ReceiptDetailDialog({ grn, onClose }: { grn: GoodsReceipt | null; onClo
   const lineInfo = po && po.id === poId ? new Map(po.lines.map((l) => [l.id, l])) : null
 
   return (
-    <Dialog open={!!grn} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!selected} onOpenChange={(open) => !open && onClose()}>
       {grn && (
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               Goods receipt
@@ -82,8 +85,11 @@ function ReceiptDetailDialog({ grn, onClose }: { grn: GoodsReceipt | null; onClo
               <Loader2 className="size-5 animate-spin text-primary" />
             </div>
           ) : (
+            // Not `embedded`: the framed table scrolls inside its own height limit with the header
+            // pinned, so a receipt with many lines can't grow the dialog past the screen.
             <DataTable
-              embedded
+              surface="card"
+              selectable={false}
               showPagination={false}
               columns={
                 [

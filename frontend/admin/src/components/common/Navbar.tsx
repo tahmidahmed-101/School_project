@@ -121,7 +121,7 @@ const Navbar = () => {
             aria-label="Open search"
             aria-expanded={mobileSearchOpen}
             onClick={() => setMobileSearchOpen(true)}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800 sm:hidden"
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800 sm:hidden"
           >
             <SearchIcon className="size-5" />
           </button>
@@ -155,7 +155,7 @@ const Navbar = () => {
           {/* Theme */}
           <button
             onClick={toggleTheme}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800"
           >
             {theme === "light" ? (
               <MoonIcon className="size-5" />
@@ -169,7 +169,7 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Notifications"
-                className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-input dark:bg-background dark:text-gray-400 dark:hover:bg-gray-800"
+                className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-input dark:bg-background dark:text-gray-400 dark:hover:bg-gray-800"
               >
                 <BellIcon className="size-5" />
 
@@ -178,7 +178,7 @@ const Navbar = () => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
-              <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
+              <DropdownMenuLabel className="border-b border-gray-200 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
                 Notifications
               </DropdownMenuLabel>
 
@@ -212,7 +212,7 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Open user profile menu"
-                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-200 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none focus-visible:ring-primary-500/40 dark:border-input"
+                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-300 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none focus-visible:ring-primary-500/40 dark:border-input"
               >
                 <Avatar className="size-full">
                   {user?.profile_picture ? (
@@ -246,7 +246,7 @@ const Navbar = () => {
                   <span className="block truncate text-sm font-semibold text-gray-800 dark:text-white/90">
                     {displayName || "Account"}
                   </span>
-                  <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                  <span className="block truncate text-xs text-gray-700 dark:text-gray-400">
                     {user?.email}
                   </span>
                 </span>

@@ -37,7 +37,7 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
       cell: ({ row: { original: o } }) => {
         const units = o.items.reduce((sum, line) => sum + line.quantity, 0)
         return (
-          <div>
+          <div className="min-w-0">
             {canOpenOrders ? (
               <Link to={`/order_detail/${o.order_id}`} className="font-medium text-primary hover:underline">
                 {o.id}
@@ -45,7 +45,7 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
             ) : (
               <span className="font-medium">{o.id}</span>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="truncate text-xs text-muted-foreground">
               {units} {units === 1 ? "item" : "items"}
               {o.region !== "—" && ` · ${o.region}`}
             </p>
@@ -79,9 +79,16 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
     {
       id: "placed",
       header: "Placed",
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{formatDateTime(row.original.created_at)}</span>
-      ),
+      // Date over time, so the column stays narrow enough for the widget's width.
+      cell: ({ row }) => {
+        const [date, time] = formatDateTime(row.original.created_at).split(", ")
+        return (
+          <span className="text-xs text-muted-foreground">
+            <span className="block">{date}</span>
+            {time && <span className="block">{time}</span>}
+          </span>
+        )
+      },
     },
   ]
 
@@ -112,8 +119,8 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
         showPagination={false}
         columns={columns}
         data={orders ?? []}
-        minWidth="640px"
-        columnWidths={["150px", "180px", "120px", "110px", "120px", "150px"]}
+        minWidth="700px"
+        columnWidths={["130px", "auto", "110px", "80px", "150px", "100px"]}
       />
     </ReportWidget>
   )

@@ -32,6 +32,10 @@ declare module "@tanstack/react-table" {
   }
 }
 
+// A page-level list scrolls inside whatever the screen has left under the header and
+// filters (about 22rem of chrome), with a floor so short screens still show a few rows.
+const LIST_HEIGHT = "max-h-[max(22rem,calc(100dvh-22rem))]"
+
 const ALIGN_CLASS = { left: "text-left", center: "text-center", right: "text-right" } as const
 
 /**
@@ -41,6 +45,18 @@ const ALIGN_CLASS = { left: "text-left", center: "text-center", right: "text-rig
  */
 function renderSlot<TProps>(slot: unknown, context: TProps): React.ReactNode {
   return typeof slot === "function" ? (slot as (props: TProps) => React.ReactNode)(context) : (slot as React.ReactNode)
+}
+
+/**
+ * Fixed pixel widths on every column make a table as wide as their sum, which forces a sideways
+ * scroll on screens that could have fitted it. Letting the widest column take the remaining
+ * space keeps the table at the container's width (never below `minWidth`).
+ */
+function flexWidest(widths: string[]): string[] {
+  if (widths.some((w) => !w.endsWith("px"))) return widths
+  const px = widths.map((w) => parseFloat(w))
+  const widest = px.indexOf(Math.max(...px))
+  return widths.map((w, i) => (i === widest ? "auto" : w))
 }
 
 /** Column ids DataTable treats specially: the built-in tick box and the row menu. */
@@ -110,6 +126,11 @@ interface DataTableProps<TData, TValue> {
    * scroll height limit, so it sits flush in the container that already frames it.
    */
   embedded?: boolean
+  /**
+   * What the table sits on, so its pinned header and actions column can match it: the page
+   * background (default) or a card. `embedded` tables are always on a card.
+   */
+  surface?: "page" | "card"
   /** A totals row under the body: one entry per column, in column order (use null to leave one blank). */
   footer?: React.ReactNode[]
 }
@@ -140,6 +161,7 @@ export function DataTable<TData, TValue>({
   bulk,
   selectable: selectableProp,
   embedded = false,
+  surface = embedded ? "card" : "page",
   footer,
 }: DataTableProps<TData, TValue>) {
   const selectable = selectableProp ?? (Boolean(bulk) || !embedded)
@@ -263,7 +285,7 @@ export function DataTable<TData, TValue>({
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const widths = [...(selectable ? ["48px"] : []), ...(columnWidths ?? columns.map(() => "auto"))]
+  const widths = [...(selectable ? ["48px"] : []), ...flexWidest(columnWidths ?? columns.map(() => "auto"))]
 
   const ColGroup = () => (
     <colgroup>
@@ -329,17 +351,26 @@ export function DataTable<TData, TValue>({
   }, [table, columns, data, allColumns.length])
 
   const headerlessIds = React.useMemo(
-    () => new Set([SELECT_COLUMN, ...(unlabelledColumns ?? [])]),
+    () => new Set([SELECT_COLUMN, ACTIONS_COLUMN, ...(unlabelledColumns ?? [])]),
     [unlabelledColumns]
   )
 
   const rows = table.getRowModel().rows
 
+  // A line between every pair of columns. The pinned actions column draws its own left edge
+  // (it has to, to stay visible over scrolled cells), so the column before it adds none.
+  const columnIds = table.getVisibleLeafColumns().map((column) => column.id)
+  const dividerClass = (index: number) =>
+    index < columnIds.length - 1 && columnIds[index + 1] !== ACTIONS_COLUMN && "border-r border-border"
+
   const showError = !isLoading && Boolean(error) && data.length === 0
   const showEmpty = !isLoading && !showError && rows.length === 0
 
   return (
-    <div className={cn("flex flex-col overflow-hidden", !embedded && "rounded-xl border border-border bg-card")}>
+    <div
+      data-surface={surface}
+      className={cn("data-table flex flex-col overflow-hidden", !embedded && "rounded-xl border border-border")}
+    >
       {selectable && (
         // Animating the grid row from 0fr to 1fr slides the bar open at its natural height.
         <div
@@ -399,7 +430,7 @@ export function DataTable<TData, TValue>({
         {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
         {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
-        <div ref={scrollRef} className={cn("overflow-auto table-scroll", !embedded && "max-h-[500px]")}>
+        <div ref={scrollRef} className={cn("overflow-auto table-scroll", !embedded && LIST_HEIGHT)}>
           {/* A plain <table>, not <Table>: that wrapper adds its own overflow container, which
               would scroll on its own and break the sticky header. */}
           <table
@@ -410,18 +441,19 @@ export function DataTable<TData, TValue>({
             style={{ minWidth }}
           >
             <ColGroup />
-            <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)]">
+            <TableHeader className="sticky top-0 z-10 bg-(--table-bg) shadow-[inset_0_-1px_0_var(--border)]">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-b-0 hover:bg-transparent">
-                  {headerGroup.headers.map((header) => (
+                  {headerGroup.headers.map((header, i) => (
                     <TableHead
                       key={header.id}
                       className={cn(
                         "text-xs font-medium text-muted-foreground uppercase tracking-wide py-3",
+                        dividerClass(i),
                         ALIGN_CLASS[header.column.columnDef.meta?.align ?? "left"],
                         // Pinned to the right edge so the row menu is reachable without scrolling sideways.
                         header.column.id === ACTIONS_COLUMN &&
-                          "sticky right-0 z-20 bg-card text-center shadow-[inset_1px_0_0_var(--border),inset_0_-1px_0_var(--border)]"
+                          "sticky right-0 z-20 bg-(--table-bg) text-center shadow-[inset_1px_0_0_var(--border),inset_0_-1px_0_var(--border)]"
                       )}
                     >
                       {header.isPlaceholder
@@ -461,21 +493,26 @@ export function DataTable<TData, TValue>({
                       role={isClickable ? "button" : undefined}
                       aria-label={isClickable ? `Open row ${row.index + 1}` : undefined}
                       className={cn(
-                        "group/row border-0 transition-colors hover:bg-muted",
+                        "group/row border-0 transition-colors duration-200 hover:bg-(--table-hover)",
                         isClickable &&
-                          "cursor-pointer active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                          "cursor-pointer active:bg-(--table-active) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       )}
                     >
-                      {row.getVisibleCells().map((cell) => (
+                      {row.getVisibleCells().map((cell, i) => (
                         <TableCell
                           key={cell.id}
                           className={cn(
-                            "border-b border-border py-3.5 group-last/row:border-b-0",
+                            // Columns have fixed widths, so content longer than its column is cut off
+                            // with "…" inside the cell rather than running over the next column.
+                            "overflow-hidden text-ellipsis border-b border-border py-3.5 group-last/row:border-b-0",
+                            dividerClass(i),
                             ALIGN_CLASS[cell.column.columnDef.meta?.align ?? "left"],
                             // Opaque, so scrolled cells don't show through; matches the row's hover tint.
                             cell.column.id === ACTIONS_COLUMN &&
-                              "sticky right-0 bg-card shadow-[inset_1px_0_0_var(--border)] transition-colors group-hover/row:bg-muted",
-                            cell.column.id === ACTIONS_COLUMN && isClickable && "group-active/row:bg-accent"
+                              "sticky right-0 bg-(--table-bg) shadow-[inset_1px_0_0_var(--border)] transition-colors duration-200 group-hover/row:bg-(--table-hover)",
+                            cell.column.id === ACTIONS_COLUMN &&
+                              isClickable &&
+                              "group-active/row:bg-(--table-active)"
                           )}
                         >
                           {renderSlot(cell.column.columnDef.cell, cell.getContext())}
@@ -507,6 +544,7 @@ export function DataTable<TData, TValue>({
                           key={i}
                           className={cn(
                             "border-t border-border bg-muted/40 px-3 py-3 tabular-nums",
+                            dividerClass(i),
                             ALIGN_CLASS[column.meta?.align ?? "left"]
                           )}
                         >
@@ -525,7 +563,7 @@ export function DataTable<TData, TValue>({
       <div className="sm:hidden">
         {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
-        <div className={cn(!embedded && "max-h-[500px] overflow-y-auto")}>
+        <div className={cn(!embedded && "overflow-y-auto", !embedded && LIST_HEIGHT)}>
           {isLoading ? (
             <TableLoader />
           ) : showError ? (
@@ -571,9 +609,9 @@ export function DataTable<TData, TValue>({
                       onClick={(e) => handleRowClick(e, row.original)}
                       onKeyDown={(e) => handleRowKeyDown(e, row.original)}
                       className={cn(
-                        "space-y-3 p-4 transition-colors hover:bg-muted",
+                        "space-y-2.5 p-4 transition-colors duration-200 hover:bg-(--table-hover)",
                         isClickable &&
-                          "cursor-pointer active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                          "cursor-pointer active:bg-(--table-active) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -599,16 +637,16 @@ export function DataTable<TData, TValue>({
                       </div>
 
                       {detailCells.length > 0 && (
-                        <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           {detailCells.map((cell) => (
-                            <React.Fragment key={cell.id}>
-                              <dt className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            <div key={cell.id} className="min-w-0">
+                              <dt className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                 {headerLabels.get(cell.column.id) ?? null}
                               </dt>
                               <dd className="min-w-0 break-words">
                                 {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                               </dd>
-                            </React.Fragment>
+                            </div>
                           ))}
                         </dl>
                       )}
@@ -637,7 +675,7 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {showPagination && (
-        <div className="flex items-center justify-center gap-4 border-t border-border bg-card px-4 py-2.5 text-center sm:justify-between flex-wrap">
+        <div className="flex items-center justify-center gap-4 border-t border-border px-4 py-2.5 text-center sm:justify-between flex-wrap">
           <p className="text-xs text-muted-foreground">
             Showing <span className="font-medium text-foreground">{from}–{to}</span> of{" "}
             <span className="font-medium text-foreground">{totalRows}</span> results

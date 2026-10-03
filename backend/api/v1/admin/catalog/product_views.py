@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.catalog.models import Category
+from apps.catalog.selectors.brands import get_brand_by_id
 from apps.catalog.selectors.categories import get_category_by_id
 from apps.catalog.selectors.products import (
     get_product_by_id,
@@ -57,6 +58,16 @@ def _product_serializer_context(request, products) -> dict:
         "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
         "preordered_by_variant": get_preordered_quantities(variants),
     }
+
+
+def _resolve_brand(brand_id):
+    """The Brand for an optional `brand_id` (None clears it). Raises DomainError if unknown."""
+    if brand_id is None:
+        return None
+    brand = get_brand_by_id(brand_id)
+    if brand is None:
+        raise DomainError("Brand not found.", code="brand_not_found")
+    return brand
 
 
 class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, GenericListAPIView):
@@ -121,6 +132,7 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
                 DomainError("Category not found.", code="category_not_found")
             )
         try:
+            data["brand"] = _resolve_brand(data.pop("brand_id", None))
             product = create_product(category=category, actor=request.user, **data)
         except DomainError as exc:
             return error_from_exception(exc)
@@ -167,6 +179,11 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
                     DomainError("Category not found.", code="category_not_found")
                 )
             data["category"] = category
+        if "brand_id" in data:
+            try:
+                data["brand"] = _resolve_brand(data.pop("brand_id"))
+            except DomainError as exc:
+                return error_from_exception(exc)
         product = update_product(product=product, data=data)
         return Response(
             {

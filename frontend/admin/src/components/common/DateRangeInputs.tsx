@@ -23,7 +23,7 @@ export function DateRangeInputs({
         value={start}
         max={end || undefined}
         onChange={(e) => onStartChange(e.target.value)}
-        className="h-11 w-[150px]"
+        className="h-10 w-[150px] bg-transparent"
       />
       <span className="text-muted-foreground text-sm">to</span>
       <Input
@@ -33,7 +33,7 @@ export function DateRangeInputs({
         value={end}
         min={start || undefined}
         onChange={(e) => onEndChange(e.target.value)}
-        className="h-11 w-[150px]"
+        className="h-10 w-[150px] bg-transparent"
       />
     </div>
   )

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FieldError } from "@/components/ui/field"
 import { PageHeader } from "@/components/common/PageHeader"
-import { SubmitButton } from "@/components/common/FormActions"
+import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
 import { DateField, SelectField, TextareaField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
@@ -211,14 +211,14 @@ const PurchaseOrderCreate = () => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" size="action" asChild>
+        <StickyFormBar>
+          <Button type="button" variant="outline" asChild>
             <Link to="/purchasing/orders"><X className="size-4" /> Cancel</Link>
           </Button>
-          <SubmitButton loading={isSubmitting} icon={CheckCircle2} size="action">
+          <SubmitButton loading={isSubmitting} icon={CheckCircle2}>
             Create Draft
           </SubmitButton>
-        </div>
+        </StickyFormBar>
       </form>
     </div>
   )

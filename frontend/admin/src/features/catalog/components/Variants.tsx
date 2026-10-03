@@ -24,6 +24,7 @@ import { useCan } from "@/hooks/use-can"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
+import { useLastValue } from "@/hooks/use-dialog-presence"
 
 import { fetchAll } from "../slices/variantSlice"
 import { deleteVariant, downloadVariantsExport, importVariants, updateVariant } from "../api"
@@ -72,6 +73,8 @@ const Variants = () => {
   // Creating a variant: first pick the product it belongs to, then fill in the variant form.
   const [pickingProduct, setPickingProduct] = useState(false)
   const [addingTo, setAddingTo] = useState<Product | null>(null)
+  const addingShown = useLastValue(addingTo)
+  const editingShown = useLastValue(editing)
   const [importOpen, setImportOpen] = useState(false)
 
   const list = useListPage({
@@ -302,20 +305,21 @@ const Variants = () => {
           }}
         />
       )}
-      {canManage && addingTo && (
+      {/* Mounted on the last picked record, so the dialog can animate shut after it is cleared. */}
+      {canManage && addingShown && (
         <VariantFormDialog
-          open
+          open={Boolean(addingTo)}
           onOpenChange={(open) => !open && setAddingTo(null)}
-          productId={addingTo.id}
+          productId={addingShown.id}
           onSaved={list.reload}
         />
       )}
-      {canManage && editing && (
+      {canManage && editingShown && (
         <VariantFormDialog
-          open
+          open={Boolean(editing)}
           onOpenChange={(open) => !open && setEditing(null)}
-          productId={editing.product_id}
-          variant={editing}
+          productId={editingShown.product_id}
+          variant={editingShown}
           onSaved={list.reload}
         />
       )}

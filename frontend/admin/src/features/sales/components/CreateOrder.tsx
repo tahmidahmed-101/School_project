@@ -343,6 +343,7 @@ const CreateOrder = () => {
 
               {lines.length > 0 ? (
                 <DataTable
+                  surface="card"
                   showPagination={false}
                   selectable={false}
                   columns={lineColumns}

@@ -29,7 +29,7 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
           <Button
             variant="outline"
             id="date-picker-range"
-            className="justify-start px-2.5 font-normal bg-accent h-9"
+            className="justify-start px-2.5 font-normal h-10 border-field-border bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
           >
             <CalendarIcon />
             {date?.from ? (

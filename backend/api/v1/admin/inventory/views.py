@@ -356,7 +356,11 @@ class AdminWarehouseListCreateView(InventoryPermissionMixin, GenericListAPIView)
     default_ordering = "name"
 
     def get_queryset(self):
-        return all_warehouses()
+        queryset = all_warehouses()
+        is_active = get_bool(self.request.query_params, "is_active")
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active)
+        return queryset
 
     def get(self, request) -> Response:
         return self.list_response(request)

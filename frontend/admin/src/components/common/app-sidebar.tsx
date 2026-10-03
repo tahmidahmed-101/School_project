@@ -93,7 +93,7 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar variant="floating" collapsible="icon" className="z-30">
+    <Sidebar variant="floating" collapsible="icon" className="z-40">
       {/* HEADER */}
       <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <NavLink
@@ -108,7 +108,7 @@ export function AppSidebar() {
             <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
               NestmartIT
             </span>
-            <span className="block truncate text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-400">
               Admin Workspace
             </span>
           </span>
@@ -119,7 +119,7 @@ export function AppSidebar() {
       <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
         {navGroups.map((group) => (
           <div key={group.label} className="mb-4 last:mb-0">
-            <p className="mb-2 px-3 text-xs font-normal uppercase text-gray-400 dark:text-gray-500 group-data-[collapsible=icon]:hidden">
+            <p className="mb-2 px-3 text-xs font-normal uppercase text-gray-600 dark:text-gray-500 group-data-[collapsible=icon]:hidden">
               {group.label}
             </p>
 
@@ -139,7 +139,7 @@ export function AppSidebar() {
                       className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:mx-auto ${
                         isActive
                           ? "text-primary-500"
-                          : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                       }`}
                     >
                       <span className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
@@ -176,7 +176,7 @@ export function AppSidebar() {
                                 `flex items-center rounded-lg px-3 py-2 pl-6 text-sm transition-colors duration-200 ${
                                   itemActive
                                     ? "bg-primary-500/10 font-medium text-primary-500"
-                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                                 }`
                               }
                             >

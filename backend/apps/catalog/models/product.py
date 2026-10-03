@@ -7,6 +7,7 @@ from django.db import models
 from apps.common.models import FullAuditModel
 from apps.common.utils.files import unique_upload_path
 
+from .brand import Brand
 from .category import Category
 
 
@@ -31,6 +32,10 @@ class Product(FullAuditModel):
 
     category = models.ForeignKey(
         Category, on_delete=models.PROTECT, related_name="products"
+    )
+    # Optional: not every product is branded. Deleting a brand keeps its products.
+    brand = models.ForeignKey(
+        Brand, on_delete=models.SET_NULL, related_name="products", null=True, blank=True
     )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)

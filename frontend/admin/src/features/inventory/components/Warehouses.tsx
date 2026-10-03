@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { PlusIcon, Star, Warehouse as WarehouseIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
@@ -20,6 +21,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
+import type { Option } from "@/lib/types"
 
 import { deleteData, fetchAll } from "../slices/warehouseSlice"
 import { createWarehouse, updateWarehouse } from "../api"
@@ -27,14 +29,21 @@ import type { Warehouse, WarehousePayload } from "../types"
 
 const PAGE_SIZE = 20
 
+const STATUS_OPTIONS: Option[] = [
+  { label: "Active", value: "true" },
+  { label: "Inactive", value: "false" },
+]
+
 const Warehouses = () => {
   useDocumentTitle("Warehouses")
   const dispatch = useAppDispatch()
   const canManage = useCan("inventory.manage")
   const warehouseState = useAppSelector((s) => s.inventoryWarehouses)
+  const [status, setStatus] = useState<Option | null>(null)
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: warehouseState,
+    params: { is_active: status?.value },
     pageSize: PAGE_SIZE,
   })
 
@@ -130,7 +139,18 @@ const Warehouses = () => {
         }
       />
 
-      <FilterToolbar searchPlaceholder="Search name or code…" searchValue={list.search} onSearchChange={list.setSearch} />
+      <FilterToolbar
+        searchPlaceholder="Search name or code…"
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
+        filters={[
+          {
+            component: (
+              <Combobox placeholder="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />
+            ),
+          },
+        ]}
+      />
 
       <DataTable
         columns={columns}

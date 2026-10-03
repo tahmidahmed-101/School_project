@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Loader2, Package, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { useDebounced } from "@/hooks/use-debounced"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/lib/format"
@@ -64,14 +65,6 @@ export function VariantPicker({
     }
   }, [debouncedQuery, open, filtersKey])
 
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", onDoc)
-    return () => document.removeEventListener("mousedown", onDoc)
-  }, [])
-
   if (value) {
     return (
       <div
@@ -99,8 +92,12 @@ export function VariantPicker({
   const visible = results.filter((r) => !excludeIds?.includes(r.id))
 
   return (
-    <div ref={boxRef} className={cn("relative", className)}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+    // The suggestions render in a popover (a portal on <body>), so a card or dialog that clips
+    // its overflow can't cut them off.
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <div ref={boxRef} className={cn("relative", className)}>
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         id={id}
         value={query}
@@ -113,8 +110,19 @@ export function VariantPicker({
           setOpen(true)
         }}
       />
-      {open && (
-        <div className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        // Typing continues in the search box; the list must not take focus.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        // A click back in the search box is not "outside".
+        onInteractOutside={(e) => {
+          if (boxRef.current?.contains(e.target as Node)) e.preventDefault()
+        }}
+        className="max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto p-0"
+      >
+        <div>
           {loading && visible.length === 0 ? (
             <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Searching…
@@ -169,7 +177,7 @@ export function VariantPicker({
             </ul>
           )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }

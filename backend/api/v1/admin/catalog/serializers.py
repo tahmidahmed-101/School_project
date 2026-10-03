@@ -296,6 +296,8 @@ class CategoryUpdateSerializer(serializers.Serializer):
 class ProductSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     category_id = serializers.UUIDField(read_only=True)
+    brand_id = serializers.UUIDField(read_only=True, allow_null=True)
+    featured = serializers.BooleanField(read_only=True)
     name = serializers.CharField()
     slug = serializers.CharField(read_only=True)
     description = serializers.CharField(allow_blank=True)
@@ -365,6 +367,8 @@ class ProductSerializer(serializers.Serializer):
 
 class ProductCreateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField()
+    brand_id = serializers.UUIDField(required=False, allow_null=True)
+    featured = serializers.BooleanField(required=False, default=False)
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
     product_type = serializers.ChoiceField(
@@ -391,6 +395,8 @@ class ProductCreateSerializer(serializers.Serializer):
 
 class ProductUpdateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField(required=False)
+    brand_id = serializers.UUIDField(required=False, allow_null=True)
+    featured = serializers.BooleanField(required=False)
     name = serializers.CharField(required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     product_type = serializers.ChoiceField(choices=Product.ProductType.choices, required=False)

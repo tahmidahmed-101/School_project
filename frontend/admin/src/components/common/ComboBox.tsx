@@ -14,9 +14,11 @@ export function Combobox({
   placeholder,
   value,
   onValueChange,
+  id,
 }: {
   options: Option[]
   placeholder?: string
+  id?: string
   value?: Option | null
   onValueChange?: (value: Option | null) => void
 }) {
@@ -27,7 +29,7 @@ export function Combobox({
       value={value}
       onValueChange={onValueChange}
     >
-      <ComboboxInput placeholder={placeholder} showClear />
+      <ComboboxInput id={id} placeholder={placeholder} showClear />
       <ComboboxContent>
         <ComboboxEmpty>No items found.</ComboboxEmpty>
         <ComboboxList>

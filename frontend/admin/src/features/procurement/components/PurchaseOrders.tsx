@@ -53,7 +53,12 @@ const PurchaseOrders = () => {
     {
       accessorKey: "supplier_name",
       header: "SUPPLIER",
-      cell: ({ row }) => <span className="text-sm font-medium text-foreground">{row.original.supplier_name}</span>,
+      // Long supplier names wrap onto a second line rather than being cut off.
+      cell: ({ row }) => (
+        <span className="block whitespace-normal break-words text-sm font-medium text-foreground">
+          {row.original.supplier_name}
+        </span>
+      ),
     },
     {
       accessorKey: "order_date",
@@ -126,8 +131,8 @@ const PurchaseOrders = () => {
         emptyTitle="No purchase orders"
         emptyActionLabel={canManage ? "New Purchase Order" : undefined}
         onEmptyAction={canManage ? () => navigate("/purchasing/orders/new") : undefined}
-        minWidth="980px"
-        columnWidths={["140px", "200px", "120px", "170px", "140px", "110px", "80px"]}
+        minWidth="900px"
+        columnWidths={["125px", "auto", "105px", "145px", "130px", "125px", "80px"]}
       />
     </div>
   )

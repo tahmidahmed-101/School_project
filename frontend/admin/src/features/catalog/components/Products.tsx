@@ -326,7 +326,7 @@ const Products = () => {
         emptyIcon={Package}
         emptyTitle="No products found"
         emptyDescription="Try a different search or filter, or add a new product."
-        minWidth="1160px"
+        minWidth="1000px"
         columnWidths={widths}
       />
     </div>

@@ -14,6 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/format"
 import type { Account, Expense, ExpenseCategory } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
 import { DetailRow } from "@/components/common/DetailRow"
+import { useLastValue } from "@/hooks/use-dialog-presence"
 
 interface Props {
   expense: Expense | null
@@ -26,7 +27,7 @@ interface Props {
 }
 
 export function ExpenseDetailDialog({
-  expense,
+  expense: selected,
   accountsById,
   categoriesById,
   canPost,
@@ -34,8 +35,10 @@ export function ExpenseDetailDialog({
   onEdit,
   onDelete,
 }: Props) {
+  // Keeps the last expense on screen while the dialog fades out.
+  const expense = useLastValue(selected)
   return (
-    <Dialog open={!!expense} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!selected} onOpenChange={(open) => !open && onClose()}>
       {expense && (
         <DialogContent className="max-w-xl">
           <DialogHeader>

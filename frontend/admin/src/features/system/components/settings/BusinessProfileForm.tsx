@@ -5,10 +5,10 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { Save, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { SubmitButton } from "@/components/common/FormActions"
+import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
 import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchBusinessProfile, updateBusinessProfile } from "@/features/system/slices/businessSettingsSlice"
@@ -240,20 +240,18 @@ export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
       </fieldset>
 
       {canManage && (
-        <Card className="sticky bottom-4 z-10 shadow-md">
-          <CardFooter className="flex flex-col gap-3 p-4 sm:flex-row sm:justify-between">
-            <p className="text-xs text-muted-foreground">Last updated {formatDateTime(profile.updated_at)}</p>
-            <div className="flex gap-3">
-              <Button type="button" variant="outline" disabled={!isDirty || isSubmitting} onClick={() => reset(toForm(profile))}>
-                <Undo2 className="size-4" />
-                Discard
-              </Button>
-              <SubmitButton loading={isSubmitting} icon={Save} disabled={!isDirty || isSubmitting || uploading}>
-                Save changes
-              </SubmitButton>
-            </div>
-          </CardFooter>
-        </Card>
+        <StickyFormBar className="flex-wrap justify-between">
+          <p className="text-xs text-muted-foreground">Last updated {formatDateTime(profile.updated_at)}</p>
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" disabled={!isDirty || isSubmitting} onClick={() => reset(toForm(profile))}>
+              <Undo2 className="size-4" />
+              Discard
+            </Button>
+            <SubmitButton loading={isSubmitting} icon={Save} disabled={!isDirty || isSubmitting || uploading}>
+              Save changes
+            </SubmitButton>
+          </div>
+        </StickyFormBar>
       )}
     </form>
   )

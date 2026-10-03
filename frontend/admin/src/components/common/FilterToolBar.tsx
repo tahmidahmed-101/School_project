@@ -1,6 +1,7 @@
-import React, { useState, useSyncExternalStore } from "react"
-import { ChevronDown, Search, SlidersHorizontal } from "lucide-react"
+import React, { useState, useSyncExternalStore, isValidElement } from "react"
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SortSelect } from "./SortSelect"
 
 interface FilterItem {
   component: React.ReactNode
@@ -25,10 +26,10 @@ interface FilterToolbarProps {
 }
 
 const SEARCH_INPUT_CLASS =
-  "h-11 w-full rounded-lg border border-gray-300 bg-white pl-11 pr-4 text-sm text-gray-900 transition-all placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-800 dark:bg-white/5 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:bg-gray-700"
+  "h-10 w-full rounded-lg border border-field-border bg-transparent pl-11 pr-4 text-sm text-field-text transition-all placeholder:text-field-placeholder focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
 
 const TOGGLE_CLASS =
-  "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-gray-800"
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-field-border bg-transparent px-4 text-sm font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
 
 /** Tailwind `sm` / `lg` breakpoints, evaluated in JS so each control renders exactly once. */
 function useMediaQuery(query: string): boolean {
@@ -93,9 +94,54 @@ const FilterToolbar = ({
 
   const toggleLabel = inline.length > 0 ? "More filters" : "Filters"
 
+  // Filters in effect, as removable chips. They are read off the dropdown elements the page
+  // passed in (their `placeholder`, selected option and change handler), so a filter tucked
+  // away under "More filters" is still visible, and pages don't have to describe it twice.
+  const chips = controls.flatMap((c) => {
+    if (!isValidElement(c.component) || c.component.type === SortSelect) return []
+    const props = c.component.props as {
+      value?: { label?: unknown } | null
+      placeholder?: string
+      onValueChange?: (value: null) => void
+    }
+    const label = props.value && typeof props.value === "object" ? props.value.label : undefined
+    const clear = props.onValueChange
+    if (typeof label !== "string" || !clear) return []
+    return [{ key: c.key, label: props.placeholder ? `${props.placeholder}: ${label}` : label, clear: () => clear(null) }]
+  })
+  const chipRow = chips.length > 0 && (
+    <div className="flex flex-wrap items-center gap-2 pt-3">
+      {chips.map((chip) => (
+        <span
+          key={chip.key}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-card py-1 pl-3 pr-1 text-xs font-medium"
+        >
+          {chip.label}
+          <button
+            type="button"
+            onClick={chip.clear}
+            aria-label={`Remove filter ${chip.label}`}
+            className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-3.5" />
+          </button>
+        </span>
+      ))}
+      {chips.length > 1 && (
+        <button
+          type="button"
+          onClick={() => chips.forEach((chip) => chip.clear())}
+          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+        >
+          Clear all
+        </button>
+      )}
+    </div>
+  )
+
   const searchInput = (
     <div className="relative w-full">
-      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
         type="text"
         aria-label={searchPlaceholder}
@@ -157,6 +203,7 @@ const FilterToolbar = ({
           {toggle}
         </div>
         {panelContent}
+        {chipRow}
       </div>
     )
   }
@@ -183,6 +230,7 @@ const FilterToolbar = ({
       </div>
 
       {panelContent}
+      {chipRow}
     </div>
   )
 }

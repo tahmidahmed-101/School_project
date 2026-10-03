@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
-import { SubmitButton } from "@/components/common/FormActions"
+import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
 import { TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -296,24 +296,26 @@ const StaffForm = () => {
             <PermissionsEditor codes={codes} selected={selected} onChange={setSelected} disabled={savingPermissions} />
           )}
         </CardContent>
-        <CardFooter className="justify-end gap-3 border-t p-4">
-          {existing ? (
+        {existing && (
+          <CardFooter className="justify-end gap-3 border-t p-4">
             <SubmitButton type="button" loading={savingPermissions} icon={Save} onClick={handleSavePermissions} disabled={!permissionsDirty}>
               Save Permissions
             </SubmitButton>
-          ) : (
-            <>
-              <Button type="button" variant="outline" onClick={() => navigate("/staffs")}>
-                <X className="size-4" />
-                Cancel
-              </Button>
-              <SubmitButton type="button" loading={createForm.formState.isSubmitting} icon={Save} onClick={createForm.handleSubmit(handleCreate)}>
-                Create Staff Member
-              </SubmitButton>
-            </>
-          )}
-        </CardFooter>
+          </CardFooter>
+        )}
       </Card>
+
+      {!existing && (
+        <StickyFormBar>
+          <Button type="button" variant="outline" onClick={() => navigate("/staffs")}>
+            <X className="size-4" />
+            Cancel
+          </Button>
+          <SubmitButton type="button" loading={createForm.formState.isSubmitting} icon={Save} onClick={createForm.handleSubmit(handleCreate)}>
+            Create Staff Member
+          </SubmitButton>
+        </StickyFormBar>
+      )}
     </div>
   )
 }

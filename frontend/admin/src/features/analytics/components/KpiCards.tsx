@@ -44,7 +44,7 @@ export function DeltaBadge({
         : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500"
   return (
     <span
-      className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium", tone)}
+      className={cn("inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium", tone)}
       title="Change vs. the previous period of the same length"
     >
       <Icon className="size-3" aria-hidden />
@@ -58,16 +58,18 @@ function KpiCard({ kpi }: { kpi: DashboardKpi }) {
   const Icon = ICONS[kpi.label] ?? BarChart3
   return (
     <Card className="gap-3 p-5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      {/* Label and badge share a line when they fit; in a narrow card the badge drops under the
+          label instead of being squeezed on top of it. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+        <span className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Icon className="size-4" aria-hidden />
           </span>
           {kpi.label}
         </span>
         <DeltaBadge delta={kpi.delta_pct} sign={kpi.sign} good={kpi.good} />
         {kpi.delta_pct === null && !kpi.good && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-500">
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-500">
             Needs attention
           </span>
         )}

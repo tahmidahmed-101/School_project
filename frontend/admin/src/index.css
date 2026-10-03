@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* One spelling for "open" / "closed" across Radix (data-state) and Base UI (data-open / data-closed). */
+@custom-variant data-open (&:where([data-state="open"], [data-open]));
+@custom-variant data-closed (&:where([data-state="closed"], [data-closed]));
 
 /* -------------------------
    THEME TOKENS
@@ -72,13 +75,13 @@
   /* Native controls (date/time picker icons and popups) follow the theme. */
   color-scheme: light;
   --background: #ffffff;
-  --foreground: #1f2937;
+  --foreground: #111827;
 
   --card: #ffffff;
-  --card-foreground: #1f2937;
+  --card-foreground: #111827;
 
   --popover: #ffffff;
-  --popover-foreground: #1f2937;
+  --popover-foreground: #111827;
 
   --primary: #0d9488;
   --primary-foreground: #ffffff;
@@ -86,32 +89,32 @@
   --secondary: #111827;
   --secondary-foreground: #ffffff;
 
-  --accent: #f3f4f6;
-  --accent-foreground: #374151;
+  --accent: #eceef1;
+  --accent-foreground: #111827;
 
-  --muted: #f9fafb;
-  --muted-foreground: #6b7280;
+  --muted: #f5f6f8;
+  --muted-foreground: #4b5563;
 
   --destructive: #dc2626;
 
-  --border: #e5e7eb;
-  --input: #d1d5db;
+  --border: #cdd2d9;
+  --input: #aeb5bf;
   --ring: #14b8a6;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #374151;
+  --sidebar-foreground: #1f2937;
   --sidebar-primary: #0d9488;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
+  --sidebar-accent: #eceef1;
   --sidebar-accent-foreground: #111827;
-  --sidebar-border: #e5e7eb;
+  --sidebar-border: #cdd2d9;
   --sidebar-ring: #14b8a6;
 
   /* ---- Field tokens (input, combobox, date picker) ---- */
-  --field-bg: #f9fafb;
-  --field-border: #d1d5db;
+  --field-bg: #ffffff;
+  --field-border: #aeb5bf;
   --field-text: #111827;
-  --field-placeholder: #6b7280;
+  --field-placeholder: #5b6472;
 }
 
 /* -------------------------
@@ -122,10 +125,12 @@
   --background: #06110f;
   --foreground: #f9fafb;
 
-  --card: #0b1a17;
+  /* One surface in the dark theme: cards, panels and inputs sit directly on the page background
+     and are told apart by their borders. Menus and dialogs use the same colour, but opaque. */
+  --card: var(--background);
   --card-foreground: #f9fafb;
 
-  --popover: #0b1a17;
+  --popover: var(--background);
   --popover-foreground: #f9fafb;
 
   --primary: #2dd4bf;
@@ -137,7 +142,7 @@
   --accent: #12201d;
   --accent-foreground: #f3f4f6;
 
-  --muted: #0b1a17;
+  --muted: var(--background);
   --muted-foreground: #9ca3af;
 
   --destructive: #ef4444;
@@ -156,7 +161,7 @@
   --sidebar-ring: #14b8a6;
 
   /* ---- Field tokens (dark mode) ---- */
-  --field-bg: rgba(255, 255, 255, 0.05);
+  --field-bg: transparent;
   --field-border: #1e413a;
   --field-text: #f9fafb;
   --field-placeholder: #9ca3af;
@@ -189,11 +194,11 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Geist Variable", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   }
 
   html {
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Geist Variable", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   }
 
   .section-container {
@@ -264,4 +269,46 @@
   input {
     display: none !important;
   }
+}
+
+/*
+ * DataTable has no background of its own: it shows the surface it sits on. Its pinned parts
+ * (sticky header, pinned actions column) still have to be opaque, and the row hover has to
+ * contrast with that surface, so both are set here per surface and theme.
+ */
+.data-table {
+  --table-bg: var(--muted);
+  --table-hover: color-mix(in oklab, var(--foreground) 5%, var(--muted));
+  --table-active: color-mix(in oklab, var(--foreground) 9%, var(--muted));
+}
+.dark .data-table {
+  --table-bg: var(--background);
+  --table-hover: var(--accent);
+  --table-active: var(--border);
+}
+.data-table[data-surface="card"] {
+  --table-bg: var(--card);
+  --table-hover: var(--muted);
+  --table-active: var(--accent);
+}
+.dark .data-table[data-surface="card"] {
+  --table-bg: var(--card);
+  --table-hover: var(--accent);
+  --table-active: var(--border);
+}
+
+/*
+ * A page with a pinned save bar (StickyFormBar) fills the height of the scroll area, and the
+ * form holding the bar stretches with it, so on a short page the bar still sits at the bottom
+ * edge rather than straight under the last field.
+ */
+.section-container:has(> .sticky-form-bar, > form > .sticky-form-bar) {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+.section-container > form:has(> .sticky-form-bar) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }

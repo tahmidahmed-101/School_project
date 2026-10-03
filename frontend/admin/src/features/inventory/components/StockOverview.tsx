@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
-import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, ScanBarcode, SlidersHorizontal, Truck, Undo2, Plus, Search } from "lucide-react"
+import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, SlidersHorizontal, Truck, Undo2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -16,24 +13,20 @@ import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { MoneyCell, ProductCell } from "@/components/common/cells"
-import { SubmitButton } from "@/components/common/FormActions"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
-import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
 import type { Option } from "@/lib/types"
 import type { PickedVariant } from "@/features/catalog/components/VariantPicker"
 
 import { fetchAll } from "../slices/stockItemSlice"
-import { fetchStockStatus, lookupStock } from "../api"
-import type { StockItem, StockLookupResult, StockStatusSummary } from "../types"
+import { fetchStockStatus } from "../api"
+import type { StockItem, StockStatusSummary } from "../types"
 import { useWarehouses } from "../lib/useWarehouses"
 import { StockMovementDialog, type MovementMode } from "./StockMovementDialog"
 import { BulkAdjustDialog } from "./BulkAdjustDialog"
-import { QuickProductDialog } from "./QuickProductDialog"
 
 const PAGE_SIZE = 25
 
@@ -57,7 +50,6 @@ const StockOverview = () => {
   useDocumentTitle("Stock")
   const dispatch = useAppDispatch()
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
-  const canQuickCreate = useCan("catalog.manage", "inventory.manage")
   const stockState = useAppSelector((s) => s.inventoryStockItems)
   const { warehouses } = useWarehouses()
 
@@ -74,10 +66,6 @@ const StockOverview = () => {
   )
   const [bulkOpen, setBulkOpen] = useState(false)
 
-  const [lookupCode, setLookupCode] = useState("")
-  const [lookupBusy, setLookupBusy] = useState(false)
-  const [lookup, setLookup] = useState<StockLookupResult | null>(null)
-  const [quickOpen, setQuickOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -112,26 +100,7 @@ const StockOverview = () => {
   const refreshAll = () => {
     list.reload()
     setStatusKey((k) => k + 1)
-    if (lookup?.found) void runLookup(lookup.sku)
   }
-
-  const runLookup = async (code: string) => {
-    const q = code.trim()
-    if (!q) return
-    setLookupBusy(true)
-    try {
-      setLookup(await lookupStock(q))
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Lookup failed"))
-    } finally {
-      setLookupBusy(false)
-    }
-  }
-
-  const lookupVariant: PickedVariant | undefined =
-    lookup?.found === true
-      ? { id: lookup.variant_id, sku: lookup.sku, product_name: lookup.product_name, price: lookup.price }
-      : undefined
 
   const rowVariant = (s: StockItem): PickedVariant => ({ id: s.variant_id, sku: s.variant_sku, product_name: s.product_name })
 
@@ -271,81 +240,6 @@ const StockOverview = () => {
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ScanBarcode className="size-4" /> Quick lookup
-          </CardTitle>
-          <CardDescription>Scan or type an exact SKU or barcode.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <form
-            className="flex max-w-xl gap-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void runLookup(lookupCode)
-            }}
-          >
-            <Input
-              aria-label="SKU or barcode"
-              placeholder="SKU or barcode"
-              value={lookupCode}
-              onChange={(e) => setLookupCode(e.target.value)}
-            />
-            <SubmitButton icon={Search} loading={lookupBusy} disabled={!lookupCode.trim()}>
-              Look up
-            </SubmitButton>
-          </form>
-          {lookup?.found === true && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
-              <div className="min-w-0">
-                <Link to={`/product_detail/${lookup.product_id}`} className="font-medium hover:underline">
-                  {lookup.product_name}
-                </Link>
-                <div className="font-mono text-xs text-muted-foreground">
-                  {lookup.sku}
-                  {lookup.barcode ? ` · ${lookup.barcode}` : ""}
-                </div>
-                <div className="text-sm">
-                  <span className="font-semibold">{lookup.available}</span> available ·{" "}
-                  {formatCurrency(lookup.price)}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {canAdjust && (
-                  <>
-                    <Button size="sm" onClick={() => setMovement({ mode: "intake", variant: lookupVariant })}>
-                      <ArrowDownToLine /> Receive
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setMovement({ mode: "adjust", variant: lookupVariant })}>
-                      <SlidersHorizontal /> Adjust
-                    </Button>
-                  </>
-                )}
-                <Button size="sm" variant="outline" asChild>
-                  <Link to={`/inventory/ledger?variant_id=${lookup.variant_id}&sku=${encodeURIComponent(lookup.sku)}`}>
-                    <History /> Ledger
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          )}
-          {lookup?.found === false && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border p-3 text-sm">
-              <span>
-                No variant matches <span className="font-mono">{lookup.query}</span>.
-              </span>
-              {canQuickCreate && (
-                <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)}>
-                  <Plus className="size-4" />
-                  Create product
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <FilterToolbar
         searchPlaceholder="Search SKU, barcode or product…"
         searchValue={list.search}
@@ -404,15 +298,6 @@ const StockOverview = () => {
         onDone={refreshAll}
       />
       <BulkAdjustDialog open={bulkOpen} onOpenChange={setBulkOpen} warehouses={warehouses} onDone={refreshAll} />
-      <QuickProductDialog
-        open={quickOpen}
-        onOpenChange={setQuickOpen}
-        initialCode={lookup?.found === false ? lookup.query : ""}
-        onCreated={(res) => {
-          setLookup(res)
-          if (res.found) setLookupCode(res.sku)
-        }}
-      />
     </div>
   )
 }

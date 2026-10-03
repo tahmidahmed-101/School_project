@@ -49,11 +49,15 @@ def create_product(
     discount_price: Decimal | None = None,
     sku: str = "",
     meta_keywords: str = "",
+    brand=None,
+    featured: bool = False,
     actor=None,
 ) -> Product:
     _require_variations_for_type(product_type)
     product = Product(
         category=category,
+        brand=brand,
+        featured=featured,
         name=name,
         description=description,
         product_type=product_type,
@@ -78,6 +82,8 @@ def create_product(
 def update_product(*, product: Product, data: dict) -> Product:
     allowed_fields = {
         "category",
+        "brand",
+        "featured",
         "name",
         "description",
         "product_type",

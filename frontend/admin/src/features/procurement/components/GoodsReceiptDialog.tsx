@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
+import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
 
 import { createGoodsReceipt } from "../slices/goodsReceiptSlice"
 import type { GoodsReceipt, GRNLineCondition, PurchaseOrder } from "../types"
@@ -50,6 +51,9 @@ export function GoodsReceiptDialog({
   )
   const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)
   const po = purchaseOrder ?? picked
+
+  // The form resets by unmounting; it stays through the exit animation so the dialog doesn't empty first.
+  const formMounted = useDelayedUnmount(open)
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -89,7 +93,7 @@ export function GoodsReceiptDialog({
         )}
 
         {/* Keyed by PO so quantities re-seed from that PO's outstanding amounts. */}
-        {open && (
+        {formMounted && (
           <ReceiptForm
             key={po?.id ?? "none"}
             po={po}
@@ -238,6 +242,7 @@ function ReceiptForm({
 
         {po && openLines.length > 0 && (
           <DataTable
+            surface="card"
             showPagination={false}
             selectable={false}
             columns={lineColumns}

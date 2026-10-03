@@ -1,6 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/geist/index.css'
+// Geist has no Bengali glyphs; without this the Taka sign falls back to a tiny system glyph.
+import '@fontsource/noto-sans-bengali/bengali-400.css'
+import '@fontsource/noto-sans-bengali/bengali-600.css'
+import '@fontsource/noto-sans-bengali/bengali-700.css'
 import './index.css'
 import { RouterProvider } from 'react-router-dom'
 import { Provider } from 'react-redux'
