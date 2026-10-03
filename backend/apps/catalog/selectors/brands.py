@@ -9,7 +9,6 @@ from apps.catalog.models import Brand
 
 def brands_list(
     *,
-    category=None,
     include_deleted: bool = False,
     is_active: bool | None = None,
 ) -> QuerySet[Brand]:
@@ -18,8 +17,6 @@ def brands_list(
         queryset = queryset.filter(deleted_at__isnull=True)
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
-    if category is not None:
-        queryset = queryset.filter(categories=category)
     return queryset.order_by("name")
 
 

@@ -84,7 +84,7 @@ class AdminSalesOrderSerializer(serializers.Serializer):
         if customer is None:
             return ""
         full = f"{customer.first_name} {customer.last_name}".strip()
-        return full or customer.email.split("@")[0]
+        return full or (customer.email or "").split("@")[0]
 
     def get_customer_phone(self, obj) -> str:
         # Order-level override first, then the ship-to, then the account.

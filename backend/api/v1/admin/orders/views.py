@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from apps.accounts.constants import StaffPermissionCode, UserRole
 from apps.accounts.selectors.addresses import get_address_for_user
 from apps.accounts.selectors.users import get_user_by_id
-from apps.catalog.selectors.products import get_variant_by_id
+from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
 from apps.common.params import get_bool, get_choice, get_date, get_uuid, validate_date_range
@@ -106,7 +106,8 @@ class OrdersPermissionMixin:
 class OrderQuerysetMixin:
     """Shared so the CSV export cannot drift from what the list endpoint shows."""
 
-    search_fields = ("order_number", "customer__email")
+    # contact_phone: phone-only guest orders have no customer email to search by.
+    search_fields = ("order_number", "customer__email", "contact_phone")
     ordering_fields = ("created_at", "grand_total")
     default_ordering = "-created_at"
 
@@ -176,9 +177,13 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
                     DomainError("Carrier not found.", code="carrier_not_found")
                 )
 
+        variants = {
+            str(variant.id): variant
+            for variant in get_variants_by_ids([line["variant_id"] for line in data["lines"]])
+        }
         resolved_lines = []
         for line in data["lines"]:
-            variant = get_variant_by_id(line["variant_id"])
+            variant = variants.get(str(line["variant_id"]))
             if variant is None:
                 return error_from_exception(
                     DomainError("Variant not found.", code="variant_not_found")

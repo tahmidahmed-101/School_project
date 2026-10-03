@@ -43,11 +43,6 @@ def is_module_enabled(key: str) -> bool:
     return _enabled_map().get(key, True)
 
 
-def enabled_module_keys() -> set[str]:
-    enabled = _enabled_map()
-    return {spec.key for spec in MODULE_REGISTRY if not spec.can_disable or enabled[spec.key]}
-
-
 def is_feature_enabled(module_key: str, field_key: str) -> bool:
     """A sub-feature is off whenever its module is, so callers guard one thing.
     An unknown field reads as on: a flag not yet in the registry must not

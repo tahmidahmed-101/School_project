@@ -324,6 +324,30 @@ def test_stock_item_detail_denied_without_permission(api_client):
     assert response.status_code == 403
 
 
+def test_bulk_adjustment_loads_variants_in_one_query(api_client):
+    seed_chart_of_accounts()
+    admin = create_user(email="inv-bulk-scale@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    def variant_selects(count: int) -> int:
+        items = [
+            {"variant_id": str(ProductVariantFactory().id), "quantity_delta": 2}
+            for _ in range(count)
+        ]
+        with CaptureQueriesContext(connection) as captured:
+            response = api_client.post(
+                "/api/v1/admin/inventory/adjustments/bulk/", {"adjustments": items}, format="json"
+            )
+        assert response.status_code == 201, response.data
+        return sum(
+            1
+            for q in captured
+            if q["sql"].startswith("SELECT") and 'FROM "catalog_productvariant"' in q["sql"]
+        )
+
+    assert variant_selects(6) == variant_selects(1)
+
+
 def test_bulk_adjustment_applies_every_item(api_client):
     seed_chart_of_accounts()
     admin = create_user(email="inv-bulk-adjust@example.com", role=UserRole.ADMIN)

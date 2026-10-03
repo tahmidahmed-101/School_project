@@ -127,13 +127,6 @@ def update_product(*, product: Product, data: dict) -> Product:
 
 
 @transaction.atomic
-def deactivate_product(*, product: Product) -> Product:
-    product.deactivate()
-    product.variants.update(is_active=False)
-    return product
-
-
-@transaction.atomic
 def delete_product(*, product: Product, actor=None) -> Product:
     from apps.common.services.soft_delete import soft_delete_instance
 

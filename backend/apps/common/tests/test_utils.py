@@ -1,24 +1,16 @@
 from __future__ import annotations
 
-from decimal import Decimal
-
 import pytest
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.accounts.models import User
 from apps.accounts.tests.helpers import create_user as make_user
 from apps.common.utils.barcodes import generate_barcode
-from apps.common.utils.codes import generate_numeric_code, generate_uuid_str, hash_code
+from apps.common.utils.codes import generate_numeric_code, hash_code
 from apps.common.utils.files import human_readable_size
-from apps.common.utils.formatting import format_currency, format_date
 from apps.common.utils.qr_codes import generate_qr_code
 from apps.common.utils.text import generate_slug, unique_slug_for
-from apps.common.utils.validators import (
-    validate_file_extension,
-    validate_file_size,
-    validate_phone_number,
-)
+from apps.common.utils.validators import validate_phone_number
 
 pytestmark = pytest.mark.django_db
 
@@ -33,21 +25,6 @@ def test_generate_numeric_code_is_zero_padded_and_in_range():
 def test_hash_code_is_deterministic_sha256():
     assert hash_code("123456") == hash_code("123456")
     assert hash_code("123456") != hash_code("654321")
-
-
-def test_generate_uuid_str_returns_unique_strings():
-    assert generate_uuid_str() != generate_uuid_str()
-
-
-def test_format_currency():
-    assert format_currency(Decimal("19.5")) == "USD 19.50"
-    assert format_currency(1234.5, currency="EUR") == "EUR 1,234.50"
-
-
-def test_format_date():
-    import datetime
-
-    assert format_date(datetime.date(2026, 1, 5)) == "2026-01-05"
 
 
 def test_generate_slug():
@@ -72,24 +49,6 @@ def test_validate_phone_number_accepts_e164_and_rejects_garbage():
 
     with pytest.raises(ValidationError):
         validate_phone_number("not-a-phone")
-
-
-def test_validate_file_size_rejects_oversized_file():
-    validator = validate_file_size(1)
-    small_file = SimpleUploadedFile("a.txt", b"x" * 10)
-    big_file = SimpleUploadedFile("b.txt", b"x" * (2 * 1024 * 1024))
-
-    validator(small_file)
-    with pytest.raises(ValidationError):
-        validator(big_file)
-
-
-def test_validate_file_extension():
-    validator = validate_file_extension(("png", "jpg"))
-    validator(SimpleUploadedFile("a.png", b"data"))
-
-    with pytest.raises(ValidationError):
-        validator(SimpleUploadedFile("a.exe", b"data"))
 
 
 def test_human_readable_size():

@@ -10,6 +10,7 @@ from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.services.modules import require_feature
 from apps.catalog.models import BundleItem, Product, ProductVariant
+from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import BusinessRuleViolationError
 
 from .products import create_product, create_variant
@@ -60,6 +61,8 @@ def _resolve_components(raw_components: list[dict]) -> list[BundleComponent]:
         raise BusinessRuleViolationError(
             "A bundle must have at least one component.", code="empty_bundle"
         )
+    ids = [raw["component_variant_id"] for raw in raw_components if raw.get("component_variant_id")]
+    variants = {str(variant.id): variant for variant in get_variants_by_ids(ids)}
     resolved: list[BundleComponent] = []
     for raw in raw_components:
         quantity = int(raw.get("quantity") or 0)
@@ -67,9 +70,7 @@ def _resolve_components(raw_components: list[dict]) -> list[BundleComponent]:
             raise BusinessRuleViolationError(
                 "Component quantity must be positive.", code="invalid_quantity"
             )
-        variant = ProductVariant.objects.filter(
-            id=raw["component_variant_id"], deleted_at__isnull=True
-        ).first()
+        variant = variants.get(str(raw["component_variant_id"]))
         if variant is None:
             raise BusinessRuleViolationError(
                 "Bundle component not found.", code="component_not_found"
@@ -229,13 +230,6 @@ def update_bundle(
         },
     )
     return bundle_variant
-
-
-@transaction.atomic
-def deactivate_bundle(*, bundle_variant: ProductVariant, actor=None) -> ProductVariant:
-    from .products import deactivate_variant
-
-    return deactivate_variant(variant=bundle_variant, actor=actor)
 
 
 @transaction.atomic

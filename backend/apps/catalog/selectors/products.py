@@ -162,10 +162,6 @@ def get_variants_by_ids(variant_ids: list[str | UUID]) -> QuerySet[ProductVarian
     return ProductVariant.objects.filter(id__in=variant_ids, deleted_at__isnull=True)
 
 
-def get_variant_by_sku(sku: str) -> ProductVariant | None:
-    return ProductVariant.objects.filter(sku=sku, deleted_at__isnull=True).first()
-
-
 def get_variant_by_sku_or_barcode(identifier: str) -> ProductVariant | None:
     """Case-insensitive lookup by SKU or barcode — the Stock App's existence
     check before stocking or creating a product."""

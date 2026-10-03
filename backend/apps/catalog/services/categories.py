@@ -113,12 +113,6 @@ def _ensure_no_active_products(category: Category) -> None:
 
 
 @transaction.atomic
-def deactivate_category(*, category: Category) -> Category:
-    category.deactivate()
-    return category
-
-
-@transaction.atomic
 def delete_category(*, category: Category, actor=None) -> Category:
     _ensure_no_active_children(category)
     _ensure_no_active_products(category)

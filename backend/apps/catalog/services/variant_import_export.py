@@ -96,8 +96,18 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
     reported and skipped instead of aborting the whole file."""
     result = ImportResult()
     variations_on = is_feature_enabled(ModuleKey.CATALOG, "product_variations")
+    rows = _read_rows(file, fmt=fmt)
+    # One query for every SKU in the file, and one per distinct product name,
+    # rather than both per row — a file is often many SKUs of a few products.
+    variants_by_sku = {
+        variant.sku: variant
+        for variant in ProductVariant.objects.filter(
+            sku__in={(row.get("sku") or "").strip() for row in rows}
+        )
+    }
+    products_by_name: dict[str, Product | None] = {}
 
-    for row_number, row in enumerate(_read_rows(file, fmt=fmt), start=2):
+    for row_number, row in enumerate(rows, start=2):
         sku = (row.get("sku") or "").strip()
         product_name = (row.get("product_name") or "").strip()
         try:
@@ -107,9 +117,11 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                 if not product_name:
                     raise ValueError("product_name is required")
 
-                product = Product.objects.filter(
-                    name__iexact=product_name, deleted_at__isnull=True
-                ).first()
+                if product_name not in products_by_name:
+                    products_by_name[product_name] = Product.objects.filter(
+                        name__iexact=product_name, deleted_at__isnull=True
+                    ).first()
+                product = products_by_name[product_name]
                 if product is None:
                     raise ValueError(f"Product '{product_name}' not found")
 
@@ -128,7 +140,7 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                 is_active_raw = str(row.get("is_active") or "1").strip().lower()
                 is_active = is_active_raw in {"1", "true", "yes"}
 
-                variant = ProductVariant.objects.filter(sku=sku).first()
+                variant = variants_by_sku.get(sku)
                 if variant is None:
                     # The importer writes rows directly, so the single-variant
                     # rule has to be repeated here rather than inherited.
@@ -177,6 +189,9 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                         ]
                     )
                     result.updated += 1
+            # Only once the row's savepoint has committed, so a later row with
+            # the same SKU updates this variant rather than creating another.
+            variants_by_sku[sku] = variant
         except ValueError as exc:
             result.errors.append({"row": row_number, "sku": sku, "message": str(exc)})
 

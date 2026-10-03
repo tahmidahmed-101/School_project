@@ -46,8 +46,11 @@ class GuestCheckoutView(APIView):
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
 
+        # AllowAny: a signed-in customer's order belongs to them; an anonymous
+        # one goes to a guest identity, whatever email or phone was typed.
+        customer = request.user if request.user.is_authenticated else None
         try:
-            order = guest_checkout(**data, ip_address=client_ip(request))
+            order = guest_checkout(**data, ip_address=client_ip(request), customer=customer)
         except DomainError as exc:
             return error_from_exception(exc)
 

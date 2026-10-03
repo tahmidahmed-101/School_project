@@ -47,7 +47,10 @@ def user_display_name(user: User) -> str:
     if address and address.full_name.strip():
         return address.full_name.strip()
     full = f"{user.first_name} {user.last_name}".strip()
-    return full or user.email.split("@")[0]
+    if full:
+        return full
+    # Phone-only customers (guest checkout without an email) have no email.
+    return user.email.split("@")[0] if user.email else user_contact_phone(user)
 
 
 def user_contact_phone(user: User) -> str:

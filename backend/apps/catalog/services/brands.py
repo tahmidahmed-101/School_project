@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.audit.services.audit import log_action
-from apps.catalog.models import Brand, Category
-from apps.common.exceptions import BusinessRuleViolationError
+from apps.catalog.models import Brand
 from apps.common.utils.text import unique_slug_for
 
 
@@ -15,7 +13,6 @@ def create_brand(
     *,
     name: str,
     description: str = "",
-    category_ids: list | None = None,
     actor=None,
 ) -> Brand:
     brand = Brand(
@@ -24,9 +21,6 @@ def create_brand(
         slug=unique_slug_for(model=Brand, text=name),
     )
     brand.save()
-    if category_ids:
-        categories = Category.objects.filter(id__in=category_ids, deleted_at__isnull=True)
-        brand.categories.set(categories)
     log_action(
         actor=actor,
         action="brand.created",
@@ -49,14 +43,6 @@ def update_brand(*, brand: Brand, data: dict, actor=None) -> Brand:
         changed_fields.append("slug")
     if changed_fields:
         brand.save(update_fields=changed_fields)
-
-    if "categories" in data:
-        category_ids = data["categories"]
-        categories = Category.objects.filter(id__in=category_ids, deleted_at__isnull=True)
-        brand.categories.set(categories)
-        changed_fields.append("categories")
-
-    if changed_fields:
         log_action(
             actor=actor,
             action="brand.updated",
@@ -73,18 +59,6 @@ def update_brand(*, brand: Brand, data: dict, actor=None) -> Brand:
 @transaction.atomic
 def delete_brand(*, brand: Brand, actor=None) -> Brand:
     from apps.common.services.soft_delete import soft_delete_instance
-
-    # Check if brand is in use by products through categories
-    products_with_brand = (
-        Category.objects.filter(brands=brand, deleted_at__isnull=True)
-        .annotate(product_count=Count("products", filter=Q(products__deleted_at__isnull=True)))
-        .filter(product_count__gt=0)
-    )
-    if products_with_brand.exists():
-        raise BusinessRuleViolationError(
-            "Cannot delete brand: it is assigned to categories that have active products.",
-            code="brand_in_use",
-        )
 
     soft_delete_instance(brand, actor=actor)
     log_action(

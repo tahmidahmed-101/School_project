@@ -7,12 +7,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.catalog.models import Category
 from apps.catalog.selectors.brands import (
     brands_list,
     get_brand_by_id,
 )
-from apps.catalog.selectors.categories import get_category_by_id
 from apps.catalog.services.brands import (
     create_brand,
     delete_brand,
@@ -26,7 +24,7 @@ from apps.common.generics import (
     IncludeDeletedMixin,
     RestoreAPIView,
 )
-from apps.common.params import get_bool, get_related
+from apps.common.params import get_bool
 from apps.common.responses import error_from_exception, not_found
 
 from .permissions import (
@@ -50,12 +48,8 @@ class AdminBrandListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gene
     include_deleted_permission = CatalogManagePermission
 
     def get_queryset(self):
-        params = self.request.query_params
-        category = get_related(params, "category_id", get_category_by_id, "Category not found.")
-        is_active = get_bool(params, "is_active")
         return brands_list(
-            category=category,
-            is_active=is_active,
+            is_active=get_bool(self.request.query_params, "is_active"),
             include_deleted=self.include_deleted(),
         )
 
@@ -66,12 +60,8 @@ class AdminBrandListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gene
         serializer = BrandCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
-        category_ids = data.pop("category_ids", [])
         try:
             brand = create_brand(actor=request.user, **data)
-            if category_ids:
-                cats = Category.objects.filter(id__in=category_ids, deleted_at__isnull=True)
-                brand.categories.set(cats)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(
@@ -107,11 +97,7 @@ class AdminBrandDetailView(CatalogPermissionMixin, APIView):
         serializer = BrandUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
-        category_ids = data.pop("category_ids", None)
         brand = update_brand(brand=brand, data=data)
-        if category_ids is not None:
-            cats = Category.objects.filter(id__in=category_ids, deleted_at__isnull=True)
-            brand.categories.set(cats)
         return Response(
             {
                 "data": BrandSerializer(brand, context={"request": request}).data,

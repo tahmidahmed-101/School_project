@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.constants import StaffPermissionCode
-from apps.catalog.selectors.products import get_variant_by_id
+from apps.catalog.selectors.products import get_variant_by_id, get_variants_by_ids
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView, IncludeDeletedMixin, RestoreAPIView
@@ -209,9 +209,14 @@ class AdminPurchaseOrderListCreateView(PurchasingPermissionMixin, GenericListAPI
             return error_from_exception(
                 DomainError("Supplier not found.", code="supplier_not_found")
             )
+        raw_lines = data.pop("lines")
+        variants = {
+            str(variant.id): variant
+            for variant in get_variants_by_ids([line["variant_id"] for line in raw_lines])
+        }
         lines = []
-        for line in data.pop("lines"):
-            variant = get_variant_by_id(line["variant_id"])
+        for line in raw_lines:
+            variant = variants.get(str(line["variant_id"]))
             if variant is None:
                 return error_from_exception(
                     DomainError("Variant not found.", code="variant_not_found")

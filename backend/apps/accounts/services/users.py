@@ -9,6 +9,7 @@ from apps.accounts.selectors.users import get_active_user_by_email, is_last_acti
 from apps.accounts.services.groups import sync_role_group
 from apps.audit.services.audit import log_action
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.utils.phone import local_bd_mobile
 
 
 def _ensure_admin_actor(actor: User) -> None:
@@ -56,6 +57,39 @@ def create_user(
         ) from exc
     sync_role_group(user)
     return user
+
+
+def get_or_create_guest_customer(*, phone: str, first_name: str = "", last_name: str = "") -> User:
+    """The guest-checkout identity for a BD mobile number, created on first use.
+
+    Never a registered account: a typed phone proves nothing about who owns
+    one. No email and an unusable password, so it can't be logged into or
+    reset, and it never blocks the number's owner from registering it.
+    Race-safe: the partial unique constraint on (phone) for live guests
+    turns a concurrent duplicate insert into a lookup of the winner's row.
+    """
+    phone = local_bd_mobile(phone)
+    live_guests = User.objects.filter(is_guest=True, deleted_at__isnull=True)
+    guest = live_guests.filter(phone=phone).first()
+    if guest is not None:
+        return guest
+    guest = User(
+        email=None,
+        username="",
+        role=UserRole.CUSTOMER,
+        first_name=first_name,
+        last_name=last_name,
+        phone=phone,
+        is_guest=True,
+    )
+    guest.set_unusable_password()
+    try:
+        with transaction.atomic():
+            guest.save()
+    except IntegrityError:
+        return live_guests.get(phone=phone)
+    sync_role_group(guest)
+    return guest
 
 
 @transaction.atomic

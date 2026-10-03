@@ -12,18 +12,23 @@ class GuestCheckoutItemSerializer(serializers.Serializer):
 
 
 class GuestCheckoutAddressSerializer(serializers.Serializer):
-    full_name = serializers.CharField(max_length=150)
-    phone = serializers.CharField(max_length=32)
+    # full_name/phone fall back to the checkout's own name and phone in
+    # guest_checkout, so the form only has to ask for them once.
+    full_name = serializers.CharField(max_length=150, required=False)
+    phone = serializers.CharField(max_length=32, required=False)
     line1 = serializers.CharField(max_length=255)
     line2 = serializers.CharField(max_length=255, allow_blank=True, required=False)
-    city = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    # District/City: required because the delivery zone (Inside/Outside Dhaka)
+    # is matched against it.
+    city = serializers.CharField(max_length=100)
     state = serializers.CharField(max_length=100, allow_blank=True, required=False)
-    postal_code = serializers.CharField(max_length=32)
+    postal_code = serializers.CharField(max_length=32, allow_blank=True, required=False)
     country = serializers.CharField(max_length=100, default="Bangladesh")
 
 
 class GuestCheckoutSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    # Optional: a phone-only guest is identified by the number instead.
+    email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=32)
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150, allow_blank=True, required=False)

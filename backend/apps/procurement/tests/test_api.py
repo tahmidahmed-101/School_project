@@ -78,6 +78,33 @@ def _admin(api_client, email: str):
     return admin
 
 
+def test_purchase_order_create_loads_line_variants_in_one_query(api_client):
+    _admin(api_client, "po-create-scale@example.com")
+    supplier = SupplierFactory()
+
+    def variant_selects(count: int) -> int:
+        lines = [
+            {"variant_id": str(ProductVariantFactory().id), "quantity_ordered": 2, "unit_cost": "3"}
+            for _ in range(count)
+        ]
+        payload = {"supplier_id": str(supplier.id), "order_date": "2026-10-01", "lines": lines}
+        with CaptureQueriesContext(connection) as captured:
+            response = api_client.post(
+                "/api/v1/admin/procurement/purchase-orders/", payload, format="json"
+            )
+        assert response.status_code == 201, response.data
+        assert len(response.data["data"]["lines"]) == count
+        return sum(
+            1
+            for q in captured
+            if q["sql"].startswith("SELECT")
+            and 'FROM "catalog_productvariant"' in q["sql"]
+            and "INNER JOIN" not in q["sql"]
+        )
+
+    assert variant_selects(6) == variant_selects(1)
+
+
 def _draft_po(**kwargs):
     po = PurchaseOrderFactory(**kwargs)
     PurchaseOrderLineFactory(purchase_order=po)

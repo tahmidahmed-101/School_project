@@ -66,10 +66,11 @@ class AdminProductVariantListCreateView(CatalogPermissionMixin, APIView):
         if product is None:
             return not_found("product_not_found", "Product not found.")
         queryset = filter_search(variants_for_product(product), request, VARIANT_SEARCH_FIELDS)
-        total_count = queryset.count()
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
         items = list(page if page is not None else queryset)
+        # The paginator has already counted; a second COUNT(*) would repeat it.
+        total_count = paginator.page.paginator.count if page is not None else len(items)
         variant_ids = [v.id for v in items]
         stock_by_variant = available_quantities_for_variants(variant_ids)
         reorder_point_by_variant = reorder_points_for_variants(variant_ids)
@@ -158,10 +159,11 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
 
     def list_response(self, request) -> Response:
         queryset = self.get_filtered_queryset(request)
-        total_count = queryset.count()
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
         items = list(page if page is not None else queryset)
+        # The paginator has already counted; a second COUNT(*) would repeat it.
+        total_count = paginator.page.paginator.count if page is not None else len(items)
         variant_ids = [v.id for v in items]
         stock_by_variant = available_quantities_for_variants(variant_ids)
         reorder_point_by_variant = reorder_points_for_variants(variant_ids)

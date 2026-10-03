@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.accounts.constants import StaffPermissionCode, UserRole
 from apps.accounts.models import StaffPermission, UserOTP
+from apps.accounts.selectors.users import user_permissions
 from apps.accounts.services.addresses import (
     create_address,
     delete_address,
@@ -24,7 +25,6 @@ from apps.accounts.services.authentication import (
     verify_email,
 )
 from apps.accounts.services.staff_permissions import (
-    enabled_permission_codes,
     replace_staff_permissions,
     set_staff_permission,
     set_staff_permissions,
@@ -274,7 +274,7 @@ def test_create_staff_user_and_staff_permission_services_validate_role_and_codes
     )
 
     assert staff.role == UserRole.STAFF
-    assert enabled_permission_codes(staff) == [StaffPermissionCode.USERS_VIEW]
+    assert user_permissions(staff) == [StaffPermissionCode.USERS_VIEW]
 
     with pytest.raises(BusinessRuleViolationError):
         set_staff_permission(
@@ -337,7 +337,7 @@ def test_replace_staff_permissions_enables_only_the_requested_codes():
         granted_by=admin,
     )
 
-    assert sorted(enabled_permission_codes(staff)) == sorted(
+    assert sorted(user_permissions(staff)) == sorted(
         [StaffPermissionCode.REPORTS_VIEW, StaffPermissionCode.CATALOG_VIEW]
     )
 

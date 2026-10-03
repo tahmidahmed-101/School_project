@@ -24,22 +24,6 @@ def get_date(params, name: str, default: date | None = None) -> date | None:
     return parsed
 
 
-def get_int(
-    params, name: str, default: int | None = None, *, min_value: int | None = None
-) -> int | None:
-    raw = params.get(name)
-    if raw in (None, ""):
-        return default
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        _fail(name, "Enter a valid integer.")
-        return None
-    if min_value is not None and value < min_value:
-        _fail(name, f"Must be greater than or equal to {min_value}.")
-    return value
-
-
 def get_uuid(params, name: str, default: str | None = None) -> str | None:
     """Validate a UUID query param but hand back the raw string, which is what
     the selectors take."""

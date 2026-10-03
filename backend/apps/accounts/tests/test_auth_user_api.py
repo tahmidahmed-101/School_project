@@ -7,6 +7,7 @@ from django.core import mail
 
 from apps.accounts.constants import StaffPermissionCode, UserRole
 from apps.accounts.models import Address, StaffPermission, User, UserOTP
+from apps.accounts.services.users import get_or_create_guest_customer
 from apps.accounts.tests.helpers import create_user, extract_otp_code
 
 pytestmark = pytest.mark.django_db
@@ -441,6 +442,39 @@ def test_staff_cannot_list_permission_codes(api_client):
     response = api_client.get("/api/v1/admin/staff/permission-codes/")
 
     assert response.status_code == 403
+
+
+def test_admin_user_list_and_detail_expose_is_guest(api_client):
+    admin = create_user(email="guest-flag-admin@example.com", role=UserRole.ADMIN)
+    registered = create_user(email="guest-flag-customer@example.com")
+    guest = get_or_create_guest_customer(phone="01788888888")
+    api_client.force_authenticate(user=admin)
+
+    listing = api_client.get("/api/v1/admin/users/", {"page_size": 100})
+
+    assert listing.status_code == 200
+    flags = {row["id"]: row["is_guest"] for row in listing.data["data"]["results"]}
+    assert flags[str(guest.id)] is True
+    assert flags[str(registered.id)] is False
+    detail = api_client.get(f"/api/v1/admin/users/{guest.id}/")
+    assert detail.status_code == 200
+    assert detail.data["data"]["is_guest"] is True
+
+
+def test_admin_cannot_change_is_guest_through_the_api(api_client):
+    admin = create_user(email="guest-flag-writer@example.com", role=UserRole.ADMIN)
+    registered = create_user(email="guest-flag-target@example.com")
+    guest = get_or_create_guest_customer(phone="01799999999")
+    api_client.force_authenticate(user=admin)
+
+    for user, attempted in ((guest, False), (registered, True)):
+        response = api_client.patch(
+            f"/api/v1/admin/users/{user.id}/", {"is_guest": attempted}, format="json"
+        )
+        assert response.status_code == 200
+        assert response.data["data"]["is_guest"] is not attempted
+        user.refresh_from_db()
+        assert user.is_guest is not attempted
 
 
 def test_admin_user_list_identifies_guest_checkout_customer_by_name_and_phone(api_client):

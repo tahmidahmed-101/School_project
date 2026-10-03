@@ -22,14 +22,6 @@ def active_categories(*, category_type: str | None = None) -> QuerySet[Category]
     return all_categories(category_type=category_type).filter(is_active=True)
 
 
-def category_tree(*, category_type: str | None = None) -> QuerySet[Category]:
-    return (
-        active_categories(category_type=category_type)
-        .filter(parent__isnull=True)
-        .prefetch_related("children")
-    )
-
-
 def get_category_by_id(
     category_id: str | UUID, *, include_deleted: bool = False
 ) -> Category | None:

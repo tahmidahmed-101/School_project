@@ -5,6 +5,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.accounts.constants import UserRole
@@ -19,7 +21,6 @@ from apps.catalog.services.categories import create_category, delete_category, u
 from apps.catalog.services.products import (
     create_product,
     create_variant,
-    deactivate_product,
     update_variant,
 )
 from apps.catalog.services.variant_import_export import export_variants, import_variants
@@ -122,16 +123,6 @@ def test_create_product_and_variant_duplicate_sku_rejected():
 
     with pytest.raises(BusinessRuleViolationError):
         create_variant(product=product, sku="TSHIRT-BLU-L", price=Decimal("19.99"))
-
-
-def test_deactivate_product_deactivates_its_variants():
-    product = ProductFactory()
-    variant = create_variant(product=product, sku="DEACT-1", price=Decimal("9.99"))
-
-    deactivate_product(product=product)
-
-    variant.refresh_from_db()
-    assert variant.is_active is False
 
 
 def test_create_variant_generates_a_sku_from_the_product_slug_and_combo():
@@ -303,6 +294,46 @@ def test_import_variants_reports_row_errors_without_aborting():
     assert result.created == 1
     assert len(result.errors) == 1
     assert result.errors[0]["sku"] == "BAD-SKU"
+
+
+def _import_csv(rows: list[str]):
+    header = (
+        "product_name,sku,barcode,price,cost_price,discount_price,stock,weight,color,size,"
+        "is_active\n"
+    )
+    content = header + "".join(f"{row}\n" for row in rows)
+    with CaptureQueriesContext(connection) as captured:
+        result = import_variants(file=io.BytesIO(content.encode("utf-8")), fmt="csv")
+    lookups = sum(
+        1
+        for q in captured
+        if q["sql"].startswith("SELECT")
+        and ('FROM "catalog_product"' in q["sql"] or 'FROM "catalog_productvariant"' in q["sql"])
+    )
+    return result, lookups
+
+
+def test_import_variants_looks_products_and_skus_up_once_not_per_row():
+    product = ProductFactory(name="Import Scale Product")
+    # Variants of one product must differ by colour/size, hence the size column.
+    _, one_row = _import_csv([f"{product.name},SCALE-0,,10,5,,0,,,S0,1"])
+    result, many_rows = _import_csv(
+        [f"{product.name},SCALE-{n},,10,5,,0,,,S{n},1" for n in range(1, 9)]
+    )
+
+    assert result.created == 8
+    assert many_rows == one_row
+
+
+def test_import_variants_repeated_sku_in_one_file_updates_rather_than_duplicates():
+    product = ProductFactory(name="Repeat Sku Product")
+
+    result, _ = _import_csv(
+        [f"{product.name},REPEAT-1,,10,5,,0,,,,1", f"{product.name},REPEAT-1,,12,5,,0,,,,1"]
+    )
+
+    assert (result.created, result.updated, result.errors) == (1, 1, [])
+    assert ProductVariant.objects.get(sku="REPEAT-1").price == Decimal("12")
 
 
 # Pre-order tests

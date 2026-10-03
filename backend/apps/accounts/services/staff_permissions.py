@@ -110,13 +110,3 @@ def replace_staff_permissions(
             },
         )
     return permissions
-
-
-def enabled_permission_codes(staff_user: User) -> list[str]:
-    if staff_user.role != UserRole.STAFF:
-        return []
-    return list(
-        staff_user.staff_permissions.filter(is_enabled=True).values_list(
-            "permission_code", flat=True
-        )
-    )

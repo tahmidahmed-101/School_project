@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import pytest
+from django.core.cache import cache
 
 from apps.audit.factories import LoginHistoryFactory
-from apps.reporting.context_processors import admin_dashboard_stats
+from apps.reporting.context_processors import _CACHE_KEY, admin_dashboard_stats
 
 pytestmark = pytest.mark.django_db
 
 
 def test_admin_dashboard_stats_counts_critical_signals(rf):
+    # The stats are cached, and the test cache outlives each test: any earlier
+    # test that rendered a Django admin page would otherwise leave stale counts.
+    cache.delete(_CACHE_KEY)
     request = rf.get("/admin/")
 
     LoginHistoryFactory(was_successful=False)

@@ -24,9 +24,3 @@ def update_supplier(*, supplier: Supplier, data: dict) -> Supplier:
     if update_fields:
         supplier.save(update_fields=update_fields)
     return supplier
-
-
-@transaction.atomic
-def deactivate_supplier(*, supplier: Supplier) -> Supplier:
-    supplier.deactivate()
-    return supplier

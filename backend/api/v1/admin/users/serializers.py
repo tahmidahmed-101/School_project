@@ -38,6 +38,8 @@ class AdminUserSerializer(serializers.Serializer):
     is_email_verified = serializers.BooleanField()
     is_phone_verified = serializers.BooleanField()
     is_superuser = serializers.BooleanField()
+    # Guest-checkout identity, not an account; set only by guest checkout.
+    is_guest = serializers.BooleanField(read_only=True)
     date_joined = serializers.DateTimeField(read_only=True)
     last_login = serializers.DateTimeField(read_only=True, allow_null=True)
     permissions = serializers.ListField(child=serializers.CharField())
