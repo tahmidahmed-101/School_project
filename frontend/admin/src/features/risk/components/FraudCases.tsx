@@ -82,7 +82,11 @@ const FraudCases = () => {
     <div className="section-container">
       <PageHeader title="Fraud Cases" />
 
+      {/* ?search= matches case/order number, customer or order email, and phone. */}
       <FilterToolbar
+        searchPlaceholder="Search case #, order #, email or phone..."
+        searchValue={list.search}
+        onSearchChange={list.setSearch}
         filters={[
           {
             component: (
@@ -104,7 +108,11 @@ const FraudCases = () => {
         {...list.tableProps}
         onRowClick={(c) => navigate(`/fraud_cases/${c.id}`)}
         emptyTitle="No fraud cases"
-        emptyDescription="Nothing has been flagged. Cases appear here when risk rules raise one."
+        emptyDescription={
+          list.debouncedSearch || statusFilter
+            ? "Try adjusting the search or filters."
+            : "Nothing has been flagged. Cases appear here when risk rules raise one."
+        }
         minWidth="820px"
         columnWidths={["150px", "360px", "130px", "180px", "80px"]}
       />
