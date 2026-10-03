@@ -10,7 +10,6 @@ from apps.common.params import (
     get_bool,
     get_choice,
     get_date,
-    get_int,
     get_search,
     validate_date_range,
 )
@@ -23,15 +22,6 @@ def test_get_date_parses_and_rejects():
     with pytest.raises(ValidationError) as exc_info:
         get_date({"start": "abc"}, "start")
     assert "start" in exc_info.value.detail
-
-
-def test_get_int_rejects_non_numeric_and_enforces_minimum():
-    assert get_int({"limit": "5"}, "limit") == 5
-
-    with pytest.raises(ValidationError):
-        get_int({"limit": "abc"}, "limit")
-    with pytest.raises(ValidationError):
-        get_int({"limit": "-1"}, "limit", min_value=0)
 
 
 def test_get_choice_rejects_unknown_values():

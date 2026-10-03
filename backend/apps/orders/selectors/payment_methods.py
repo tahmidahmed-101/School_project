@@ -35,7 +35,3 @@ def payment_methods_list() -> list[dict]:
 
 def get_payment_method_state(key: str) -> dict | None:
     return next((row for row in payment_methods_list() if row["key"] == key), None)
-
-
-def enabled_payment_method_keys() -> list[str]:
-    return [row["key"] for row in payment_methods_list() if row["is_enabled"]]

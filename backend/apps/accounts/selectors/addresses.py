@@ -16,7 +16,3 @@ def addresses_for_user(user: User) -> QuerySet[Address]:
 
 def get_address_for_user(user: User, address_id: str | UUID) -> Address | None:
     return addresses_for_user(user).filter(id=address_id).first()
-
-
-def default_address_for_user(user: User) -> Address | None:
-    return addresses_for_user(user).filter(is_default=True).first()

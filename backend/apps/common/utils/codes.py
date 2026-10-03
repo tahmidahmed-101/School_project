@@ -15,10 +15,6 @@ def hash_code(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 
-def generate_uuid_str() -> str:
-    return str(uuid.uuid4())
-
-
 def generate_document_number(prefix: str) -> str:
     """Not guaranteed globally unique on its own — callers with a uniqueness
     constraint should retry on collision, same as

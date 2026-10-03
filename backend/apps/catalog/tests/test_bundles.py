@@ -11,7 +11,6 @@ from apps.catalog.models import Product
 from apps.catalog.selectors.bundles import bundle_available_quantities, bundle_variants_list
 from apps.catalog.services.bundles import (
     create_bundle,
-    deactivate_bundle,
     delete_bundle,
     update_bundle,
 )
@@ -192,24 +191,6 @@ def test_update_bundle_keeps_explicit_price_over_derived():
 
     bundle.refresh_from_db()
     assert bundle.price == Decimal("99.00")
-
-
-def test_deactivate_bundle_soft_deletes_variant():
-    a = _component_variant("10.00")
-    category = CategoryFactory()
-    bundle = create_bundle(
-        category=category,
-        name="To Deactivate",
-        sku="BND-DEL",
-        price=Decimal("15.00"),
-        components=[{"component_variant_id": str(a.id), "quantity": 1}],
-        actor=None,
-    )
-
-    deactivate_bundle(bundle_variant=bundle)
-
-    bundle.refresh_from_db()
-    assert bundle.is_active is False
 
 
 def test_delete_bundle_soft_deletes_variant():

@@ -8,7 +8,6 @@ from apps.common.exceptions import BusinessRuleViolationError
 from apps.orders.constants import PaymentMethodKey, normalize_payment_method
 from apps.orders.models import PaymentMethodSetting
 from apps.orders.selectors.payment_methods import (
-    enabled_payment_method_keys,
     is_payment_method_enabled,
     payment_methods_list,
 )
@@ -41,7 +40,8 @@ def test_disabling_a_method_sticks():
 
     assert is_payment_method_enabled(PaymentMethodKey.BKASH) is False
     assert PaymentMethodSetting.objects.get(key=PaymentMethodKey.BKASH).is_enabled is False
-    assert PaymentMethodKey.BKASH not in enabled_payment_method_keys()
+    enabled = {row["key"] for row in payment_methods_list() if row["is_enabled"]}
+    assert PaymentMethodKey.BKASH not in enabled
 
 
 def test_manual_cannot_be_switched_off():
