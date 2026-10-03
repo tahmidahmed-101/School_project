@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0022_product_meta_keywords'),
+        ('catalog', '0023_remove_brand_categories'),
     ]
 
     operations = [

@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 import { BadgeCheck, ImageIcon, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
@@ -25,13 +23,11 @@ import { useCan } from "@/hooks/use-can"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
-import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 
 import { deleteData, fetchAll } from "../slices/brandSlice"
-import { bulkBrandStatus, createBrand, fetchAllCategories, restoreBrand, updateBrand, uploadBrandImage } from "../api"
+import { bulkBrandStatus, createBrand, restoreBrand, updateBrand, uploadBrandImage } from "../api"
 import type { Brand, BrandPayload } from "../types"
-import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -44,37 +40,23 @@ const Brands = () => {
   const canManage = useCan("catalog.manage")
   const brandState = useAppSelector((s) => s.brands)
   const brands = brandState.data
-  const { options: categoryOptions, nameById } = useCategoryOptions()
 
   const [status, setStatus] = useState<Option | null>(null)
-  const [category, setCategory] = useState<Option | null>(null)
   const [editing, setEditing] = useState<Brand | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: brandState,
-    params: { is_active: status?.value, category_id: category?.value },
+    params: { is_active: status?.value },
   })
 
-  // CSV import: "Categories" holds names/slugs separated by ";" (or "|"), resolved to ids.
-  const categoryLookup = useMemo(
-    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
-    []
-  )
   const importFields = useMemo<ImportField[]>(
     () => [
       { key: "name", label: "Name", required: true, aliases: ["brand", "brand name"], example: "Aarong" },
       { key: "description", label: "Description", example: "Bangladeshi lifestyle brand known for handcrafted clothing." },
-      {
-        key: "category_ids",
-        label: "Categories",
-        aliases: ["category", "category names"],
-        example: "Panjabi & Kurta; Home & Lifestyle",
-        resolve: (raw: string) => Promise.all(splitList(raw).map(categoryLookup.resolve)),
-      },
     ],
-    [categoryLookup]
+    []
   )
 
   const handleRestore = async (brand: Brand) => {
@@ -111,15 +93,6 @@ const Brands = () => {
           </div>
           <ProductCell name={row.original.name} sub={row.original.slug} />
         </div>
-      ),
-    },
-    {
-      id: "categories",
-      header: "CATEGORIES",
-      cell: ({ row }) => (
-        <span className="line-clamp-2 text-sm text-muted-foreground">
-          {row.original.category_ids.map((cid) => nameById.get(cid) ?? "—").join(", ") || "—"}
-        </span>
       ),
     },
     {
@@ -160,10 +133,7 @@ const Brands = () => {
                 entityName="brands"
                 fields={importFields}
                 createRow={(payload) => createBrand(payload as BrandPayload)}
-                onComplete={() => {
-                  categoryLookup.reset()
-                  list.reload()
-                }}
+                onComplete={list.reload}
               />
               <Button
                 size="action"
@@ -184,16 +154,6 @@ const Brands = () => {
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[
-          {
-            component: (
-              <Combobox
-                placeholder="Category"
-                options={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
-                value={category}
-                onValueChange={setCategory}
-              />
-            ),
-          },
           {
             component: (
               <Combobox
@@ -226,7 +186,7 @@ const Brands = () => {
         emptyTitle="No brands"
         emptyDescription="Add a brand and link it to the categories it sells in."
         minWidth="760px"
-        columnWidths={["280px", "260px", "110px", "80px"]}
+        columnWidths={["auto", "130px", "80px"]}
         unlabelledColumns={["actions"]}
       />
 
@@ -235,7 +195,6 @@ const Brands = () => {
           open={formOpen}
           onOpenChange={setFormOpen}
           brand={editing}
-          categoryOptions={categoryOptions}
           onSaved={list.reload}
         />
       )}
@@ -247,7 +206,6 @@ const brandSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   description: z.string(),
   is_active: z.boolean(),
-  category_ids: z.array(z.string()),
 })
 type BrandValues = z.infer<typeof brandSchema>
 
@@ -255,13 +213,11 @@ function BrandFormDialog({
   open,
   onOpenChange,
   brand,
-  categoryOptions,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   brand: Brand | null
-  categoryOptions: CategoryOption[]
   onSaved: () => void
 }) {
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -274,7 +230,7 @@ function BrandFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<BrandValues>({
     resolver: zodResolver(brandSchema),
-    defaultValues: { name: "", description: "", is_active: true, category_ids: [] },
+    defaultValues: { name: "", description: "", is_active: true },
   })
 
   useEffect(() => {
@@ -283,7 +239,6 @@ function BrandFormDialog({
       name: brand?.name ?? "",
       description: brand?.description ?? "",
       is_active: brand?.is_active ?? true,
-      category_ids: brand?.category_ids ?? [],
     })
   }, [open, brand, reset])
 
@@ -296,7 +251,6 @@ function BrandFormDialog({
     const payload: BrandPayload = {
       name: values.name,
       description: values.description,
-      category_ids: values.category_ids,
     }
     try {
       let saved: Brand
@@ -340,39 +294,6 @@ function BrandFormDialog({
         error={errors.description}
         {...register("description")}
       />
-      <Field>
-        <FieldLabel>Categories</FieldLabel>
-        <FieldContent>
-          <Controller
-            control={control}
-            name="category_ids"
-            render={({ field }) => (
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-                {categoryOptions.length === 0 && <p className="p-1 text-sm text-muted-foreground">No categories.</p>}
-                {categoryOptions.map((o) => {
-                  const checked = field.value.includes(o.value)
-                  return (
-                    <label
-                      key={o.value}
-                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-accent"
-                      style={{ paddingLeft: 4 + o.depth * 16 }}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(v) =>
-                          field.onChange(v ? [...field.value, o.value] : field.value.filter((x) => x !== o.value))
-                        }
-                      />
-                      {o.label}
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-          />
-          <FieldError errors={[errors.category_ids]} />
-        </FieldContent>
-      </Field>
       <FormField label="Logo / image" htmlFor="brand-image" description="Uploaded when you save.">
         <ImagePicker id="brand-image" src={brand?.image} onSelect={setImageFile} />
       </FormField>

@@ -171,7 +171,6 @@ export interface Brand {
   description: string
   is_active: boolean
   image: string | null
-  category_ids: string[]
   deleted_at: string | null
 }
 
@@ -179,7 +178,6 @@ export interface BrandPayload {
   name?: string
   description?: string
   is_active?: boolean
-  category_ids?: string[]
 }
 
 /** BundleComponentSerializer */
