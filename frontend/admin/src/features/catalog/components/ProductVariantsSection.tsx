@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { History, Layers, PlusIcon, Wand2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
@@ -184,17 +184,20 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Layers className="size-4" /> Variants
-        </CardTitle>
-        <CardDescription>
-          {productType === "simple"
-            ? "A simple product sells as a single SKU."
-            : "Each colour/size combination is its own SKU with its own stock."}
-        </CardDescription>
+      {/* Phones stack the buttons under the heading; beside it they squeeze the text into a sliver. */}
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="grid min-w-0 gap-1">
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="size-4" /> Variants
+          </CardTitle>
+          <CardDescription>
+            {productType === "simple"
+              ? "A simple product sells as a single SKU."
+              : "Each colour/size combination is its own SKU with its own stock."}
+          </CardDescription>
+        </div>
         {canManage && (
-          <CardAction className="flex flex-wrap gap-2">
+          <div className="flex w-full gap-2 sm:w-auto sm:shrink-0 [&>button]:flex-1 sm:[&>button]:flex-none">
             {productType === "variant" && (
               <Button variant="outline" size="sm" onClick={() => setGenerateOpen(true)}>
                 <Wand2 /> Generate
@@ -209,7 +212,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
             >
               <PlusIcon /> Add variant
             </Button>
-          </CardAction>
+          </div>
         )}
       </CardHeader>
       <CardContent>

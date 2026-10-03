@@ -35,7 +35,7 @@ declare module "@tanstack/react-table" {
 
 // A page-level list scrolls inside whatever the screen has left under the header and
 // filters (about 22rem of chrome), with a floor so short screens still show a few rows.
-const LIST_HEIGHT = "max-h-[max(22rem,calc(100dvh-22rem))]"
+const LIST_HEIGHT = "max-h-[max(24rem,calc(100dvh-15rem))]"
 
 const ALIGN_CLASS = { left: "text-left", center: "text-center", right: "text-right" } as const
 
