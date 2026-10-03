@@ -38,6 +38,7 @@ def create_shipment(
         raise BusinessRuleViolationError(
             "Only a confirmed order can be shipped.", code="not_confirmed"
         )
+    _ensure_not_held_for_fraud_review(order)
     if not lines:
         raise BusinessRuleViolationError("A shipment needs at least one line.", code="no_lines")
 
@@ -219,8 +220,26 @@ def _refresh_phone_risk_profile(shipment: Shipment) -> None:
         )
 
 
+def _ensure_not_held_for_fraud_review(order: SalesOrder) -> None:
+    """An unresolved high-risk fraud case holds every shipment of its order.
+    Resolving the case only lifts the hold: the order and payment rules
+    around it still apply."""
+    from apps.risk.selectors.fraud_cases import unresolved_high_risk_case
+
+    case = unresolved_high_risk_case(order)
+    if case is not None:
+        raise BusinessRuleViolationError(
+            f"Order is on hold for fraud review (case {case.case_number}). "
+            "Resolve the case before shipping.",
+            code="fraud_review_hold",
+        )
+
+
 @transaction.atomic
 def dispatch_to_courier(*, shipment: Shipment) -> Shipment:
+    # A shipment created before a case was opened must not reach a courier
+    # while the case is under review.
+    _ensure_not_held_for_fraud_review(shipment.order)
     carrier = shipment.carrier
     if carrier is None:
         carrier = _auto_select_carrier(shipment)

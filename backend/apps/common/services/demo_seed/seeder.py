@@ -99,7 +99,9 @@ from apps.procurement.services.purchase_orders import (
 from apps.procurement.services.suppliers import create_supplier
 from apps.procurement.services.vendor_bills import create_vendor_bill, record_vendor_payment
 from apps.risk.models import IPBlock, PhoneBlock
+from apps.risk.selectors.fraud_cases import unresolved_high_risk_case
 from apps.risk.services.blocklist import block_phone
+from apps.risk.services.fraud_cases import resolve_fraud_case
 from apps.risk.services.ip_blocklist import block_ip
 
 COST_RATIO = Decimal("0.45")
@@ -719,6 +721,12 @@ class DemoSeeder:
 
         shipped_day = min(ordered_at.date() + timedelta(days=self.rng.randint(1, 3)), self.today)
         shipped_at = max(self._moment(shipped_day), ordered_at + timedelta(hours=3))
+        # A high-risk score (blocked number, very large order) opens a fraud
+        # case that holds shipping; demo staff clear it the way real staff
+        # would, before dispatch.
+        case = unresolved_high_risk_case(order)
+        if case is not None:
+            resolve_fraud_case(case=case, resolution="approved", notes="Verified by phone.")
         shipment = self._create_shipment(order=order, method=method, partial=status == "partial")
         self._bump("shipments")
 

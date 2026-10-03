@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from apps.accounts.factories import AddressFactory
+from apps.accounts.factories import AddressFactory, AdminUserFactory
 from apps.catalog.factories import ProductVariantFactory
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
@@ -21,7 +21,9 @@ from apps.orders.services.shipments import (
     dispatch_to_courier,
     update_shipment_status,
 )
-from apps.risk.models import PhoneRiskProfile
+from apps.risk.factories import FraudCaseFactory, RiskAssessmentFactory
+from apps.risk.models import PhoneRiskProfile, RiskAssessment
+from apps.risk.services.fraud_cases import resolve_fraud_case
 
 pytestmark = pytest.mark.django_db
 
@@ -37,10 +39,10 @@ def _stocked_variant(quantity: int = 20):
     return variant
 
 
-def _ready_shipment(*, dispatch_carrier=None):
-    """A shipped, undispatched shipment with a resolvable delivery zone: a
-    catch-all zone (no keywords) plus a rate for at least one active carrier,
-    so `checkout` can quote it."""
+def _confirmed_order(*, dispatch_carrier=None):
+    """A paid, confirmed order with a resolvable delivery zone: a catch-all
+    zone (no keywords) plus a rate for at least one active carrier, so
+    `checkout` can quote it."""
     zone = ShippingZoneFactory()
     # Deliberately pricier than any carrier a test adds on top of this, so it
     # never wins an auto-selection it isn't the subject of.
@@ -57,9 +59,95 @@ def _ready_shipment(*, dispatch_carrier=None):
     order.refresh_from_db()
     capture_payment(order=order, amount=order.grand_total)
     order.refresh_from_db()
+    return zone, order, line
+
+
+def _ready_shipment(*, dispatch_carrier=None):
+    """A shipped, undispatched shipment on a `_confirmed_order`."""
+    zone, order, line = _confirmed_order(dispatch_carrier=dispatch_carrier)
     return zone, create_shipment(
         order=order, lines=[{"order_line": line, "quantity": 1}], carrier=dispatch_carrier
     )
+
+
+def _open_high_risk_case(order):
+    assessment = RiskAssessmentFactory(
+        order=order, customer=order.customer, risk_level=RiskAssessment.RiskLevel.HIGH
+    )
+    return FraudCaseFactory(order=order, customer=order.customer, risk_assessment=assessment)
+
+
+def test_unresolved_high_risk_case_holds_the_shipment_until_resolved():
+    _, order, line = _confirmed_order()
+    case = _open_high_risk_case(order)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_shipment(order=order, lines=[{"order_line": line, "quantity": 1}])
+
+    assert exc.value.code == "fraud_review_hold"
+    assert case.case_number in str(exc.value)
+    assert not Shipment.objects.filter(order=order).exists()
+    order.refresh_from_db()
+    assert order.status == SalesOrder.Status.CONFIRMED
+    line.refresh_from_db()
+    assert line.shipped_quantity == 0
+
+    resolve_fraud_case(case=case, resolution="false_positive", notes="Confirmed by phone")
+    shipment = create_shipment(order=order, lines=[{"order_line": line, "quantity": 1}])
+
+    assert shipment.order_id == order.id
+    order.refresh_from_db()
+    assert order.status == SalesOrder.Status.SHIPPED
+
+
+def test_resolving_the_case_does_not_bypass_the_order_rules():
+    _, order, line = _confirmed_order()
+    case = _open_high_risk_case(order)
+    order.status = SalesOrder.Status.CANCELLED
+    order.save(update_fields=["status"])
+    resolve_fraud_case(case=case, resolution="confirmed_fraud")
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_shipment(order=order, lines=[{"order_line": line, "quantity": 1}])
+
+    assert exc.value.code == "not_confirmed"
+
+
+def test_admin_shipment_api_reports_the_fraud_hold(api_client):
+    _, order, line = _confirmed_order()
+    _open_high_risk_case(order)
+    api_client.force_authenticate(user=AdminUserFactory())
+
+    response = api_client.post(
+        f"/api/v1/admin/orders/{order.id}/shipments/",
+        {"lines": [{"order_line_id": str(line.id), "quantity": 1}]},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "fraud_review_hold"
+
+
+def test_unresolved_case_holds_courier_dispatch_of_an_existing_shipment():
+    carrier = CarrierFactory()
+    _, shipment = _ready_shipment(dispatch_carrier=carrier)
+    case = _open_high_risk_case(shipment.order)
+
+    with patch("apps.orders.services.shipments.get_gateway_for_carrier") as get_gateway:
+        with pytest.raises(BusinessRuleViolationError) as exc:
+            dispatch_to_courier(shipment=shipment)
+        assert exc.value.code == "fraud_review_hold"
+        get_gateway.assert_not_called()
+
+        resolve_fraud_case(case=case, resolution="false_positive")
+        get_gateway.return_value.create_consignment.return_value = {
+            "consignment_id": "CN-HOLD-1",
+            "status": "pending",
+        }
+        dispatch_to_courier(shipment=shipment)
+
+    shipment.refresh_from_db()
+    assert shipment.tracking_number == "CN-HOLD-1"
 
 
 def test_create_shipment_denormalises_recipient_phone():
