@@ -197,9 +197,14 @@ class AdminJournalEntryListView(AccountingPermissionMixin, GenericListAPIView):
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
 
+        raw_lines = data.pop("lines")
+        accounts = {
+            str(account.id): account
+            for account in accounts_list().filter(id__in=[line["account_id"] for line in raw_lines])
+        }
         lines = []
-        for line in data.pop("lines"):
-            account = get_account_by_id(line["account_id"])
+        for line in raw_lines:
+            account = accounts.get(str(line["account_id"]))
             if account is None:
                 return error_from_exception(
                     DomainError("Account not found.", code="account_not_found")

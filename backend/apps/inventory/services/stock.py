@@ -8,7 +8,7 @@ from django.db import transaction
 from apps.accounting.services.postings import post_stock_adjustment, post_stock_writeoff
 from apps.audit.services.audit import log_action
 from apps.catalog.models import ProductVariant
-from apps.catalog.selectors.products import get_variant_by_id
+from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
@@ -223,9 +223,13 @@ def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
     A partially applied cycle count is worse than a rejected one, so the first
     failing item rolls the whole batch back.
     """
+    variants = {
+        str(variant.id): variant
+        for variant in get_variants_by_ids([item["variant_id"] for item in items])
+    }
     results = []
     for index, item in enumerate(items):
-        variant = get_variant_by_id(item["variant_id"])
+        variant = variants.get(str(item["variant_id"]))
         if variant is None:
             raise BusinessRuleViolationError(
                 f"Variant not found for item {index}.", code="variant_not_found"

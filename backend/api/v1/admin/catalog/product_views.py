@@ -92,10 +92,11 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
 
     def list_response(self, request) -> Response:
         queryset = self.get_filtered_queryset(request)
-        total_count = queryset.count()
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
         items = list(page if page is not None else queryset)
+        # The paginator has already counted; a second COUNT(*) would repeat it.
+        total_count = paginator.page.paginator.count if page is not None else len(items)
         serializer = self.serializer_class(
             items, many=True, context=_product_serializer_context(request, items)
         )
