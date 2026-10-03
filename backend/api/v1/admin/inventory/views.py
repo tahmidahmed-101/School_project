@@ -184,6 +184,8 @@ class AdminStockAdjustmentView(APIView):
         if variant is None:
             return error_from_exception(DomainError("Variant not found.", code="variant_not_found"))
 
+        data["warehouse"] = data.pop("warehouse_id", None)
+
         try:
             entry = post_adjustment(variant=variant, actor=request.user, **data)
         except DomainError as exc:
@@ -242,6 +244,8 @@ class AdminStockWriteOffView(APIView):
         variant = get_variant_by_id(data.pop("variant_id"))
         if variant is None:
             return error_from_exception(DomainError("Variant not found.", code="variant_not_found"))
+
+        data["warehouse"] = data.pop("warehouse_id", None)
 
         try:
             entry = write_off_stock(variant=variant, actor=request.user, **data)
@@ -303,6 +307,8 @@ class AdminStockIntakeView(APIView):
         variant = get_variant_by_id(data.pop("variant_id"))
         if variant is None:
             return error_from_exception(DomainError("Variant not found.", code="variant_not_found"))
+
+        data["warehouse"] = data.pop("warehouse_id", None)
 
         try:
             entry = stock_intake(variant=variant, actor=request.user, **data)

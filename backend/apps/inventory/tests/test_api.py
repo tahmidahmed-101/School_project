@@ -245,6 +245,45 @@ def test_staff_with_adjust_permission_can_write_off(api_client):
     assert response.data["data"]["balance_after"] == 7
 
 
+@pytest.mark.parametrize("use_default", [True, False])
+def test_stock_movements_accept_warehouse_id(api_client, use_default):
+    """The dashboard always sends `warehouse_id` (null = default warehouse);
+    intake, adjustment and write-off must all accept it."""
+    seed_chart_of_accounts()
+    admin = create_user(email="inv-warehouse-id-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    default = Warehouse.objects.create(name="Default WH", code="DEF-WH", is_default=True)
+    branch = Warehouse.objects.create(name="Branch WH", code="BR-WH")
+    warehouse = default if use_default else branch
+    variant = ProductVariantFactory()
+    base = {
+        "variant_id": str(variant.id),
+        "warehouse_id": None if use_default else str(branch.id),
+    }
+
+    intake = api_client.post(
+        "/api/v1/admin/inventory/intake/",
+        {**base, "quantity": 10, "unit_cost": "5.00"},
+        format="json",
+    )
+    adjustment = api_client.post(
+        "/api/v1/admin/inventory/adjustments/",
+        {**base, "quantity_delta": -2, "unit_cost": None, "notes": ""},
+        format="json",
+    )
+    write_off = api_client.post(
+        "/api/v1/admin/inventory/write-offs/",
+        {**base, "quantity": 3, "reason": ""},
+        format="json",
+    )
+
+    assert intake.status_code == 201
+    assert adjustment.status_code == 201
+    assert write_off.status_code == 201
+    assert str(write_off.data["data"]["warehouse_id"]) == str(warehouse.id)
+    assert write_off.data["data"]["balance_after"] == 5
+
+
 def test_view_staff_can_read_stock_status_summary(api_client):
     staff = create_user(email="inv-staff-status@example.com", role=UserRole.STAFF)
     admin = create_user(email="inv-grantor-status@example.com", role=UserRole.ADMIN)
