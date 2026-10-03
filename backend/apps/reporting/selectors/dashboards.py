@@ -286,7 +286,7 @@ def recent_orders(*, start: date, end: date, limit: int = 8) -> list[dict]:
             {
                 "id": order.order_number,
                 "order_id": str(order.id),
-                "customer": {"name": order.customer.get_full_name() or order.customer.email},
+                "customer": {"name": order.customer.get_full_name() or order.customer.email or ""},
                 "items": [
                     {
                         "name": line.variant.product.name,

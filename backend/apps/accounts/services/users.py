@@ -19,7 +19,7 @@ def _ensure_admin_actor(actor: User) -> None:
 @transaction.atomic
 def create_user(
     *,
-    email: str,
+    email: str | None,
     password: str,
     role: str = UserRole.CUSTOMER,
     first_name: str = "",
@@ -28,14 +28,15 @@ def create_user(
     profile_picture: str = "",
     is_active: bool = True,
 ) -> User:
-    if get_active_user_by_email(email):
+    # email is None only for phone-only customers created at guest checkout.
+    if email and get_active_user_by_email(email):
         raise BusinessRuleViolationError(
             "A user with this email already exists.",
             code="duplicate_email",
         )
     validate_password(password)
     user = User(
-        email=email.lower(),
+        email=email.lower() if email else None,
         username="",
         role=role,
         first_name=first_name,

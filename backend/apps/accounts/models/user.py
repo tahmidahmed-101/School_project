@@ -35,7 +35,10 @@ class UserManager(DjangoUserManager):
 
 class User(AbstractUser, SoftDeleteModel):
     username = models.CharField(max_length=150, blank=True, default="")
-    email = models.EmailField(unique=True)
+    # Nullable for phone-only customers (guest checkout without an email).
+    # NULLs never collide on the unique constraint; "" would, so save() maps
+    # a blank email to NULL.
+    email = models.EmailField(unique=True, null=True, blank=True)  # type: ignore[assignment]
     role = models.CharField(
         max_length=20, choices=UserRole.choices, default=UserRole.CUSTOMER
     )
@@ -57,6 +60,8 @@ class User(AbstractUser, SoftDeleteModel):
         ]
 
     def save(self, *args, **kwargs):
+        # AbstractUser.clean() normalises a missing email to "".
+        self.email = self.email or None
         if self.is_superuser and self.role != UserRole.ADMIN:
             self.role = UserRole.ADMIN
         super().save(*args, **kwargs)

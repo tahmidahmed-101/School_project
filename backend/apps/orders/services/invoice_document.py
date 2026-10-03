@@ -17,7 +17,7 @@ STATUS_CLASSES = {
 
 
 def _person_name(user: Any) -> str:
-    return (user.get_full_name() or "").strip() or user.email
+    return (user.get_full_name() or "").strip() or user.email or ""
 
 
 def _address_lines(address: dict[str, str]) -> list[str]:
@@ -84,7 +84,7 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
         "doc_status": payment_label,
         "doc_status_class": STATUS_CLASSES.get(payment_label, ""),
         "customer_name": _person_name(order.customer),
-        "customer_email": order.customer.email,
+        "customer_email": order.customer.email or "",
         "customer_phone": order.customer.phone,
         "ship_name": address.get("full_name", ""),
         "ship_lines": _address_lines(address),

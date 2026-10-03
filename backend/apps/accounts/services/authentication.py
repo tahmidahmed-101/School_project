@@ -105,7 +105,7 @@ def authenticate_user(*, email: str, password: str) -> User:
     if not user or not user.is_active or user.deleted_at is not None:
         record_login_attempt(user=None, email=email, was_successful=False)
         raise BusinessRuleViolationError("Invalid credentials.", code="auth_invalid_credentials")
-    record_login_attempt(user=user, email=user.email, was_successful=True)
+    record_login_attempt(user=user, email=user.email or email, was_successful=True)
     return user
 
 
@@ -214,6 +214,8 @@ def create_otp(*, user: User, purpose: str) -> tuple[UserOTP, str]:
 
 
 def request_email_verification(user: User) -> None:
+    if not user.email:
+        raise BusinessRuleViolationError("No email on file.", code="no_email")
     _, code = create_otp(user=user, purpose=UserOTP.Purpose.EMAIL_VERIFICATION)
     send_mail(
         "Verify your email",
@@ -239,7 +241,7 @@ def verify_email(*, user: User, code: str) -> None:
 
 def request_password_reset(email: str) -> None:
     user = get_active_user_by_email(email)
-    if user is None:
+    if user is None or not user.email:
         return
     _, code = create_otp(user=user, purpose=UserOTP.Purpose.PASSWORD_RESET)
     send_mail(

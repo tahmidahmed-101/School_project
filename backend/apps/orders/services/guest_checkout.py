@@ -5,17 +5,22 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.accounts.models import Address, User
-from apps.accounts.selectors.users import get_active_user_by_email
+from apps.accounts.selectors.users import get_active_customer_by_phone, get_active_user_by_email
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import create_user
-from apps.catalog.selectors.products import get_variant_by_id, get_variants_by_ids
+from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.utils.codes import generate_document_number
+from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile, local_bd_mobile
 from apps.logistics.selectors.rates import (
     get_carrier_by_id,
 )
 from apps.orders.models import SalesOrder, SalesOrderLine
-from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
+from apps.orders.services.carts import (
+    _check_preorder_stock_limit,
+    compute_line_tax,
+    default_tax_percent,
+)
 
 
 def _variants_by_id(items: list[dict]) -> dict:
@@ -67,22 +72,31 @@ def _get_or_create_guest_user(
     first_name = first_name.strip() if first_name else ""
     last_name = last_name.strip() if last_name else ""
 
-    user = get_active_user_by_email(email) if email else None
-    if user:
-        if phone and not user.phone:
-            user.phone = phone
-            user.save(update_fields=["phone"])
-        return user
+    if email:
+        user = get_active_user_by_email(email)
+        if user:
+            if phone and not user.phone:
+                user.phone = phone
+                user.save(update_fields=["phone"])
+            return user
 
-    if not email:
-        raise BusinessRuleViolationError(
-            "Email is required for guest checkout.", code="email_required"
-        )
+    # Without an email the phone is the customer's identity, so it must be a
+    # recognisable mobile number. With one, an odd number is still accepted
+    # as before — it just can't be used to find an existing customer.
+    if is_bd_mobile(phone):
+        phone = local_bd_mobile(phone)
+        user = get_active_customer_by_phone(phone)
+        if user:
+            # An existing account's email is never changed from here: an
+            # unverified checkout form must not be able to take one over.
+            return user
+    elif not email:
+        raise BusinessRuleViolationError(BD_MOBILE_HELP, code="invalid_phone")
 
     from django.utils.crypto import get_random_string
     temp_password = get_random_string(32)
     return create_user(
-        email=email,
+        email=email or None,
         password=temp_password,
         first_name=first_name,
         last_name=last_name,
@@ -129,13 +143,13 @@ def _generate_order_number() -> str:
 @transaction.atomic
 def guest_checkout(
     *,
-    email: str,
     phone: str,
     first_name: str,
-    last_name: str,
     items: list[dict],
     shipping_address: dict,
     payment_method: str,
+    email: str = "",
+    last_name: str = "",
     carrier_id: str | None = None,
     coupon_code: str | None = None,
     notes: str = "",
@@ -189,8 +203,16 @@ def guest_checkout(
         variant_id = str(item["variant_id"])
         combined_items[variant_id] = combined_items.get(variant_id, 0) + item["quantity"]
 
+    # One query for every variant (and its product, for the line snapshot) and
+    # one tax-rate lookup for the whole order, rather than one of each per item.
+    variants_by_id = {
+        str(variant.id): variant
+        for variant in get_variants_by_ids(list(combined_items)).select_related("product")
+    }
+    tax_percent = default_tax_percent()
+
     for variant_id, quantity in combined_items.items():
-        variant = get_variant_by_id(variant_id)
+        variant = variants_by_id.get(variant_id)
         if variant is None:
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
@@ -206,7 +228,9 @@ def guest_checkout(
 
         unit_price = variant.effective_price
         is_preorder = variant.is_preorder_active
-        tax_amount = compute_line_tax(unit_price=unit_price, quantity=quantity)
+        tax_amount = compute_line_tax(
+            unit_price=unit_price, quantity=quantity, tax_percent=tax_percent
+        )
 
         SalesOrderLine.objects.create(
             order=order,

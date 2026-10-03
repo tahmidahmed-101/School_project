@@ -14,15 +14,25 @@ from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.sales_orders import get_cart
 
 
-def compute_line_tax(*, unit_price: Decimal, quantity: int) -> Decimal:
-    """Line tax from the configured default rate. Zero when no TaxRate
-    exists, so a fresh deployment behaves tax-free until configured."""
+def default_tax_percent() -> Decimal:
+    """The configured default rate's percent. Zero when tax is off or no
+    TaxRate exists, so a fresh deployment behaves tax-free until configured."""
     if not is_feature_enabled(ModuleKey.ACCOUNTING, "tax"):
         return Decimal("0")
     rate = get_default_tax_rate()
-    if rate is None:
+    return rate.rate_percent if rate is not None else Decimal("0")
+
+
+def compute_line_tax(
+    *, unit_price: Decimal, quantity: int, tax_percent: Decimal | None = None
+) -> Decimal:
+    """Line tax from the configured default rate. Callers pricing several lines
+    pass `tax_percent` (from `default_tax_percent`) to look the rate up once."""
+    if tax_percent is None:
+        tax_percent = default_tax_percent()
+    if not tax_percent:
         return Decimal("0")
-    amount = unit_price * quantity * rate.rate_percent / Decimal("100")
+    amount = unit_price * quantity * tax_percent / Decimal("100")
     return amount.quantize(Decimal("0.01"))
 
 

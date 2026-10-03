@@ -23,7 +23,7 @@ def export_audit_logs(queryset: QuerySet[AuditLog]) -> list[Sequence[Any]]:
     return [
         [
             log.created_at.isoformat(),
-            log.actor.email if log.actor is not None else "",
+            (log.actor.email or "") if log.actor is not None else "",
             log.action,
             log.target_type,
             log.target_id,
