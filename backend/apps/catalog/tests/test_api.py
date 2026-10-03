@@ -936,3 +936,35 @@ def test_admin_can_list_brands_filtered_by_status(api_client):
     assert all_response.status_code == 200
     assert all_response.data["data"]["count"] == 2
     assert [b["name"] for b in active_response.data["data"]["results"]] == ["Active Brand"]
+
+
+def test_admin_brand_has_only_the_form_fields(api_client):
+    """Name, slug, image, description and active — plus id and deleted_at,
+    which the list needs to address and badge rows."""
+    admin = create_user(email="catalog-brand-fields-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    created = api_client.post(
+        "/api/v1/admin/catalog/brands/",
+        {"name": "Aarong", "description": "Handcrafted goods"},
+        format="json",
+    )
+
+    assert created.status_code == 201, created.data
+    brand = created.data["data"]
+    assert set(brand) == {"id", "name", "slug", "description", "is_active", "image", "deleted_at"}
+    assert brand["slug"] == "aarong"
+    detail = api_client.get(f"/api/v1/admin/catalog/brands/{brand['id']}/")
+    assert set(detail.data["data"]) == set(brand)
+
+
+def test_admin_can_delete_a_brand(api_client):
+    admin = create_user(email="catalog-brand-delete-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    brand = Brand.objects.create(name="Old Brand", slug="old-brand")
+
+    response = api_client.delete(f"/api/v1/admin/catalog/brands/{brand.id}/")
+
+    assert response.status_code == 200
+    brand.refresh_from_db()
+    assert brand.deleted_at is not None

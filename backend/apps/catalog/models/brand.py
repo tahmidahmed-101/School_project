@@ -7,8 +7,6 @@ from django.db import models
 from apps.common.models import FullAuditModel
 from apps.common.utils.files import unique_upload_path
 
-from .category import Category
-
 
 def _brand_image_path(instance: Brand, filename: str) -> str:
     return unique_upload_path(instance, filename, subdir="brands")
@@ -20,9 +18,6 @@ class Brand(FullAuditModel):
     description = models.TextField(blank=True)
     image = models.ImageField(
         upload_to=_brand_image_path, null=True, blank=True
-    )
-    categories = models.ManyToManyField(
-        Category, related_name="brands", blank=True
     )
 
     class Meta:

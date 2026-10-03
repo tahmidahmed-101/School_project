@@ -442,22 +442,15 @@ class BrandSerializer(serializers.Serializer):
     description = serializers.CharField(allow_blank=True)
     is_active = serializers.BooleanField()
     image = serializers.SerializerMethodField()
-    category_ids = serializers.SerializerMethodField()
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
     def get_image(self, obj) -> str | None:
         return _image_url(obj, self.context)
 
-    def get_category_ids(self, obj) -> list[str]:
-        return [str(cat.id) for cat in obj.categories.all()]
-
 
 class BrandCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
-    category_ids = serializers.ListField(
-        child=serializers.UUIDField(), required=False, default=list
-    )
 
 
 class BrandUpdateSerializer(serializers.Serializer):
@@ -465,9 +458,6 @@ class BrandUpdateSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
     image = serializers.ImageField(required=False)
-    category_ids = serializers.ListField(
-        child=serializers.UUIDField(), required=False
-    )
 
 
 class BrandBulkStatusSerializer(serializers.Serializer):
