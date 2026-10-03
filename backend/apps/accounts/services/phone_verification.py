@@ -82,8 +82,10 @@ def confirm_phone_change(*, user: User, code: str, new_phone: str) -> None:
 
 
 def _assert_phone_available(phone: str, *, exclude_user: User) -> None:
+    # Guest-checkout identities don't own their number — anyone can type one —
+    # so they never stop the real owner from verifying it on an account.
     taken = (
-        User.objects.filter(phone=phone, deleted_at__isnull=True)
+        User.objects.filter(phone=phone, deleted_at__isnull=True, is_guest=False)
         .exclude(pk=exclude_user.pk)
         .exists()
     )

@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from apps.accounts.constants import UserRole
 from apps.accounts.models import Address, StaffPermission, User, UserOTP
-from apps.common.utils.phone import local_bd_mobile
 
 
 def active_users() -> QuerySet[User]:
@@ -100,22 +99,6 @@ def get_user_by_id(user_id: str | UUID, *, include_deleted: bool = False) -> Use
 
 def get_active_user_by_email(email: str) -> User | None:
     return active_users().filter(email__iexact=email).first()
-
-
-def get_active_customer_by_phone(phone: str) -> User | None:
-    """Customer account for a BD mobile number in any stored form
-    (01…, 8801…, +8801…). Customers only: a staff account sharing the number
-    must never collect someone's guest orders."""
-    local = local_bd_mobile(phone)
-    if not local:
-        return None
-    forms = {local, f"880{local[1:]}", f"+880{local[1:]}"}
-    return (
-        active_users()
-        .filter(role=UserRole.CUSTOMER, phone__in=forms)
-        .order_by("date_joined")
-        .first()
-    )
 
 
 def staff_users(*, include_inactive: bool = False, include_deleted: bool = False) -> QuerySet[User]:

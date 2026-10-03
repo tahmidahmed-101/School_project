@@ -5,13 +5,12 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.accounts.models import Address, User
-from apps.accounts.selectors.users import get_active_customer_by_phone, get_active_user_by_email
 from apps.accounts.services.addresses import create_address
-from apps.accounts.services.users import create_user
+from apps.accounts.services.users import get_or_create_guest_customer
 from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.utils.codes import generate_document_number
-from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile, local_bd_mobile
+from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.logistics.selectors.rates import (
     get_carrier_by_id,
 )
@@ -60,53 +59,21 @@ def _is_preorder_line(line: SalesOrderLine) -> bool:
     return variant.is_preorder_enabled and variant.is_preorder_active
 
 
-def _get_or_create_guest_user(
-    *,
-    email: str,
-    phone: str,
-    first_name: str,
-    last_name: str,
-) -> User:
-    email = email.lower().strip() if email else ""
-    phone = phone.strip() if phone else ""
-    first_name = first_name.strip() if first_name else ""
-    last_name = last_name.strip() if last_name else ""
-
-    if email:
-        user = get_active_user_by_email(email)
-        if user:
-            if phone and not user.phone:
-                user.phone = phone
-                user.save(update_fields=["phone"])
-            return user
-
-    # Without an email the phone is the customer's identity, so it must be a
-    # recognisable mobile number. With one, an odd number is still accepted
-    # as before — it just can't be used to find an existing customer.
-    if is_bd_mobile(phone):
-        phone = local_bd_mobile(phone)
-        user = get_active_customer_by_phone(phone)
-        if user:
-            # An existing account's email is never changed from here: an
-            # unverified checkout form must not be able to take one over.
-            return user
-    elif not email:
+def _guest_identity(*, phone: str, first_name: str, last_name: str) -> User:
+    """Anonymous checkout's owner. A typed email or phone is not proof of
+    owning a registered account, so it never selects one — orders go to the
+    phone's guest identity, and the typed contact details stay on the order."""
+    if not is_bd_mobile(phone):
         raise BusinessRuleViolationError(BD_MOBILE_HELP, code="invalid_phone")
-
-    from django.utils.crypto import get_random_string
-    temp_password = get_random_string(32)
-    return create_user(
-        email=email or None,
-        password=temp_password,
-        first_name=first_name,
-        last_name=last_name,
-        phone=phone,
+    return get_or_create_guest_customer(
+        phone=phone, first_name=first_name.strip(), last_name=last_name.strip()
     )
 
 
 def _create_guest_address(
     *,
     user: User,
+    is_default: bool,
     full_name: str,
     phone: str,
     line1: str,
@@ -128,7 +95,7 @@ def _create_guest_address(
             "state": state.strip(),
             "postal_code": postal_code.strip(),
             "country": country.strip(),
-            "is_default": True,
+            "is_default": is_default,
         },
     )
 
@@ -154,16 +121,20 @@ def guest_checkout(
     coupon_code: str | None = None,
     notes: str = "",
     ip_address: str = "",
+    customer: User | None = None,
 ) -> SalesOrder:
-    user = _get_or_create_guest_user(
-        email=email,
-        phone=phone,
-        first_name=first_name,
-        last_name=last_name,
-    )
+    """`customer` is the authenticated requester, if any — the only way an
+    order reaches a registered account from here."""
+    if customer is not None:
+        user = customer
+    else:
+        user = _guest_identity(phone=phone, first_name=first_name, last_name=last_name)
 
     address = _create_guest_address(
         user=user,
+        # A signed-in customer's address book gains this address but keeps
+        # its default; a guest identity's newest address is its default.
+        is_default=user.is_guest,
         full_name=shipping_address.get("full_name", f"{first_name} {last_name}"),
         phone=shipping_address.get("phone", phone),
         line1=shipping_address["line1"],

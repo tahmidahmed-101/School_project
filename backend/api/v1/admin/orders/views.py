@@ -106,7 +106,8 @@ class OrdersPermissionMixin:
 class OrderQuerysetMixin:
     """Shared so the CSV export cannot drift from what the list endpoint shows."""
 
-    search_fields = ("order_number", "customer__email")
+    # contact_phone: phone-only guest orders have no customer email to search by.
+    search_fields = ("order_number", "customer__email", "contact_phone")
     ordering_fields = ("created_at", "grand_total")
     default_ordering = "-created_at"
 

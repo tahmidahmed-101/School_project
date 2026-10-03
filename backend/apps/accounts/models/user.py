@@ -46,6 +46,10 @@ class User(AbstractUser, SoftDeleteModel):
     profile_picture = models.URLField(blank=True)
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
+    # A guest-checkout identity, not an account: no email, no usable password,
+    # one per normalised phone. Anonymous checkouts only ever attach orders to
+    # these, never to a registered user found by a typed email or phone.
+    is_guest = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: ClassVar[list[str]] = []
@@ -58,6 +62,20 @@ class User(AbstractUser, SoftDeleteModel):
             models.Index(fields=["is_active"]),
             models.Index(fields=["deleted_at", "is_active"], name="user_deleted_active_idx"),
         ]
+        constraints: ClassVar[list] = [
+            # Makes concurrent first checkouts from one phone race-safe: the
+            # loser's insert fails here and it reuses the winner's row.
+            models.UniqueConstraint(
+                fields=["phone"],
+                condition=models.Q(is_guest=True, deleted_at__isnull=True),
+                name="user_unique_live_guest_phone",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        # AbstractBaseUser.__str__ returns the email, which is None for
+        # phone-only customers — and __str__ must return a str.
+        return self.email or self.phone or str(self.pk)
 
     def save(self, *args, **kwargs):
         # AbstractUser.clean() normalises a missing email to "".

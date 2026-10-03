@@ -5,12 +5,18 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
-from apps.accounts.factories import CustomerUserFactory, StaffUserFactory
-from apps.accounts.models import User
+from apps.accounts.factories import (
+    AddressFactory,
+    AdminUserFactory,
+    CustomerUserFactory,
+    StaffUserFactory,
+)
+from apps.accounts.models import Address, User
+from apps.accounts.services.users import get_or_create_guest_customer
 from apps.catalog.factories import ProductVariantFactory
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
@@ -510,21 +516,38 @@ def test_public_shipping_zones_lists_active_zones_without_leaking_keywords(api_c
         assert set(zone) == {"id", "name"}
 
 
-def test_guest_checkout_without_email_creates_a_phone_only_customer(api_client):
-    variant = _stocked_variant()
+def _account_state(user):
+    """Everything an anonymous checkout must never change on an account."""
+    user.refresh_from_db()
+    addresses = sorted((str(a.id), a.is_default) for a in Address.objects.filter(user=user))
+    return (user.email, user.phone, user.is_phone_verified, addresses)
+
+
+def _order_customer_id(response):
+    assert response.status_code == 201, response.data
+    return SalesOrder.objects.get(id=response.data["data"]["id"]).customer_id
+
+
+def test_anonymous_checkout_creates_a_guest_identity_not_an_account(api_client):
     _dhaka_delivery()
 
-    response = api_client.post(GUEST_CHECKOUT_URL, _minimal_payload(variant), format="json")
+    response = api_client.post(
+        GUEST_CHECKOUT_URL, _minimal_payload(_stocked_variant()), format="json"
+    )
 
     assert response.status_code == 201, response.data
     order = SalesOrder.objects.select_related("customer").get(id=response.data["data"]["id"])
-    assert order.customer.email is None
-    assert order.customer.phone == "01711111111"
-    assert order.contact_email == ""
+    guest = order.customer
+    assert guest.is_guest
+    assert guest.email is None
+    assert guest.phone == "01711111111"
+    assert not guest.has_usable_password()
+    # The typed contact details live on the order.
     assert order.contact_phone == "+8801711111111"
+    assert order.contact_email == ""
 
 
-def test_phone_only_guests_reuse_their_account_and_never_collide(api_client):
+def test_repeat_guest_checkouts_reuse_one_identity_per_phone(api_client):
     _dhaka_delivery()
     first = _minimal_payload(_stocked_variant())
     again = _minimal_payload(_stocked_variant())
@@ -532,58 +555,82 @@ def test_phone_only_guests_reuse_their_account_and_never_collide(api_client):
     other = _minimal_payload(_stocked_variant())
     other["phone"] = "01822222222"
 
-    ids = [
-        api_client.post(GUEST_CHECKOUT_URL, payload, format="json").data["data"]["id"]
+    customers = [
+        _order_customer_id(api_client.post(GUEST_CHECKOUT_URL, payload, format="json"))
         for payload in (first, again, other)
     ]
 
-    customers = [SalesOrder.objects.get(id=order_id).customer_id for order_id in ids]
     assert customers[0] == customers[1]
     assert customers[2] != customers[0]
-    assert User.objects.filter(email__isnull=True).count() == 2
+    assert User.objects.filter(is_guest=True).count() == 2
 
 
-def test_phone_matches_an_existing_customer_without_touching_their_email(api_client):
+@pytest.mark.parametrize("phone_verified", [False, True])
+def test_anonymous_checkout_with_a_customers_phone_leaves_their_account_alone(
+    api_client, phone_verified
+):
     _dhaka_delivery()
-    customer = CustomerUserFactory(email="known@example.com", phone="+8801733333333")
+    customer = CustomerUserFactory(
+        email="known@example.com", phone="+8801733333333", is_phone_verified=phone_verified
+    )
+    AddressFactory(user=customer, is_default=True)
+    before = _account_state(customer)
     payload = _minimal_payload(_stocked_variant())
     payload["phone"] = "01733333333"
 
-    response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
+    customer_id = _order_customer_id(api_client.post(GUEST_CHECKOUT_URL, payload, format="json"))
 
-    assert response.status_code == 201, response.data
-    assert SalesOrder.objects.get(id=response.data["data"]["id"]).customer_id == customer.id
-    customer.refresh_from_db()
-    assert customer.email == "known@example.com"
+    assert customer_id != customer.id
+    assert not SalesOrder.objects.filter(customer=customer).exists()
+    assert _account_state(customer) == before
 
 
-def test_phone_never_attaches_a_guest_order_to_a_staff_account(api_client):
+def test_anonymous_checkout_with_a_customers_email_leaves_their_account_alone(api_client):
     _dhaka_delivery()
-    staff = StaffUserFactory(phone="01744444444")
-    payload = _minimal_payload(_stocked_variant())
-    payload["phone"] = "01744444444"
-
-    response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
-
-    assert response.status_code == 201, response.data
-    assert SalesOrder.objects.get(id=response.data["data"]["id"]).customer_id != staff.id
-
-
-def test_guest_checkout_with_email_still_uses_the_email_account(api_client):
-    _dhaka_delivery()
-    customer = CustomerUserFactory(email="has-email@example.com")
+    customer = CustomerUserFactory(email="has-email@example.com", phone="")
+    AddressFactory(user=customer, is_default=True)
+    before = _account_state(customer)
     payload = _minimal_payload(_stocked_variant())
     payload["email"] = "has-email@example.com"
 
     response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
 
-    assert response.status_code == 201, response.data
+    assert _order_customer_id(response) != customer.id
+    assert _account_state(customer) == before  # phone not filled in, address book untouched
     order = SalesOrder.objects.get(id=response.data["data"]["id"])
-    assert order.customer_id == customer.id
     assert order.contact_email == "has-email@example.com"
 
 
-def test_guest_checkout_without_email_needs_a_valid_mobile_number(api_client):
+def test_anonymous_checkout_never_attaches_to_a_staff_account(api_client):
+    _dhaka_delivery()
+    staff = StaffUserFactory(phone="01744444444")
+    payload = _minimal_payload(_stocked_variant())
+    payload["phone"] = "01744444444"
+
+    customer_id = _order_customer_id(api_client.post(GUEST_CHECKOUT_URL, payload, format="json"))
+
+    assert customer_id != staff.id
+
+
+def test_authenticated_checkout_belongs_to_the_signed_in_customer(api_client):
+    _dhaka_delivery()
+    customer = CustomerUserFactory(email="signed-in@example.com", phone="01755555555")
+    default = AddressFactory(user=customer, is_default=True)
+    api_client.force_authenticate(user=customer)
+    payload = _minimal_payload(_stocked_variant())
+    payload["phone"] = "01799999999"  # a different contact number for this delivery
+
+    response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
+
+    assert _order_customer_id(response) == customer.id
+    customer.refresh_from_db()
+    assert customer.phone == "01755555555"
+    default.refresh_from_db()
+    assert default.is_default  # the new delivery address didn't take over
+    assert not User.objects.filter(is_guest=True).exists()
+
+
+def test_anonymous_checkout_needs_a_valid_mobile_number(api_client):
     _dhaka_delivery()
     payload = _minimal_payload(_stocked_variant())
     payload["phone"] = "12345"
@@ -593,4 +640,60 @@ def test_guest_checkout_without_email_needs_a_valid_mobile_number(api_client):
     assert response.status_code == 400
     assert response.data["error"]["code"] == "invalid_phone"
     assert not SalesOrder.objects.exists()
-    assert not User.objects.filter(email__isnull=True).exists()
+    assert not User.objects.filter(is_guest=True).exists()
+
+
+def test_database_allows_only_one_live_guest_per_phone():
+    get_or_create_guest_customer(phone="01766666666")
+    duplicate = User(email=None, phone="01766666666", is_guest=True)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        duplicate.save()
+
+
+def test_concurrent_first_checkout_reuses_the_winners_guest_identity(monkeypatch):
+    """Two first checkouts for one number: the other request's insert commits
+    between our lookup and our insert. Ours must hit the unique constraint
+    and fall back to the winner's row, not create a second identity."""
+    real_set_unusable_password = User.set_unusable_password
+    winner = User(email=None, phone="01777777777", is_guest=True)
+
+    def other_request_commits_first(self):
+        # Runs after our lookup missed and before our insert's savepoint.
+        real_set_unusable_password(self)
+        if winner._state.adding:
+            winner.save()
+
+    monkeypatch.setattr(User, "set_unusable_password", other_request_commits_first)
+
+    guest = get_or_create_guest_customer(phone="+8801777777777")
+
+    assert guest.pk == winner.pk
+    assert User.objects.filter(is_guest=True, phone="01777777777").count() == 1
+
+
+def test_phone_only_customer_renders_as_text_and_in_django_admin(api_client, client):
+    _dhaka_delivery()
+    response = api_client.post(
+        GUEST_CHECKOUT_URL, _minimal_payload(_stocked_variant()), format="json"
+    )
+    customer = SalesOrder.objects.get(id=response.data["data"]["id"]).customer
+
+    # AbstractBaseUser.__str__ returns the email; it must not crash on None.
+    assert str(customer) == "01711111111"
+    client.force_login(User.objects.create_superuser(email="su-admin@example.com", password="x"))
+    assert client.get("/admin/accounts/user/").status_code == 200
+    assert client.get(f"/admin/accounts/user/{customer.id}/change/").status_code == 200
+
+
+def test_admin_can_find_a_phone_only_order_by_phone(api_client):
+    _dhaka_delivery()
+    response = api_client.post(
+        GUEST_CHECKOUT_URL, _minimal_payload(_stocked_variant()), format="json"
+    )
+    order_id = response.data["data"]["id"]
+    api_client.force_authenticate(user=AdminUserFactory())
+
+    for term in ("01711111111", "+8801711111111"):
+        found = api_client.get("/api/v1/admin/orders/", {"search": term})
+        assert [row["id"] for row in found.data["data"]["results"]] == [order_id], term
