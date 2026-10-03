@@ -418,11 +418,12 @@ const DICT = {
   // Checkout fields (API schema)
   fieldRequired: { en: "This field is required", bn: "এই ঘরটি পূরণ করা আবশ্যক" },
   fieldInvalid: { en: "Please check this value", bn: "মানটি সঠিক নয়, আবার দেখুন" },
-  checkoutFirstName: { en: "First name", bn: "প্রথম নাম" },
-  checkoutFirstNamePlaceholder: { en: "Enter your first name", bn: "আপনার প্রথম নাম লিখুন" },
-  checkoutLastName: { en: "Last name (optional)", bn: "শেষ নাম (ঐচ্ছিক)" },
-  checkoutEmail: { en: "Email", bn: "ইমেইল" },
-  checkoutPostalCode: { en: "Postal code", bn: "পোস্টাল কোড" },
+  checkoutName: { en: "Your name", bn: "আপনার নাম" },
+  checkoutNamePlaceholder: { en: "Enter your full name", bn: "আপনার পুরো নাম লিখুন" },
+  fieldInvalidPhone: {
+    en: "Enter a Bangladeshi mobile number, like 01712345678",
+    bn: "একটি বাংলাদেশি মোবাইল নম্বর লিখুন, যেমন 01712345678",
+  },
   checkoutShippingPending: { en: "Calculated when you confirm", bn: "অর্ডার নিশ্চিত করলে হিসাব হবে" },
   checkoutTax: { en: "Tax", bn: "ট্যাক্স" },
   checkoutDiscount: { en: "Discount", bn: "ছাড়" },

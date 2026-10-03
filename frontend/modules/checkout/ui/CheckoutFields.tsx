@@ -57,44 +57,17 @@ export function CheckoutFields({
         <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-fg">{ui("checkoutContactInfo")}</h3>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField htmlFor="co-first-name" label={ui("checkoutFirstName")} required error={errors.firstName}>
-              <input
-                id="co-first-name"
-                type="text"
-                required
-                maxLength={150}
-                autoComplete="given-name"
-                placeholder={ui("checkoutFirstNamePlaceholder")}
-                value={form.firstName}
-                onChange={(e) => onChange({ firstName: e.target.value })}
-                className={inputClass("firstName")}
-              />
-            </FormField>
-
-            <FormField htmlFor="co-last-name" label={ui("checkoutLastName")} error={errors.lastName}>
-              <input
-                id="co-last-name"
-                type="text"
-                maxLength={150}
-                autoComplete="family-name"
-                value={form.lastName}
-                onChange={(e) => onChange({ lastName: e.target.value })}
-                className={inputClass("lastName")}
-              />
-            </FormField>
-          </div>
-
-          <FormField htmlFor="co-email" label={ui("checkoutEmail")} required error={errors.email}>
+          <FormField htmlFor="co-name" label={ui("checkoutName")} required error={errors.name}>
             <input
-              id="co-email"
-              type="email"
+              id="co-name"
+              type="text"
               required
-              autoComplete="email"
-              placeholder="name@example.com"
-              value={form.email}
-              onChange={(e) => onChange({ email: e.target.value })}
-              className={inputClass("email")}
+              maxLength={150}
+              autoComplete="name"
+              placeholder={ui("checkoutNamePlaceholder")}
+              value={form.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              className={inputClass("name")}
             />
           </FormField>
 
@@ -105,6 +78,7 @@ export function CheckoutFields({
               required
               maxLength={32}
               autoComplete="tel"
+              inputMode="tel"
               placeholder="01XXXXXXXXX"
               value={form.phone}
               onChange={(e) => onChange({ phone: e.target.value })}
@@ -112,34 +86,17 @@ export function CheckoutFields({
             />
           </FormField>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField htmlFor="co-district" label={ui("checkoutCity")} required error={errors.district}>
-              <Dropdown
-                id="co-district"
-                invalid={Boolean(errors.district)}
-                value={form.district}
-                onChange={(district) => onChange({ district })}
-                options={BD_DISTRICTS}
-                searchable
-                placeholder={ui("checkoutDistrictPlaceholder")}
-              />
-            </FormField>
-
-            <FormField htmlFor="co-postal" label={ui("checkoutPostalCode")} required error={errors.postalCode}>
-              <input
-                id="co-postal"
-                type="text"
-                required
-                maxLength={32}
-                autoComplete="postal-code"
-                inputMode="numeric"
-                placeholder="1207"
-                value={form.postalCode}
-                onChange={(e) => onChange({ postalCode: e.target.value })}
-                className={inputClass("postalCode")}
-              />
-            </FormField>
-          </div>
+          <FormField htmlFor="co-district" label={ui("checkoutCity")} required error={errors.district}>
+            <Dropdown
+              id="co-district"
+              invalid={Boolean(errors.district)}
+              value={form.district}
+              onChange={(district) => onChange({ district })}
+              options={BD_DISTRICTS}
+              searchable
+              placeholder={ui("checkoutDistrictPlaceholder")}
+            />
+          </FormField>
 
           <FormField htmlFor="co-addr" label={ui("checkoutAddress")} required error={errors.address}>
             <input

@@ -149,18 +149,22 @@ export interface ApiCheckoutItem {
 }
 
 interface ApiCheckoutAddress {
-  full_name: string;
-  phone: string;
+  /** Optional: the backend falls back to the checkout's own name and phone. */
+  full_name?: string;
+  phone?: string;
   line1: string;
   line2?: string;
-  city?: string;
+  /** Required: the delivery zone is matched against it. */
+  city: string;
   state?: string;
-  postal_code: string;
+  postal_code?: string;
   country?: string;
 }
 
 export interface ApiCheckoutRequest {
-  email: string;
+  /** Optional: a guest is identified by the phone number. */
+  email?: string;
+  /** A Bangladeshi mobile number (01XXXXXXXXX, with or without +880). */
   phone: string;
   first_name: string;
   last_name?: string;

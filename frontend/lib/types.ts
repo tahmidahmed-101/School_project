@@ -115,13 +115,11 @@ export interface CartItem {
 
 /** Checkout form, mirroring the fields POST /checkout/ needs. */
 export interface OrderForm {
-  firstName: string;
-  lastName: string;
-  email: string;
+  /** The shopper's full name, as one field. */
+  name: string;
   phone: string;
   /** BD district; sent as shipping_address.city (the backend matches shipping zones on line1 + city). */
   district: string;
-  postalCode: string;
   address: string;
   notes: string;
 }

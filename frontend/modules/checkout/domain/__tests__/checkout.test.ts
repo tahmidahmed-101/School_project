@@ -5,12 +5,9 @@ import { makeProduct } from "@/tests/fixtures";
 import { EMPTY_ORDER_FORM, buildCheckoutRequest, mapApiFieldErrors, validateOrderForm } from "../checkout";
 
 const validForm: OrderForm = {
-  firstName: " Rahim ",
-  lastName: " Uddin ",
-  email: " rahim@example.com ",
+  name: " Rahim Uddin ",
   phone: " 01712-345678 ",
   district: " Dhaka ",
-  postalCode: " 1207 ",
   address: " House 1, Road 2 ",
   notes: " ring the bell ",
 };
@@ -25,19 +22,17 @@ describe("validateOrderForm", () => {
     expect(validateOrderForm(validForm)).toEqual({});
   });
 
-  it("flags every missing required field on an empty form", () => {
-    expect(Object.keys(validateOrderForm(EMPTY_ORDER_FORM)).sort()).toEqual(
-      ["address", "district", "email", "firstName", "phone", "postalCode"].sort(),
-    );
+  it("flags every field except the notes on an empty form", () => {
+    expect(Object.keys(validateOrderForm(EMPTY_ORDER_FORM)).sort()).toEqual(["address", "district", "name", "phone"]);
   });
 
-  it("rejects a malformed email and a too-short phone, but not an empty last name", () => {
-    const errors = validateOrderForm({ ...validForm, lastName: "", email: "rahim@", phone: "12345" });
-    expect(errors).toEqual({ email: "invalid", phone: "invalid" });
-  });
-
-  it("counts digits only when checking the phone", () => {
-    expect(validateOrderForm({ ...validForm, phone: "+880 1712-345678" }).phone).toBeUndefined();
+  it("requires a Bangladeshi mobile number, as the backend does", () => {
+    for (const phone of ["01712345678", "+880 1712-345678", "8801712345678", "1712345678"]) {
+      expect(validateOrderForm({ ...validForm, phone }).phone).toBeUndefined();
+    }
+    for (const phone of ["12345", "01212345678", "0171234567", "017123456789", "+1 415 555 0100"]) {
+      expect(validateOrderForm({ ...validForm, phone }).phone).toBe("invalidPhone");
+    }
   });
 });
 
@@ -53,31 +48,33 @@ describe("buildCheckoutRequest", () => {
     expect(JSON.stringify(request)).not.toContain("price");
   });
 
-  it("trims fields and puts the district in shipping_address.city", () => {
+  it("trims fields, sends the one name as first_name, and puts the district in shipping_address.city", () => {
     expect(request).toMatchObject({
-      email: "rahim@example.com",
       phone: "01712-345678",
-      first_name: "Rahim",
-      last_name: "Uddin",
+      first_name: "Rahim Uddin",
       payment_method: "cod",
       coupon_code: "KULL10",
       notes: "ring the bell",
       shipping_address: {
         full_name: "Rahim Uddin",
+        phone: "01712-345678",
         line1: "House 1, Road 2",
         city: "Dhaka",
-        postal_code: "1207",
         country: "Bangladesh",
       },
     });
   });
 
   it("omits optional fields that are empty", () => {
-    const bare = buildCheckoutRequest({ ...validForm, lastName: "", notes: "  " }, items, { paymentMethod: "cod" });
-    expect(bare).not.toHaveProperty("last_name");
+    const bare = buildCheckoutRequest({ ...validForm, notes: "  " }, items, { paymentMethod: "cod" });
     expect(bare).not.toHaveProperty("notes");
     expect(bare).not.toHaveProperty("coupon_code");
-    expect(bare.shipping_address.full_name).toBe("Rahim");
+  });
+
+  it("never sends the fields the form no longer asks for", () => {
+    expect(request).not.toHaveProperty("email");
+    expect(request).not.toHaveProperty("last_name");
+    expect(request.shipping_address).not.toHaveProperty("postal_code");
   });
 });
 
@@ -87,13 +84,13 @@ describe("mapApiFieldErrors", () => {
 
   it("maps API field names onto form fields", () => {
     expect(
-      mapApiFieldErrors(apiError({ email: "Bad email", first_name: "Required", "shipping_address.line1": "Required" })),
-    ).toEqual({ email: "Bad email", firstName: "Required", address: "Required" });
+      mapApiFieldErrors(apiError({ phone: "Bad phone", first_name: "Required", "shipping_address.line1": "Required" })),
+    ).toEqual({ phone: "Bad phone", name: "Required", address: "Required" });
   });
 
   it("handles the backend's one-item-list wrapping of nested errors", () => {
-    expect(mapApiFieldErrors(apiError({ "shipping_address.0.postal_code": "Invalid code" }))).toEqual({
-      postalCode: "Invalid code",
+    expect(mapApiFieldErrors(apiError({ "shipping_address.0.line1": "Too long" }))).toEqual({
+      address: "Too long",
     });
   });
 

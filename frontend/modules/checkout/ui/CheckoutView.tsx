@@ -45,12 +45,18 @@ export function CheckoutView() {
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
 
-  /** Turns the "required" / "invalid" markers from local validation into text in the shopper's language. */
+  /** Turns the "required" / "invalid" / "invalidPhone" markers from local validation into text in the shopper's language. */
   const localise = (errors: FormErrors): FormErrors =>
     Object.fromEntries(
       Object.entries(errors).map(([field, message]) => [
         field,
-        message === "required" ? ui("fieldRequired") : message === "invalid" ? ui("fieldInvalid") : message,
+        message === "required"
+          ? ui("fieldRequired")
+          : message === "invalid"
+            ? ui("fieldInvalid")
+            : message === "invalidPhone"
+              ? ui("fieldInvalidPhone")
+              : message,
       ]),
     );
 
@@ -75,7 +81,7 @@ export function CheckoutView() {
       );
       setOrderResult(
         toOrderResult(order, {
-          name: [form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(" "),
+          name: form.name.trim(),
           address: form.address.trim(),
           district: form.district,
         }),
