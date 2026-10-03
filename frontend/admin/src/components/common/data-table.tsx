@@ -1,11 +1,10 @@
 import * as React from "react"
 import {
-  flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import type { ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef, RowData } from "@tanstack/react-table"
 import {
   TableBody,
   TableCell,
@@ -14,20 +13,58 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon, type LucideIcon, XIcon } from "lucide-react"
 
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { EmptyState } from "./EmptyState"
-import { Skeleton } from "@/components/ui/skeleton"
-import { AlertCircleIcon, Loader2Icon } from "lucide-react"
+import { AlertCircleIcon, Loader2Icon, ToggleLeft, ToggleRight, Trash2Icon } from "lucide-react"
+import { toast } from "sonner"
 import { getApiErrorMessage } from "@/lib/api/client"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ConfirmDialog } from "./ConfirmDialog"
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Aligns the column's header and cells on desktop (numbers usually go right). */
+    align?: "left" | "center" | "right"
+  }
+}
+
+const ALIGN_CLASS = { left: "text-left", center: "text-center", right: "text-right" } as const
+
+/**
+ * Renders a column's header or cell. A function is called directly rather than mounted as a
+ * component: columns are rebuilt on every render, and mounting a fresh function each time would
+ * remount the cell, so an input inside a cell would lose focus on every keystroke.
+ */
+function renderSlot<TProps>(slot: unknown, context: TProps): React.ReactNode {
+  return typeof slot === "function" ? (slot as (props: TProps) => React.ReactNode)(context) : (slot as React.ReactNode)
+}
+
+/** Column ids DataTable treats specially: the built-in tick box and the row menu. */
+const SELECT_COLUMN = "select"
+const ACTIONS_COLUMN = "actions"
+
+/**
+ * The bulk operations a list supports, shown in the bar while rows are ticked:
+ * Cancel is always there, Delete when `deleteRow` is set, Activate / Deactivate when given.
+ */
+export interface BulkActions<TData> {
+  /** Defaults to `row.id`. */
+  getId?: (row: TData) => string
+  /** Rows that can be ticked. Defaults to every row without a `deleted_at`. */
+  isSelectable?: (row: TData) => boolean
+  /** Deletes one row. Called once per ticked row; failures are counted and reported. */
+  deleteRow?: (row: TData) => Promise<unknown>
+  activate?: (rows: TData[]) => Promise<unknown>
+  deactivate?: (rows: TData[]) => Promise<unknown>
+  /** Runs after any bulk action, e.g. to reload the list. */
+  onDone?: () => void
+  /** What a row is called in messages, e.g. "product". */
+  noun?: string
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -41,9 +78,8 @@ interface DataTableProps<TData, TValue> {
   emptyIcon?: LucideIcon
   emptyActionLabel?: string
   onEmptyAction?: () => void
-  /** True while the current page's data is being fetched. On first load (no data yet)
-   * this renders skeleton rows; on a refetch with existing data it dims the table and
-   * shows a small inline spinner instead of replacing the rows the user is looking at. */
+  /** True while the current page's data is being fetched. The rows are replaced by a
+   * centred spinner until the fetch settles, so stale rows never show alongside the loader. */
   isLoading?: boolean
   /** Set when the fetch backing this table failed — from the slice's `error` field. */
   error?: unknown
@@ -62,6 +98,20 @@ interface DataTableProps<TData, TValue> {
    * carry no label in the mobile card layout. Optional — the layout falls back to the
    * column header, and headerless columns are rendered without a label automatically. */
   unlabelledColumns?: string[]
+  /** The actions offered in the bar that appears while rows are ticked (Cancel is always there). */
+  bulk?: BulkActions<TData>
+  /**
+   * Row tick boxes. On for every list table; off by default for `embedded` tables (line items
+   * inside a card or dialog) unless they pass `bulk`.
+   */
+  selectable?: boolean
+  /**
+   * For a table inside a card, dialog or widget: drops the table's own frame and its
+   * scroll height limit, so it sits flush in the container that already frames it.
+   */
+  embedded?: boolean
+  /** A totals row under the body: one entry per column, in column order (use null to leave one blank). */
+  footer?: React.ReactNode[]
 }
 
 export function DataTable<TData, TValue>({
@@ -87,13 +137,97 @@ export function DataTable<TData, TValue>({
   onRowClick,
   getRowLink,
   unlabelledColumns,
+  bulk,
+  selectable: selectableProp,
+  embedded = false,
+  footer,
 }: DataTableProps<TData, TValue>) {
+  const selectable = selectableProp ?? (Boolean(bulk) || !embedded)
   const navigate = useNavigate()
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
+  // Rows without an id of their own (report rows) are told apart by their position.
+  const getId =
+    bulk?.getId ?? ((row: TData) => String((row as { id?: string | number }).id ?? `row-${data.indexOf(row)}`))
+  const isSelectable = bulk?.isSelectable ?? ((row: TData) => !(row as { deleted_at?: unknown }).deleted_at)
+  const [tickedIds, setTickedIds] = React.useState<string[]>([])
+  const [bulkBusy, setBulkBusy] = React.useState(false)
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false)
+
+  // Only rows still on screen count, so a page or filter change never leaves a hidden selection.
+  const selectableRows = selectable ? data.filter(isSelectable) : []
+  const selectedRows = selectableRows.filter((row) => tickedIds.includes(getId(row)))
+  const allSelected = selectableRows.length > 0 && selectedRows.length === selectableRows.length
+  // Remembers the last non-zero count so the bar doesn't flash "0 selected" while it slides shut.
+  const [shownCount, setShownCount] = React.useState(0)
+  if (selectedRows.length > 0 && selectedRows.length !== shownCount) setShownCount(selectedRows.length)
+  const bulkBarOpen = selectedRows.length > 0
+  const noun = bulk?.noun ?? "item"
+  const plural = (n: number) => `${n} ${n === 1 ? noun : noun.replace(/([^aeiou])y$/, "$1ie") + "s"}`
+
+  const runBulk = async (action: (rows: TData[]) => Promise<unknown>, done: string) => {
+    setBulkBusy(true)
+    try {
+      await action(selectedRows)
+      toast.success(`${plural(selectedRows.length)} ${done}`)
+      setTickedIds([])
+      bulk?.onDone?.()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Bulk update failed"))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const runBulkDelete = async () => {
+    if (!bulk?.deleteRow) return
+    setBulkBusy(true)
+    let failed = 0
+    let firstError: unknown
+    // One at a time: the list endpoints are not built for a burst of parallel deletes.
+    for (const row of selectedRows) {
+      try {
+        await bulk.deleteRow(row)
+      } catch (err) {
+        failed += 1
+        firstError ??= err
+      }
+    }
+    const deleted = selectedRows.length - failed
+    if (deleted) toast.success(`${plural(deleted)} deleted`)
+    if (failed) toast.error(`${plural(failed)} could not be deleted: ${getApiErrorMessage(firstError, "delete failed")}`)
+    setBulkBusy(false)
+    setTickedIds([])
+    bulk.onDone?.()
+  }
+
+  const selectColumn: ColumnDef<TData, TValue> = {
+    id: SELECT_COLUMN,
+    header: () => (
+      <Checkbox
+        aria-label="Select all on this page"
+        checked={allSelected}
+        disabled={selectableRows.length === 0}
+        onCheckedChange={(v) => setTickedIds(v ? selectableRows.map(getId) : [])}
+      />
+    ),
+    cell: ({ row }) =>
+      isSelectable(row.original) ? (
+        <Checkbox
+          aria-label={`Select row ${row.index + 1}`}
+          checked={tickedIds.includes(getId(row.original))}
+          onCheckedChange={(v) => {
+            const id = getId(row.original)
+            setTickedIds((prev) => (v ? [...prev, id] : prev.filter((x) => x !== id)))
+          }}
+        />
+      ) : null,
+  }
+  const allColumns = selectable ? [selectColumn, ...columns] : columns
+
   const table = useReactTable({
     data,
-    columns,
+    columns: allColumns,
     getCoreRowModel: getCoreRowModel(),
     ...(manualPagination
       ? {
@@ -101,10 +235,12 @@ export function DataTable<TData, TValue>({
           pageCount: controlledPageCount,
           state: { pagination: { pageIndex: controlledPageIndex, pageSize } },
         }
-      : {
-          getPaginationRowModel: getPaginationRowModel(),
-          initialState: { pagination: { pageSize } },
-        }),
+      : showPagination
+        ? {
+            getPaginationRowModel: getPaginationRowModel(),
+            initialState: { pagination: { pageSize } },
+          }
+        : {}),
   })
 
   const pageIndex = manualPagination ? controlledPageIndex : table.getState().pagination.pageIndex
@@ -127,7 +263,7 @@ export function DataTable<TData, TValue>({
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const widths = columnWidths ?? columns.map(() => "auto")
+  const widths = [...(selectable ? ["48px"] : []), ...(columnWidths ?? columns.map(() => "auto"))]
 
   const ColGroup = () => (
     <colgroup>
@@ -184,36 +320,93 @@ export function DataTable<TData, TValue>({
     for (const group of table.getHeaderGroups()) {
       for (const header of group.headers) {
         if (header.isPlaceholder) continue
-        map.set(header.column.id, flexRender(header.column.columnDef.header, header.getContext()))
+        map.set(header.column.id, renderSlot(header.column.columnDef.header, header.getContext()))
       }
     }
     return map
     // `table` is a stable reference, so columns/data are what actually signal a change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, columns, data])
+  }, [table, columns, data, allColumns.length])
 
-  const headerlessIds = React.useMemo(() => new Set(unlabelledColumns ?? []), [unlabelledColumns])
+  const headerlessIds = React.useMemo(
+    () => new Set([SELECT_COLUMN, ...(unlabelledColumns ?? [])]),
+    [unlabelledColumns]
+  )
 
   const rows = table.getRowModel().rows
 
-  const showSkeleton = isLoading && data.length === 0
-  const showError = Boolean(error) && data.length === 0
-  const showEmpty = !showSkeleton && !showError && rows.length === 0
+  const showError = !isLoading && Boolean(error) && data.length === 0
+  const showEmpty = !isLoading && !showError && rows.length === 0
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+    <div className={cn("flex flex-col overflow-hidden", !embedded && "rounded-xl border border-border bg-card")}>
+      {selectable && (
+        // Animating the grid row from 0fr to 1fr slides the bar open at its natural height.
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+            bulkBarOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          )}
+          inert={!bulkBarOpen}
+        >
+          <div className="overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-sm">
+              <span className="mr-1 font-medium">{shownCount} selected</span>
+              {bulk?.activate && (
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(bulk.activate!, "activated")}>
+                  <ToggleRight /> Activate
+                </Button>
+              )}
+              {bulk?.deactivate && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkBusy}
+                  onClick={() => runBulk(bulk.deactivate!, "deactivated")}
+                >
+                  <ToggleLeft /> Deactivate
+                </Button>
+              )}
+              {bulk?.deleteRow && (
+                <Button size="sm" variant="destructive" disabled={bulkBusy} onClick={() => setConfirmingDelete(true)}>
+                  <Trash2Icon /> Delete
+                </Button>
+              )}
+              <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => setTickedIds([])}>
+                <XIcon className="size-4" />
+                Cancel
+              </Button>
+              {bulkBusy && <Loader2Icon className="size-4 animate-spin text-muted-foreground" />}
+            </div>
+          </div>
+        </div>
+      )}
+      {bulk?.deleteRow && (
+        <ConfirmDialog
+          open={confirmingDelete}
+          onOpenChange={setConfirmingDelete}
+          title={`Delete ${plural(selectedRows.length)}?`}
+          description="The selected rows will be deleted. This action cannot be undone."
+          confirmLabel="Delete"
+          destructive
+          icon={<Trash2Icon />}
+          onConfirm={runBulkDelete}
+        />
+      )}
       {/* ---- Desktop: one table in one scroll container. The header is sticky, so it stays
            pinned while rows scroll vertically and moves with them horizontally. ---- */}
       <div className="hidden sm:block">
         {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
-        {Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
+        {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
-        <div ref={scrollRef} className="overflow-auto max-h-[500px] table-scroll">
+        <div ref={scrollRef} className={cn("overflow-auto table-scroll", !embedded && "max-h-[500px]")}>
           {/* A plain <table>, not <Table>: that wrapper adds its own overflow container, which
               would scroll on its own and break the sticky header. */}
           <table
             data-slot="table"
-            className="w-full table-fixed caption-bottom text-sm"
+            // Separate borders: with collapsed ones the pinned actions cell paints over some of
+            // the row lines, so each cell draws its own bottom border instead.
+            className="w-full table-fixed border-separate border-spacing-0 caption-bottom text-sm"
             style={{ minWidth }}
           >
             <ColGroup />
@@ -223,34 +416,32 @@ export function DataTable<TData, TValue>({
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide py-3"
+                      className={cn(
+                        "text-xs font-medium text-muted-foreground uppercase tracking-wide py-3",
+                        ALIGN_CLASS[header.column.columnDef.meta?.align ?? "left"],
+                        // Pinned to the right edge so the row menu is reachable without scrolling sideways.
+                        header.column.id === ACTIONS_COLUMN &&
+                          "sticky right-0 z-20 bg-card text-center shadow-[inset_1px_0_0_var(--border),inset_0_-1px_0_var(--border)]"
+                      )}
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : renderSlot(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
               ))}
             </TableHeader>
-              <TableBody
-                className={cn(
-                  isLoading && data.length > 0 && "pointer-events-none opacity-60 transition-opacity"
-                )}
-              >
-                {showSkeleton ? (
-                  Array.from({ length: Math.min(pageSize, 8) }).map((_, i) => (
-                    <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
-                      {columns.map((_, j) => (
-                        <TableCell key={j} className="py-3.5">
-                          <Skeleton className="h-4 w-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+              <TableBody>
+                {isLoading ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={allColumns.length} className="p-0 border-0">
+                      <TableLoader />
+                    </TableCell>
+                  </TableRow>
                 ) : showError ? (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="p-0 border-0">
+                    <TableCell colSpan={allColumns.length} className="p-0 border-0">
                       <EmptyState
                         icon={AlertCircleIcon}
                         title="Couldn't load this data"
@@ -270,22 +461,31 @@ export function DataTable<TData, TValue>({
                       role={isClickable ? "button" : undefined}
                       aria-label={isClickable ? `Open row ${row.index + 1}` : undefined}
                       className={cn(
-                        "border-b border-border transition-colors last:border-0",
-                        isClickable
-                          ? "cursor-pointer hover:bg-muted/50 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                          : "hover:bg-muted/50"
+                        "group/row border-0 transition-colors hover:bg-muted",
+                        isClickable &&
+                          "cursor-pointer active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-3.5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            "border-b border-border py-3.5 group-last/row:border-b-0",
+                            ALIGN_CLASS[cell.column.columnDef.meta?.align ?? "left"],
+                            // Opaque, so scrolled cells don't show through; matches the row's hover tint.
+                            cell.column.id === ACTIONS_COLUMN &&
+                              "sticky right-0 bg-card shadow-[inset_1px_0_0_var(--border)] transition-colors group-hover/row:bg-muted",
+                            cell.column.id === ACTIONS_COLUMN && isClickable && "group-active/row:bg-accent"
+                          )}
+                        >
+                          {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="p-0 border-0">
+                    <TableCell colSpan={allColumns.length} className="p-0 border-0">
                       <EmptyState
                         icon={emptyIcon}
                         title={emptyTitle}
@@ -297,30 +497,37 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 )}
               </TableBody>
+              {footer && rows.length > 0 && (
+                <tfoot data-slot="table-footer" className="font-semibold">
+                  <tr>
+                    {allColumns.map((column, i) => {
+                      const cell = footer[i - (selectable ? 1 : 0)]
+                      return (
+                        <td
+                          key={i}
+                          className={cn(
+                            "border-t border-border bg-muted/40 px-3 py-3 tabular-nums",
+                            ALIGN_CLASS[column.meta?.align ?? "left"]
+                          )}
+                        >
+                          {cell ?? null}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                </tfoot>
+              )}
           </table>
         </div>
       </div>
 
       {/* ---- Mobile (< sm): stacked cards, so no horizontal scrolling is needed ---- */}
       <div className="sm:hidden">
-        {Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
+        {!isLoading && Boolean(error) && data.length > 0 && <StaleErrorBanner error={error} onRetry={onRetry} />}
 
-        <div
-          className={cn(
-            "max-h-[500px] overflow-y-auto",
-            isLoading && data.length > 0 && "pointer-events-none opacity-60 transition-opacity"
-          )}
-        >
-          {showSkeleton ? (
-            <div className="divide-y divide-border">
-              {Array.from({ length: Math.min(pageSize, 6) }).map((_, i) => (
-                <div key={`skeleton-${i}`} className="space-y-2 p-4">
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))}
-            </div>
+        <div className={cn(!embedded && "max-h-[500px] overflow-y-auto")}>
+          {isLoading ? (
+            <TableLoader />
           ) : showError ? (
             <EmptyState
               icon={AlertCircleIcon}
@@ -340,7 +547,9 @@ export function DataTable<TData, TValue>({
           ) : (
             <ul className="divide-y divide-border">
               {rows.map((row) => {
-                const cells = row.getVisibleCells()
+                const allCells = row.getVisibleCells()
+                const selectCell = allCells.find((cell) => cell.column.id === SELECT_COLUMN)
+                const cells = allCells.filter((cell) => cell !== selectCell)
                 // The first labelled cell is treated as the card's heading (it is the
                 // primary entity in every table here), the rest become label/value pairs.
                 const headingIndex = cells.findIndex(
@@ -362,22 +571,27 @@ export function DataTable<TData, TValue>({
                       onClick={(e) => handleRowClick(e, row.original)}
                       onKeyDown={(e) => handleRowKeyDown(e, row.original)}
                       className={cn(
-                        "space-y-3 p-4 transition-colors",
+                        "space-y-3 p-4 transition-colors hover:bg-muted",
                         isClickable &&
-                          "cursor-pointer hover:bg-muted/50 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                          "cursor-pointer active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
+                        {selectCell && (
+                          <div className="flex h-5 shrink-0 items-center">
+                            {renderSlot(selectCell.column.columnDef.cell, selectCell.getContext())}
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1 font-medium">
                           {headingCell
-                            ? flexRender(headingCell.column.columnDef.cell, headingCell.getContext())
+                            ? renderSlot(headingCell.column.columnDef.cell, headingCell.getContext())
                             : null}
                         </div>
                         {trailingCells.length > 0 && (
                           <div className="flex shrink-0 items-center gap-1">
                             {trailingCells.map((cell) => (
                               <React.Fragment key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                               </React.Fragment>
                             ))}
                           </div>
@@ -392,7 +606,7 @@ export function DataTable<TData, TValue>({
                                 {headerLabels.get(cell.column.id) ?? null}
                               </dt>
                               <dd className="min-w-0 break-words">
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                               </dd>
                             </React.Fragment>
                           ))}
@@ -404,14 +618,27 @@ export function DataTable<TData, TValue>({
               })}
             </ul>
           )}
+          {footer && rows.length > 0 && (
+            <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t border-border bg-muted/40 p-4 text-sm font-semibold">
+              {columns.map((column, i) =>
+                footer[i] == null || i === 0 ? null : (
+                  <React.Fragment key={i}>
+                    <dt className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {headerLabels.get(column.id ?? String((column as { accessorKey?: string }).accessorKey)) ?? null}
+                    </dt>
+                    <dd className="tabular-nums">{footer[i]}</dd>
+                  </React.Fragment>
+                )
+              )}
+            </dl>
+          )}
         </div>
       </div>
 
       {/* Pagination */}
       {showPagination && (
         <div className="flex items-center justify-center gap-4 border-t border-border bg-card px-4 py-2.5 text-center sm:justify-between flex-wrap">
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {isLoading && data.length > 0 && <Loader2Icon className="size-3 animate-spin" />}
+          <p className="text-xs text-muted-foreground">
             Showing <span className="font-medium text-foreground">{from}–{to}</span> of{" "}
             <span className="font-medium text-foreground">{totalRows}</span> results
           </p>
@@ -486,6 +713,20 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Spinner shown in place of the rows while a fetch is in flight. */
+function TableLoader() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground"
+    >
+      <Loader2Icon className="size-6 animate-spin text-primary" />
+      Loading…
     </div>
   )
 }

@@ -45,7 +45,6 @@ const Dashboard = () => {
     <div className="section-container flex flex-col gap-5">
       <PageHeader
         title="Overview"
-        description="How the store is doing in the selected period."
         actions={
           !blocked && (
             <DateRangeControl

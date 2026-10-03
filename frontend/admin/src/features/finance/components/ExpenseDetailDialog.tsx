@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { BookOpen, Trash2 } from "lucide-react"
+import { BookOpen, Trash2, Pencil, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -83,7 +83,7 @@ export function ExpenseDetailDialog({
             {expense.description && <DetailRow label="Description">{expense.description}</DetailRow>}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 sm:justify-between">
+          <DialogFooter className="sm:justify-between">
             {canPost ? (
               <DeleteModal
                 title="Delete this expense?"
@@ -102,10 +102,11 @@ export function ExpenseDetailDialog({
             <div className="flex gap-2">
               {canPost && (
                 <Button variant="outline" onClick={() => onEdit(expense)}>
+                  <Pencil className="size-4" />
                   Edit
                 </Button>
               )}
-              <Button onClick={onClose}>Close</Button>
+              <Button onClick={onClose}><X className="size-4" /> Close</Button>
             </div>
           </DialogFooter>
         </DialogContent>

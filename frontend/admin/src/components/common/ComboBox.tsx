@@ -1,32 +1,29 @@
 import {
-  Combobox,
+  Combobox as ComboboxRoot,
   ComboboxContent,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import type { Option } from "@/lib/types"
 
-type Framework = {
-  label: string
-  value: string
-}
-
-export function ExampleComboboxCustomItems({
-  frameworks,
+/** Searchable, clearable single-choice dropdown used for list filters. */
+export function Combobox({
+  options,
   placeholder,
   value,
   onValueChange,
 }: {
-  frameworks: Framework[]
+  options: Option[]
   placeholder?: string
-  value?: Framework | null
-  onValueChange?: (value: Framework | null) => void
+  value?: Option | null
+  onValueChange?: (value: Option | null) => void
 }) {
   return (
-    <Combobox
-      items={frameworks}
-      itemToStringValue={(item: Framework) => item.label}
+    <ComboboxRoot
+      items={options}
+      itemToStringValue={(item: Option) => item.label}
       value={value}
       onValueChange={onValueChange}
     >
@@ -41,6 +38,6 @@ export function ExampleComboboxCustomItems({
           )}
         </ComboboxList>
       </ComboboxContent>
-    </Combobox>
+    </ComboboxRoot>
   )
 }

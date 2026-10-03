@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { SortSelect } from "@/components/common/SortSelect"
 import type { Option } from "@/lib/types"
 
@@ -13,7 +13,7 @@ export function useStatusSortFilters(statusOptions: Option[], sortOptions: Optio
     filters: [
       {
         component: (
-          <ExampleComboboxCustomItems frameworks={statusOptions} placeholder="Status" value={status} onValueChange={setStatus} />
+          <Combobox options={statusOptions} placeholder="Status" value={status} onValueChange={setStatus} />
         ),
       },
       { component: <SortSelect options={sortOptions} value={ordering} onChange={setOrdering} /> },

@@ -4,8 +4,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { PlusIcon, XIcon } from "lucide-react"
 
-import { DatePicker } from "./DatePicker"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { DatePicker } from "@/components/common/DatePicker"
+import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
@@ -133,7 +133,6 @@ const Orders = () => {
     <div className="section-container">
       <PageHeader
         title="Orders"
-        description="Monitor and manage all customer orders."
         actions={
           <>
             <ExportButton onExport={() => downloadFile("/admin/orders/export/", "orders.csv", list.query)} />
@@ -154,8 +153,8 @@ const Orders = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={ORDER_STATUS_OPTIONS}
+              <Combobox
+                options={ORDER_STATUS_OPTIONS}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -188,7 +187,7 @@ const Orders = () => {
           emptyTitle="No orders found"
           emptyDescription="Try adjusting the search or filters."
           minWidth="1050px"
-          columnWidths={["140px", "220px", "120px", "130px", "130px", "120px", "90px"]}
+          columnWidths={["140px", "220px", "120px", "130px", "130px", "120px", "80px"]}
         />
       </div>
     </div>

@@ -7,7 +7,7 @@ import { XIcon } from "lucide-react"
 import { DataTable } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { MoneyCell, TextCell } from "@/components/common/cells"
 import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -18,7 +18,7 @@ import {
   paymentMethodLabel,
   type Payment,
 } from "@/features/payments/types"
-import { DatePicker } from "@/features/sales/components/DatePicker"
+import { DatePicker } from "@/components/common/DatePicker"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -123,7 +123,7 @@ const Payments = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Payments" description="Track captured payments and process refunds." />
+      <PageHeader title="Payments" />
 
       {/* No text search on this endpoint — only status / method / date filters. */}
       <FilterToolbar
@@ -133,8 +133,8 @@ const Payments = () => {
           {
             active: Boolean(statusFilter),
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={PAYMENT_STATUS_OPTIONS}
+              <Combobox
+                options={PAYMENT_STATUS_OPTIONS}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -144,8 +144,8 @@ const Payments = () => {
           {
             active: Boolean(methodFilter),
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={PAYMENT_METHOD_OPTIONS}
+              <Combobox
+                options={PAYMENT_METHOD_OPTIONS}
                 placeholder="Method"
                 value={methodFilter}
                 onValueChange={setMethodFilter}
@@ -174,7 +174,7 @@ const Payments = () => {
         emptyTitle="No payments found"
         emptyDescription="Try adjusting the filters."
         minWidth="950px"
-        columnWidths={["150px", "150px", "130px", "120px", "120px", "180px", "90px"]}
+        columnWidths={["150px", "150px", "130px", "120px", "120px", "180px", "80px"]}
       />
     </div>
   )

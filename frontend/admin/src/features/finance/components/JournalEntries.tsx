@@ -6,7 +6,7 @@ import { BookOpen, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -120,7 +120,6 @@ const JournalEntries = () => {
     <div className="section-container">
       <PageHeader
         title="Journal Entries"
-        description="The general ledger. Entries are posted once and never edited — corrections are reversing entries."
         actions={
           canPost && (
             <Button size="action" onClick={() => setFormOpen(true)}>
@@ -137,8 +136,8 @@ const JournalEntries = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={REFERENCE_TYPES.map((t) => ({ label: humanize(t), value: t }))}
+              <Combobox
+                options={REFERENCE_TYPES.map((t) => ({ label: humanize(t), value: t }))}
                 placeholder="Source"
                 value={referenceType}
                 onValueChange={setReferenceType}

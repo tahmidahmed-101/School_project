@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
@@ -81,7 +81,7 @@ const Returns = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Returns" description="Review return requests, grade returned items and book receipts." />
+      <PageHeader title="Returns" />
 
       <FilterToolbar
         searchPlaceholder="Search RMA number..."
@@ -90,8 +90,8 @@ const Returns = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={RMA_STATUS_OPTIONS}
+              <Combobox
+                options={RMA_STATUS_OPTIONS}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -109,7 +109,7 @@ const Returns = () => {
         emptyTitle="No returns found"
         emptyDescription="Returns are opened from an order's detail page or by customers."
         minWidth="900px"
-        columnWidths={["150px", "120px", "150px", "280px", "120px", "90px"]}
+        columnWidths={["150px", "120px", "150px", "280px", "120px", "80px"]}
       />
     </div>
   )

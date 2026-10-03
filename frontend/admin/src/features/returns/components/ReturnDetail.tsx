@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -11,7 +12,7 @@ import type { Order, OrderLine } from "@/features/sales/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
@@ -104,6 +105,55 @@ const ReturnDetail = () => {
   const isApproved = rma.status === "approved"
   const allGraded = rma.lines.every((l) => l.condition)
 
+  const lineColumns: ColumnDef<RmaLine>[] = [
+    {
+      id: "product",
+      header: "Product",
+      cell: ({ row: { original: line } }) => {
+        const orderLine = orderLines.get(line.order_line_id)
+        return (
+          <ProductCell
+            name={orderLine?.product_name ?? "Order line"}
+            sku={orderLine?.variant_sku ?? line.order_line_id.slice(0, 8)}
+          />
+        )
+      },
+    },
+    {
+      id: "qty",
+      header: "Qty",
+      meta: { align: "center" },
+      cell: ({ row }) => <span className="font-semibold">{row.original.quantity}</span>,
+    },
+    {
+      id: "condition",
+      header: "Condition",
+      cell: ({ row: { original: line } }) =>
+        isApproved && canManage ? (
+          <Select
+            value={line.condition || undefined}
+            onValueChange={(v) => grade(line, v as Exclude<RmaCondition, "">)}
+            disabled={busy}
+          >
+            <SelectTrigger
+              className="h-8"
+              aria-label={`Condition for ${orderLines.get(line.order_line_id)?.product_name ?? "line"}`}
+            >
+              <SelectValue placeholder="Not graded" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sellable">Sellable</SelectItem>
+              <SelectItem value="damaged">Damaged</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : line.condition ? (
+          <StatusBadge status={line.condition} />
+        ) : (
+          <span className="text-sm text-muted-foreground">Not graded</span>
+        ),
+    },
+  ]
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
@@ -190,52 +240,14 @@ const ReturnDetail = () => {
             )}
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-muted/20">
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-center">Qty</TableHead>
-                  <TableHead className="w-[180px]">Condition</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rma.lines.map((line) => {
-                  const orderLine = orderLines.get(line.order_line_id)
-                  return (
-                    <TableRow key={line.id}>
-                      <TableCell>
-                        <ProductCell
-                          name={orderLine?.product_name ?? "Order line"}
-                          sku={orderLine?.variant_sku ?? line.order_line_id.slice(0, 8)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">{line.quantity}</TableCell>
-                      <TableCell>
-                        {isApproved && canManage ? (
-                          <Select
-                            value={line.condition || undefined}
-                            onValueChange={(v) => grade(line, v as Exclude<RmaCondition, "">)}
-                            disabled={busy}
-                          >
-                            <SelectTrigger className="h-8" aria-label={`Condition for ${orderLine?.product_name ?? "line"}`}>
-                              <SelectValue placeholder="Not graded" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="sellable">Sellable</SelectItem>
-                              <SelectItem value="damaged">Damaged</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : line.condition ? (
-                          <StatusBadge status={line.condition} />
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Not graded</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <DataTable
+              embedded
+              showPagination={false}
+              columns={lineColumns}
+              data={rma.lines}
+              minWidth="0px"
+              columnWidths={["auto", "80px", "180px"]}
+            />
           </CardContent>
         </Card>
       </div>

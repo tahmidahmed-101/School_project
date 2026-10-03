@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -6,7 +7,7 @@ import { Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -78,6 +79,37 @@ const JournalEntryDetail = () => {
     }
   }
 
+  const lineColumns: ColumnDef<JournalEntry["lines"][number]>[] = [
+    {
+      id: "account",
+      header: "ACCOUNT",
+      // Credit lines are indented, the way a journal is written by hand.
+      cell: ({ row: { original: line } }) => (
+        <span className={Number(line.credit) > 0 ? "block pl-5" : undefined}>
+          {accountLabel(accountsById.get(line.account_id), line.account_id)}
+        </span>
+      ),
+    },
+    {
+      id: "debit",
+      header: "DEBIT",
+      meta: { align: "right" },
+      cell: ({ row }) => (
+        <span className="tabular-nums">{Number(row.original.debit) > 0 ? formatCurrency(row.original.debit) : ""}</span>
+      ),
+    },
+    {
+      id: "credit",
+      header: "CREDIT",
+      meta: { align: "right" },
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {Number(row.original.credit) > 0 ? formatCurrency(row.original.credit) : ""}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
@@ -94,7 +126,6 @@ const JournalEntryDetail = () => {
               }
               onOpenChange={(open) => !open && setReverseDate("")}
               title="Reverse this entry?"
-              description="Posts a new entry with debits and credits swapped. The original stays in the ledger for the audit trail."
               confirmLabel="Post Reversal"
               reason={{ label: "Reason" }}
               onConfirm={handleReverse}
@@ -123,37 +154,15 @@ const JournalEntryDetail = () => {
             <CardTitle>Lines</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ACCOUNT</TableHead>
-                  <TableHead className="text-right">DEBIT</TableHead>
-                  <TableHead className="text-right">CREDIT</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entry.lines.map((line) => (
-                  <TableRow key={line.id}>
-                    <TableCell className={Number(line.credit) > 0 ? "pl-8" : undefined}>
-                      {accountLabel(accountsById.get(line.account_id), line.account_id)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {Number(line.debit) > 0 ? formatCurrency(line.debit) : ""}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {Number(line.credit) > 0 ? formatCurrency(line.credit) : ""}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell className="font-semibold">Total</TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">{formatCurrency(totalDebit)}</TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">{formatCurrency(totalCredit)}</TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+            <DataTable
+              embedded
+              showPagination={false}
+              columns={lineColumns}
+              data={entry.lines}
+              minWidth="420px"
+              columnWidths={["auto", "140px", "140px"]}
+              footer={["Total", formatCurrency(totalDebit), formatCurrency(totalCredit)]}
+            />
           </CardContent>
         </Card>
 

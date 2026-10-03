@@ -1,36 +1,36 @@
-import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useEffect, useId, useRef, useState } from "react"
+import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Loader2, Save } from "lucide-react"
+import { CalendarClock, ImageIcon, Layers, Plus, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
+import { FormActions } from "@/components/common/FormActions"
+import { NoPermission } from "@/components/common/NoPermission"
+import { DateField, MoneyField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
-import { reportFormError } from "@/lib/forms"
+import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { fetchSingle } from "../slices/productSlice"
-import { createProduct, updateProduct } from "../api"
-import type { Product, ProductPayload } from "../types"
+import { createProduct, createProductImage, createVariant, updateProduct, updateVariant, uploadMedia } from "../api"
+import type { Product, ProductPayload, ProductVariantPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
-
-const money = z
-  .string()
-  .trim()
-  .refine((v) => v === "" || (/^\d+(\.\d{1,2})?$/.test(v) && Number(v) >= 0), "Enter a valid amount (max 2 decimals)")
+import { ImageDropzone } from "./ImageDropzone"
+import { ProductImagesSection } from "./ProductImagesSection"
 
 const schema = z
   .object({
@@ -40,18 +40,85 @@ const schema = z
     description: z.string(),
     highlights: z.string(),
     meta_keywords: z.string(),
-    price: money,
-    cost_price: money,
-    discount_price: money,
+    price: moneySchema,
+    cost_price: moneySchema,
+    discount_price: moneySchema,
     sku: z.string().trim(),
     is_active: z.boolean(),
+    /** Sell the product's variants as pre-orders (the settings are stored on each variant). */
+    is_preorder: z.boolean(),
+    preorder_price: moneySchema,
+    preorder_start_date: z.string(),
+    preorder_end_date: z.string(),
+    release_date: z.string(),
+    preorder_stock_limit: z.string().refine((v) => v === "" || /^\d+$/.test(v), "Whole number"),
+    /** Create only: variants queued to be added once the product exists. */
+    variants: z.array(
+      z.object({ color: z.string().trim(), size: z.string().trim(), sku: z.string().trim(), price: moneySchema })
+    ),
   })
   .refine((v) => !v.discount_price || (v.price !== "" && Number(v.discount_price) < Number(v.price)), {
     path: ["discount_price"],
     message: "Discount price must be lower than the price",
   })
+  .superRefine((v, ctx) => {
+    if (!v.is_preorder) return
+    const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message })
+    const queuedPrices = v.product_type === "variant" && v.variants.length > 0 && v.variants.every((r) => r.price)
+    if (!v.price && !queuedPrices) issue("price", "A pre-order product needs a price")
+    // The storefront only takes pre-orders inside the start / end window, so both are required.
+    if (!v.preorder_start_date) issue("preorder_start_date", "Choose when pre-orders open")
+    if (!v.preorder_end_date) issue("preorder_end_date", "Choose when pre-orders close")
+    if (v.preorder_start_date && v.preorder_end_date && v.preorder_start_date >= v.preorder_end_date) {
+      issue("preorder_end_date", "Must be after the start")
+    }
+    if (v.release_date && v.preorder_end_date && v.release_date < v.preorder_end_date) {
+      issue("release_date", "Must not be before pre-orders close")
+    }
+    if (v.preorder_price && v.price && Number(v.preorder_price) >= Number(v.price)) {
+      issue("preorder_price", "Must be lower than the price")
+    }
+  })
+  .superRefine((v, ctx) => {
+    if (v.product_type !== "variant") return
+    const seen = new Set<string>()
+    v.variants.forEach((row, i) => {
+      if (!row.color && !row.size) {
+        ctx.addIssue({ code: "custom", path: ["variants", i, "color"], message: "Enter a colour or a size" })
+        return
+      }
+      // The backend rejects a repeated colour + size combination on one product.
+      const combo = `${row.color.toLowerCase()}|${row.size.toLowerCase()}`
+      if (seen.has(combo)) {
+        ctx.addIssue({ code: "custom", path: ["variants", i, "color"], message: "Duplicate colour and size" })
+      }
+      seen.add(combo)
+      if (!row.price && !v.price) {
+        ctx.addIssue({ code: "custom", path: ["variants", i, "price"], message: "Set a price here or under Pricing" })
+      }
+    })
+  })
 
 type FormValues = z.infer<typeof schema>
+
+const PREORDER_FIELDS = [
+  "is_preorder",
+  "preorder_price",
+  "preorder_start_date",
+  "preorder_end_date",
+  "release_date",
+  "preorder_stock_limit",
+] as const
+
+/** The variant fields that carry the form's pre-order settings. */
+const preorderPayload = (values: FormValues): ProductVariantPayload => ({
+  is_preorder_enabled: values.is_preorder,
+  preorder_price: values.preorder_price || null,
+  preorder_start_date: fromDatetimeLocal(values.preorder_start_date),
+  preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
+  release_date: fromDatetimeLocal(values.release_date),
+  preorder_stock_limit: values.preorder_stock_limit === "" ? null : Number(values.preorder_stock_limit),
+})
 
 const ProductForm = () => {
   const { id } = useParams<{ id: string }>()
@@ -86,8 +153,34 @@ const ProductForm = () => {
       discount_price: "",
       sku: "",
       is_active: true,
+      is_preorder: false,
+      preorder_price: "",
+      preorder_start_date: "",
+      preorder_end_date: "",
+      release_date: "",
+      preorder_stock_limit: "",
+      variants: [],
     },
   })
+  const formId = useId()
+  const variantRows = useFieldArray({ control, name: "variants" })
+  const productType = useWatch({ control, name: "product_type" })
+  const isPreorder = useWatch({ control, name: "is_preorder" })
+
+  // Create only: images picked before the product exists, uploaded right after it is created.
+  const [stagedImages, setStagedImages] = useState<{ file: File; preview: string }[]>([])
+  const stagedRef = useRef(stagedImages)
+  useEffect(() => {
+    stagedRef.current = stagedImages
+  }, [stagedImages])
+  useEffect(() => () => stagedRef.current.forEach((img) => URL.revokeObjectURL(img.preview)), [])
+
+  const stageImages = (files: File[]) =>
+    setStagedImages((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))])
+  const unstageImage = (index: number) => {
+    URL.revokeObjectURL(stagedImages[index].preview)
+    setStagedImages((prev) => prev.filter((_, i) => i !== index))
+  }
 
   useEffect(() => {
     if (isEditing && id) dispatch(fetchSingle(id))
@@ -95,30 +188,40 @@ const ProductForm = () => {
 
   useEffect(() => {
     if (isEditing && product && product.id === id) {
-      reset({
-        name: product.name,
-        category_id: product.category_id,
-        product_type: product.product_type === "variant" ? "variant" : "simple",
-        description: product.description ?? "",
-        highlights: (product.highlights ?? []).join("\n"),
-        meta_keywords: product.meta_keywords ?? "",
-        price: product.price ?? "",
-        cost_price: product.cost_price ?? "",
-        discount_price: product.discount_price ?? "",
-        sku: "",
-        is_active: product.is_active,
-      })
+      // Pre-order settings are per variant; the form shows those of a pre-order variant if there is one.
+      const preorderSource = product.variants.find((v) => v.is_preorder_enabled) ?? product.variants[0]
+      // The product is refetched whenever an image changes below; keepDirtyValues stops
+      // that refetch from wiping edits the user has not saved yet.
+      reset(
+        {
+          name: product.name,
+          category_id: product.category_id,
+          product_type: product.product_type === "variant" ? "variant" : "simple",
+          description: product.description ?? "",
+          highlights: (product.highlights ?? []).join("\n"),
+          meta_keywords: product.meta_keywords ?? "",
+          price: product.price ?? "",
+          cost_price: product.cost_price ?? "",
+          discount_price: product.discount_price ?? "",
+          sku: "",
+          is_active: product.is_active,
+          is_preorder: Boolean(preorderSource?.is_preorder_enabled),
+          preorder_price: preorderSource?.preorder_price ?? "",
+          preorder_start_date: toDatetimeLocal(preorderSource?.preorder_start_date),
+          preorder_end_date: toDatetimeLocal(preorderSource?.preorder_end_date),
+          release_date: toDatetimeLocal(preorderSource?.release_date),
+          preorder_stock_limit:
+            preorderSource?.preorder_stock_limit != null ? String(preorderSource.preorder_stock_limit) : "",
+          variants: [],
+        },
+        { keepDirtyValues: true }
+      )
     }
   }, [product, id, isEditing, reset])
 
   if (!canManage) {
     return (
-      <div className="section-container py-16 text-center text-sm text-muted-foreground">
-        You don't have permission to edit products.{" "}
-        <Link className="text-primary underline" to="/products">
-          Back to products
-        </Link>
-      </div>
+      <NoPermission message="You don't have permission to edit products." backTo="/products" backLabel="Back to products" />
     )
   }
 
@@ -170,13 +273,40 @@ const ProductForm = () => {
       if (isEditing && id) {
         payload.is_active = values.is_active
         await updateProduct(id, payload)
+        const preorderChanged = PREORDER_FIELDS.some((f) => dirtyFields[f])
+        if (preorderChanged && product) {
+          const results = await Promise.allSettled(
+            product.variants.map((v) => updateVariant(v.id, preorderPayload(values)))
+          )
+          const failed = results.find((r) => r.status === "rejected")
+          if (failed) {
+            toast.error(getApiErrorMessage(failed.reason, "Pre-order settings could not be saved on every variant"))
+            return
+          }
+        }
         toast.success(`${values.name} updated`)
         navigate(`/product_detail/${id}`)
       } else {
-        if (values.sku) payload.sku = values.sku
-        if (!values.price) delete payload.discount_price
+        let queued = values.product_type === "variant" ? values.variants : []
+        // Pre-order settings live on the variant, and the product endpoint can't set them on the
+        // variant it creates, so the single default variant is created here instead.
+        if (values.is_preorder && !queued.length) queued = [{ color: "", size: "", sku: values.sku, price: "" }]
+        if (queued.length) {
+          // A price on the product itself would create an extra variant with no colour or
+          // size; the queued variants carry the pricing instead.
+          delete payload.price
+          delete payload.cost_price
+          delete payload.discount_price
+        } else {
+          if (values.sku) payload.sku = values.sku
+          if (!values.price) delete payload.discount_price
+        }
         const created = await createProduct(payload)
-        toast.success(`${values.name} created`)
+        // The product now exists, so a failure below is reported and left to be retried
+        // from the detail page rather than failing the whole form.
+        const failures = await addVariantsAndImages(created.id, values, queued)
+        if (failures) toast.warning(`${values.name} created, but ${failures} could not be added`)
+        else toast.success(`${values.name} created`)
         navigate(`/product_detail/${created.id}`)
       }
     } catch (err) {
@@ -184,29 +314,78 @@ const ProductForm = () => {
     }
   }
 
+  /** Adds the queued variants and images to a just-created product; returns a summary of failures, if any. */
+  const addVariantsAndImages = async (productId: string, values: FormValues, queued: FormValues["variants"]) => {
+    let failedVariants = 0
+    for (const row of queued) {
+      const ownPrice = Boolean(row.price)
+      try {
+        await createVariant(productId, {
+          color: row.color,
+          size: row.size,
+          price: row.price || values.price,
+          ...(row.sku ? { sku: row.sku } : {}),
+          ...(values.cost_price ? { cost_price: values.cost_price } : {}),
+          // The discount was validated against the product price, not a per-variant one.
+          ...(!ownPrice && values.discount_price ? { discount_price: values.discount_price } : {}),
+          ...(values.is_preorder ? preorderPayload(values) : {}),
+        })
+      } catch (err) {
+        failedVariants += 1
+        const label = [row.color, row.size].filter(Boolean).join(" / ") || "(default)"
+        toast.error(`Variant ${label}: ${getApiErrorMessage(err, "could not be created")}`)
+      }
+    }
+
+    let failedImages = 0
+    for (const [i, { file }] of stagedImages.entries()) {
+      try {
+        const url = await uploadMedia(file)
+        await createProductImage(productId, {
+          url,
+          alt_text: file.name.replace(/\.[^/.]+$/, ""),
+          sort_order: i,
+          variant_id: null,
+        })
+      } catch (err) {
+        failedImages += 1
+        toast.error(`${file.name}: ${getApiErrorMessage(err, "upload failed")}`)
+      }
+    }
+
+    const parts = [
+      failedVariants && `${failedVariants} variant${failedVariants === 1 ? "" : "s"}`,
+      failedImages && `${failedImages} image${failedImages === 1 ? "" : "s"}`,
+    ].filter(Boolean)
+    return parts.join(" and ")
+  }
+
+  const hasQueuedVariants = !isEditing && productType === "variant" && variantRows.fields.length > 0
+
   const backTo = isEditing ? `/product_detail/${id}` : "/products"
 
   return (
     <div className="section-container">
       <PageHeader
         title={isEditing ? "Edit Product" : "Add Product"}
-        description={isEditing ? `Editing ${product?.name ?? ""}` : "Create a product; add images and variants after saving"}
+        description={isEditing ? `Editing ${product?.name ?? ""}` : undefined}
         back={{ to: backTo, label: "Back" }}
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Basic information</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="name">Product name</FieldLabel>
-              <FieldContent>
-                <Input id="name" placeholder="e.g. Oversized Graphic Tee" {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
+            <TextField
+              className="md:col-span-2"
+              label="Product name"
+              id="name"
+              placeholder="e.g. Oversized Graphic Tee"
+              error={errors.name}
+              {...register("name")}
+            />
 
             <Field>
               <FieldLabel htmlFor="category_id">Category</FieldLabel>
@@ -222,54 +401,40 @@ const ProductForm = () => {
               </FieldContent>
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="product_type">Product type</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="product_type"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="product_type" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="simple">Simple — one sellable SKU</SelectItem>
-                        <SelectItem value="variant">Variant — colours / sizes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldDescription>
-                  Bundles are created from <Link to="/bundles/new" className="text-primary underline">Bundles</Link>.
-                </FieldDescription>
-                <FieldError errors={[errors.product_type]} />
-              </FieldContent>
-            </Field>
+            <SelectField
+              control={control}
+              name="product_type"
+              label="Product type"
+              id="product_type"
+              description={<>Bundles are created from <Link to="/bundles/new" className="text-primary underline">Bundles</Link>.</>}
+              options={[{ label: "Simple — one sellable SKU", value: "simple" }, { label: "Variant — colours / sizes", value: "variant" }]}
+            />
 
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="description">Description</FieldLabel>
-              <FieldContent>
-                <Textarea id="description" rows={4} {...register("description")} />
-                <FieldError errors={[errors.description]} />
-              </FieldContent>
-            </Field>
+            <TextareaField
+              className="md:col-span-2"
+              label="Description"
+              id="description"
+              rows={4}
+              error={errors.description}
+              {...register("description")}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="highlights">Highlights</FieldLabel>
-              <FieldContent>
-                <Textarea id="highlights" rows={4} placeholder="One highlight per line" {...register("highlights")} />
-                <FieldError errors={[errors.highlights]} />
-              </FieldContent>
-            </Field>
+            <TextareaField
+              label="Highlights"
+              id="highlights"
+              rows={4}
+              placeholder="One highlight per line"
+              error={errors.highlights}
+              {...register("highlights")}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="meta_keywords">Meta keywords</FieldLabel>
-              <FieldContent>
-                <Input id="meta_keywords" placeholder="comma, separated, keywords" {...register("meta_keywords")} />
-                <FieldError errors={[errors.meta_keywords]} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Meta keywords"
+              id="meta_keywords"
+              placeholder="comma, separated, keywords"
+              error={errors.meta_keywords}
+              {...register("meta_keywords")}
+            />
 
             {isEditing && (
               <SwitchField
@@ -288,52 +453,223 @@ const ProductForm = () => {
             <CardDescription>
               {isEditing
                 ? "Price changes apply to every live variant of this product."
-                : "Setting a price creates the product's first variant now, so it can be stocked and sold immediately."}
+                : hasQueuedVariants
+                  ? "Applies to every variant below unless a variant sets its own price."
+                  : "Setting a price creates the product's first variant now, so it can be stocked and sold immediately."}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Field>
-              <FieldLabel htmlFor="price">Price (BDT)</FieldLabel>
-              <FieldContent>
-                <Input id="price" inputMode="decimal" placeholder="0.00" {...register("price")} />
-                <FieldError errors={[errors.price]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="discount_price">Discount price</FieldLabel>
-              <FieldContent>
-                <Input id="discount_price" inputMode="decimal" placeholder="Optional" {...register("discount_price")} />
-                <FieldError errors={[errors.discount_price]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="cost_price">Cost price</FieldLabel>
-              <FieldContent>
-                <Input id="cost_price" inputMode="decimal" placeholder="0.00" {...register("cost_price")} />
-                <FieldError errors={[errors.cost_price]} />
-              </FieldContent>
-            </Field>
-            {!isEditing && (
-              <Field>
-                <FieldLabel htmlFor="sku">SKU</FieldLabel>
-                <FieldContent>
-                  <Input id="sku" placeholder="Auto-generated if blank" {...register("sku")} />
-                  <FieldError errors={[errors.sku]} />
-                </FieldContent>
-              </Field>
+            <MoneyField
+              label="Price (BDT)"
+              id="price"
+              placeholder="0.00"
+              error={errors.price}
+              {...register("price")}
+            />
+            <MoneyField
+              label="Discount price"
+              id="discount_price"
+              placeholder="Optional"
+              error={errors.discount_price}
+              {...register("discount_price")}
+            />
+            <MoneyField
+              label="Cost price"
+              id="cost_price"
+              placeholder="0.00"
+              error={errors.cost_price}
+              {...register("cost_price")}
+            />
+            {!isEditing && !hasQueuedVariants && (
+              <TextField
+                label="SKU"
+                id="sku"
+                placeholder="Auto-generated if blank"
+                error={errors.sku}
+                {...register("sku")}
+              />
             )}
           </CardContent>
-          <CardFooter className="justify-end gap-3 border-t p-4">
-            <Button type="button" variant="outline" onClick={() => navigate(backTo)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {isEditing ? "Save changes" : "Create product"}
-            </Button>
-          </CardFooter>
         </Card>
+
+        {!isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="size-4" /> Images
+              </CardTitle>
+              <CardDescription>Uploaded when the product is created. The first image is the main one.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ImageDropzone onFiles={stageImages} />
+              {stagedImages.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {stagedImages.map((img, i) => (
+                    <div key={img.preview} className="overflow-hidden rounded-lg border border-border bg-card">
+                      <div className="relative aspect-square bg-muted">
+                        <img src={img.preview} alt={img.file.name} className="size-full object-cover" />
+                        <button
+                          type="button"
+                          aria-label={`Remove ${img.file.name}`}
+                          onClick={() => unstageImage(i)}
+                          className="absolute right-1.5 top-1.5 rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                      <p className="truncate p-2 text-xs text-muted-foreground">{img.file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {(!isEditing || (product?.variants.length ?? 0) > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="size-4" /> Pre-order
+              </CardTitle>
+              <CardDescription>
+                {isEditing
+                  ? "Let customers order before stock arrives. Saving applies these settings to every variant of this product."
+                  : "Let customers order before stock arrives. Applies to every variant created with this product."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SwitchField control={control} name="is_preorder" label="Sell this product as a pre-order" />
+              {isPreorder && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <DateField
+                    withTime
+                    label="Pre-orders open *"
+                    error={errors.preorder_start_date}
+                    {...register("preorder_start_date")}
+                  />
+                  <DateField
+                    withTime
+                    label="Pre-orders close *"
+                    error={errors.preorder_end_date}
+                    {...register("preorder_end_date")}
+                  />
+                  <DateField
+                    withTime
+                    label="Release date"
+                    description="When the product ships."
+                    error={errors.release_date}
+                    {...register("release_date")}
+                  />
+                  <MoneyField
+                    label="Pre-order price"
+                    placeholder="Optional"
+                    description="Lower than the normal price."
+                    error={errors.preorder_price}
+                    {...register("preorder_price")}
+                  />
+                  <TextField
+                    label="Pre-order limit"
+                    inputMode="numeric"
+                    placeholder="Unlimited"
+                    description="Most units that can be pre-ordered."
+                    error={errors.preorder_stock_limit}
+                    {...register("preorder_stock_limit")}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isEditing && productType === "variant" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="size-4" /> Variants
+              </CardTitle>
+              <CardDescription>
+                One row per colour / size combination. Leave SKU blank to auto-generate it, and price blank to use
+                the price above.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {variantRows.fields.map((row, i) => (
+                <div key={row.id} className="grid grid-cols-2 items-start gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                  <Field>
+                    <FieldContent>
+                      <Input aria-label="Colour" placeholder="Colour" {...register(`variants.${i}.color`)} />
+                      <FieldError errors={[errors.variants?.[i]?.color]} />
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <Input aria-label="Size" placeholder="Size" {...register(`variants.${i}.size`)} />
+                      <FieldError errors={[errors.variants?.[i]?.size]} />
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <Input aria-label="SKU" placeholder="SKU (auto)" {...register(`variants.${i}.sku`)} />
+                      <FieldError errors={[errors.variants?.[i]?.sku]} />
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <Input
+                        aria-label="Price"
+                        inputMode="decimal"
+                        placeholder="Price (optional)"
+                        {...register(`variants.${i}.price`)}
+                      />
+                      <FieldError errors={[errors.variants?.[i]?.price]} />
+                    </FieldContent>
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove variant"
+                    className="col-span-2 justify-self-end md:col-span-1"
+                    onClick={() => variantRows.remove(i)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => variantRows.append({ color: "", size: "", sku: "", price: "" })}
+              >
+                <Plus className="size-4" /> Add variant
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
       </form>
+
+      {/* Outside the <form>: its inputs and buttons save on their own and must not submit it. */}
+      {isEditing && product && (
+        <div className="mt-6">
+          <ProductImagesSection
+            productId={product.id}
+            variants={product.variants}
+            canManage={canManage}
+            onChanged={() => dispatch(fetchSingle(product.id))}
+          />
+        </div>
+      )}
+
+      <FormActions
+        className="mt-6"
+        form={formId}
+        onCancel={() => navigate(backTo)}
+        submitLabel={isEditing ? "Save changes" : "Create product"}
+        submitting={isSubmitting}
+      />
     </div>
   )
 }

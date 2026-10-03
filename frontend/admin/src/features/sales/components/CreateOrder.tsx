@@ -1,7 +1,8 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { Loader2, MapPin, Package, Search, Trash2Icon, User, X } from "lucide-react"
+import { MapPin, Package, Search, Trash2Icon, User, X, Check } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
 import { ProductCell } from "@/components/common/cells"
@@ -12,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
+import { SubmitButton } from "@/components/common/FormActions"
 import { useAppDispatch } from "@/app/hooks"
 import { createOrder } from "@/features/sales/slices/orderSlice"
 import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
@@ -172,12 +174,58 @@ const CreateOrder = () => {
     }
   }
 
+  const lineColumns: ColumnDef<DraftLine>[] = [
+    {
+      id: "product",
+      header: "Product",
+      cell: ({ row }) => <ProductCell name={row.original.variant.product_name} sku={row.original.variant.sku} />,
+    },
+    {
+      id: "price",
+      header: "Price",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="text-sm">{formatCurrency(row.original.variant.effective_price)}</span>,
+    },
+    {
+      id: "qty",
+      header: "Qty",
+      meta: { align: "right" },
+      cell: ({ row: { original: l } }) => (
+        <Input
+          type="number"
+          min={1}
+          step={1}
+          className="h-8 text-right"
+          aria-label={`Quantity for ${l.variant.product_name}`}
+          value={l.quantity}
+          onChange={(e) =>
+            setLines((prev) => prev.map((x) => (x.variant.id === l.variant.id ? { ...x, quantity: e.target.value } : x)))
+          }
+        />
+      ),
+    },
+    {
+      id: "remove",
+      header: "",
+      cell: ({ row: { original: l } }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive"
+          aria-label={`Remove ${l.variant.product_name}`}
+          onClick={() => setLines((prev) => prev.filter((x) => x.variant.id !== l.variant.id))}
+        >
+          <Trash2Icon className="size-4" />
+        </Button>
+      ),
+    },
+  ]
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
         back={{ to: "/orders", label: "Back to orders" }}
         title="New order"
-        description="Phone or manual order placed on a customer's behalf."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -294,54 +342,15 @@ const CreateOrder = () => {
               )}
 
               {lines.length > 0 ? (
-                <div className="rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="w-[100px] text-right">Qty</TableHead>
-                        <TableHead className="w-[50px]" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lines.map((l) => (
-                        <TableRow key={l.variant.id}>
-                          <TableCell>
-                            <ProductCell name={l.variant.product_name} sku={l.variant.sku} />
-                          </TableCell>
-                          <TableCell className="text-right text-sm">{formatCurrency(l.variant.effective_price)}</TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              min={1}
-                              step={1}
-                              className="h-8 text-right"
-                              aria-label={`Quantity for ${l.variant.product_name}`}
-                              value={l.quantity}
-                              onChange={(e) =>
-                                setLines((prev) =>
-                                  prev.map((x) => (x.variant.id === l.variant.id ? { ...x, quantity: e.target.value } : x))
-                                )
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive"
-                              aria-label={`Remove ${l.variant.product_name}`}
-                              onClick={() => setLines((prev) => prev.filter((x) => x.variant.id !== l.variant.id))}
-                            >
-                              <Trash2Icon className="size-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTable
+                  showPagination={false}
+                  selectable={false}
+                  columns={lineColumns}
+                  data={lines}
+                  minWidth="0px"
+                  columnWidths={["auto", "120px", "100px", "64px"]}
+                  unlabelledColumns={["remove"]}
+                />
               ) : (
                 <p className="py-4 text-center text-sm text-muted-foreground">No products added yet.</p>
               )}
@@ -442,10 +451,9 @@ const CreateOrder = () => {
                 <span className="text-muted-foreground">Items (before tax & shipping)</span>
                 <span className="font-semibold">{formatCurrency(estimate)}</span>
               </div>
-              <Button className="w-full" onClick={handleSubmit} disabled={!customer || !linesValid || submitting}>
-                {submitting && <Loader2 className="size-4 animate-spin" />}
+              <SubmitButton icon={Check} type="button" loading={submitting} className="w-full" onClick={handleSubmit} disabled={!customer || !linesValid}>
                 Create order
-              </Button>
+              </SubmitButton>
             </CardContent>
           </Card>
         </div>

@@ -6,10 +6,10 @@ import { addDays, format } from "date-fns"
 import { toast } from "sonner"
 import { FileText } from "lucide-react"
 
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
+import { DateField, TextField } from "@/components/common/form-fields"
 import { formatCurrency } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
@@ -152,21 +152,17 @@ export function VendorBillFormDialog({
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="bill-amount">Amount (BDT) *</FieldLabel>
-          <FieldContent>
-            <Input id="bill-amount" type="number" step="0.01" min="0.01" aria-invalid={!!errors.amount} {...register("amount")} />
-            <FieldDescription>Must match the received value (3-way match).</FieldDescription>
-            <FieldError errors={[errors.amount]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="bill-due">Due date *</FieldLabel>
-          <FieldContent>
-            <Input id="bill-due" type="date" aria-invalid={!!errors.due_date} {...register("due_date")} />
-            <FieldError errors={[errors.due_date]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Amount (BDT) *"
+          id="bill-amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          description="Must match the received value (3-way match)."
+          error={errors.amount}
+          {...register("amount")}
+        />
+        <DateField label="Due date *" id="bill-due" error={errors.due_date} {...register("due_date")} />
       </div>
     </FormDialog>
   )

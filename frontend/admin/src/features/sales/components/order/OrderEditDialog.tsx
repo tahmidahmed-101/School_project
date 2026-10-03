@@ -5,9 +5,9 @@ import { z } from "zod"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { FormDialog } from "@/components/common/FormDialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { updateOrder } from "@/features/sales/slices/orderSlice"
 import type { Order, OrderUpdatePayload } from "@/features/sales/types"
@@ -127,12 +127,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
           </div>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="order-notes">Internal notes</FieldLabel>
-          <FieldContent>
-            <Textarea id="order-notes" rows={3} {...register("notes")} />
-          </FieldContent>
-        </Field>
+        <TextareaField label="Internal notes" id="order-notes" rows={3} {...register("notes")} />
       </div>
     </FormDialog>
   )

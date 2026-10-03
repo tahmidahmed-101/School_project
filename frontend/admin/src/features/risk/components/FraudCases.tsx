@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -80,14 +80,14 @@ const FraudCases = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Fraud Cases" description="Orders and customers flagged for review by risk rules." />
+      <PageHeader title="Fraud Cases" />
 
       <FilterToolbar
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={statusOptions}
+              <Combobox
+                options={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -106,7 +106,7 @@ const FraudCases = () => {
         emptyTitle="No fraud cases"
         emptyDescription="Nothing has been flagged. Cases appear here when risk rules raise one."
         minWidth="820px"
-        columnWidths={["150px", "360px", "130px", "180px", "90px"]}
+        columnWidths={["150px", "360px", "130px", "180px", "80px"]}
       />
     </div>
   )

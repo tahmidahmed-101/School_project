@@ -13,7 +13,7 @@ export interface ListSliceState {
 /**
  * State + fetching for a server-paginated list page.
  *
- * - `params` are the page's filters; whenever they (or the search / show-deleted toggle)
+ * - `params` are the page's filters; whenever they (or the search)
  *   change, the list returns to page 1 — callers never reset paging by hand.
  * - The search box is debounced and trimmed before it is sent.
  * - Each fetch is aborted when a newer one starts or the page unmounts.
@@ -34,14 +34,13 @@ export function useListPage({
 }) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState(initialSearch)
-  const [includeDeleted, setIncludeDeleted] = useState(false)
   const debouncedSearch = useDebounced(search).trim()
 
   // Drop undefined / null / "" so callers can pass `{ status: status?.value }` directly.
   const filterKey = JSON.stringify(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ""))
   )
-  const resetKey = `${filterKey}|${debouncedSearch}|${includeDeleted}`
+  const resetKey = `${filterKey}|${debouncedSearch}`
   const [lastResetKey, setLastResetKey] = useState(resetKey)
   if (lastResetKey !== resetKey) {
     // Adjusted during render rather than in an effect, so no request goes out for a stale page.
@@ -53,9 +52,8 @@ export function useListPage({
     () => ({
       ...(JSON.parse(filterKey) as Record<string, unknown>),
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(includeDeleted ? { include_deleted: true } : {}),
     }),
-    [filterKey, debouncedSearch, includeDeleted]
+    [filterKey, debouncedSearch]
   )
 
   const [reloadKey, setReloadKey] = useState(0)
@@ -74,8 +72,6 @@ export function useListPage({
     search,
     setSearch,
     debouncedSearch,
-    includeDeleted,
-    setIncludeDeleted,
     /** The active filters (without paging), e.g. for an export of everything that matches. */
     query,
     reload,

@@ -9,7 +9,7 @@ import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteData, fetchAll, restoreStaff } from "@/features/users/slices/staffSlice"
+import { deleteData, fetchAll, restoreStaff, patchData } from "@/features/users/slices/staffSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
@@ -17,7 +17,6 @@ import { isFullAccess } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatDateTime } from "@/lib/format"
 import { UserAvatar } from "./UserAvatar"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 
 const Staffs = () => {
   useDocumentTitle("Staff")
@@ -32,11 +31,13 @@ const Staffs = () => {
     state: staffState,
   })
 
+  const setActive = (rows: AdminUser[], is_active: boolean) =>
+    Promise.all(rows.map((u) => dispatch(patchData({ id: u.id, payload: { is_active } })).unwrap()))
+
   const handleDelete = async (staff: AdminUser) => {
     try {
       await dispatch(deleteData(staff.id)).unwrap()
       toast.success(`${displayNameOf(staff)} removed`)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Couldn't remove this staff member"))
     }
@@ -114,7 +115,6 @@ const Staffs = () => {
     <div className="section-container">
       <PageHeader
         title="Staff Members"
-        description="Manage your team members and what they can access."
         actions={
           <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
             <PlusIcon className="size-5" /> Add Staff
@@ -126,15 +126,17 @@ const Staffs = () => {
         searchPlaceholder="Search by name, email or phone..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={[
-          {
-            component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
-          },
-        ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={{
+          noun: "staff member",
+          deleteRow: (u) => dispatch(deleteData(u.id)).unwrap(),
+  activate: (rows) => setActive(rows, true),
+  deactivate: (rows) => setActive(rows, false),
+          onDone: list.reload,
+        }}
         data={staffs}
         {...list.tableProps}
         onRowClick={(staff) => {
@@ -145,7 +147,7 @@ const Staffs = () => {
         emptyActionLabel="Add Staff"
         onEmptyAction={() => navigate("/staff_form/new")}
         minWidth="960px"
-        columnWidths={["300px", "150px", "130px", "180px", "110px", "110px"]}
+        columnWidths={["300px", "150px", "130px", "180px", "110px", "80px"]}
       />
     </div>
   )

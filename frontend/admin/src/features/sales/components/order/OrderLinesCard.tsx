@@ -1,15 +1,14 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
-import { Package, PencilIcon, Trash2Icon } from "lucide-react"
+import { Package } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
-import { DeleteModal } from "@/components/common/DeleteModal"
+import { DataTable } from "@/components/common/data-table"
 import { FormDialog } from "@/components/common/FormDialog"
 import { ProductCell } from "@/components/common/cells"
+import { TextField } from "@/components/common/form-fields"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch } from "@/app/hooks"
 import { removeOrderLine, updateOrderLine } from "@/features/sales/slices/orderSlice"
 import { PRE_SHIPMENT_STATUSES, type Order, type OrderLine } from "@/features/sales/types"
@@ -65,6 +64,65 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
 
   const qtyValid = Number.isInteger(Number(quantity)) && Number(quantity) >= 1
 
+  const columns: ColumnDef<OrderLine>[] = [
+    {
+      id: "product",
+      header: "Product",
+      cell: ({ row: { original: line } }) => (
+        <div className="flex items-center gap-3">
+          {line.product_image ? (
+            <img
+              src={line.product_image}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-md border object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
+          )}
+          <ProductCell name={line.product_name || "—"} sku={line.variant_sku} />
+        </div>
+      ),
+    },
+    {
+      id: "qty",
+      header: "Qty",
+      meta: { align: "center" },
+      cell: ({ row }) => <span className="font-semibold">{row.original.quantity}</span>,
+    },
+    { id: "shipped", header: "Shipped", meta: { align: "center" }, cell: ({ row }) => row.original.shipped_quantity },
+    { id: "returned", header: "Returned", meta: { align: "center" }, cell: ({ row }) => row.original.returned_quantity },
+    {
+      id: "unit_price",
+      header: "Unit price",
+      meta: { align: "right" },
+      cell: ({ row }) => formatCurrency(row.original.unit_price),
+    },
+    {
+      id: "discount",
+      header: "Discount",
+      meta: { align: "right" },
+      cell: ({ row }) => formatCurrency(row.original.discount_amount),
+    },
+    { id: "tax", header: "Tax", meta: { align: "right" }, cell: ({ row }) => formatCurrency(row.original.tax_amount) },
+    ...(showActions
+      ? [
+          {
+            id: "actions",
+            header: "Actions",
+            cell: ({ row: { original: line } }) =>
+              canEditLine(line) ? (
+                <TableActions
+                  itemName={line.product_name}
+                  onEdit={() => openEdit(line)}
+                  onDelete={canRemoveLine(line) ? () => removeLine(line) : undefined}
+                />
+              ) : null,
+          } satisfies ColumnDef<OrderLine>,
+        ]
+      : []),
+  ]
+
   return (
     <Card className="shadow-sm overflow-hidden">
       <CardHeader className="border-b bg-muted/30">
@@ -77,82 +135,15 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
         )}
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/20">
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-center">Qty</TableHead>
-                <TableHead className="text-center">Shipped</TableHead>
-                <TableHead className="text-center">Returned</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Tax</TableHead>
-                {showActions && <TableHead className="w-[90px] text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {order.lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {line.product_image ? (
-                        <img
-                          src={line.product_image}
-                          alt=""
-                          className="h-10 w-10 shrink-0 rounded-md border object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
-                      )}
-                      <ProductCell name={line.product_name || "—"} sku={line.variant_sku} />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-semibold">{line.quantity}</TableCell>
-                  <TableCell className="text-center">{line.shipped_quantity}</TableCell>
-                  <TableCell className="text-center">{line.returned_quantity}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(line.discount_amount)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(line.tax_amount)}</TableCell>
-                  {showActions && (
-                    <TableCell className="text-right">
-                      {canEditLine(line) && (
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Edit quantity of ${line.product_name}`}
-                            onClick={() => openEdit(line)}
-                          >
-                            <PencilIcon className="size-4" />
-                          </Button>
-                          {canRemoveLine(line) && (
-                            <DeleteModal
-                              title={`Remove ${line.product_name}?`}
-                              description="The line is dropped, its held stock is released and totals are recalculated."
-                              onConfirm={() => removeLine(line)}
-                              trigger={
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive"
-                                  aria-label={`Remove ${line.product_name}`}
-                                >
-                                  <Trash2Icon className="size-4" />
-                                </Button>
-                              }
-                            />
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          embedded
+          showPagination={false}
+          columns={columns}
+          data={order.lines}
+          minWidth="820px"
+          columnWidths={["auto", "70px", "90px", "90px", "120px", "110px", "100px", ...(showActions ? ["80px"] : [])]}
+          unlabelledColumns={["actions"]}
+        />
       </CardContent>
 
       <FormDialog
@@ -165,20 +156,15 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
         submitLabel="Save"
         submitDisabled={!qtyValid}
       >
-        <Field>
-          <FieldLabel htmlFor="line-quantity">Quantity</FieldLabel>
-          <FieldContent>
-            <Input
-              id="line-quantity"
-              type="number"
-              min={1}
-              step={1}
-              value={quantity}
-              aria-invalid={!qtyValid}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Quantity"
+          id="line-quantity"
+          type="number"
+          min={1}
+          step={1}
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
       </FormDialog>
     </Card>
   )

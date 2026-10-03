@@ -8,13 +8,12 @@ import { fetchPayment, refundPayment } from "@/features/payments/slices/paymentS
 import { paymentMethodLabel, type Payment } from "@/features/payments/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { DetailRow } from "@/components/common/DetailRow"
 import { PageHeader } from "@/components/common/PageHeader"
+import { TextField } from "@/components/common/form-fields"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -141,24 +140,19 @@ const PaymentDetail = () => {
         confirmDisabled={!!amountError}
         onConfirm={handleRefund}
       >
-        <Field>
-          <FieldLabel htmlFor="refund-amount">Amount</FieldLabel>
-          <FieldContent>
-            <Input
-              id="refund-amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              max={outstanding}
-              placeholder={outstanding}
-              value={amount}
-              aria-invalid={!!amountError}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <FieldDescription>Leave blank to refund the full outstanding balance.</FieldDescription>
-            <FieldError errors={[amountError ? { message: amountError } : undefined]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Amount"
+          id="refund-amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          max={outstanding}
+          placeholder={outstanding}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          description="Leave blank to refund the full outstanding balance."
+          error={amountError ? { message: amountError } : undefined}
+        />
       </ConfirmDialog>
     </div>
   )

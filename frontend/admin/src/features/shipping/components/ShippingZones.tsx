@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, Truck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteZone, fetchZones, restoreZone } from "@/features/shipping/slices/zoneSlice"
+import { deleteZone, fetchZones, restoreZone, updateZone } from "@/features/shipping/slices/zoneSlice"
 import type { ShippingZone } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -34,13 +34,14 @@ const ShippingZones = () => {
     setFormOpen(true)
   }
 
-  const { list, trailingColumns, filters } = useSoftDeleteList<ShippingZone>({
+  const { list, trailingColumns, bulk } = useSoftDeleteList<ShippingZone>({
     fetch: (p) => dispatch(fetchZones(p)),
     state: zoneState,
     noun: "zone",
     canUpdate,
     remove: (id) => dispatch(deleteZone(id)).unwrap(),
     restore: (id) => dispatch(restoreZone(id)).unwrap(),
+    setActive: (id, is_active) => dispatch(updateZone({ id, payload: { is_active } })).unwrap(),
     onEdit: openForm,
   })
 
@@ -84,6 +85,7 @@ const ShippingZones = () => {
             navigate(`/shipping_rates?zone_id=${row.original.id}`)
           }}
         >
+          <Truck className="size-4" />
           {row.original.rates.length} rate(s)
         </Button>
       ),
@@ -95,7 +97,6 @@ const ShippingZones = () => {
     <div className="section-container">
       <PageHeader
         title="Delivery Zones"
-        description="Areas that share delivery pricing."
         actions={
           canUpdate && (
             <Button size="action" onClick={() => openForm(null)}>
@@ -109,11 +110,11 @@ const ShippingZones = () => {
         searchPlaceholder="Search zones..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={filters}
       />
 
       <DataTable
         columns={columns}
+        bulk={bulk}
         data={zoneState.data}
         {...list.tableProps}
         emptyTitle="No delivery zones"

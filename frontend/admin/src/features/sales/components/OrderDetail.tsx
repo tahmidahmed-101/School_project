@@ -1,21 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import {
-  Ban,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  FileText,
-  Loader2,
-  MapPin,
-  PencilIcon,
-  RotateCcw,
-  Tag,
-  Truck,
-  User,
-  Wallet,
-} from "lucide-react"
+import { Ban, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered } from "lucide-react"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { cancelOrder, fetchSingle, selectOrderDetail, updateOrderStatus } from "@/features/sales/slices/orderSlice"
@@ -36,6 +22,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { DetailRow } from "@/components/common/DetailRow"
 import { PageHeader } from "@/components/common/PageHeader"
+import { SubmitButton } from "@/components/common/FormActions"
 import { downloadFile } from "@/lib/download"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -150,10 +137,9 @@ const OrderDetail = () => {
         description={`Placed on ${formatDateTime(order.created_at)}`}
         actions={
           <>
-            <Button variant="outline" onClick={handleInvoice} disabled={downloading}>
-              {downloading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+            <SubmitButton type="button" loading={downloading} icon={FileText} variant="outline" onClick={handleInvoice}>
               Invoice PDF
-            </Button>
+            </SubmitButton>
             {canManage && (
               <Button variant="outline" onClick={() => setDialog("edit")}>
                 <PencilIcon className="size-4" />
@@ -221,10 +207,9 @@ const OrderDetail = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button onClick={handleStatus} disabled={!nextStatus || busy}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                <SubmitButton type="button" loading={busy} icon={CheckCircle2} onClick={handleStatus} disabled={!nextStatus}>
                   Apply status
-                </Button>
+                </SubmitButton>
               </div>
             )}
 
@@ -300,7 +285,7 @@ const OrderDetail = () => {
             )}
             <div className="pt-2">
               <Button variant="link" size="sm" className="px-0" asChild>
-                <Link to={`/orders?customer_id=${order.customer_id}`}>All orders from this customer</Link>
+                <Link to={`/orders?customer_id=${order.customer_id}`}><ListOrdered className="size-4" /> All orders from this customer</Link>
               </Button>
             </div>
           </CardContent>
@@ -359,6 +344,7 @@ const OrderDetail = () => {
                   <StatusBadge status={p.status} />
                   <Button variant="ghost" size="sm" asChild>
                     <Link to={`/payment_detail/${p.id}`}>
+                      <Eye className="size-4" />
                       {canRefund && p.status === "captured" ? "Refund" : "View"}
                     </Link>
                   </Button>
@@ -422,7 +408,7 @@ const OrderDetail = () => {
                 <StatusBadge status={r.status} />
                 {canReturn && (
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/return_detail/${r.id}`}>View</Link>
+                    <Link to={`/return_detail/${r.id}`}><Eye className="size-4" /> View</Link>
                   </Button>
                 )}
               </div>

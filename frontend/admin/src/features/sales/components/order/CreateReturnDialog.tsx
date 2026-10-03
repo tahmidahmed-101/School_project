@@ -2,8 +2,7 @@ import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
 
 import { FormDialog } from "@/components/common/FormDialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
+import { TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createReturn } from "@/features/sales/slices/orderSlice"
 import type { Order, OrderLine } from "@/features/sales/types"
@@ -77,18 +76,14 @@ export function CreateReturnDialog({ order, open, onOpenChange, onCreated }: Cre
         values={quantities}
         onChange={setQuantities}
       />
-      <Field>
-        <FieldLabel htmlFor="rma-reason">Reason</FieldLabel>
-        <FieldContent>
-          <Textarea
-            id="rma-reason"
-            rows={3}
-            placeholder="e.g. Wrong size delivered"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </FieldContent>
-      </Field>
+      <TextareaField
+        label="Reason"
+        id="rma-reason"
+        rows={3}
+        placeholder="e.g. Wrong size delivered"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
     </FormDialog>
   )
 }

@@ -1,22 +1,8 @@
 import { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import {
-  Archive,
-  ArrowDownToLine,
-  Ban,
-  CircleCheck,
-  History,
-  Loader2,
-  Lock,
-  MinusCircle,
-  Package,
-  ScanBarcode,
-  SlidersHorizontal,
-  Truck,
-  Undo2,
-} from "lucide-react"
+import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, ScanBarcode, SlidersHorizontal, Truck, Undo2, Plus, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,13 +10,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { MoneyCell, ProductCell } from "@/components/common/cells"
+import { SubmitButton } from "@/components/common/FormActions"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -68,7 +55,6 @@ const orderingOptions: Option[] = [
 
 const StockOverview = () => {
   useDocumentTitle("Stock")
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
   const canQuickCreate = useCan("catalog.manage", "inventory.manage")
@@ -210,32 +196,33 @@ const StockOverview = () => {
       header: "ACTIONS",
       cell: ({ row }) => {
         const s = row.original
-        const action = (label: string, icon: React.ReactNode, onClick: () => void) => (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={`${label} ${s.variant_sku}`} onClick={onClick}>
-                {icon}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{label}</TooltipContent>
-          </Tooltip>
-        )
         return (
-          <TooltipProvider>
-            <div className="flex items-center gap-0.5" data-no-row-click>
-              {canAdjust &&
-                action("Adjust", <SlidersHorizontal className="size-4" />, () =>
-                  setMovement({ mode: "adjust", variant: rowVariant(s), warehouseId: s.warehouse_id })
-                )}
-              {canAdjust &&
-                action("Write off", <MinusCircle className="size-4 text-destructive" />, () =>
-                  setMovement({ mode: "write_off", variant: rowVariant(s), warehouseId: s.warehouse_id })
-                )}
-              {action("Ledger", <History className="size-4" />, () =>
-                navigate(`/inventory/ledger?variant_id=${s.variant_id}&sku=${encodeURIComponent(s.variant_sku)}`)
-              )}
-            </div>
-          </TooltipProvider>
+          <TableActions
+            itemName={s.variant_sku}
+            actions={[
+              ...(canAdjust
+                ? [
+                    {
+                      label: "Adjust",
+                      icon: SlidersHorizontal,
+                      onSelect: () => setMovement({ mode: "adjust", variant: rowVariant(s), warehouseId: s.warehouse_id }),
+                    },
+                    {
+                      label: "Write off",
+                      icon: MinusCircle,
+                      destructive: true,
+                      onSelect: () =>
+                        setMovement({ mode: "write_off", variant: rowVariant(s), warehouseId: s.warehouse_id }),
+                    },
+                  ]
+                : []),
+              {
+                label: "Ledger",
+                icon: History,
+                to: `/inventory/ledger?variant_id=${s.variant_id}&sku=${encodeURIComponent(s.variant_sku)}`,
+              },
+            ]}
+          />
         )
       },
     },
@@ -245,7 +232,6 @@ const StockOverview = () => {
     <div className="section-container">
       <PageHeader
         title="Stock"
-        description="On-hand, reserved and available stock per warehouse"
         actions={
           canAdjust && (
             <>
@@ -306,9 +292,9 @@ const StockOverview = () => {
               value={lookupCode}
               onChange={(e) => setLookupCode(e.target.value)}
             />
-            <Button type="submit" disabled={!lookupCode.trim() || lookupBusy}>
-              {lookupBusy && <Loader2 className="size-4 animate-spin" />} Look up
-            </Button>
+            <SubmitButton icon={Search} loading={lookupBusy} disabled={!lookupCode.trim()}>
+              Look up
+            </SubmitButton>
           </form>
           {lookup?.found === true && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
@@ -351,6 +337,7 @@ const StockOverview = () => {
               </span>
               {canQuickCreate && (
                 <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)}>
+                  <Plus className="size-4" />
                   Create product
                 </Button>
               )}
@@ -366,9 +353,9 @@ const StockOverview = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Warehouse"
-                frameworks={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
+                options={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
                 value={warehouse}
                 onValueChange={setWarehouse}
               />
@@ -404,7 +391,7 @@ const StockOverview = () => {
         emptyTitle="No stock items"
         emptyDescription="Nothing matches these filters."
         minWidth="1060px"
-        columnWidths={["260px", "170px", "90px", "90px", "100px", "130px", "110px", "130px"]}
+        columnWidths={["260px", "170px", "90px", "90px", "100px", "130px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
 

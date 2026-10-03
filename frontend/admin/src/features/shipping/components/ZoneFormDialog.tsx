@@ -4,10 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
+import { TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createZone, updateZone } from "@/features/shipping/slices/zoneSlice"
 import type { ShippingZone, ShippingZonePayload } from "@/features/shipping/types"
@@ -94,27 +92,22 @@ export function ZoneFormDialog({ open, onOpenChange, zone, onSaved }: ZoneFormDi
       submitting={isSubmitting}
       submitLabel={zone ? "Save changes" : "Create zone"}
     >
-      <Field>
-        <FieldLabel htmlFor="zone-name">Name *</FieldLabel>
-        <FieldContent>
-          <Input id="zone-name" placeholder="e.g. Inside Dhaka" aria-invalid={!!errors.name} {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="zone-areas">Areas</FieldLabel>
-        <FieldContent>
-          <Textarea
-            id="zone-areas"
-            rows={4}
-            placeholder="dhaka, gulshan, banani, uttara"
-            aria-invalid={!!errors.areas}
-            {...register("areas")}
-          />
-          <FieldDescription>Comma or newline separated keywords matched against the address.</FieldDescription>
-          <FieldError errors={[errors.areas]} />
-        </FieldContent>
-      </Field>
+      <TextField
+        label="Name *"
+        id="zone-name"
+        placeholder="e.g. Inside Dhaka"
+        error={errors.name}
+        {...register("name")}
+      />
+      <TextareaField
+        label="Areas"
+        id="zone-areas"
+        rows={4}
+        placeholder="dhaka, gulshan, banani, uttara"
+        description="Comma or newline separated keywords matched against the address."
+        error={errors.areas}
+        {...register("areas")}
+      />
       {zone && <SwitchField control={control} name="is_active" label="Active" />}
     </FormDialog>
   )

@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { ImageIcon, Loader2, Trash2, UploadCloud } from "lucide-react"
+import { ImageIcon, Loader2, Trash2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,6 +10,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 
 import { createProductImage, deleteProductImage, listProductImages, updateProductImage, uploadMedia } from "../api"
 import type { ProductImage, ProductVariant } from "../types"
+import { ImageDropzone } from "./ImageDropzone"
 
 const PRODUCT_LEVEL = "product"
 
@@ -32,7 +32,6 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
   const [uploading, setUploading] = useState(false)
   const [target, setTarget] = useState<string>(PRODUCT_LEVEL)
   const [reloadKey, setReloadKey] = useState(0)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -59,12 +58,12 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
 
   const variantImages = variants.flatMap((v) => v.images.map((img) => ({ img, variant: v })))
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files?.length) return
+  const handleFiles = async (files: File[]) => {
+    if (!files.length || uploading) return
     setUploading(true)
     let ok = 0
     const base = target === PRODUCT_LEVEL ? images.length : (variants.find((v) => v.id === target)?.images.length ?? 0)
-    for (const [i, file] of Array.from(files).entries()) {
+    for (const [i, file] of files.entries()) {
       try {
         const url = await uploadMedia(file)
         await createProductImage(productId, {
@@ -79,7 +78,6 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
       }
     }
     setUploading(false)
-    if (fileRef.current) fileRef.current.value = ""
     if (ok) {
       toast.success(`${ok} image${ok === 1 ? "" : "s"} added`)
       refresh()
@@ -171,40 +169,29 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
         <CardTitle className="flex items-center gap-2">
           <ImageIcon className="size-4" /> Images
         </CardTitle>
-        <CardDescription>Lowest sort order shows first. JPG, PNG, WEBP, GIF, AVIF or HEIC.</CardDescription>
-        {canManage && (
-          <CardAction className="flex flex-wrap items-center gap-2">
-            {variants.length > 1 && (
-              <Select value={target} onValueChange={setTarget}>
-                <SelectTrigger className="h-7 w-44 text-xs" aria-label="Attach uploads to">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PRODUCT_LEVEL}>Product gallery</SelectItem>
-                  {variants.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.sku}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => void handleFiles(e.target.files)}
-            />
-            <Button size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
-              {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
-              {uploading ? "Uploading…" : "Upload"}
-            </Button>
+        <CardDescription>Lowest sort order shows first.</CardDescription>
+        {canManage && variants.length > 1 && (
+          <CardAction>
+            <Select value={target} onValueChange={setTarget}>
+              <SelectTrigger className="h-7 w-44 text-xs" aria-label="Attach uploads to">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={PRODUCT_LEVEL}>Product gallery</SelectItem>
+                {variants.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.sku}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardAction>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        {canManage && (
+          <ImageDropzone onFiles={(files) => void handleFiles(files)} uploading={uploading} />
+        )}
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Loading images…

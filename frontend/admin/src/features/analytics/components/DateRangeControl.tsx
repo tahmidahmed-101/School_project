@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon, Loader2, Check } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -91,6 +91,7 @@ export function DateRangeControl({ preset, range, onPreset, onCustom, busy }: Da
                   : "Pick a start and end day"}
               </span>
               <Button size="sm" onClick={apply} disabled={!draft?.from}>
+                <Check className="size-4" />
                 Apply
               </Button>
             </div>

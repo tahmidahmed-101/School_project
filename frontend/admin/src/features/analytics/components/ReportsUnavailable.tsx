@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Lock } from "lucide-react"
+import { Lock, ArrowRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -21,7 +21,7 @@ export function ReportsUnavailable({ links = [] }: { links?: { to: string; label
         <div className="flex flex-wrap justify-center gap-2">
           {links.map((l) => (
             <Button key={l.to} variant="outline" size="sm" asChild>
-              <Link to={l.to}>{l.label}</Link>
+              <Link to={l.to}><ArrowRight className="size-4" /> {l.label}</Link>
             </Button>
           ))}
         </div>

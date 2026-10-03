@@ -4,19 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { DateField, TextField } from "@/components/common/form-fields"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
-import { reportFormError } from "@/lib/forms"
+import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
 import type { ProductVariant, ProductVariantPayload } from "../types"
-
-const money = z
-  .string()
-  .trim()
-  .refine((v) => v === "" || (/^\d+(\.\d{1,2})?$/.test(v) && Number(v) >= 0), "Enter a valid amount")
 
 const schema = z
   .object({
@@ -24,18 +18,18 @@ const schema = z
     barcode: z.string().trim(),
     color: z.string().trim(),
     size: z.string().trim(),
-    price: money,
-    cost_price: money,
-    discount_price: money,
+    price: moneySchema,
+    cost_price: moneySchema,
+    discount_price: moneySchema,
     weight: z
       .string()
       .trim()
       .refine((v) => v === "" || /^\d+(\.\d{1,3})?$/.test(v), "Up to 3 decimals (kg)"),
-    wholesale_price: money,
+    wholesale_price: moneySchema,
     show_wholesale_price: z.boolean(),
     is_active: z.boolean(),
     is_preorder_enabled: z.boolean(),
-    preorder_price: money,
+    preorder_price: moneySchema,
     preorder_start_date: z.string(),
     preorder_end_date: z.string(),
     release_date: z.string(),
@@ -129,21 +123,19 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
     }
   }
 
-  const text = (name: keyof FormValues, label: string, opts: { placeholder?: string; type?: string; hint?: string } = {}) => (
-    <Field>
-      <FieldLabel htmlFor={`variant-${name}`}>{label}</FieldLabel>
-      <FieldContent>
-        <Input
-          id={`variant-${name}`}
-          type={opts.type ?? "text"}
-          placeholder={opts.placeholder}
-          {...register(name)}
-        />
-        {opts.hint && <FieldDescription>{opts.hint}</FieldDescription>}
-        <FieldError errors={[errors[name]]} />
-      </FieldContent>
-    </Field>
-  )
+  const text = (name: keyof FormValues, label: string, opts: { placeholder?: string; withTime?: boolean } = {}) => {
+    const FieldComponent = opts.withTime ? DateField : TextField
+    return (
+      <FieldComponent
+        id={`variant-${name}`}
+        label={label}
+        placeholder={opts.placeholder}
+        withTime={opts.withTime}
+        error={errors[name]}
+        {...register(name)}
+      />
+    )
+  }
 
   return (
     <FormDialog
@@ -183,9 +175,9 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
             {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
-            {text("preorder_start_date", "Starts", { type: "datetime-local" })}
-            {text("preorder_end_date", "Ends", { type: "datetime-local" })}
-            {text("release_date", "Release date", { type: "datetime-local" })}
+            {text("preorder_start_date", "Starts", { withTime: true })}
+            {text("preorder_end_date", "Ends", { withTime: true })}
+            {text("release_date", "Release date", { withTime: true })}
           </div>
         )}
       </div>

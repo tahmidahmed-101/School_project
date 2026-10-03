@@ -2,23 +2,25 @@ import { useEffect, useMemo } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Loader2, PlusIcon, Save, Trash2 } from "lucide-react"
+import { PlusIcon, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
+import { FormActions } from "@/components/common/FormActions"
+import { NoPermission } from "@/components/common/NoPermission"
+import { MoneyField, TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
 import { resolveDetailState } from "@/lib/detailState"
-import { reportFormError } from "@/lib/forms"
+import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency } from "@/lib/format"
 
 import { fetchSingle } from "../slices/bundleSlice"
@@ -28,19 +30,14 @@ import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
 import { VariantPicker, type PickedVariant } from "./VariantPicker"
 
-const money = z
-  .string()
-  .trim()
-  .refine((v) => v === "" || (/^\d+(\.\d{1,2})?$/.test(v) && Number(v) >= 0), "Enter a valid amount")
-
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   category_id: z.string().min(1, "Choose a category"),
   sku: z.string().trim(),
   barcode: z.string().trim(),
-  price: money,
-  discount_price: money,
-  cost_price: money,
+  price: moneySchema,
+  discount_price: moneySchema,
+  cost_price: moneySchema,
   description: z.string(),
   is_active: z.boolean(),
   components: z
@@ -132,12 +129,7 @@ const BundleForm = () => {
 
   if (!canManage) {
     return (
-      <div className="section-container py-16 text-center text-sm text-muted-foreground">
-        You don't have permission to edit bundles.{" "}
-        <Link className="text-primary underline" to="/bundles">
-          Back to bundles
-        </Link>
-      </div>
+      <NoPermission message="You don't have permission to edit bundles." backTo="/bundles" backLabel="Back to bundles" />
     )
   }
 
@@ -191,7 +183,7 @@ const BundleForm = () => {
     <div className="section-container">
       <PageHeader
         title={isEditing ? "Edit Bundle" : "New Bundle"}
-        description={isEditing ? `Editing ${bundle?.name ?? ""}` : "Combine existing variants into one sellable SKU"}
+        description={isEditing ? `Editing ${bundle?.name ?? ""}` : undefined}
         back={{ to: "/bundles", label: "Back" }}
       />
 
@@ -201,13 +193,7 @@ const BundleForm = () => {
             <CardTitle>Bundle details</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <FieldContent>
-                <Input id="name" {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
+            <TextField label="Name" id="name" error={errors.name} {...register("name")} />
             <Field>
               <FieldLabel htmlFor="category_id">Category</FieldLabel>
               <FieldContent>
@@ -221,26 +207,21 @@ const BundleForm = () => {
                 <FieldError errors={[errors.category_id]} />
               </FieldContent>
             </Field>
-            <Field>
-              <FieldLabel htmlFor="sku">SKU</FieldLabel>
-              <FieldContent>
-                <Input id="sku" placeholder={isEditing ? undefined : "Auto-generated if blank"} {...register("sku")} />
-                <FieldError errors={[errors.sku]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="barcode">Barcode</FieldLabel>
-              <FieldContent>
-                <Input id="barcode" {...register("barcode")} />
-                <FieldError errors={[errors.barcode]} />
-              </FieldContent>
-            </Field>
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="description">Description</FieldLabel>
-              <FieldContent>
-                <Textarea id="description" rows={3} {...register("description")} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="SKU"
+              id="sku"
+              placeholder={isEditing ? undefined : "Auto-generated if blank"}
+              error={errors.sku}
+              {...register("sku")}
+            />
+            <TextField label="Barcode" id="barcode" error={errors.barcode} {...register("barcode")} />
+            <TextareaField
+              className="md:col-span-2"
+              label="Description"
+              id="description"
+              rows={3}
+              {...register("description")}
+            />
             <SwitchField control={control} name="is_active" label="Active" />
           </CardContent>
         </Card>
@@ -306,37 +287,35 @@ const BundleForm = () => {
             <CardDescription>Leave price or cost blank to default them to the component totals.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field>
-              <FieldLabel htmlFor="price">Price (BDT)</FieldLabel>
-              <FieldContent>
-                <Input id="price" inputMode="decimal" placeholder={componentTotal ? componentTotal.toFixed(2) : "0.00"} {...register("price")} />
-                <FieldError errors={[errors.price]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="discount_price">Discount price</FieldLabel>
-              <FieldContent>
-                <Input id="discount_price" inputMode="decimal" placeholder="Optional" {...register("discount_price")} />
-                <FieldError errors={[errors.discount_price]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="cost_price">Cost price</FieldLabel>
-              <FieldContent>
-                <Input id="cost_price" inputMode="decimal" placeholder="From components" {...register("cost_price")} />
-                <FieldDescription>Defaults to the components' cost.</FieldDescription>
-                <FieldError errors={[errors.cost_price]} />
-              </FieldContent>
-            </Field>
+            <MoneyField
+              label="Price (BDT)"
+              id="price"
+              placeholder={componentTotal ? componentTotal.toFixed(2) : "0.00"}
+              error={errors.price}
+              {...register("price")}
+            />
+            <MoneyField
+              label="Discount price"
+              id="discount_price"
+              placeholder="Optional"
+              error={errors.discount_price}
+              {...register("discount_price")}
+            />
+            <MoneyField
+              label="Cost price"
+              id="cost_price"
+              placeholder="From components"
+              description="Defaults to the components' cost."
+              error={errors.cost_price}
+              {...register("cost_price")}
+            />
           </CardContent>
-          <CardFooter className="justify-end gap-3 border-t p-4">
-            <Button type="button" variant="outline" onClick={() => navigate("/bundles")}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {isEditing ? "Save bundle" : "Create bundle"}
-            </Button>
+          <CardFooter className="justify-end border-t p-4">
+            <FormActions
+              onCancel={() => navigate("/bundles")}
+              submitLabel={isEditing ? "Save bundle" : "Create bundle"}
+              submitting={isSubmitting}
+            />
           </CardFooter>
         </Card>
       </form>

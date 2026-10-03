@@ -362,7 +362,7 @@ const FinancialReports = () => {
   useDocumentTitle("Financial Reports")
   return (
     <div className="section-container space-y-6">
-      <PageHeading title="Financial Reports" description="Statements computed from posted journal entries." />
+      <PageHeading title="Financial Reports" />
       <Tabs defaultValue="pnl" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>

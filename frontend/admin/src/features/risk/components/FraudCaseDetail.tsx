@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { CheckCircle2, Loader2, ShieldAlert } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { CheckCircle2, ShieldAlert } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +10,7 @@ import { DetailPageState } from "@/components/common/DetailPageState"
 import { DetailRow } from "@/components/common/DetailRow"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { SubmitButton } from "@/components/common/FormActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, resolveFraudCase } from "@/features/risk/slices/fraudCaseSlice"
 import { selectFraudCases } from "@/features/risk/selectors"
@@ -167,10 +167,9 @@ const FraudCaseDetail = () => {
                 )}
               </CardContent>
               <CardFooter className="justify-end border-t p-4">
-                <Button type="submit" disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                <SubmitButton loading={saving} icon={CheckCircle2}>
                   Resolve case
-                </Button>
+                </SubmitButton>
               </CardFooter>
             </Card>
           </form>

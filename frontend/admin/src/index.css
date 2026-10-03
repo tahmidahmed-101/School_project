@@ -170,6 +170,23 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Anything clickable shows the pointer, whichever component rendered it. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not(:disabled),
+  [role="switch"]:not(:disabled),
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  select,
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"] {
+    cursor: pointer;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;

@@ -1,23 +1,12 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import {
-  Ban,
-  CheckCircle2,
-  Clock,
-  MapPin,
-  Mail,
-  Phone,
-  ShoppingBag,
-  Trash2,
-  User,
-  Wallet,
-  XCircle,
-} from "lucide-react"
+import { Ban, CheckCircle2, Clock, MapPin, Mail, Phone, ShoppingBag, Trash2, User, Wallet, XCircle, ListOrdered, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeleteModal } from "@/components/common/DeleteModal"
 import { DetailPageState } from "@/components/common/DetailPageState"
@@ -150,6 +139,17 @@ const CustomerDetail = () => {
   const addressRows = addresses?.forId === id ? addresses : null
   const orderRows = orders?.forId === id ? orders : null
 
+  const orderColumns: ColumnDef<CustomerOrderRow>[] = [
+    {
+      id: "order",
+      header: "Order",
+      cell: ({ row }) => <span className="font-medium text-primary">{row.original.order_number}</span>,
+    },
+    { id: "date", header: "Date", cell: ({ row }) => formatDate(row.original.created_at) },
+    { id: "total", header: "Total", cell: ({ row }) => formatCurrency(row.original.grand_total) },
+    { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+  ]
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
@@ -180,7 +180,6 @@ const CustomerDetail = () => {
             )}
             <DeleteModal
               title={`Delete ${name}?`}
-              description="The account is soft-deleted: the customer can no longer sign in. You can restore it from the Customers list with “Show deleted”."
               onConfirm={async () => {
                 if (await runAction(softDeleteUser, "Customer deleted")) navigate("/customers")
               }}
@@ -265,6 +264,7 @@ const CustomerDetail = () => {
                     loadAddresses()
                   }}
                 >
+                  <RotateCcw className="size-4" />
                   Retry
                 </Button>
               </div>
@@ -303,65 +303,27 @@ const CustomerDetail = () => {
           </CardTitle>
           {orderRows?.status === "succeeded" && orderRows.total > orderRows.rows.length && (
             <Button variant="link" asChild>
-              <Link to={`/orders?customer_id=${customer.id}`}>View all {orderRows.total}</Link>
+              <Link to={`/orders?customer_id=${customer.id}`}><ListOrdered className="size-4" /> View all {orderRows.total}</Link>
             </Button>
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!orderRows || orderRows.status !== "succeeded" ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    {orderRows?.status === "failed" ? (
-                      <span className="inline-flex items-center gap-3">
-                        Couldn't load this customer's orders.
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setOrders(null)
-                            loadOrders()
-                          }}
-                        >
-                          Retry
-                        </Button>
-                      </span>
-                    ) : (
-                      "Loading orders..."
-                    )}
-                  </TableCell>
-                </TableRow>
-              ) : orderRows.rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    No orders yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                orderRows.rows.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/order_detail/${order.id}`)}
-                  >
-                    <TableCell className="font-medium text-primary">{order.order_number}</TableCell>
-                    <TableCell>{formatDate(order.created_at)}</TableCell>
-                    <TableCell>{formatCurrency(order.grand_total)}</TableCell>
-                    <TableCell><StatusBadge status={order.status} /></TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            embedded
+            showPagination={false}
+            columns={orderColumns}
+            data={orderRows?.status === "succeeded" ? orderRows.rows : []}
+            isLoading={!orderRows || (orderRows.status !== "succeeded" && orderRows.status !== "failed")}
+            error={orderRows?.status === "failed" ? { message: "Couldn't load this customer's orders." } : null}
+            onRetry={() => {
+              setOrders(null)
+              loadOrders()
+            }}
+            onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
+            emptyTitle="No orders yet"
+            emptyDescription="This customer has not placed an order."
+            minWidth="0px"
+          />
         </CardContent>
       </Card>
     </div>

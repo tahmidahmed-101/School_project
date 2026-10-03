@@ -9,19 +9,16 @@ import { BookOpen, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
+import { FieldError } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
+import { DateField, TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
-import { reportFormError } from "@/lib/forms"
+import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { createJournalEntry } from "../slices/journalEntrySlice"
 import type { Account } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-
-const money = z
-  .string()
-  .refine((v) => v === "" || (Number(v) >= 0 && /^\d+(\.\d{1,2})?$/.test(v)), "Max 2 decimals")
 
 const schema = z
   .object({
@@ -31,8 +28,8 @@ const schema = z
       .array(
         z.object({
           account_id: z.string().min(1, "Pick an account"),
-          debit: money,
-          credit: money,
+          debit: moneySchema,
+          credit: moneySchema,
         })
       )
       .min(2, "A journal entry needs at least two lines"),
@@ -135,19 +132,14 @@ export function JournalEntryFormDialog({
       submitLabel="Post Entry"
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field>
-          <FieldLabel htmlFor="je-date">Entry date *</FieldLabel>
-          <FieldContent>
-            <Input id="je-date" type="date" aria-invalid={!!errors.entry_date} {...register("entry_date")} />
-            <FieldError errors={[errors.entry_date]} />
-          </FieldContent>
-        </Field>
-        <Field className="sm:col-span-2">
-          <FieldLabel htmlFor="je-desc">Description</FieldLabel>
-          <FieldContent>
-            <Input id="je-desc" placeholder="e.g. Owner capital injection" {...register("description")} />
-          </FieldContent>
-        </Field>
+        <DateField label="Entry date *" id="je-date" error={errors.entry_date} {...register("entry_date")} />
+        <TextField
+          className="sm:col-span-2"
+          label="Description"
+          id="je-desc"
+          placeholder="e.g. Owner capital injection"
+          {...register("description")}
+        />
       </div>
 
       <div className="rounded-lg border border-border">

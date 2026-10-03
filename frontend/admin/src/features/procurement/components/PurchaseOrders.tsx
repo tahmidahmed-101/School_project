@@ -99,7 +99,6 @@ const PurchaseOrders = () => {
     <div className="section-container">
       <PageHeader
         title="Purchase Orders"
-        description="Draft, submit and receive stock orders from suppliers."
         actions={
           canManage && (
             <Button size="action" asChild>

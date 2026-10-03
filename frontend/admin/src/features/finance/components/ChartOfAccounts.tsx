@@ -7,19 +7,18 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { SelectField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { humanize } from "@/lib/format"
@@ -123,46 +122,17 @@ function AccountFormDialog({
       submitLabel={account ? "Save Changes" : "Create Account"}
     >
       <div className="grid grid-cols-3 gap-4">
-        <Field>
-          <FieldLabel htmlFor="acc-code">Code *</FieldLabel>
-          <FieldContent>
-            <Input id="acc-code" placeholder="e.g. 5300" aria-invalid={!!errors.code} {...register("code")} />
-            <FieldError errors={[errors.code]} />
-          </FieldContent>
-        </Field>
-        <Field className="col-span-2">
-          <FieldLabel htmlFor="acc-name">Name *</FieldLabel>
-          <FieldContent>
-            <Input id="acc-name" aria-invalid={!!errors.name} {...register("name")} />
-            <FieldError errors={[errors.name]} />
-          </FieldContent>
-        </Field>
+        <TextField label="Code *" id="acc-code" placeholder="e.g. 5300" error={errors.code} {...register("code")} />
+        <TextField className="col-span-2" label="Name *" id="acc-name" error={errors.name} {...register("name")} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="acc-type">Type *</FieldLabel>
-          <FieldContent>
-            <Controller
-              control={control}
-              name="type"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="acc-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACCOUNT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {humanize(t)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldError errors={[errors.type]} />
-          </FieldContent>
-        </Field>
+        <SelectField
+          control={control}
+          name="type"
+          label="Type *"
+          id="acc-type"
+          options={ACCOUNT_TYPES.map((t) => ({ label: humanize(t), value: t }))}
+        />
         <Field>
           <FieldLabel htmlFor="acc-parent">Parent account</FieldLabel>
           <FieldContent>
@@ -231,12 +201,16 @@ const ChartOfAccounts = () => {
     [accountLookup]
   )
 
+  const setActive = (rows: Account[], is_active: boolean) =>
+    Promise.all(
+      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<Account> })).unwrap())
+    )
+
   const handleDelete = async (account: Account) => {
     try {
       await dispatch(deleteData(account.id)).unwrap()
       toast.success("Account deleted")
       reloadLookup()
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete account"))
     }
@@ -309,7 +283,6 @@ const ChartOfAccounts = () => {
     <div className="section-container">
       <PageHeader
         title="Chart of Accounts"
-        description="The ledger accounts every posting is booked against."
         actions={
           canPost && (
             <>
@@ -349,28 +322,39 @@ const ChartOfAccounts = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={ACCOUNT_TYPES.map((t) => ({ label: humanize(t), value: t }))}
+              <Combobox
+                options={ACCOUNT_TYPES.map((t) => ({ label: humanize(t), value: t }))}
                 placeholder="Type"
                 value={type}
                 onValueChange={setType}
               />
             ),
           },
-          ...(canPost
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canPost
+            ? {
+                noun: "account",
+                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
+                activate: (rows) => setActive(rows, true),
+                deactivate: (rows) => setActive(rows, false),
+                onDone: () => {
+                  reloadLookup()
+                  list.reload()
+                },
+              }
+            : undefined
+        }
         data={listState.data}
         {...list.tableProps}
         emptyIcon={BookText}
         emptyTitle="No accounts found"
         minWidth="860px"
-        columnWidths={["100px", "260px", "120px", "220px", "110px", "110px"]}
+        columnWidths={["100px", "260px", "120px", "220px", "110px", "80px"]}
       />
 
       <AccountFormDialog

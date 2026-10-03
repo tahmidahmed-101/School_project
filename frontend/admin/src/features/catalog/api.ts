@@ -47,6 +47,16 @@ export const restoreProduct = (id: string) =>
 export const bulkProductStatus = (ids: string[], is_active: boolean) =>
   apiCall<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
 
+/** Search products by name (for pickers). */
+export async function searchProducts(search: string) {
+  try {
+    const res = await api.get(`${C}/products/`, { params: { page: 1, page_size: 20, search } })
+    return unwrapList<Product>(res.data, 1, 20).items
+  } catch (err) {
+    throw extractApiError(err)
+  }
+}
+
 // ---- product images ----
 export async function listProductImages(productId: string): Promise<ProductImage[]> {
   try {

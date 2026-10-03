@@ -1,20 +1,21 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, Loader2, PackageCheck } from "lucide-react"
+import { CheckCircle2, PackageCheck } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
+import { DialogActions } from "@/components/common/FormDialog"
+import { DateField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
@@ -166,73 +167,84 @@ function ReceiptForm({
   const setLine = (id: string, patch: Partial<LineState>) =>
     setLineState((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
 
+  const lineColumns: ColumnDef<PurchaseOrder["lines"][number]>[] = [
+    {
+      id: "product",
+      header: "PRODUCT",
+      cell: ({ row: { original: line } }) => (
+        <div>
+          <p className="text-sm font-medium">{line.product_name}</p>
+          <p className="text-xs font-mono text-muted-foreground">{line.variant_sku}</p>
+        </div>
+      ),
+    },
+    {
+      id: "outstanding",
+      header: "OUTSTANDING",
+      meta: { align: "right" },
+      cell: ({ row: { original: line } }) => (
+        <span className="tabular-nums">{line.quantity_ordered - line.quantity_received}</span>
+      ),
+    },
+    {
+      id: "receive",
+      header: "RECEIVE",
+      cell: ({ row: { original: line } }) => (
+        <Input
+          type="number"
+          min={0}
+          max={line.quantity_ordered - line.quantity_received}
+          step={1}
+          aria-label={`Quantity received for ${line.variant_sku}`}
+          value={lineState[line.id]?.quantity ?? "0"}
+          onChange={(e) => setLine(line.id, { quantity: e.target.value })}
+        />
+      ),
+    },
+    {
+      id: "condition",
+      header: "CONDITION",
+      cell: ({ row: { original: line } }) => (
+        <Select
+          value={lineState[line.id]?.condition ?? "accepted"}
+          onValueChange={(v) => setLine(line.id, { condition: v as GRNLineCondition })}
+        >
+          <SelectTrigger aria-label={`Condition for ${line.variant_sku}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="accepted">Accepted</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+  ]
+
   return (
     <>
       <div className="space-y-4 py-2">
-        <Field className="max-w-xs">
-          <FieldLabel htmlFor="grn-date">Received date *</FieldLabel>
-          <FieldContent>
-            <Input id="grn-date" type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
-          </FieldContent>
-        </Field>
+        <DateField
+          className="max-w-xs"
+          label="Received date *"
+          id="grn-date"
+          value={receivedDate}
+          onChange={(e) => setReceivedDate(e.target.value)}
+        />
 
         {po && openLines.length === 0 && (
           <p className="text-sm text-muted-foreground">Every line on this purchase order has been fully received.</p>
         )}
 
         {po && openLines.length > 0 && (
-          <div className="rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>PRODUCT</TableHead>
-                  <TableHead className="text-right">OUTSTANDING</TableHead>
-                  <TableHead className="w-[110px]">RECEIVE</TableHead>
-                  <TableHead className="w-[140px]">CONDITION</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {openLines.map((line) => {
-                  const remaining = line.quantity_ordered - line.quantity_received
-                  const state = lineState[line.id]
-                  return (
-                    <TableRow key={line.id}>
-                      <TableCell>
-                        <p className="text-sm font-medium">{line.product_name}</p>
-                        <p className="text-xs font-mono text-muted-foreground">{line.variant_sku}</p>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{remaining}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={remaining}
-                          step={1}
-                          aria-label={`Quantity received for ${line.variant_sku}`}
-                          value={state?.quantity ?? "0"}
-                          onChange={(e) => setLine(line.id, { quantity: e.target.value })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={state?.condition ?? "accepted"}
-                          onValueChange={(v) => setLine(line.id, { condition: v as GRNLineCondition })}
-                        >
-                          <SelectTrigger aria-label={`Condition for ${line.variant_sku}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="accepted">Accepted</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            showPagination={false}
+            selectable={false}
+            columns={lineColumns}
+            data={openLines}
+            minWidth="0px"
+            columnWidths={["auto", "120px", "110px", "140px"]}
+          />
         )}
         {invalidLine && (
           <p className="text-sm text-destructive">
@@ -241,18 +253,14 @@ function ReceiptForm({
         )}
       </div>
 
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!po || submitting || !!invalidLine || payloadLines.length === 0 || !receivedDate}
-        >
-          {submitting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          Record Receipt
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onCancel}
+        onSubmit={handleSubmit}
+        submitLabel="Record Receipt"
+        icon={CheckCircle2}
+        submitting={submitting}
+        submitDisabled={!po || !!invalidLine || payloadLines.length === 0 || !receivedDate}
+      />
     </>
   )
 }

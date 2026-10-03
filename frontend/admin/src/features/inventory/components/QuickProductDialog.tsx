@@ -4,28 +4,23 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
-import { reportFormError } from "@/lib/forms"
+import { MoneyField, TextField } from "@/components/common/form-fields"
+import { moneySchema, reportFormError } from "@/lib/forms"
 import { useCategoryOptions } from "@/features/catalog/lib/useCategoryOptions"
 
 import { createQuickProduct } from "../api"
 import type { StockLookupResult } from "../types"
-
-const money = z
-  .string()
-  .trim()
-  .refine((v) => v === "" || /^\d+(\.\d{1,2})?$/.test(v), "Enter a valid amount")
 
 const schema = z.object({
   category_id: z.string().min(1, "Choose a category"),
   name: z.string().trim().min(1, "Name is required"),
   sku: z.string().trim().min(1, "SKU is required"),
   barcode: z.string().trim(),
-  price: money.refine((v) => v !== "", "Price is required"),
-  cost_price: money,
+  price: moneySchema.refine((v) => v !== "", "Price is required"),
+  cost_price: moneySchema,
 })
 type FormValues = z.infer<typeof schema>
 
@@ -98,13 +93,13 @@ export function QuickProductDialog({
       submitLabel="Create"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field className="sm:col-span-2">
-          <FieldLabel htmlFor="qp-name">Product name</FieldLabel>
-          <FieldContent>
-            <Input id="qp-name" {...register("name")} />
-            <FieldError errors={[errors.name]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          className="sm:col-span-2"
+          label="Product name"
+          id="qp-name"
+          error={errors.name}
+          {...register("name")}
+        />
         <Field className="sm:col-span-2">
           <FieldLabel htmlFor="qp-category">Category</FieldLabel>
           <FieldContent>
@@ -130,34 +125,16 @@ export function QuickProductDialog({
             <FieldError errors={[errors.category_id]} />
           </FieldContent>
         </Field>
-        <Field>
-          <FieldLabel htmlFor="qp-sku">SKU</FieldLabel>
-          <FieldContent>
-            <Input id="qp-sku" {...register("sku")} />
-            <FieldError errors={[errors.sku]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="qp-barcode">Barcode</FieldLabel>
-          <FieldContent>
-            <Input id="qp-barcode" {...register("barcode")} />
-            <FieldError errors={[errors.barcode]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="qp-price">Price (BDT)</FieldLabel>
-          <FieldContent>
-            <Input id="qp-price" inputMode="decimal" {...register("price")} />
-            <FieldError errors={[errors.price]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="qp-cost">Cost price</FieldLabel>
-          <FieldContent>
-            <Input id="qp-cost" inputMode="decimal" placeholder="0.00" {...register("cost_price")} />
-            <FieldError errors={[errors.cost_price]} />
-          </FieldContent>
-        </Field>
+        <TextField label="SKU" id="qp-sku" error={errors.sku} {...register("sku")} />
+        <TextField label="Barcode" id="qp-barcode" error={errors.barcode} {...register("barcode")} />
+        <MoneyField label="Price (BDT)" id="qp-price" error={errors.price} {...register("price")} />
+        <MoneyField
+          label="Cost price"
+          id="qp-cost"
+          placeholder="0.00"
+          error={errors.cost_price}
+          {...register("cost_price")}
+        />
       </div>
     </FormDialog>
   )

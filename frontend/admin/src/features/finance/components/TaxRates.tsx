@@ -7,15 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
+import { TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -104,35 +102,24 @@ function TaxRateFormDialog({
       submitting={isSubmitting}
       submitLabel={taxRate ? "Save Changes" : "Create Tax Rate"}
     >
-      <Field>
-        <FieldLabel htmlFor="tax-name">Name *</FieldLabel>
-        <FieldContent>
-          <Input id="tax-name" placeholder="e.g. VAT 7.5%" aria-invalid={!!errors.name} {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </FieldContent>
-      </Field>
+      <TextField label="Name *" id="tax-name" placeholder="e.g. VAT 7.5%" error={errors.name} {...register("name")} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="tax-rate">Rate (%) *</FieldLabel>
-          <FieldContent>
-            <Input
-              id="tax-rate"
-              type="number"
-              step="0.01"
-              min="0"
-              aria-invalid={!!errors.rate_percent}
-              {...register("rate_percent")}
-            />
-            <FieldError errors={[errors.rate_percent]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="tax-region">Region</FieldLabel>
-          <FieldContent>
-            <Input id="tax-region" placeholder="e.g. Bangladesh" {...register("region")} />
-            <FieldError errors={[errors.region]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Rate (%) *"
+          id="tax-rate"
+          type="number"
+          step="0.01"
+          min="0"
+          error={errors.rate_percent}
+          {...register("rate_percent")}
+        />
+        <TextField
+          label="Region"
+          id="tax-region"
+          placeholder="e.g. Bangladesh"
+          error={errors.region}
+          {...register("region")}
+        />
       </div>
       {taxRate && (
         <div className="space-y-3">
@@ -160,11 +147,15 @@ const TaxRates = () => {
 
   const list = useListPage({ fetch: (params) => dispatch(fetchAll(params)), state: listState })
 
+  const setActive = (rows: TaxRate[], is_active: boolean) =>
+    Promise.all(
+      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<TaxRate> })).unwrap())
+    )
+
   const handleDelete = async (rate: TaxRate) => {
     try {
       await dispatch(deleteData(rate.id)).unwrap()
       toast.success("Tax rate deleted")
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete tax rate"))
     }
@@ -233,7 +224,6 @@ const TaxRates = () => {
     <div className="section-container">
       <PageHeader
         title="Tax Rates"
-        description="Rates charged on orders. The starred rate is the store default."
         actions={
           canPost && (
             <Button
@@ -253,21 +243,29 @@ const TaxRates = () => {
         searchPlaceholder="Search name or region..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={
-          canPost
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []
-        }
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canPost
+            ? {
+                noun: "tax rate",
+                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
+                activate: (rows) => setActive(rows, true),
+                deactivate: (rows) => setActive(rows, false),
+                onDone: () => {
+                  list.reload()
+                },
+              }
+            : undefined
+        }
         data={listState.data}
         {...list.tableProps}
         emptyIcon={Percent}
         emptyTitle="No tax rates"
         minWidth="720px"
-        columnWidths={["260px", "100px", "180px", "110px", "110px"]}
+        columnWidths={["260px", "100px", "180px", "110px", "80px"]}
       />
 
       {/* Setting a new default clears the old one server-side, so refetch the page after saves. */}

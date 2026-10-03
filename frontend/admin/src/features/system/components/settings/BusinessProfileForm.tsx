@@ -1,13 +1,15 @@
-import { useRef, useState, type ChangeEvent } from "react"
+import { useState } from "react"
 import { useForm, type Path } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react"
+import { Save, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { SubmitButton } from "@/components/common/FormActions"
+import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchBusinessProfile, updateBusinessProfile } from "@/features/system/slices/businessSettingsSlice"
 import type { BusinessProfile } from "@/features/system/types"
@@ -115,7 +117,6 @@ const SECTIONS: { title: string; description: string; fields: FieldSpec[] }[] = 
 export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
   const { data: profile, status, error } = useAppSelector((state) => state.businessSettings.profile)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
   const {
@@ -149,10 +150,7 @@ export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
     )
   }
 
-  const handleLogo = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ""
-    if (!file) return
+  const handleLogo = async (file: File) => {
     setUploading(true)
     try {
       const url = await uploadImage(file)
@@ -195,39 +193,16 @@ export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
             <CardTitle>Logo</CardTitle>
             <CardDescription>PNG, JPG, WEBP, GIF, AVIF or HEIC. Used on invoices and the storefront header.</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-              {logoUrl ? (
-                <img src={logoUrl} alt="Business logo" className="h-full w-full object-contain" />
-              ) : (
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              )}
-            </div>
-            {canManage && (
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="action" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                  {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                  {logoUrl ? "Replace logo" : "Upload logo"}
-                </Button>
-                {logoUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="action"
-                    onClick={() => setValue("logo_url", "", { shouldDirty: true })}
-                  >
-                    <Trash2 className="size-4" /> Remove
-                  </Button>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif,image/heic"
-                  className="hidden"
-                  onChange={handleLogo}
-                />
-              </div>
-            )}
+          <CardContent>
+            <ImagePicker
+              src={logoUrl}
+              noun="logo"
+              fit="contain"
+              localPreview={false}
+              uploading={uploading}
+              onSelect={(file) => void handleLogo(file)}
+              onRemove={() => setValue("logo_url", "", { shouldDirty: true })}
+            />
           </CardContent>
         </Card>
 
@@ -270,12 +245,12 @@ export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
             <p className="text-xs text-muted-foreground">Last updated {formatDateTime(profile.updated_at)}</p>
             <div className="flex gap-3">
               <Button type="button" variant="outline" disabled={!isDirty || isSubmitting} onClick={() => reset(toForm(profile))}>
+                <Undo2 className="size-4" />
                 Discard
               </Button>
-              <Button type="submit" disabled={!isDirty || isSubmitting || uploading}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <SubmitButton loading={isSubmitting} icon={Save} disabled={!isDirty || isSubmitting || uploading}>
                 Save changes
-              </Button>
+              </SubmitButton>
             </div>
           </CardFooter>
         </Card>

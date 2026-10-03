@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { History, Layers, PlusIcon, Wand2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { MoneyCell, TextCell } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
+import { MoneyField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import { splitList } from "@/lib/importLookup"
 
-import { deleteVariant, generateVariants, listProductVariants } from "../api"
+import { deleteVariant, generateVariants, listProductVariants, updateVariant } from "../api"
 import type { ProductVariant } from "../types"
 import { VariantFormDialog } from "./VariantFormDialog"
 
@@ -145,33 +143,41 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1" data-no-row-click>
-          {canViewInventory && (
-            <Button variant="ghost" size="icon" asChild aria-label={`Stock ledger for ${row.original.sku}`}>
-              <Link to={`/inventory/ledger?variant_id=${row.original.id}&sku=${encodeURIComponent(row.original.sku)}`}>
-                <History className="size-4" />
-              </Link>
-            </Button>
-          )}
-          {canManage && (
-            <TableActions
-              itemName={row.original.sku}
-              onEdit={() => {
-                setEditing(row.original)
-                setFormOpen(true)
-              }}
-              onDelete={async () => {
-                try {
-                  await deleteVariant(row.original.id)
-                  toast.success(`${row.original.sku} deactivated`)
-                  afterChange()
-                } catch (err) {
-                  toast.error(getApiErrorMessage(err, "Failed to delete variant"))
+        <TableActions
+          itemName={row.original.sku}
+          actions={
+            canViewInventory
+              ? [
+                  {
+                    label: "Stock ledger",
+                    icon: History,
+                    to: `/inventory/ledger?variant_id=${row.original.id}&sku=${encodeURIComponent(row.original.sku)}`,
+                  },
+                ]
+              : []
+          }
+          onEdit={
+            canManage
+              ? () => {
+                  setEditing(row.original)
+                  setFormOpen(true)
                 }
-              }}
-            />
-          )}
-        </div>
+              : undefined
+          }
+          onDelete={
+            canManage
+              ? async () => {
+                  try {
+                    await deleteVariant(row.original.id)
+                    toast.success(`${row.original.sku} deactivated`)
+                    afterChange()
+                  } catch (err) {
+                    toast.error(getApiErrorMessage(err, "Failed to delete variant"))
+                  }
+                }
+              : undefined
+          }
+        />
       ),
     },
   ]
@@ -209,6 +215,17 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
       <CardContent>
         <DataTable
           columns={columns}
+          bulk={
+            canManage
+              ? {
+                  noun: "variant",
+                  deleteRow: (v) => deleteVariant(v.id),
+                  activate: (rows) => Promise.all(rows.map((v) => updateVariant(v.id, { is_active: true }))),
+                  deactivate: (rows) => Promise.all(rows.map((v) => updateVariant(v.id, { is_active: false }))),
+                  onDone: afterChange,
+                }
+              : undefined
+          }
           data={variants}
           isLoading={isLoading}
           error={error}
@@ -227,7 +244,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
           emptyTitle="No variants yet"
           emptyDescription="Add a variant (or set a price on the product) to make it sellable."
           minWidth="860px"
-          columnWidths={["180px", "130px", "150px", "110px", "110px", "150px", "140px"]}
+          columnWidths={["180px", "130px", "150px", "110px", "110px", "150px", "80px"]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -311,33 +328,37 @@ function GenerateVariantsDialog({
       submitLabel="Generate"
       submitDisabled={!canSubmit}
     >
-      <Field>
-        <FieldLabel htmlFor="gen-colors">Colours</FieldLabel>
-        <FieldContent>
-          <Input id="gen-colors" value={colors} onChange={(e) => setColors(e.target.value)} placeholder="Black, White, Navy" />
-          <FieldDescription>Comma separated.</FieldDescription>
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="gen-sizes">Sizes</FieldLabel>
-        <FieldContent>
-          <Input id="gen-sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" />
-          <FieldDescription>Comma separated.</FieldDescription>
-        </FieldContent>
-      </Field>
+      <TextField
+        label="Colours"
+        id="gen-colors"
+        value={colors}
+        onChange={(e) => setColors(e.target.value)}
+        placeholder="Black, White, Navy"
+        description="Comma separated."
+      />
+      <TextField
+        label="Sizes"
+        id="gen-sizes"
+        value={sizes}
+        onChange={(e) => setSizes(e.target.value)}
+        placeholder="S, M, L, XL"
+        description="Comma separated."
+      />
       <div className="grid grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="gen-price">Price (BDT)</FieldLabel>
-          <FieldContent>
-            <Input id="gen-price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="gen-cost">Cost price</FieldLabel>
-          <FieldContent>
-            <Input id="gen-cost" inputMode="decimal" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="0.00" />
-          </FieldContent>
-        </Field>
+        <MoneyField
+          label="Price (BDT)"
+          id="gen-price"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="0.00"
+        />
+        <MoneyField
+          label="Cost price"
+          id="gen-cost"
+          value={costPrice}
+          onChange={(e) => setCostPrice(e.target.value)}
+          placeholder="0.00"
+        />
       </div>
       {(colorList.length > 0 || sizeList.length > 0) && (
         <p className="text-sm text-muted-foreground">

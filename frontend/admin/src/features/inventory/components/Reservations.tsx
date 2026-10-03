@@ -4,16 +4,16 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Lock, Unlock } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/common/data-table"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, ProductCell } from "@/components/common/cells"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -54,6 +54,7 @@ const Reservations = () => {
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [variant, setVariant] = useState<PickedVariant | null>(null)
   const [createdBefore, setCreatedBefore] = useState("")
+  const [releasing, setReleasing] = useState<StockReservation | null>(null)
 
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
@@ -123,21 +124,9 @@ const Reservations = () => {
             header: "ACTIONS",
             cell: ({ row }: { row: { original: StockReservation } }) =>
               row.original.status === "active" ? (
-                <ConfirmDialog
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <Unlock /> Release
-                    </Button>
-                  }
-                  title="Release reservation?"
-                  description={
-                    <>
-                      {row.original.quantity} × {row.original.variant_sku} held for order {row.original.order_number}{" "}
-                      returns to sellable stock.
-                    </>
-                  }
-                  confirmLabel="Release"
-                  onConfirm={() => release(row.original)}
+                <TableActions
+                  itemName={`reservation for ${row.original.variant_sku}`}
+                  actions={[{ label: "Release", icon: Unlock, onSelect: () => setReleasing(row.original) }]}
                 />
               ) : null,
           } as ColumnDef<StockReservation>,
@@ -147,7 +136,7 @@ const Reservations = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Stock Reservations" description="Stock held for placed orders until they ship or the hold expires" />
+      <PageHeader title="Stock Reservations" />
 
       <FilterToolbar
         inlineCount={3}
@@ -162,9 +151,9 @@ const Reservations = () => {
           {
             active: Boolean(status),
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Status"
-                frameworks={statusOptions}
+                options={statusOptions}
                 value={status}
                 onValueChange={setStatus}
               />
@@ -173,9 +162,9 @@ const Reservations = () => {
           {
             active: Boolean(expired),
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Expiry"
-                frameworks={expiryOptions}
+                options={expiryOptions}
                 value={expired}
                 onValueChange={setExpired}
               />
@@ -211,8 +200,24 @@ const Reservations = () => {
         emptyTitle="No reservations"
         emptyDescription="No stock holds match these filters."
         minWidth="980px"
-        columnWidths={["240px", "140px", "70px", "150px", "170px", "170px", ...(canRelease ? ["120px"] : [])]}
+        columnWidths={["240px", "140px", "70px", "150px", "170px", "170px", ...(canRelease ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
+      />
+
+      <ConfirmDialog
+        open={Boolean(releasing)}
+        onOpenChange={(open) => !open && setReleasing(null)}
+        title="Release reservation?"
+        description={
+          releasing && (
+            <>
+              {releasing.quantity} × {releasing.variant_sku} held for order {releasing.order_number} returns to
+              sellable stock.
+            </>
+          )
+        }
+        confirmLabel="Release"
+        onConfirm={() => (releasing ? release(releasing) : undefined)}
       />
     </div>
   )

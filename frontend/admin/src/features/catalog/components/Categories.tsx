@@ -7,12 +7,11 @@ import { CornerDownRight, FolderTree, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge } from "@/components/common/cells"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -20,7 +19,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { createImportLookup } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 
-import { createCategory, deleteCategory, fetchAllCategories, restoreCategory } from "../api"
+import { createCategory, deleteCategory, fetchAllCategories, restoreCategory, updateCategory } from "../api"
 import { categoryTypeOptions, type Category, type CategoryPayload } from "../types"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
 
@@ -28,8 +27,7 @@ const Categories = () => {
   useDocumentTitle("Categories")
   const navigate = useNavigate()
   const canManage = useCan("catalog.manage")
-  const [includeDeleted, setIncludeDeleted] = useState(false)
-  const { options, isLoading, error, reload } = useCategoryOptions(includeDeleted)
+  const { options, isLoading, error, reload } = useCategoryOptions()
   const [search, setSearch] = useState("")
   const [type, setType] = useState<Option | null>(null)
 
@@ -166,7 +164,6 @@ const Categories = () => {
     <div className="section-container">
       <PageHeader
         title="Categories"
-        description="Organise products into a category tree"
         actions={
           canManage && (
             <>
@@ -194,22 +191,32 @@ const Categories = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Category type"
-                frameworks={categoryTypeOptions}
+                options={categoryTypeOptions}
                 value={type}
                 onValueChange={setType}
               />
             ),
           },
-          ...(canManage
-            ? [{ component: <DeletedToggle pressed={includeDeleted} onPressedChange={setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+                noun: "category",
+                getId: (o) => o.value,
+                isSelectable: (o) => !o.category.deleted_at,
+                deleteRow: (o) => deleteCategory(o.value),
+        activate: (rows) => Promise.all(rows.map((o) => updateCategory(o.value, { is_active: true }))),
+        deactivate: (rows) => Promise.all(rows.map((o) => updateCategory(o.value, { is_active: false }))),
+                onDone: reload,
+              }
+            : undefined
+        }
         data={rows}
         isLoading={isLoading}
         error={error}
@@ -219,7 +226,7 @@ const Categories = () => {
         emptyTitle="No categories"
         emptyDescription="Create a root category, then nest subcategories under it."
         minWidth="760px"
-        columnWidths={["320px", "200px", "110px", "110px", "120px"]}
+        columnWidths={["320px", "200px", "110px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
     </div>

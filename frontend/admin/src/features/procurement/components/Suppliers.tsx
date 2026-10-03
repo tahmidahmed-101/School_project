@@ -7,16 +7,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
@@ -99,36 +97,24 @@ function SupplierFormDialog({
       submitting={isSubmitting}
       submitLabel={supplier ? "Save Changes" : "Add Supplier"}
     >
-      <Field>
-        <FieldLabel htmlFor="sup-name">Name *</FieldLabel>
-        <FieldContent>
-          <Input id="sup-name" aria-invalid={!!errors.name} {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </FieldContent>
-      </Field>
+      <TextField label="Name *" id="sup-name" error={errors.name} {...register("name")} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="sup-email">Contact email</FieldLabel>
-          <FieldContent>
-            <Input id="sup-email" type="email" aria-invalid={!!errors.contact_email} {...register("contact_email")} />
-            <FieldError errors={[errors.contact_email]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="sup-phone">Phone</FieldLabel>
-          <FieldContent>
-            <Input id="sup-phone" type="tel" {...register("phone")} />
-            <FieldError errors={[errors.phone]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Contact email"
+          id="sup-email"
+          type="email"
+          error={errors.contact_email}
+          {...register("contact_email")}
+        />
+        <TextField label="Phone" id="sup-phone" type="tel" error={errors.phone} {...register("phone")} />
       </div>
-      <Field>
-        <FieldLabel htmlFor="sup-terms">Payment terms</FieldLabel>
-        <FieldContent>
-          <Input id="sup-terms" placeholder="e.g. Net 30" {...register("payment_terms")} />
-          <FieldError errors={[errors.payment_terms]} />
-        </FieldContent>
-      </Field>
+      <TextField
+        label="Payment terms"
+        id="sup-terms"
+        placeholder="e.g. Net 30"
+        error={errors.payment_terms}
+        {...register("payment_terms")}
+      />
       {supplier && <SwitchField control={control} name="is_active" label="Active" />}
     </FormDialog>
   )
@@ -151,11 +137,15 @@ const Suppliers = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Supplier | null>(null)
 
+  const setActive = (rows: Supplier[], is_active: boolean) =>
+    Promise.all(
+      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<Supplier> })).unwrap())
+    )
+
   const handleDelete = async (supplier: Supplier) => {
     try {
       await dispatch(deleteData(supplier.id)).unwrap()
       toast.success("Supplier deleted")
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete supplier"))
     }
@@ -235,7 +225,6 @@ const Suppliers = () => {
     <div className="section-container">
       <PageHeader
         title="Suppliers"
-        description="Vendors you buy stock from."
         actions={
           canManage && (
             <>
@@ -257,15 +246,23 @@ const Suppliers = () => {
         searchPlaceholder="Search name or email..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={
-          canManage
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []
-        }
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+                noun: "supplier",
+                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
+                activate: (rows) => setActive(rows, true),
+                deactivate: (rows) => setActive(rows, false),
+                onDone: () => {
+                  list.reload()
+                },
+              }
+            : undefined
+        }
         data={state.data}
         {...list.tableProps}
         onRowClick={canManage ? (s) => !s.deleted_at && openForm(s) : undefined}
@@ -274,7 +271,7 @@ const Suppliers = () => {
         emptyActionLabel={canManage ? "Add Supplier" : undefined}
         onEmptyAction={canManage ? () => openForm(null) : undefined}
         minWidth="900px"
-        columnWidths={["220px", "230px", "150px", "120px", "100px", "110px"]}
+        columnWidths={["220px", "230px", "150px", "120px", "100px", "80px"]}
       />
 
       <SupplierFormDialog open={formOpen} onOpenChange={setFormOpen} supplier={editing} />

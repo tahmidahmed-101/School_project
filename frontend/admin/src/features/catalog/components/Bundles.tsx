@@ -11,7 +11,6 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -21,7 +20,7 @@ import { formatCurrency } from "@/lib/format"
 import type { Option } from "@/lib/types"
 
 import { deleteData, fetchAll } from "../slices/bundleSlice"
-import { restoreBundle } from "../api"
+import { restoreBundle, updateBundle } from "../api"
 import type { Bundle } from "../types"
 
 const orderingOptions: Option[] = [
@@ -59,7 +58,6 @@ const Bundles = () => {
     try {
       await dispatch(deleteData(b.id)).unwrap()
       toast.success(`${b.name} deleted`)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete bundle"))
     }
@@ -139,7 +137,6 @@ const Bundles = () => {
     <div className="section-container">
       <PageHeader
         title="Bundles"
-        description="Combo products sold as one SKU; stock is drawn from their component variants"
         actions={
           canManage && (
             <Button size="action" onClick={() => navigate("/bundles/new")}>
@@ -155,14 +152,22 @@ const Bundles = () => {
         onSearchChange={list.setSearch}
         filters={[
           { component: <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} /> },
-          ...(canManage
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+        noun: "bundle",
+        deleteRow: (b) => dispatch(deleteData(b.id)).unwrap(),
+        activate: (rows) => Promise.all(rows.map((b) => updateBundle(b.id, { is_active: true }))),
+        deactivate: (rows) => Promise.all(rows.map((b) => updateBundle(b.id, { is_active: false }))),
+        onDone: list.reload,
+      }
+            : undefined
+        }
         data={bundleState.data}
         {...list.tableProps}
         getRowLink={canManage ? (b) => `/bundles/${b.id}` : undefined}
@@ -172,7 +177,7 @@ const Bundles = () => {
         emptyActionLabel={canManage ? "New bundle" : undefined}
         onEmptyAction={canManage ? () => navigate("/bundles/new") : undefined}
         minWidth="980px"
-        columnWidths={["260px", "280px", "140px", "100px", "110px", "130px"]}
+        columnWidths={["260px", "280px", "140px", "100px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
     </div>

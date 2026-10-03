@@ -97,7 +97,6 @@ const VendorPayments = () => {
     <div className="section-container">
       <PageHeader
         title="Vendor Payments"
-        description="Money paid to suppliers. Record new payments from a vendor bill."
         actions={<ExportButton onExport={handleExport} />}
       />
 

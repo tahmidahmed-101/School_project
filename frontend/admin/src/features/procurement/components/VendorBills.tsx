@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Ban, Banknote, CheckCircle2, FileDown, FileText, Loader2, Pencil, Plus } from "lucide-react"
+import { Ban, Banknote, CheckCircle2, FileDown, FileText, Pencil, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,8 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { DateCell, MoneyCell } from "@/components/common/cells"
+import { DialogActions } from "@/components/common/FormDialog"
+import { DateField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime, fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
@@ -95,27 +97,23 @@ function PaymentDialog({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="pay-amount">Amount *</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="pay-amount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={outstanding}
-                  value={amount}
-                  aria-invalid={!amountValid}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="pay-at">Paid at *</FieldLabel>
-              <FieldContent>
-                <Input id="pay-at" type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Amount *"
+              id="pay-amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              max={outstanding}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            <DateField
+              label="Paid at *"
+              id="pay-at"
+              withTime
+              value={paidAt}
+              onChange={(e) => setPaidAt(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Field>
@@ -129,22 +127,23 @@ function PaymentDialog({
                 </datalist>
               </FieldContent>
             </Field>
-            <Field>
-              <FieldLabel htmlFor="pay-ref">Reference</FieldLabel>
-              <FieldContent>
-                <Input id="pay-ref" placeholder="e.g. BEFTN trace no." value={reference} onChange={(e) => setReference(e.target.value)} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Reference"
+              id="pay-ref"
+              placeholder="e.g. BEFTN trace no."
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+            />
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={save} disabled={saving || !amountValid || !paidAt}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Record Payment
-          </Button>
-        </DialogFooter>
+        <DialogActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={save}
+          submitLabel="Record Payment"
+          icon={CheckCircle2}
+          submitting={saving}
+          submitDisabled={!amountValid || !paidAt}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -372,7 +371,6 @@ const VendorBills = () => {
     <div className="section-container">
       <PageHeader
         title="Vendor Bills"
-        description="Supplier invoices matched to received purchase orders (accounts payable)."
         actions={
           canWrite && (
             <Button size="action" onClick={() => setCreateOpen(true)}>

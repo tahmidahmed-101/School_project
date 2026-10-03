@@ -1,4 +1,5 @@
 import { toast } from "sonner"
+import { z } from "zod"
 import type { FieldPath, FieldValues, UseFormSetError } from "react-hook-form"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 
@@ -26,3 +27,9 @@ export function reportFormError<T extends FieldValues>(
   }
   toast.error(getApiErrorMessage(err, fallback))
 }
+
+/** An amount typed into a text input: blank (optional) or a non-negative number with up to 2 decimals. */
+export const moneySchema = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^\d+(\.\d{1,2})?$/.test(v), "Enter a valid amount (max 2 decimals)")

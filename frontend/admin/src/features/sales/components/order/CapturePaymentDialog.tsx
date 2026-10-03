@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { FormDialog } from "@/components/common/FormDialog"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { capturePayment } from "@/features/sales/slices/orderSlice"
 import type { Order } from "@/features/sales/types"
@@ -71,20 +72,16 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
       submitLabel="Capture"
       submitDisabled={!canSubmit}
     >
-      <Field>
-        <FieldLabel htmlFor="capture-amount">Amount</FieldLabel>
-        <FieldContent>
-          <Input
-            id="capture-amount"
-            type="number"
-            step="0.01"
-            min="0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <FieldDescription>Must equal the order total of {formatCurrency(order.grand_total)}.</FieldDescription>
-        </FieldContent>
-      </Field>
+      <TextField
+        label="Amount"
+        id="capture-amount"
+        type="number"
+        step="0.01"
+        min="0"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        description={<>Must equal the order total of {formatCurrency(order.grand_total)}.</>}
+      />
       <Field>
         <FieldLabel htmlFor="capture-method">Method</FieldLabel>
         <FieldContent>

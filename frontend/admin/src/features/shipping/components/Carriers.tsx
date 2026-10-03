@@ -8,7 +8,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteCarrier, fetchCarriers, restoreCarrier } from "@/features/shipping/slices/carrierSlice"
+import { deleteCarrier, fetchCarriers, restoreCarrier, updateCarrier } from "@/features/shipping/slices/carrierSlice"
 import { CARRIER_PROVIDER_OPTIONS, type Carrier } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -31,13 +31,14 @@ const Carriers = () => {
     setFormOpen(true)
   }
 
-  const { list, trailingColumns, filters } = useSoftDeleteList<Carrier>({
+  const { list, trailingColumns, bulk } = useSoftDeleteList<Carrier>({
     fetch: (p) => dispatch(fetchCarriers(p)),
     state: carrierState,
     noun: "carrier",
     canUpdate,
     remove: (id) => dispatch(deleteCarrier(id)).unwrap(),
     restore: (id) => dispatch(restoreCarrier(id)).unwrap(),
+    setActive: (id, is_active) => dispatch(updateCarrier({ id, payload: { is_active } })).unwrap(),
     onEdit: openForm,
   })
 
@@ -84,7 +85,6 @@ const Carriers = () => {
     <div className="section-container">
       <PageHeader
         title="Carriers"
-        description="Courier partners used to ship orders."
         actions={
           canUpdate && (
             <Button size="action" onClick={() => openForm(null)}>
@@ -98,11 +98,11 @@ const Carriers = () => {
         searchPlaceholder="Search carriers..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={filters}
       />
 
       <DataTable
         columns={columns}
+        bulk={bulk}
         data={carrierState.data}
         {...list.tableProps}
         emptyTitle="No carriers yet"

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import type { DateRange } from "react-day-picker"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Plus, Receipt } from "lucide-react"
@@ -6,14 +7,14 @@ import { Plus, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ExportButton } from "@/components/common/ExportButton"
 import { SortSelect } from "@/components/common/SortSelect"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
-import { DateRangeInputs } from "@/components/common/DateRangeInputs"
+import { DatePicker } from "@/components/common/DatePicker"
+import { toISODate } from "@/lib/format"
 import { DateCell, MoneyCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { exportToCSV } from "@/lib/csv"
@@ -51,8 +52,9 @@ const Expenses = () => {
 
   const [category, setCategory] = useState<Option | null>(null)
   const [account, setAccount] = useState<Option | null>(null)
-  const [start, setStart] = useState("")
-  const [end, setEnd] = useState("")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const from = dateRange?.from
+  const to = dateRange?.to ?? dateRange?.from
   const [ordering, setOrdering] = useState<Option | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -65,8 +67,8 @@ const Expenses = () => {
     params: {
       category_id: category?.value,
       account_id: account?.value,
-      start,
-      end,
+      start: from ? toISODate(from) : undefined,
+      end: to ? toISODate(to) : undefined,
       ordering: ordering?.value,
     },
   })
@@ -119,7 +121,6 @@ const Expenses = () => {
       await dispatch(deleteData(expense.id)).unwrap()
       toast.success("Expense deleted")
       setViewing(null)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete expense"))
     }
@@ -237,7 +238,6 @@ const Expenses = () => {
     <div className="section-container">
       <PageHeader
         title="Expenses"
-        description="Operating spend, posted to the ledger as journal entries."
         actions={
           <>
             <ExportButton onExport={exportAll} />
@@ -272,20 +272,12 @@ const Expenses = () => {
         searchPlaceholder="Search payee, description, reference..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        datePicker={
-          <DateRangeInputs
-            idPrefix="expenses"
-            start={start}
-            end={end}
-            onStartChange={setStart}
-            onEndChange={setEnd}
-          />
-        }
+        datePicker={<DatePicker value={dateRange} onChange={setDateRange} />}
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={categoryOptions}
+              <Combobox
+                options={categoryOptions}
                 placeholder="Category"
                 value={category}
                 onValueChange={setCategory}
@@ -294,8 +286,8 @@ const Expenses = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={expenseAccountOptions}
+              <Combobox
+                options={expenseAccountOptions}
                 placeholder="Expense account"
                 value={account}
                 onValueChange={setAccount}
@@ -303,18 +295,16 @@ const Expenses = () => {
             ),
           },
           { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
-          ...(canPost
-            ? [
-                {
-                  component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
-                },
-              ]
-            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canPost
+            ? { noun: "expense", deleteRow: (e) => dispatch(deleteData(e.id)).unwrap(), onDone: list.reload }
+            : undefined
+        }
         data={expenses}
         {...list.tableProps}
         onRowClick={(exp) => !exp.deleted_at && setViewing(exp)}
@@ -322,7 +312,7 @@ const Expenses = () => {
         emptyTitle="No expenses found"
         emptyDescription="No expenses match these filters."
         minWidth="1200px"
-        columnWidths={["110px", "240px", "150px", "190px", "160px", "120px", "130px", "110px"]}
+        columnWidths={["110px", "240px", "150px", "190px", "160px", "120px", "130px", "80px"]}
       />
 
       <ExpenseFormDialog

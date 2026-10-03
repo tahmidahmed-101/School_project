@@ -236,7 +236,7 @@ const Blocklists = () => {
 
   return (
     <div className="section-container space-y-6">
-      <PageHeader title="Blocklists" description="Phone numbers and IP addresses that are restricted from ordering." />
+      <PageHeader title="Blocklists" />
       <Tabs value={tab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>
         <TabsList className="w-full md:w-fit bg-muted p-1">
           <TabsTrigger value="phone" className="min-w-max gap-2">

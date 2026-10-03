@@ -4,23 +4,21 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { BadgeCheck, ImageIcon, PlusIcon, ToggleLeft, ToggleRight } from "lucide-react"
+import { BadgeCheck, ImageIcon, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
-import { BulkActionBar } from "@/components/common/BulkActionBar"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
+import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -34,7 +32,6 @@ import { deleteData, fetchAll } from "../slices/brandSlice"
 import { bulkBrandStatus, createBrand, fetchAllCategories, restoreBrand, updateBrand, uploadBrandImage } from "../api"
 import type { Brand, BrandPayload } from "../types"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
-import { useRowSelection } from "../lib/useRowSelection"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -53,14 +50,12 @@ const Brands = () => {
   const [category, setCategory] = useState<Option | null>(null)
   const [editing, setEditing] = useState<Brand | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const [bulkBusy, setBulkBusy] = useState(false)
 
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: brandState,
     params: { is_active: status?.value, category_id: category?.value },
   })
-  const selection = useRowSelection(brands, `${list.page}|${JSON.stringify(list.query)}`)
 
   // CSV import: "Categories" holds names/slugs separated by ";" (or "|"), resolved to ids.
   const categoryLookup = useMemo(
@@ -82,20 +77,6 @@ const Brands = () => {
     [categoryLookup]
   )
 
-  const runBulk = async (isActive: boolean) => {
-    setBulkBusy(true)
-    try {
-      const res = await bulkBrandStatus(selection.selected, isActive)
-      toast.success(`${res.affected} brand(s) ${isActive ? "activated" : "deactivated"}`)
-      selection.clear()
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Bulk update failed"))
-    } finally {
-      setBulkBusy(false)
-    }
-  }
-
   const handleRestore = async (brand: Brand) => {
     try {
       await restoreBrand(brand.id)
@@ -110,14 +91,12 @@ const Brands = () => {
     try {
       await dispatch(deleteData(brand.id)).unwrap()
       toast.success(`${brand.name} deleted`)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete brand"))
     }
   }
 
   const columns: ColumnDef<Brand>[] = [
-    ...(canManage ? [selection.column] : []),
     {
       accessorKey: "name",
       header: "BRAND",
@@ -174,7 +153,6 @@ const Brands = () => {
     <div className="section-container">
       <PageHeader
         title="Brands"
-        description="Brands shown on the storefront, linked to categories"
         actions={
           canManage && (
             <>
@@ -208,9 +186,9 @@ const Brands = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Category"
-                frameworks={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
+                options={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
                 value={category}
                 onValueChange={setCategory}
               />
@@ -218,41 +196,38 @@ const Brands = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Status"
-                frameworks={statusOptions}
+                options={statusOptions}
                 value={status}
                 onValueChange={setStatus}
               />
             ),
           },
-          ...(canManage
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
-      {canManage && (
-        <BulkActionBar count={selection.selected.length} onClear={selection.clear}>
-          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(true)}>
-            <ToggleRight /> Activate
-          </Button>
-          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(false)}>
-            <ToggleLeft /> Deactivate
-          </Button>
-        </BulkActionBar>
-      )}
-
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+                noun: "brand",
+                deleteRow: (b) => dispatch(deleteData(b.id)).unwrap(),
+                activate: (rows) => bulkBrandStatus(rows.map((r) => r.id), true),
+                deactivate: (rows) => bulkBrandStatus(rows.map((r) => r.id), false),
+                onDone: list.reload,
+              }
+            : undefined
+        }
         data={brands}
         {...list.tableProps}
         emptyIcon={BadgeCheck}
         emptyTitle="No brands"
         emptyDescription="Add a brand and link it to the categories it sells in."
         minWidth="760px"
-        columnWidths={[...(canManage ? ["48px"] : []), "280px", "260px", "110px", "120px"]}
-        unlabelledColumns={["select", "actions"]}
+        columnWidths={["280px", "260px", "110px", "80px"]}
+        unlabelledColumns={["actions"]}
       />
 
       {canManage && (
@@ -357,20 +332,14 @@ function BrandFormDialog({
       submitting={isSubmitting}
       submitLabel={brand ? "Save brand" : "Create brand"}
     >
-      <Field>
-        <FieldLabel htmlFor="brand-name">Name</FieldLabel>
-        <FieldContent>
-          <Input id="brand-name" {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="brand-description">Description</FieldLabel>
-        <FieldContent>
-          <Textarea id="brand-description" rows={3} {...register("description")} />
-          <FieldError errors={[errors.description]} />
-        </FieldContent>
-      </Field>
+      <TextField label="Name" id="brand-name" error={errors.name} {...register("name")} />
+      <TextareaField
+        label="Description"
+        id="brand-description"
+        rows={3}
+        error={errors.description}
+        {...register("description")}
+      />
       <Field>
         <FieldLabel>Categories</FieldLabel>
         <FieldContent>
@@ -404,18 +373,9 @@ function BrandFormDialog({
           <FieldError errors={[errors.category_ids]} />
         </FieldContent>
       </Field>
-      <Field>
-        <FieldLabel htmlFor="brand-image">Logo / image</FieldLabel>
-        <FieldContent>
-          <Input
-            id="brand-image"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-          />
-          <FieldDescription>Uploaded when you save.</FieldDescription>
-        </FieldContent>
-      </Field>
+      <FormField label="Logo / image" htmlFor="brand-image" description="Uploaded when you save.">
+        <ImagePicker id="brand-image" src={brand?.image} onSelect={setImageFile} />
+      </FormField>
       {brand && <SwitchField control={control} name="is_active" label="Active" />}
     </FormDialog>
   )

@@ -37,7 +37,6 @@ const Analytics = () => {
     <div className="section-container flex flex-col gap-5">
       <PageHeader
         title="Analytics"
-        description="Sales, stock and customer reports for the selected period."
         actions={
           !blocked && (
             <DateRangeControl

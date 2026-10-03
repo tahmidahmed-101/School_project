@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Check, X } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,13 +119,16 @@ export function ConfirmDialog({
         {children}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>
+            <X className="size-4" />
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? "destructive" : "default"}
             disabled={busy || missingReason || confirmDisabled}
             onClick={confirm}
           >
-            {busy && <Loader2 className="size-4 animate-spin" />}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

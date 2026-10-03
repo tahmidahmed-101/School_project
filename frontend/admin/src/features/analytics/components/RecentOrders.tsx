@@ -1,7 +1,8 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "react-router-dom"
 import { ShoppingBag } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import type { StatusTone } from "@/components/common/status-tones"
 import { useCan } from "@/hooks/use-can"
@@ -29,6 +30,61 @@ interface Props {
 export function RecentOrders({ orders, isLoading, error, onRetry, className }: Props) {
   const canOpenOrders = useCan("orders.view")
 
+  const columns: ColumnDef<DashboardOrder>[] = [
+    {
+      id: "order",
+      header: "Order",
+      cell: ({ row: { original: o } }) => {
+        const units = o.items.reduce((sum, line) => sum + line.quantity, 0)
+        return (
+          <div>
+            {canOpenOrders ? (
+              <Link to={`/order_detail/${o.order_id}`} className="font-medium text-primary hover:underline">
+                {o.id}
+              </Link>
+            ) : (
+              <span className="font-medium">{o.id}</span>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {units} {units === 1 ? "item" : "items"}
+              {o.region !== "—" && ` · ${o.region}`}
+            </p>
+          </div>
+        )
+      },
+    },
+    {
+      id: "customer",
+      header: "Customer",
+      cell: ({ row }) => <span className="block truncate">{row.original.customer.name}</span>,
+    },
+    {
+      id: "total",
+      header: "Total",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="font-medium tabular-nums">{formatCurrency(row.original.total_amount)}</span>,
+    },
+    {
+      id: "payment",
+      header: "Payment",
+      cell: ({ row }) => (
+        <span className="text-xs uppercase text-muted-foreground">{humanize(row.original.payment_method)}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} tone={STATUS_TONE[row.original.status]} />,
+    },
+    {
+      id: "placed",
+      header: "Placed",
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">{formatDateTime(row.original.created_at)}</span>
+      ),
+    },
+  ]
+
   return (
     <ReportWidget
       title="Recent orders"
@@ -51,49 +107,14 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
       className={className}
       contentClassName="px-0 pb-2 pt-0"
     >
-      <div className="overflow-x-auto">
-        <Table className="min-w-[640px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-5">Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="pr-5">Placed</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders?.map((o) => {
-              const units = o.items.reduce((s, line) => s + line.quantity, 0)
-              return (
-                <TableRow key={o.order_id}>
-                  <TableCell className="pl-5">
-                    {canOpenOrders ? (
-                      <Link to={`/order_detail/${o.order_id}`} className="font-medium text-primary hover:underline">
-                        {o.id}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{o.id}</span>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {units} {units === 1 ? "item" : "items"}
-                      {o.region !== "—" && ` · ${o.region}`}
-                    </p>
-                  </TableCell>
-                  <TableCell className="max-w-[180px] truncate">{o.customer.name}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">{formatCurrency(o.total_amount)}</TableCell>
-                  <TableCell className="text-muted-foreground uppercase text-xs">{humanize(o.payment_method)}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={o.status} tone={STATUS_TONE[o.status]} />
-                  </TableCell>
-                  <TableCell className="pr-5 text-xs text-muted-foreground">{formatDateTime(o.created_at)}</TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        embedded
+        showPagination={false}
+        columns={columns}
+        data={orders ?? []}
+        minWidth="640px"
+        columnWidths={["150px", "180px", "120px", "110px", "120px", "150px"]}
+      />
     </ReportWidget>
   )
 }

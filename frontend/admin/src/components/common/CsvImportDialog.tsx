@@ -1,6 +1,8 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useRef, useState } from "react"
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Loader2, Upload, X } from "lucide-react"
+import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Loader2, Upload, X, Check, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DataTable } from "./data-table"
 import {
   Dialog,
   DialogContent,
@@ -274,6 +276,44 @@ export function CsvImportDialog({
     )
   }
 
+  const previewColumns: ColumnDef<string[]>[] = [
+    // Row 1 of the file is the header, so the first data row is row 2.
+    { id: "row", header: "Row", cell: ({ row }) => <span className="text-muted-foreground">{row.index + 2}</span> },
+    ...fields.map(
+      (f): ColumnDef<string[]> => ({
+        id: f.key,
+        header: f.label,
+        cell: ({ row }) => {
+          const col = mapping[f.key]
+          return col && col !== IGNORE ? (
+            <span className="block truncate">{row.original[Number(col)]}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
+        },
+      })
+    ),
+    {
+      id: "check",
+      header: "Check",
+      cell: ({ row }) => {
+        const error = validateSync(row.original)
+        return error ? (
+          <span className="text-destructive" title={error}>
+            {error}
+          </span>
+        ) : (
+          <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />
+        )
+      },
+    },
+  ]
+
+  const failedColumns: ColumnDef<RowResult>[] = [
+    { id: "row", header: "Row", cell: ({ row }) => <span className="text-muted-foreground">{row.original.rowNumber}</span> },
+    { id: "problem", header: "Problem", cell: ({ row }) => <span className="text-destructive">{row.original.error}</span> },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-3xl">
@@ -366,48 +406,14 @@ export function CsvImportDialog({
 
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-              <div className="overflow-x-auto rounded-md border border-border">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left font-medium">Row</th>
-                      {fields.map((f) => (
-                        <th key={f.key} className="whitespace-nowrap px-2 py-1.5 text-left font-medium">
-                          {f.label}
-                        </th>
-                      ))}
-                      <th className="px-2 py-1.5 text-left font-medium">Check</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewRows.map((r, i) => {
-                      const error = validateSync(r)
-                      return (
-                        <tr key={i} className="border-t border-border">
-                          <td className="px-2 py-1.5 text-muted-foreground">{i + 2}</td>
-                          {fields.map((f) => {
-                            const col = mapping[f.key]
-                            return (
-                              <td key={f.key} className="max-w-40 truncate px-2 py-1.5">
-                                {col && col !== IGNORE ? r[Number(col)] : <span className="text-muted-foreground">—</span>}
-                              </td>
-                            )
-                          })}
-                          <td className="px-2 py-1.5">
-                            {error ? (
-                              <span className="text-destructive" title={error}>
-                                {error}
-                              </span>
-                            ) : (
-                              <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                showPagination={false}
+                selectable={false}
+                columns={previewColumns}
+                data={previewRows}
+                minWidth={`${160 + fields.length * 150}px`}
+                columnWidths={["60px", ...fields.map(() => "150px"), "auto"]}
+              />
               {invalidCount > 0 && (
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                   {invalidCount} of {rows.length} rows have problems and will be skipped. You can download them after the import.
@@ -452,24 +458,14 @@ export function CsvImportDialog({
               )}
             </div>
             {failed.length > 0 && (
-              <div className="max-h-56 overflow-y-auto rounded-md border border-border">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-muted">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left font-medium">Row</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Problem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {failed.map((r) => (
-                      <tr key={r.rowNumber} className="border-t border-border">
-                        <td className="px-2 py-1.5 text-muted-foreground">{r.rowNumber}</td>
-                        <td className="px-2 py-1.5 text-destructive">{r.error}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                showPagination={false}
+                selectable={false}
+                columns={failedColumns}
+                data={failed}
+                minWidth="0px"
+                columnWidths={["70px", "auto"]}
+              />
             )}
           </div>
         )}
@@ -480,7 +476,8 @@ export function CsvImportDialog({
               <Button type="button" variant="outline" onClick={downloadTemplate}>
                 <Download className="size-4" /> Download template
               </Button>
-              <Button type="button" variant="ghost" onClick={() => close(false)}>
+              <Button type="button" variant="outline" onClick={() => close(false)}>
+                <X className="size-4" />
                 Cancel
               </Button>
             </>
@@ -488,6 +485,7 @@ export function CsvImportDialog({
           {step === "map" && (
             <>
               <Button type="button" variant="ghost" onClick={reset}>
+                <RotateCcw className="size-4" />
                 Choose another file
               </Button>
               <Button type="button" onClick={runImport} disabled={missingRequired.length > 0}>
@@ -514,6 +512,7 @@ export function CsvImportDialog({
                 </Button>
               )}
               <Button type="button" onClick={() => close(false)}>
+                <Check className="size-4" />
                 Done
               </Button>
             </>

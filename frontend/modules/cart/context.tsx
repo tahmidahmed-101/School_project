@@ -8,7 +8,13 @@ import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "
 interface CartContextType {
   items: CartItem[];
   /** Adds the SKU that `selectedVariant` points at (the product's default SKU when omitted). */
-  addItem: (product: Product, quantity?: number, selectedVariant?: Record<string, string>) => void;
+  /** Adds a line and opens the cart drawer; pass `openDrawer: false` when the caller navigates away instead. */
+  addItem: (
+    product: Product,
+    quantity?: number,
+    selectedVariant?: Record<string, string>,
+    options?: { openDrawer?: boolean },
+  ) => void;
   updateQuantity: (productId: string, quantity: number, selectedVariant?: Record<string, string>) => void;
   removeItem: (productId: string, selectedVariant?: Record<string, string>) => void;
   clearCart: () => void;
@@ -93,7 +99,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addItem = useCallback(
-    (product: Product, quantity = 1, selectedVariant?: Record<string, string>) => {
+    (
+      product: Product,
+      quantity = 1,
+      selectedVariant?: Record<string, string>,
+      { openDrawer = true }: { openDrawer?: boolean } = {},
+    ) => {
       const variant = resolveVariant(product, selectedVariant);
       // No SKU means the product did not come from the API (e.g. an old wishlist entry): it cannot be ordered.
       if (!variant || !variant.inStock) return;
@@ -124,7 +135,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ];
       });
 
-      setIsDrawerOpen(true);
+      if (openDrawer) setIsDrawerOpen(true);
     },
     [setItems],
   );

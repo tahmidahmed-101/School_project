@@ -1,22 +1,23 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { DownloadIcon, Layers, Loader2, Package, UploadIcon } from "lucide-react"
+import { DownloadIcon, Layers, Loader2, Package, UploadIcon, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { MoneyCell, ProductCell, TextCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
+import { DialogActions } from "@/components/common/FormDialog"
+import { TextField } from "@/components/common/form-fields"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -25,8 +26,10 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 
 import { fetchAll } from "../slices/variantSlice"
-import { downloadVariantsExport, importVariants } from "../api"
-import type { ProductVariant, VariantImportResult } from "../types"
+import { deleteVariant, downloadVariantsExport, importVariants, updateVariant } from "../api"
+import { ProductPickerDialog } from "./ProductPickerDialog"
+import { VariantFormDialog } from "./VariantFormDialog"
+import type { Product, ProductVariant, VariantImportResult } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 
 const PAGE_SIZE = 25
@@ -65,6 +68,10 @@ const Variants = () => {
   const [preorder, setPreorder] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [editing, setEditing] = useState<ProductVariant | null>(null)
+  // Creating a variant: first pick the product it belongs to, then fill in the variant form.
+  const [pickingProduct, setPickingProduct] = useState(false)
+  const [addingTo, setAddingTo] = useState<Product | null>(null)
   const [importOpen, setImportOpen] = useState(false)
 
   const list = useListPage({
@@ -160,12 +167,27 @@ const Variants = () => {
       ),
     },
     {
-      id: "product",
-      header: "PRODUCT",
+      id: "actions",
+      header: "ACTIONS",
       cell: ({ row }) => (
-        <Link to={`/product_detail/${row.original.product_id}`} className="text-sm text-primary hover:underline">
-          Open
-        </Link>
+        <TableActions
+          itemName={row.original.sku}
+          viewUrl={`/product_detail/${row.original.product_id}`}
+          onEdit={canManage ? () => setEditing(row.original) : undefined}
+          onDelete={
+            canManage
+              ? async () => {
+                  try {
+                    await deleteVariant(row.original.id)
+                    toast.success(`${row.original.sku} deactivated`)
+                    list.reload()
+                  } catch (err) {
+                    toast.error(getApiErrorMessage(err, "Failed to delete variant"))
+                  }
+                }
+              : undefined
+          }
+        />
       ),
     },
   ]
@@ -174,7 +196,6 @@ const Variants = () => {
     <div className="section-container">
       <PageHeader
         title="Variants"
-        description="Every sellable SKU across the catalog, with live availability"
         actions={
           <>
             <DropdownMenu>
@@ -189,8 +210,13 @@ const Variants = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             {canManage && (
-              <Button size="action" onClick={() => setImportOpen(true)}>
+              <Button variant="outline" size="action" onClick={() => setImportOpen(true)}>
                 <UploadIcon className="size-5" /> Import
+              </Button>
+            )}
+            {canManage && (
+              <Button size="action" onClick={() => setPickingProduct(true)}>
+                <PlusIcon className="size-5" /> Add Variant
               </Button>
             )}
           </>
@@ -204,9 +230,9 @@ const Variants = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Category"
-                frameworks={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
+                options={categoryOptions.map((o) => ({ label: o.label, value: o.value }))}
                 value={category}
                 onValueChange={setCategory}
               />
@@ -214,19 +240,19 @@ const Variants = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems placeholder="Stock" frameworks={stockOptions} value={stock} onValueChange={setStock} />
+              <Combobox placeholder="Stock" options={stockOptions} value={stock} onValueChange={setStock} />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems placeholder="Status" frameworks={statusOptions} value={status} onValueChange={setStatus} />
+              <Combobox placeholder="Status" options={statusOptions} value={status} onValueChange={setStatus} />
             ),
           },
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Pre-order"
-                frameworks={preorderOptions}
+                options={preorderOptions}
                 value={preorder}
                 onValueChange={setPreorder}
               />
@@ -244,14 +270,55 @@ const Variants = () => {
         columns={columns}
         data={variantState.data}
         {...list.tableProps}
+        bulk={
+          canManage
+            ? {
+                noun: "variant",
+                deleteRow: (v) => deleteVariant(v.id),
+                activate: (rows) => Promise.all(rows.map((v) => updateVariant(v.id, { is_active: true }))),
+                deactivate: (rows) => Promise.all(rows.map((v) => updateVariant(v.id, { is_active: false }))),
+                onDone: list.reload,
+              }
+            : undefined
+        }
         getRowLink={(v) => `/product_detail/${v.product_id}`}
+        unlabelledColumns={["actions"]}
         emptyIcon={Layers}
         emptyTitle="No variants found"
         minWidth="1000px"
-        columnWidths={["280px", "130px", "150px", "120px", "100px", "160px", "90px"]}
+        columnWidths={["280px", "130px", "150px", "120px", "100px", "160px", "80px"]}
       />
 
       {canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={list.reload} />}
+      {canManage && (
+        <ProductPickerDialog
+          open={pickingProduct}
+          onOpenChange={setPickingProduct}
+          title="Add variant"
+          description="Choose the product this variant belongs to."
+          onPick={(product) => {
+            setPickingProduct(false)
+            setAddingTo(product)
+          }}
+        />
+      )}
+      {canManage && addingTo && (
+        <VariantFormDialog
+          open
+          onOpenChange={(open) => !open && setAddingTo(null)}
+          productId={addingTo.id}
+          onSaved={list.reload}
+        />
+      )}
+      {canManage && editing && (
+        <VariantFormDialog
+          open
+          onOpenChange={(open) => !open && setEditing(null)}
+          productId={editing.product_id}
+          variant={editing}
+          onSaved={list.reload}
+        />
+      )}
     </div>
   )
 }
@@ -318,21 +385,17 @@ function ImportDialog({
               </Select>
             </FieldContent>
           </Field>
-          <Field>
-            <FieldLabel htmlFor="import-file">File</FieldLabel>
-            <FieldContent>
-              <Input
-                id="import-file"
-                type="file"
-                accept={fmt === "csv" ? ".csv,text/csv" : ".xlsx"}
-                onChange={(e) => {
+          <TextField
+            label="File"
+            id="import-file"
+            type="file"
+            accept={fmt === "csv" ? ".csv,text/csv" : ".xlsx"}
+            onChange={(e) => {
                   setFile(e.target.files?.[0] ?? null)
                   setResult(null)
                 }}
-              />
-              <FieldDescription>Tip: export first to get the expected columns.</FieldDescription>
-            </FieldContent>
-          </Field>
+            description="Tip: export first to get the expected columns."
+          />
           {result && (
             <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
               <p>
@@ -356,15 +419,14 @@ function ImportDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => close(false)}>
-            Close
-          </Button>
-          <Button onClick={submit} disabled={!file || busy}>
-            {busy && <Loader2 className="size-4 animate-spin" />}
-            Import
-          </Button>
-        </DialogFooter>
+        <DialogActions
+          onCancel={() => close(false)}
+          cancelLabel="Close"
+          onSubmit={submit}
+          submitLabel="Import"
+          submitting={busy}
+          submitDisabled={!file}
+        />
       </DialogContent>
     </Dialog>
   )

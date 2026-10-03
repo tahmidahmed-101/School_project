@@ -1,6 +1,7 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { PackageOpen } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { formatCount } from "../measure"
@@ -17,6 +18,55 @@ interface Props {
 }
 
 export function TopProductsTable({ products, isLoading, error, onRetry, className }: Props) {
+  const columns: ColumnDef<TopProduct>[] = [
+    {
+      id: "rank",
+      header: "#",
+      cell: ({ row }) => <span className="tabular-nums text-muted-foreground">{row.original.rank}</span>,
+    },
+    {
+      id: "product",
+      header: "Product",
+      cell: ({ row: { original: p } }) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium" title={p.name}>
+            {p.name}
+          </p>
+          <p className="font-mono text-xs text-muted-foreground">{p.sku}</p>
+        </div>
+      ),
+    },
+    {
+      id: "units",
+      header: "Units",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="tabular-nums">{formatCount(row.original.units)}</span>,
+    },
+    {
+      id: "revenue",
+      header: "Revenue",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="font-medium tabular-nums">{formatCurrency(row.original.revenue)}</span>,
+    },
+    {
+      id: "available",
+      header: "Available",
+      meta: { align: "right" },
+      cell: ({ row }) => (
+        <span
+          className={cn("tabular-nums", row.original.stock <= 0 && "font-medium text-red-700 dark:text-red-500")}
+        >
+          {formatCount(row.original.stock)}
+        </span>
+      ),
+    },
+    {
+      id: "daily",
+      header: "Daily units",
+      cell: ({ row }) => <Sparkline values={row.original.spark} className="h-8" />,
+    },
+  ]
+
   return (
     <ReportWidget
       title="Top products"
@@ -39,46 +89,14 @@ export function TopProductsTable({ products, isLoading, error, onRetry, classNam
       className={className}
       contentClassName="px-0 pb-2 pt-0"
     >
-      <div className="overflow-x-auto">
-        <Table className="min-w-[560px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10 pl-5">#</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead className="text-right">Units</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="text-right">Available</TableHead>
-              <TableHead className="w-28 pr-5">Daily units</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products?.map((p) => (
-              <TableRow key={p.sku}>
-                <TableCell className="pl-5 text-muted-foreground tabular-nums">{p.rank}</TableCell>
-                <TableCell>
-                  <p className="max-w-[220px] truncate font-medium" title={p.name}>
-                    {p.name}
-                  </p>
-                  <p className="font-mono text-xs text-muted-foreground">{p.sku}</p>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{formatCount(p.units)}</TableCell>
-                <TableCell className="text-right font-medium tabular-nums">{formatCurrency(p.revenue)}</TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums",
-                    p.stock <= 0 && "font-medium text-red-700 dark:text-red-500"
-                  )}
-                >
-                  {formatCount(p.stock)}
-                </TableCell>
-                <TableCell className="pr-5">
-                  <Sparkline values={p.spark} className="h-8" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        embedded
+        showPagination={false}
+        columns={columns}
+        data={products ?? []}
+        minWidth="560px"
+        columnWidths={["48px", "240px", "90px", "120px", "100px", "112px"]}
+      />
     </ReportWidget>
   )
 }

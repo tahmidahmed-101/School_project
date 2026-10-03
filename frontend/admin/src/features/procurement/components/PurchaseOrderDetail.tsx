@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -14,11 +15,9 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DeleteModal } from "@/components/common/DeleteModal"
@@ -26,6 +25,8 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { FormDialog } from "@/components/common/FormDialog"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { DateField, TextField, TextareaField } from "@/components/common/form-fields"
+import { TableActions } from "@/components/common/TableActions"
 import { resolveDetailState } from "@/lib/detailState"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
@@ -127,18 +128,8 @@ function HeaderEditDialog({
           </Select>
         </FieldContent>
       </Field>
-      <Field>
-        <FieldLabel htmlFor="poe-date">Order date</FieldLabel>
-        <FieldContent>
-          <Input id="poe-date" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="poe-notes">Notes</FieldLabel>
-        <FieldContent>
-          <Textarea id="poe-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </FieldContent>
-      </Field>
+      <DateField label="Order date" id="poe-date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
+      <TextareaField label="Notes" id="poe-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
     </FormDialog>
   )
 }
@@ -217,34 +208,24 @@ function LineDialog({
         </FieldContent>
       </Field>
       <div className="grid grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="line-qty">Quantity *</FieldLabel>
-          <FieldContent>
-            <Input
-              id="line-qty"
-              type="number"
-              min={1}
-              step={1}
-              value={quantity}
-              aria-invalid={!qtyValid}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="line-cost">Unit cost *</FieldLabel>
-          <FieldContent>
-            <Input
-              id="line-cost"
-              type="number"
-              min={0}
-              step="0.01"
-              value={unitCost}
-              aria-invalid={!costValid}
-              onChange={(e) => setUnitCost(e.target.value)}
-            />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Quantity *"
+          id="line-qty"
+          type="number"
+          min={1}
+          step={1}
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
+        <TextField
+          label="Unit cost *"
+          id="line-cost"
+          type="number"
+          min={0}
+          step="0.01"
+          value={unitCost}
+          onChange={(e) => setUnitCost(e.target.value)}
+        />
       </div>
     </FormDialog>
   )
@@ -349,6 +330,91 @@ const PurchaseOrderDetail = () => {
       navigate("/purchasing/orders")
     }, `${po.po_number} deleted`)
 
+  const canEditLines = canManage && isDraft
+  const lineColumns: ColumnDef<PurchaseOrderLine>[] = [
+    {
+      id: "product",
+      header: "PRODUCT",
+      cell: ({ row: { original: line } }) => (
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
+            {line.product_image ? (
+              <img src={line.product_image} alt="" className="size-full object-cover" loading="lazy" />
+            ) : (
+              <ImageOff className="size-4 text-muted-foreground" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{line.product_name}</p>
+            <p className="font-mono text-xs text-muted-foreground">{line.variant_sku}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "ordered",
+      header: "ORDERED",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="tabular-nums">{row.original.quantity_ordered}</span>,
+    },
+    {
+      id: "received",
+      header: "RECEIVED",
+      meta: { align: "right" },
+      cell: ({ row: { original: line } }) => (
+        <span
+          className={
+            line.quantity_received >= line.quantity_ordered
+              ? "tabular-nums text-green-600 dark:text-green-500"
+              : "tabular-nums"
+          }
+        >
+          {line.quantity_received}
+        </span>
+      ),
+    },
+    {
+      id: "unit_cost",
+      header: "UNIT COST",
+      meta: { align: "right" },
+      cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.unit_cost)}</span>,
+    },
+    {
+      id: "line_total",
+      header: "LINE TOTAL",
+      meta: { align: "right" },
+      cell: ({ row: { original: line } }) => (
+        <span className="font-semibold tabular-nums">
+          {formatCurrency(Number(line.unit_cost) * line.quantity_ordered)}
+        </span>
+      ),
+    },
+    ...(canEditLines
+      ? [
+          {
+            id: "actions",
+            header: "ACTIONS",
+            cell: ({ row: { original: line } }) => (
+              <TableActions
+                itemName={`${line.product_name} (${line.variant_sku})`}
+                onEdit={() => setLineDialog({ open: true, line })}
+                // An order must keep at least one line.
+                onDelete={
+                  po.lines.length > 1
+                    ? () =>
+                        runAction(async () => {
+                          await dispatch(removePurchaseOrderLine({ poId: po.id, lineId: line.id })).unwrap()
+                          await load()
+                        }, "Line removed")
+                    : undefined
+                }
+              />
+            ),
+          } satisfies ColumnDef<PurchaseOrderLine>,
+        ]
+      : []),
+  ]
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
@@ -434,93 +500,17 @@ const PurchaseOrderDetail = () => {
             </Button>
           )}
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table className="min-w-[720px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>PRODUCT</TableHead>
-                <TableHead className="text-right">ORDERED</TableHead>
-                <TableHead className="text-right">RECEIVED</TableHead>
-                <TableHead className="text-right">UNIT COST</TableHead>
-                <TableHead className="text-right">LINE TOTAL</TableHead>
-                {canManage && isDraft && <TableHead className="w-[90px]" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {po.lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-                        {line.product_image ? (
-                          <img src={line.product_image} alt="" className="size-full object-cover" loading="lazy" />
-                        ) : (
-                          <ImageOff className="size-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{line.product_name}</p>
-                        <p className="text-xs font-mono text-muted-foreground">{line.variant_sku}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{line.quantity_ordered}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    <span
-                      className={
-                        line.quantity_received >= line.quantity_ordered ? "text-green-600 dark:text-green-500" : undefined
-                      }
-                    >
-                      {line.quantity_received}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(line.unit_cost)}</TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {formatCurrency(Number(line.unit_cost) * line.quantity_ordered)}
-                  </TableCell>
-                  {canManage && isDraft && (
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Edit ${line.variant_sku}`}
-                          onClick={() => setLineDialog({ open: true, line })}
-                        >
-                          <Pencil className="size-4 text-blue-600" />
-                        </Button>
-                        <DeleteModal
-                          title="Remove this line?"
-                          description={`${line.product_name} (${line.variant_sku}) will be removed from the order.`}
-                          onConfirm={() =>
-                            runAction(async () => {
-                              await dispatch(removePurchaseOrderLine({ poId: po.id, lineId: line.id })).unwrap()
-                              await load()
-                            }, "Line removed")
-                          }
-                          trigger={
-                            <Button variant="ghost" size="icon" aria-label={`Remove ${line.variant_sku}`} disabled={po.lines.length <= 1}>
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          }
-                        />
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell className="font-semibold">Total</TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">{poUnitsOrdered(po)}</TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">{poUnitsReceived(po)}</TableCell>
-                <TableCell />
-                <TableCell className="text-right font-bold tabular-nums">{formatCurrency(poOrderedTotal(po))}</TableCell>
-                {canManage && isDraft && <TableCell />}
-              </TableRow>
-            </TableFooter>
-          </Table>
+        <CardContent>
+          <DataTable
+            embedded
+            showPagination={false}
+            columns={lineColumns}
+            data={po.lines}
+            minWidth="720px"
+            columnWidths={["auto", "110px", "110px", "130px", "140px", ...(canEditLines ? ["80px"] : [])]}
+            unlabelledColumns={["actions"]}
+            footer={["Total", poUnitsOrdered(po), poUnitsReceived(po), null, formatCurrency(poOrderedTotal(po))]}
+          />
         </CardContent>
       </Card>
 

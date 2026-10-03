@@ -48,7 +48,7 @@ const Settings = () => {
         title="Settings"
         description={
           canManage
-            ? "Your business details, which modules are switched on, and how customers can pay."
+            ? undefined
             : "You can view these settings; changing them needs the settings.manage permission."
         }
       />

@@ -1,14 +1,28 @@
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { EyeIcon, Trash2Icon, PencilIcon, RotateCcw } from "lucide-react"
+import { EyeIcon, MoreVertical, PencilIcon, RotateCcw, Trash2Icon, type LucideIcon } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { DeleteModal } from "./DeleteModal"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ConfirmDialog } from "./ConfirmDialog"
+
+/** An extra row action listed in the menu between Edit and Delete. */
+export interface TableAction {
+  label: string
+  icon?: LucideIcon
+  /** Navigate on select… */
+  to?: string
+  /** …or run a handler. */
+  onSelect?: () => void
+  destructive?: boolean
+  disabled?: boolean
+}
 
 type Props = {
   viewUrl?: string
@@ -16,11 +30,13 @@ type Props = {
   editUrl?: string
   onEdit?: () => void
   onDelete?: () => void | Promise<unknown>
-  /** Soft-deleted rows show only a Restore button (when `onRestore` is given). */
+  /** Soft-deleted rows offer only Restore (when `onRestore` is given). */
   deleted?: boolean
   onRestore?: () => void | Promise<unknown>
   /** Disables Restore, e.g. while a mutation is in flight. */
   restoreDisabled?: boolean
+  /** Row-specific actions beyond view / edit / delete. */
+  actions?: TableAction[]
   itemName: string
 }
 
@@ -50,20 +66,7 @@ export function RestoreButton({
   )
 }
 
-// Compose the shared Button recipe instead of hand-rolling three near-identical
-// class strings, so future Button changes propagate here automatically. Only the
-// per-action accent colour is layered on top.
-const actionClass = (tone: "view" | "edit" | "delete") =>
-  cn(
-    buttonVariants({ variant: "ghost", size: "icon" }),
-    tone === "view" &&
-      "text-green-600 hover:bg-green-50 dark:text-green-500 dark:hover:bg-green-500/10",
-    tone === "edit" &&
-      "text-blue-600 hover:bg-blue-50 dark:text-blue-500 dark:hover:bg-blue-500/10",
-    tone === "delete" &&
-      "text-red-500 hover:bg-red-50 dark:text-red-500 dark:hover:bg-red-500/10"
-  )
-
+/** The row's action menu: a three-dot button that opens the actions by name. */
 export function TableActions({
   viewUrl,
   onView,
@@ -73,88 +76,81 @@ export function TableActions({
   deleted = false,
   onRestore,
   restoreDisabled = false,
+  actions = [],
   itemName,
 }: Props) {
-  if (deleted) return onRestore ? <RestoreButton label={itemName} onClick={onRestore} disabled={restoreDisabled} /> : null
+  // The confirm dialog lives outside the menu: a dialog opened from inside a menu item
+  // would be unmounted as soon as the menu closes.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  const items: TableAction[] = deleted
+    ? onRestore
+      ? [{ label: "Restore", icon: RotateCcw, onSelect: () => void onRestore(), disabled: restoreDisabled }]
+      : []
+    : [
+        ...(viewUrl || onView ? [{ label: "View", icon: EyeIcon, to: viewUrl, onSelect: onView }] : []),
+        ...(editUrl || onEdit ? [{ label: "Edit", icon: PencilIcon, to: editUrl, onSelect: onEdit }] : []),
+        ...actions,
+      ]
+  const canDelete = !deleted && Boolean(onDelete)
+
+  if (items.length === 0 && !canDelete) return null
 
   return (
-    <div
-      className="flex items-center gap-1 sm:ml-1 md:ml-1.5"
-      onClick={(e) => e.stopPropagation()}
-      data-no-row-click="true"
-    >
-      {(viewUrl || onView) && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {viewUrl ? (
-                <Link to={viewUrl} className={actionClass("view")} aria-label={`View ${itemName}`}>
-                  <EyeIcon className="size-4" />
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onView}
-                  className={actionClass("view")}
-                  aria-label={`View ${itemName}`}
-                >
-                  <EyeIcon className="size-4" />
-                </button>
-              )}
-            </TooltipTrigger>
-            <TooltipContent>View</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+    <div className="flex justify-center" onClick={(e) => e.stopPropagation()} data-no-row-click="true">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" aria-label={`Actions for ${itemName}`}>
+            <MoreVertical className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto min-w-36 duration-200">
+          {items.map((item) => {
+            const Icon = item.icon
+            const content = (
+              <>
+                {Icon && <Icon className="size-4" />}
+                {item.label}
+              </>
+            )
+            return item.to ? (
+              <DropdownMenuItem key={item.label} asChild disabled={item.disabled}>
+                <Link to={item.to}>{content}</Link>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                key={item.label}
+                variant={item.destructive ? "destructive" : "default"}
+                disabled={item.disabled}
+                onSelect={item.onSelect}
+              >
+                {content}
+              </DropdownMenuItem>
+            )
+          })}
+          {canDelete && (
+            <>
+              {items.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(true)}>
+                <Trash2Icon className="size-4" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {(editUrl || onEdit) && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {editUrl ? (
-                <Link to={editUrl} className={actionClass("edit")} aria-label={`Edit ${itemName}`}>
-                  <PencilIcon className="size-4" />
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className={actionClass("edit")}
-                  aria-label={`Edit ${itemName}`}
-                >
-                  <PencilIcon className="size-4" />
-                </button>
-              )}
-            </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
-
-      {onDelete && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <DeleteModal
-                  title={`Delete ${itemName}?`}
-                  description={`Are you sure you want to delete "${itemName}"? This action cannot be undone.`}
-                  onConfirm={() => onDelete?.()}
-                  trigger={
-                    <button
-                      type="button"
-                      className={actionClass("delete")}
-                      aria-label={`Delete ${itemName}`}
-                    >
-                      <Trash2Icon className="size-4" />
-                    </button>
-                  }
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      {canDelete && (
+        <ConfirmDialog
+          open={confirmingDelete}
+          onOpenChange={setConfirmingDelete}
+          title={`Delete ${itemName}?`}
+          description={`Are you sure you want to delete "${itemName}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          destructive
+          icon={<Trash2Icon />}
+          onConfirm={() => onDelete?.()}
+        />
       )}
     </div>
   )

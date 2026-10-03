@@ -99,7 +99,6 @@ const AuditLogs = () => {
     <div className="section-container">
       <PageHeader
         title="Audit Logs"
-        description="Every administrative change, who made it and when."
         actions={<ExportButton onExport={handleExport} />}
       />
 

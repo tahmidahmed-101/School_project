@@ -2,9 +2,9 @@ import { useEffect, useState, type FormEvent } from "react"
 import { toast } from "sonner"
 
 import { FormDialog } from "@/components/common/FormDialog"
-import { Input } from "@/components/ui/input"
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createShipment } from "@/features/sales/slices/orderSlice"
 import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
@@ -122,44 +122,32 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
             </Select>
           </FieldContent>
         </Field>
-        <Field>
-          <FieldLabel htmlFor="shipment-tracking">Tracking number</FieldLabel>
-          <FieldContent>
-            <Input
-              id="shipment-tracking"
-              placeholder="Filled in by the courier on dispatch"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-            />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="shipment-charge">Shipping charge</FieldLabel>
-          <FieldContent>
-            <Input
-              id="shipment-charge"
-              type="number"
-              step="0.01"
-              min="0"
-              value={shippingCharge}
-              onChange={(e) => setShippingCharge(e.target.value)}
-            />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="shipment-cod">COD amount</FieldLabel>
-          <FieldContent>
-            <Input
-              id="shipment-cod"
-              type="number"
-              step="0.01"
-              min="0"
-              value={codAmount}
-              onChange={(e) => setCodAmount(e.target.value)}
-            />
-            <FieldDescription>Cash the courier collects on delivery (0 if prepaid).</FieldDescription>
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Tracking number"
+          id="shipment-tracking"
+          placeholder="Filled in by the courier on dispatch"
+          value={trackingNumber}
+          onChange={(e) => setTrackingNumber(e.target.value)}
+        />
+        <TextField
+          label="Shipping charge"
+          id="shipment-charge"
+          type="number"
+          step="0.01"
+          min="0"
+          value={shippingCharge}
+          onChange={(e) => setShippingCharge(e.target.value)}
+        />
+        <TextField
+          label="COD amount"
+          id="shipment-cod"
+          type="number"
+          step="0.01"
+          min="0"
+          value={codAmount}
+          onChange={(e) => setCodAmount(e.target.value)}
+          description="Cash the courier collects on delivery (0 if prepaid)."
+        />
       </div>
 
       <LineQuantityTable

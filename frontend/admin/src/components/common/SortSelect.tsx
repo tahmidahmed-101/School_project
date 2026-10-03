@@ -1,5 +1,5 @@
 import type { Option } from "@/lib/types"
-import { ExampleComboboxCustomItems } from "./ComboBox"
+import { Combobox } from "./ComboBox"
 
 /** The "Sort" filter used in list toolbars. */
 export function SortSelect({
@@ -13,5 +13,5 @@ export function SortSelect({
   onChange: (value: Option | null) => void
   placeholder?: string
 }) {
-  return <ExampleComboboxCustomItems placeholder={placeholder} frameworks={options} value={value} onValueChange={onChange} />
+  return <Combobox placeholder={placeholder} options={options} value={value} onValueChange={onChange} />
 }

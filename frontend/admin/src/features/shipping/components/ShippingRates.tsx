@@ -7,7 +7,7 @@ import { PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { TextCell } from "@/components/common/cells"
@@ -137,7 +137,6 @@ const ShippingRates = () => {
     <div className="section-container">
       <PageHeader
         title="Shipping Rates"
-        description="What each carrier charges per delivery zone, by weight."
         actions={
           canUpdate && (
             <Button size="action" onClick={() => openForm(null)} disabled={zones.length === 0 || carriers.length === 0}>
@@ -152,9 +151,9 @@ const ShippingRates = () => {
           {
             active: Boolean(zoneId),
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Zone"
-                frameworks={zoneOptions}
+                options={zoneOptions}
                 value={zoneOptions.find((o) => o.value === zoneId) ?? null}
                 onValueChange={(v) => setFilter("zone_id", v)}
               />
@@ -163,9 +162,9 @@ const ShippingRates = () => {
           {
             active: Boolean(carrierId),
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Carrier"
-                frameworks={carrierOptions}
+                options={carrierOptions}
                 value={carrierOptions.find((o) => o.value === carrierId) ?? null}
                 onValueChange={(v) => setFilter("carrier_id", v)}
               />
@@ -176,12 +175,17 @@ const ShippingRates = () => {
 
       <DataTable
         columns={columns}
+        bulk={
+          canUpdate
+            ? { noun: "rate", deleteRow: (r) => dispatch(deleteRate(r.id)).unwrap(), onDone: list.reload }
+            : undefined
+        }
         data={rateState.data}
         {...list.tableProps}
         emptyTitle="No rates"
         emptyDescription="Add a carrier rate to a delivery zone."
         minWidth="800px"
-        columnWidths={canUpdate ? ["200px", "200px", "200px", "200px", "100px"] : ["220px", "220px", "220px", "220px"]}
+        columnWidths={canUpdate ? ["200px", "200px", "200px", "200px", "80px"] : ["220px", "220px", "220px", "220px"]}
       />
 
       <RateFormDialog

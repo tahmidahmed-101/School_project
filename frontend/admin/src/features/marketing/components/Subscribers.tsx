@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -150,7 +150,6 @@ const Subscribers = () => {
     <div className="section-container">
       <PageHeader
         title="Newsletter Subscribers"
-        description="People who signed up for your newsletter."
         actions={
           <>
             <ExportButton onExport={handleExport} />
@@ -178,8 +177,8 @@ const Subscribers = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={statusOptions}
+              <Combobox
+                options={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -191,6 +190,11 @@ const Subscribers = () => {
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? { noun: "subscriber", deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(), onDone: list.reload }
+            : undefined
+        }
         data={subscribers}
         {...list.tableProps}
         emptyTitle="No subscribers"

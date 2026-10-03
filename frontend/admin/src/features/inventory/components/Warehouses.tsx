@@ -7,15 +7,13 @@ import { toast } from "sonner"
 import { PlusIcon, Star, Warehouse as WarehouseIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, DateCell, TextCell } from "@/components/common/cells"
+import { TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -117,7 +115,6 @@ const Warehouses = () => {
     <div className="section-container">
       <PageHeader
         title="Warehouses"
-        description="Locations that hold stock. The default warehouse receives unassigned movements."
         actions={
           canManage && (
             <Button
@@ -137,12 +134,23 @@ const Warehouses = () => {
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+        noun: "warehouse",
+        deleteRow: (w) => dispatch(deleteData(w.id)).unwrap(),
+        activate: (rows) => Promise.all(rows.map((w) => updateWarehouse(w.id, { is_active: true }))),
+        deactivate: (rows) => Promise.all(rows.map((w) => updateWarehouse(w.id, { is_active: false }))),
+        onDone: list.reload,
+      }
+            : undefined
+        }
         data={warehouseState.data}
         {...list.tableProps}
         emptyIcon={WarehouseIcon}
         emptyTitle="No warehouses"
         minWidth="860px"
-        columnWidths={["240px", "110px", "260px", "110px", "120px", ...(canManage ? ["110px"] : [])]}
+        columnWidths={["240px", "110px", "260px", "110px", "120px", ...(canManage ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
       />
 
@@ -225,27 +233,16 @@ function WarehouseFormDialog({
       submitLabel={warehouse ? "Save" : "Create"}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field>
-          <FieldLabel htmlFor="wh-name">Name</FieldLabel>
-          <FieldContent>
-            <Input id="wh-name" placeholder="Main Warehouse" {...register("name")} />
-            <FieldError errors={[errors.name]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="wh-code">Code</FieldLabel>
-          <FieldContent>
-            <Input id="wh-code" placeholder="MAIN" {...register("code")} />
-            <FieldError errors={[errors.code]} />
-          </FieldContent>
-        </Field>
-        <Field className="sm:col-span-2">
-          <FieldLabel htmlFor="wh-address">Address</FieldLabel>
-          <FieldContent>
-            <Textarea id="wh-address" rows={2} {...register("address")} />
-            <FieldError errors={[errors.address]} />
-          </FieldContent>
-        </Field>
+        <TextField label="Name" id="wh-name" placeholder="Main Warehouse" error={errors.name} {...register("name")} />
+        <TextField label="Code" id="wh-code" placeholder="MAIN" error={errors.code} {...register("code")} />
+        <TextareaField
+          className="sm:col-span-2"
+          label="Address"
+          id="wh-address"
+          rows={2}
+          error={errors.address}
+          {...register("address")}
+        />
         <SwitchField control={control} name="is_active" label="Active" />
         <SwitchField
           control={control}

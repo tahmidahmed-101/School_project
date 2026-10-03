@@ -11,6 +11,7 @@ import { DataTable } from "@/components/common/data-table"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { FormDialog } from "@/components/common/FormDialog"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { TableActions } from "@/components/common/TableActions"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 
@@ -116,9 +117,17 @@ export function BlocklistTab<T extends { id: string }>({
             header: "ACTIONS",
             cell: ({ row }) =>
               !action.isAvailable || action.isAvailable(row.original) ? (
-                <Button variant="outline" size="sm" onClick={() => setTarget(row.original)} disabled={state.isMutating}>
-                  <Unlock className="size-3.5" /> {action.label}
-                </Button>
+                <TableActions
+                  itemName="this entry"
+                  actions={[
+                    {
+                      label: action.label,
+                      icon: Unlock,
+                      onSelect: () => setTarget(row.original),
+                      disabled: state.isMutating,
+                    },
+                  ]}
+                />
               ) : (
                 action.unavailable
               ),

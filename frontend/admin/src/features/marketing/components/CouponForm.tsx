@@ -4,16 +4,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Loader2, Save } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
+import { FormActions } from "@/components/common/FormActions"
+import { DateField, SelectField, TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, patchData, postData } from "@/features/marketing/slices/couponSlice"
@@ -157,7 +156,7 @@ const CouponForm = () => {
             ? `Used ${existing.times_used} time${existing.times_used === 1 ? "" : "s"}${
                 existing.usage_limit != null ? ` of ${existing.usage_limit}` : ""
               }`
-            : "Create a new discount code"
+            : undefined
         }
         back={{ to: "/coupons", label: "Back to coupons" }}
       />
@@ -169,35 +168,23 @@ const CouponForm = () => {
           </CardHeader>
           <CardContent>
             <fieldset disabled={readOnly} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="code">Coupon Code</FieldLabel>
-                <FieldContent>
-                  <Input id="code" placeholder="e.g. WELCOME10" className="font-mono uppercase" {...register("code")} />
-                  <FieldError errors={[errors.code]} />
-                </FieldContent>
-              </Field>
+              <TextField
+                label="Coupon Code"
+                id="code"
+                inputClassName="font-mono uppercase"
+                placeholder="e.g. WELCOME10"
+                error={errors.code}
+                {...register("code")}
+              />
 
-              <Field>
-                <FieldLabel htmlFor="discount_type">Discount Type</FieldLabel>
-                <FieldContent>
-                  <Controller
-                    control={control}
-                    name="discount_type"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
-                        <SelectTrigger id="discount_type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentage</SelectItem>
-                          <SelectItem value="fixed">Fixed amount</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <FieldError errors={[errors.discount_type]} />
-                </FieldContent>
-              </Field>
+              <SelectField
+                control={control}
+                name="discount_type"
+                label="Discount Type"
+                id="discount_type"
+                disabled={readOnly}
+                options={[{ label: "Percentage", value: "percentage" }, { label: "Fixed amount", value: "fixed" }]}
+              />
 
               <Field>
                 <FieldLabel htmlFor="value">
@@ -246,14 +233,14 @@ const CouponForm = () => {
                 </FieldContent>
               </Field>
 
-              <Field>
-                <FieldLabel htmlFor="expires_at">Expires At</FieldLabel>
-                <FieldContent>
-                  <Input id="expires_at" type="datetime-local" {...register("expires_at")} />
-                  <FieldDescription>Leave empty for a coupon that never expires.</FieldDescription>
-                  <FieldError errors={[errors.expires_at]} />
-                </FieldContent>
-              </Field>
+              <DateField
+                label="Expires At"
+                id="expires_at"
+                withTime
+                description="Leave empty for a coupon that never expires."
+                error={errors.expires_at}
+                {...register("expires_at")}
+              />
 
               <Field orientation="horizontal">
                 <FieldContent>
@@ -271,14 +258,13 @@ const CouponForm = () => {
             </fieldset>
           </CardContent>
           {!readOnly && (
-            <CardFooter className="justify-end gap-3 border-t p-4">
-              <Button type="button" variant="outline" onClick={() => navigate("/coupons")}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting || (isEditing && !isDirty)}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {isEditing ? "Save Changes" : "Create Coupon"}
-              </Button>
+            <CardFooter className="justify-end border-t p-4">
+              <FormActions
+                onCancel={() => navigate("/coupons")}
+                submitLabel={isEditing ? "Save Changes" : "Create Coupon"}
+                submitting={isSubmitting}
+                submitDisabled={(isEditing && !isDirty)}
+              />
             </CardFooter>
           )}
         </Card>

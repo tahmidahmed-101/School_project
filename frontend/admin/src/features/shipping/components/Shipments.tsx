@@ -90,7 +90,7 @@ const Shipments = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Shipments" description="Track consignments, dispatch to couriers and update delivery status." />
+      <PageHeader title="Shipments" />
 
       <FilterToolbar
         searchPlaceholder="Search tracking #, order # or carrier..."

@@ -7,8 +7,7 @@ import { LogInIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
+import { TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { login } from "@/features/authentication/slices/authSlice"
@@ -61,33 +60,25 @@ const SignInForm = () => {
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  {...register("email")}
-                />
-                <FieldError errors={[errors.email]} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Email"
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              error={errors.email}
+              {...register("email")}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  {...register("password")}
-                />
-                <FieldError errors={[errors.password]} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Password"
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              error={errors.password}
+              {...register("password")}
+            />
           </CardContent>
           <CardFooter>
             <Button type="submit" variant="apply" className="w-full" disabled={isSubmitting || isLoading}>

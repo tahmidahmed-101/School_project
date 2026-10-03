@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { reportFormError } from "@/lib/forms"
 import { FormDialog } from "@/components/common/FormDialog"
+import { MoneyField } from "@/components/common/form-fields"
 import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
 
 import { postAdjustment, postIntake, postWriteOff } from "../api"
@@ -189,13 +190,13 @@ export function StockMovementDialog({ mode, onOpenChange, warehouses, variant, w
           </FieldContent>
         </Field>
         {mode !== "write_off" && (
-          <Field>
-            <FieldLabel htmlFor="movement-cost">Unit cost</FieldLabel>
-            <FieldContent>
-              <Input id="movement-cost" inputMode="decimal" placeholder="Optional" {...register("unit_cost")} />
-              <FieldError errors={[errors.unit_cost]} />
-            </FieldContent>
-          </Field>
+          <MoneyField
+            label="Unit cost"
+            id="movement-cost"
+            placeholder="Optional"
+            error={errors.unit_cost}
+            {...register("unit_cost")}
+          />
         )}
       </div>
       <Field>

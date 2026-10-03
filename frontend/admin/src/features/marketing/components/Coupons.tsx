@@ -20,7 +20,6 @@ import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import type { Option } from "@/lib/types"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 
 const ORDERING_OPTIONS: Option[] = [
   { value: "-created_at", label: "Newest first" },
@@ -63,7 +62,6 @@ const Coupons = () => {
     try {
       await dispatch(deleteData(coupon.id)).unwrap()
       toast.success(`Coupon ${coupon.code} deleted`)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Couldn't delete this coupon"))
     }
@@ -153,7 +151,6 @@ const Coupons = () => {
     <div className="section-container">
       <PageHeader
         title="Coupons"
-        description="Discount codes customers can apply at checkout."
         actions={
           canManage && (
             <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
@@ -169,14 +166,16 @@ const Coupons = () => {
         onSearchChange={list.setSearch}
         filters={[
           { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
-          ...(canManage
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? { noun: "coupon", deleteRow: (c) => dispatch(deleteData(c.id)).unwrap(), onDone: list.reload }
+            : undefined
+        }
         data={coupons}
         {...list.tableProps}
         onRowClick={(coupon) => {
@@ -186,7 +185,7 @@ const Coupons = () => {
         emptyDescription="Create a discount code to reward customers or run a promotion."
         {...(canManage ? { emptyActionLabel: "Add Coupon", onEmptyAction: () => navigate("/coupon_form/new") } : {})}
         minWidth="960px"
-        columnWidths={["160px", "140px", "130px", "100px", "140px", "110px", "110px"]}
+        columnWidths={["160px", "140px", "130px", "100px", "140px", "110px", "80px"]}
       />
     </div>
   )

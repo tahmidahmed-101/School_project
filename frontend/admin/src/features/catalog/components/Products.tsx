@@ -2,19 +2,18 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Boxes, Package, PlusIcon, ToggleLeft, ToggleRight } from "lucide-react"
+import { Boxes, Package, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
-import { BulkActionBar } from "@/components/common/BulkActionBar"
 import { SortSelect } from "@/components/common/SortSelect"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -28,7 +27,6 @@ import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
 import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { useRowSelection } from "../lib/useRowSelection"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -49,7 +47,8 @@ const Products = () => {
   const canManage = useCan("catalog.manage")
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
-  const { options: categoryOptions, nameById } = useCategoryOptions()
+  const { categories, options: categoryOptions, nameById } = useCategoryOptions()
+  const categoryTypeById = useMemo(() => new Map(categories.map((c) => [c.id, c.category_type])), [categories])
 
   // CSV import: simple products only (one variant created from price/SKU in the same call).
   const categoryLookup = useMemo(
@@ -90,7 +89,6 @@ const Products = () => {
   const [categoryType, setCategoryType] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
-  const [bulkBusy, setBulkBusy] = useState(false)
 
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
@@ -103,22 +101,6 @@ const Products = () => {
       ordering: ordering?.value,
     },
   })
-  // Any page or filter change drops a selection that may no longer be visible.
-  const selection = useRowSelection(products, `${list.page}|${JSON.stringify(list.query)}`)
-
-  const runBulk = async (isActive: boolean) => {
-    setBulkBusy(true)
-    try {
-      const res = await bulkProductStatus(selection.selected, isActive)
-      toast.success(`${res.affected} product(s) ${isActive ? "activated" : "deactivated"}`)
-      selection.clear()
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Bulk update failed"))
-    } finally {
-      setBulkBusy(false)
-    }
-  }
 
   const handleRestore = async (product: Product) => {
     try {
@@ -134,14 +116,12 @@ const Products = () => {
     try {
       await dispatch(deleteData(product.id)).unwrap()
       toast.success(`${product.name} deleted`)
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete product"))
     }
   }
 
   const columns: ColumnDef<Product>[] = [
-    ...(canManage ? [selection.column] : []),
     {
       id: "image",
       header: "IMAGE",
@@ -184,12 +164,12 @@ const Products = () => {
         row.original.price === null ? (
           <span className="text-sm text-muted-foreground">No price</span>
         ) : (
-          <div className="text-sm">
+          <div className="flex flex-col text-sm">
             <span className="font-semibold">
               {formatCurrency(row.original.discount_price ?? row.original.price)}
             </span>
             {row.original.discount_price && (
-              <span className="ml-1.5 text-xs text-muted-foreground line-through">
+              <span className="text-xs text-muted-foreground line-through">
                 {formatCurrency(row.original.price)}
               </span>
             )}
@@ -206,9 +186,14 @@ const Products = () => {
       ),
     },
     {
-      accessorKey: "product_type",
-      header: "TYPE",
-      cell: ({ row }) => <span className="text-sm capitalize">{row.original.product_type}</span>,
+      id: "product_type",
+      header: "PRODUCT TYPE",
+      cell: ({ row }) =>
+        categoryTypeById.get(row.original.category_id) === "preorder" ? (
+          <StatusBadge status="pre-order" tone="info" />
+        ) : (
+          <span className="text-sm">Stock</span>
+        ),
     },
     {
       id: "status",
@@ -235,22 +220,20 @@ const Products = () => {
   ]
 
   const widths = [
-    ...(canManage ? ["48px"] : []),
     "70px",
     "240px",
     "150px",
     "140px",
     "80px",
-    "90px",
-    "110px",
     "130px",
+    "110px",
+    "80px",
   ]
 
   return (
     <div className="section-container">
       <PageHeader
         title="Products"
-        description="Manage your product catalog, pricing and variants"
         actions={
           canManage && (
             <>
@@ -281,9 +264,9 @@ const Products = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Category"
-                frameworks={categoryOptions.map((o) => ({ label: `${"— ".repeat(o.depth)}${o.label}`, value: o.value }))}
+                options={categoryOptions.map((o) => ({ label: `${"— ".repeat(o.depth)}${o.label}`, value: o.value }))}
                 value={category}
                 onValueChange={setCategory}
               />
@@ -291,19 +274,9 @@ const Products = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
-                placeholder="Type"
-                frameworks={productTypeOptions}
-                value={productType}
-                onValueChange={setProductType}
-              />
-            ),
-          },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                placeholder="Category type"
-                frameworks={categoryTypeOptions}
+              <Combobox
+                placeholder="Product type"
+                options={categoryTypeOptions}
                 value={categoryType}
                 onValueChange={setCategoryType}
               />
@@ -311,42 +284,49 @@ const Products = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
+                placeholder="Type"
+                options={productTypeOptions}
+                value={productType}
+                onValueChange={setProductType}
+              />
+            ),
+          },
+          {
+            component: (
+              <Combobox
                 placeholder="Status"
-                frameworks={statusOptions}
+                options={statusOptions}
                 value={status}
                 onValueChange={setStatus}
               />
             ),
           },
           { component: <SortSelect options={orderingOptions} value={ordering} onChange={setOrdering} /> },
-          ...(canManage
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []),
         ]}
       />
 
-      {canManage && (
-        <BulkActionBar count={selection.selected.length} onClear={selection.clear}>
-          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(true)}>
-            <ToggleRight /> Activate
-          </Button>
-          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(false)}>
-            <ToggleLeft /> Deactivate
-          </Button>
-        </BulkActionBar>
-      )}
-
       <DataTable
         columns={columns}
+        bulk={
+          canManage
+            ? {
+                noun: "product",
+                deleteRow: (p) => dispatch(deleteData(p.id)).unwrap(),
+                activate: (rows) => bulkProductStatus(rows.map((r) => r.id), true),
+                deactivate: (rows) => bulkProductStatus(rows.map((r) => r.id), false),
+                onDone: list.reload,
+              }
+            : undefined
+        }
         data={products}
         {...list.tableProps}
         getRowLink={(p) => `/product_detail/${p.id}`}
-        unlabelledColumns={["select", "image"]}
+        unlabelledColumns={["image"]}
         emptyIcon={Package}
         emptyTitle="No products found"
         emptyDescription="Try a different search or filter, or add a new product."
-        minWidth="1100px"
+        minWidth="1160px"
         columnWidths={widths}
       />
     </div>

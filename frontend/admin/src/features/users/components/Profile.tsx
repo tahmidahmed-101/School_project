@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/common/PageHeader"
+import { SubmitButton } from "@/components/common/FormActions"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { isFullAccess } from "@/hooks/use-can"
 
@@ -126,7 +127,7 @@ const Profile = () => {
 
   return (
     <div className="section-container space-y-6">
-      <PageHeader title="My Profile" description="Manage your personal details and password." />
+      <PageHeader title="My Profile" />
 
       <Card>
         <CardContent className="flex flex-col items-center gap-5 p-6 sm:flex-row">
@@ -209,10 +210,9 @@ const Profile = () => {
                 </div>
               </CardContent>
               <CardFooter className="justify-end border-t p-4">
-                <Button type="submit" disabled={isSaving || !isDirty}>
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <SubmitButton loading={isSaving} icon={Save} disabled={!isDirty}>
                   Save changes
-                </Button>
+                </SubmitButton>
               </CardFooter>
             </Card>
           </form>
@@ -263,10 +263,9 @@ const Profile = () => {
                 )}
               </CardContent>
               <CardFooter className="justify-end border-t p-4">
-                <Button type="submit" disabled={isChangingPassword}>
-                  {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                <SubmitButton loading={isChangingPassword} icon={KeyRound}>
                   Update password
-                </Button>
+                </SubmitButton>
               </CardFooter>
             </Card>
           </form>

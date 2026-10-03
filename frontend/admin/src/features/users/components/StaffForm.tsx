@@ -4,15 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Loader2, Save } from "lucide-react"
+import { Save, RotateCcw, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
+import { SubmitButton } from "@/components/common/FormActions"
+import { TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
@@ -179,7 +180,7 @@ const StaffForm = () => {
     <div className="section-container space-y-6">
       <PageHeader
         title={isEditing ? "Edit Staff Member" : "Add Staff Member"}
-        description={existing ? existing.email : "Create a dashboard account for a team member"}
+        description={existing ? existing.email : undefined}
         back={{ to: "/staffs", label: "Back to staff" }}
         actions={existing && <ResetPasswordDialog userId={existing.id} userLabel={displayNameOf(existing)} />}
       />
@@ -191,27 +192,24 @@ const StaffForm = () => {
               <CardTitle>Staff Details</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="first_name">First Name</FieldLabel>
-                <FieldContent>
-                  <Input id="first_name" {...editForm.register("first_name")} />
-                  <FieldError errors={[editForm.formState.errors.first_name]} />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="last_name">Last Name</FieldLabel>
-                <FieldContent>
-                  <Input id="last_name" {...editForm.register("last_name")} />
-                  <FieldError errors={[editForm.formState.errors.last_name]} />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="phone">Phone</FieldLabel>
-                <FieldContent>
-                  <Input id="phone" {...editForm.register("phone")} />
-                  <FieldError errors={[editForm.formState.errors.phone]} />
-                </FieldContent>
-              </Field>
+              <TextField
+                label="First Name"
+                id="first_name"
+                error={editForm.formState.errors.first_name}
+                {...editForm.register("first_name")}
+              />
+              <TextField
+                label="Last Name"
+                id="last_name"
+                error={editForm.formState.errors.last_name}
+                {...editForm.register("last_name")}
+              />
+              <TextField
+                label="Phone"
+                id="phone"
+                error={editForm.formState.errors.phone}
+                {...editForm.register("phone")}
+              />
               <Field orientation="horizontal">
                 <FieldContent>
                   <FieldLabel htmlFor="is_active">Active</FieldLabel>
@@ -227,10 +225,9 @@ const StaffForm = () => {
               </Field>
             </CardContent>
             <CardFooter className="justify-end gap-3 border-t p-4">
-              <Button type="submit" disabled={editForm.formState.isSubmitting || !editForm.formState.isDirty}>
-                {editForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <SubmitButton loading={editForm.formState.isSubmitting} icon={Save} disabled={!editForm.formState.isDirty}>
                 Save Details
-              </Button>
+              </SubmitButton>
             </CardFooter>
           </Card>
         </form>
@@ -240,41 +237,40 @@ const StaffForm = () => {
             <CardTitle>Staff Details</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <FieldContent>
-                <Input id="email" type="email" autoComplete="off" {...createForm.register("email")} />
-                <FieldError errors={[createForm.formState.errors.email]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password">Temporary Password</FieldLabel>
-              <FieldContent>
-                <Input id="password" type="password" autoComplete="new-password" {...createForm.register("password")} />
-                <FieldError errors={[createForm.formState.errors.password]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="first_name">First Name</FieldLabel>
-              <FieldContent>
-                <Input id="first_name" {...createForm.register("first_name")} />
-                <FieldError errors={[createForm.formState.errors.first_name]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="last_name">Last Name</FieldLabel>
-              <FieldContent>
-                <Input id="last_name" {...createForm.register("last_name")} />
-                <FieldError errors={[createForm.formState.errors.last_name]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="phone">Phone</FieldLabel>
-              <FieldContent>
-                <Input id="phone" {...createForm.register("phone")} />
-                <FieldError errors={[createForm.formState.errors.phone]} />
-              </FieldContent>
-            </Field>
+            <TextField
+              label="Email"
+              id="email"
+              type="email"
+              autoComplete="off"
+              error={createForm.formState.errors.email}
+              {...createForm.register("email")}
+            />
+            <TextField
+              label="Temporary Password"
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              error={createForm.formState.errors.password}
+              {...createForm.register("password")}
+            />
+            <TextField
+              label="First Name"
+              id="first_name"
+              error={createForm.formState.errors.first_name}
+              {...createForm.register("first_name")}
+            />
+            <TextField
+              label="Last Name"
+              id="last_name"
+              error={createForm.formState.errors.last_name}
+              {...createForm.register("last_name")}
+            />
+            <TextField
+              label="Phone"
+              id="phone"
+              error={createForm.formState.errors.phone}
+              {...createForm.register("phone")}
+            />
           </CardContent>
         </Card>
       )}
@@ -292,7 +288,7 @@ const StaffForm = () => {
           {codesError ? (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               {codesError}
-              <Button variant="outline" size="sm" onClick={() => loadCodes()}>Retry</Button>
+              <Button variant="outline" size="sm" onClick={() => loadCodes()}><RotateCcw className="size-4" /> Retry</Button>
             </div>
           ) : codes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Loading permissions...</p>
@@ -302,19 +298,18 @@ const StaffForm = () => {
         </CardContent>
         <CardFooter className="justify-end gap-3 border-t p-4">
           {existing ? (
-            <Button onClick={handleSavePermissions} disabled={savingPermissions || !permissionsDirty}>
-              {savingPermissions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            <SubmitButton type="button" loading={savingPermissions} icon={Save} onClick={handleSavePermissions} disabled={!permissionsDirty}>
               Save Permissions
-            </Button>
+            </SubmitButton>
           ) : (
             <>
               <Button type="button" variant="outline" onClick={() => navigate("/staffs")}>
+                <X className="size-4" />
                 Cancel
               </Button>
-              <Button onClick={createForm.handleSubmit(handleCreate)} disabled={createForm.formState.isSubmitting}>
-                {createForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <SubmitButton type="button" loading={createForm.formState.isSubmitting} icon={Save} onClick={createForm.handleSubmit(handleCreate)}>
                 Create Staff Member
-              </Button>
+              </SubmitButton>
             </>
           )}
         </CardFooter>

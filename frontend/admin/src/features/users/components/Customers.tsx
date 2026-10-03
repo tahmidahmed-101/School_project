@@ -2,24 +2,20 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { BanIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge, DateCell, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { bulkDeactivateUsers, fetchAll, postData, restoreUser } from "@/features/users/slices/customerSlice"
+import { bulkDeactivateUsers, fetchAll, postData, restoreUser, activateUser } from "@/features/users/slices/customerSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { UserAvatar } from "./UserAvatar"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 // Mirrors AdminUserCreateSerializer (POST /admin/users/); role is always sent as "customer".
@@ -53,40 +49,15 @@ const Customers = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const customerState = useAppSelector((state) => state.customers)
-  const { data: customers, isMutating } = customerState
+  const { data: customers } = customerState
 
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: customerState,
     params: { role: "customer", is_active: statusFilter?.value },
   })
-
-  const toggleRow = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-
-  const selectable = customers.filter((c) => c.is_active && !c.deleted_at)
-  const allSelected = selectable.length > 0 && selectable.every((c) => selected.has(c.id))
-
-  const handleBulkDeactivate = async () => {
-    const ids = Array.from(selected)
-    if (!ids.length) return
-    try {
-      const result = await dispatch(bulkDeactivateUsers(ids)).unwrap()
-      toast.success(`${result.affected} customer${result.affected === 1 ? "" : "s"} deactivated`)
-      setSelected(new Set())
-      list.reload()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't deactivate the selected customers"))
-    }
-  }
 
   const handleRestore = async (user: AdminUser) => {
     try {
@@ -99,28 +70,6 @@ const Customers = () => {
   }
 
   const columns: ColumnDef<AdminUser>[] = [
-    {
-      id: "select",
-      header: () => (
-        <Checkbox
-          aria-label="Select all active customers on this page"
-          checked={allSelected}
-          onCheckedChange={(checked) =>
-            setSelected(checked ? new Set(selectable.map((c) => c.id)) : new Set())
-          }
-        />
-      ),
-      cell: ({ row }) => (
-        <div onClick={(e) => e.stopPropagation()} data-no-row-click="true">
-          <Checkbox
-            aria-label={`Select ${row.original.email}`}
-            disabled={!row.original.is_active || !!row.original.deleted_at}
-            checked={selected.has(row.original.id)}
-            onCheckedChange={() => toggleRow(row.original.id)}
-          />
-        </div>
-      ),
-    },
     {
       id: "customer",
       header: "CUSTOMER",
@@ -170,14 +119,8 @@ const Customers = () => {
     <div className="section-container">
       <PageHeader
         title="Customers"
-        description="Manage your registered customer accounts."
         actions={
           <>
-            {selected.size > 0 && (
-              <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
-                <BanIcon className="size-4" /> Deactivate {selected.size} selected
-              </Button>
-            )}
             <CsvImportButton
               entityName="customers"
               fields={CUSTOMER_IMPORT_FIELDS}
@@ -197,36 +140,34 @@ const Customers = () => {
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                frameworks={statusOptions}
+              <Combobox
+                options={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
               />
             ),
           },
-          {
-            component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
-          },
         ]}
       />
 
       <DataTable
         columns={columns}
+        bulk={{
+          noun: "customer",
+          activate: (rows) => Promise.all(rows.map((c) => dispatch(activateUser(c.id)).unwrap())),
+          deactivate: (rows) => dispatch(bulkDeactivateUsers(rows.map((c) => c.id))).unwrap(),
+          onDone: list.reload,
+        }}
         data={customers}
         {...list.tableProps}
-        onPageChange={(index) => {
-          list.tableProps.onPageChange(index)
-          setSelected(new Set())
-        }}
         onRowClick={(customer) => {
           if (!customer.deleted_at) navigate(`/customer_detail/${customer.id}`)
         }}
-        unlabelledColumns={["select"]}
         emptyTitle="No customers found"
         emptyDescription="No customer accounts match these filters."
         minWidth="900px"
-        columnWidths={["48px", "300px", "160px", "130px", "120px", "90px"]}
+        columnWidths={["300px", "160px", "130px", "120px", "80px"]}
       />
     </div>
   )

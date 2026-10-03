@@ -7,17 +7,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DeletedToggle } from "@/components/common/DeletedToggle"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { ActiveStatusBadge } from "@/components/common/cells"
+import { TextField, TextareaField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -104,13 +102,7 @@ function CategoryFormDialog({
       submitting={isSubmitting}
       submitLabel={category ? "Save Changes" : "Create Category"}
     >
-      <Field>
-        <FieldLabel htmlFor="cat-name">Name *</FieldLabel>
-        <FieldContent>
-          <Input id="cat-name" aria-invalid={!!errors.name} {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </FieldContent>
-      </Field>
+      <TextField label="Name *" id="cat-name" error={errors.name} {...register("name")} />
       <Field>
         <FieldLabel htmlFor="cat-account">Expense account</FieldLabel>
         <FieldContent>
@@ -136,12 +128,7 @@ function CategoryFormDialog({
           <FieldError errors={[errors.expense_account_id]} />
         </FieldContent>
       </Field>
-      <Field>
-        <FieldLabel htmlFor="cat-desc">Description</FieldLabel>
-        <FieldContent>
-          <Textarea id="cat-desc" rows={2} {...register("description")} />
-        </FieldContent>
-      </Field>
+      <TextareaField label="Description" id="cat-desc" rows={2} {...register("description")} />
       {category && (
         <SwitchField control={control} name="is_active" label="Active (available when recording expenses)" />
       )}
@@ -161,11 +148,15 @@ const ExpenseCategories = () => {
 
   const list = useListPage({ fetch: (params) => dispatch(fetchAll(params)), state: listState })
 
+  const setActive = (rows: ExpenseCategory[], is_active: boolean) =>
+    Promise.all(
+      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<ExpenseCategory> })).unwrap())
+    )
+
   const handleDelete = async (category: ExpenseCategory) => {
     try {
       await dispatch(deleteData(category.id)).unwrap()
       toast.success("Category deleted")
-      if (list.includeDeleted) list.reload()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete category"))
     }
@@ -231,7 +222,6 @@ const ExpenseCategories = () => {
     <div className="section-container">
       <PageHeader
         title="Expense Categories"
-        description="Group spending and map it to the right expense account."
         back={{ to: "/expenses", label: "Expenses" }}
         actions={
           canPost && (
@@ -252,15 +242,23 @@ const ExpenseCategories = () => {
         searchPlaceholder="Search categories..."
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={
-          canPost
-            ? [{ component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} /> }]
-            : []
-        }
       />
 
       <DataTable
         columns={columns}
+        bulk={
+          canPost
+            ? {
+                noun: "expense category",
+                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
+                activate: (rows) => setActive(rows, true),
+                deactivate: (rows) => setActive(rows, false),
+                onDone: () => {
+                  list.reload()
+                },
+              }
+            : undefined
+        }
         data={listState.data}
         {...list.tableProps}
         emptyIcon={Tags}
@@ -276,7 +274,7 @@ const ExpenseCategories = () => {
             : undefined
         }
         minWidth="760px"
-        columnWidths={["320px", "220px", "110px", "110px"]}
+        columnWidths={["320px", "220px", "110px", "80px"]}
       />
 
       <CategoryFormDialog open={formOpen} onOpenChange={setFormOpen} category={editing} accounts={accounts} />

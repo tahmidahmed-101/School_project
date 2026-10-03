@@ -106,7 +106,7 @@ const ProductDetail = () => {
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="overflow-hidden lg:col-span-1">
+        <Card className="overflow-hidden pt-0 lg:col-span-1">
           <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-muted">
             {product.primary_image ? (
               <img src={product.primary_image} alt={product.name} className="size-full object-cover" />

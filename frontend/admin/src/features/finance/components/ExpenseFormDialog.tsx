@@ -1,15 +1,12 @@
 import { useEffect, useMemo } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 import { Receipt } from "lucide-react"
 
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
+import { DateField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { reportFormError } from "@/lib/forms"
 import { todayLocalISODate } from "@/lib/format"
@@ -146,134 +143,83 @@ export function ExpenseFormDialog({ open, onOpenChange, expense, accounts, categ
       submitLabel={isEdit ? "Save Changes" : "Record Expense"}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="exp-payee">Payee *</FieldLabel>
-          <FieldContent>
-            <Input id="exp-payee" placeholder="e.g. Khulna Stationers" aria-invalid={!!errors.payee} {...register("payee")} />
-            <FieldError errors={[errors.payee]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="exp-ref">Reference #</FieldLabel>
-          <FieldContent>
-            <Input id="exp-ref" placeholder="Invoice or receipt number" {...register("reference_number")} />
-            <FieldError errors={[errors.reference_number]} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="Payee *"
+          id="exp-payee"
+          placeholder="e.g. Khulna Stationers"
+          error={errors.payee}
+          {...register("payee")}
+        />
+        <TextField
+          label="Reference #"
+          id="exp-ref"
+          placeholder="Invoice or receipt number"
+          error={errors.reference_number}
+          {...register("reference_number")}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="exp-date">Expense date *</FieldLabel>
-          <FieldContent>
-            <Input id="exp-date" type="date" disabled={isEdit} aria-invalid={!!errors.expense_date} {...register("expense_date")} />
-            <FieldError errors={[errors.expense_date]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="exp-amount">Amount (BDT) *</FieldLabel>
-          <FieldContent>
-            <Input
-              id="exp-amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              disabled={isEdit}
-              aria-invalid={!!errors.amount}
-              {...register("amount")}
-            />
-            <FieldError errors={[errors.amount]} />
-          </FieldContent>
-        </Field>
+        <DateField
+          label="Expense date *"
+          id="exp-date"
+          disabled={isEdit}
+          error={errors.expense_date}
+          {...register("expense_date")}
+        />
+        <TextField
+          label="Amount (BDT) *"
+          id="exp-amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          placeholder="0.00"
+          disabled={isEdit}
+          error={errors.amount}
+          {...register("amount")}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="exp-category">Category</FieldLabel>
-          <FieldContent>
-            <Controller
-              control={control}
-              name="category_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
-                  <SelectTrigger id="exp-category" aria-invalid={!!errors.category_id}>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>No category</SelectItem>
-                    {activeCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldError errors={[errors.category_id]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="exp-account">Expense account</FieldLabel>
-          <FieldContent>
-            <Controller
-              control={control}
-              name="expense_account_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
-                  <SelectTrigger id="exp-account" aria-invalid={!!errors.expense_account_id}>
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Use the category's account</SelectItem>
-                    {expenseAccounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {accountLabel(a)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldDescription>Pick a category, an account, or both.</FieldDescription>
-            <FieldError errors={[errors.expense_account_id]} />
-          </FieldContent>
-        </Field>
+        <SelectField
+          control={control}
+          name="category_id"
+          label="Category"
+          id="exp-category"
+          placeholder="Select category"
+          disabled={isEdit}
+          options={[{ label: "No category", value: NONE }, ...activeCategories.map((c) => ({ label: c.name, value: c.id }))]}
+        />
+        <SelectField
+          control={control}
+          name="expense_account_id"
+          label="Expense account"
+          id="exp-account"
+          placeholder="Select account"
+          disabled={isEdit}
+          description="Pick a category, an account, or both."
+          options={[{ label: "Use the category's account", value: NONE }, ...expenseAccounts.map((a) => ({ label: accountLabel(a), value: a.id }))]}
+        />
       </div>
 
-      <Field>
-        <FieldLabel htmlFor="exp-payment">Paid from *</FieldLabel>
-        <FieldContent>
-          <Controller
-            control={control}
-            name="payment_account_id"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
-                <SelectTrigger id="exp-payment" aria-invalid={!!errors.payment_account_id}>
-                  <SelectValue placeholder="Select payment account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentAccounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {accountLabel(a)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          <FieldError errors={[errors.payment_account_id]} />
-        </FieldContent>
-      </Field>
+      <SelectField
+        control={control}
+        name="payment_account_id"
+        label="Paid from *"
+        id="exp-payment"
+        placeholder="Select payment account"
+        disabled={isEdit}
+        options={paymentAccounts.map((a) => ({ label: accountLabel(a), value: a.id }))}
+      />
 
-      <Field>
-        <FieldLabel htmlFor="exp-desc">Description</FieldLabel>
-        <FieldContent>
-          <Textarea id="exp-desc" rows={2} placeholder="What was this for?" {...register("description")} />
-          <FieldError errors={[errors.description]} />
-        </FieldContent>
-      </Field>
+      <TextareaField
+        label="Description"
+        id="exp-desc"
+        rows={2}
+        placeholder="What was this for?"
+        error={errors.description}
+        {...register("description")}
+      />
     </FormDialog>
   )
 }

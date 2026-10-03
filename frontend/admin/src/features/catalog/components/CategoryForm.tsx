@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ImageIcon, Loader2, Save } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
+import { FormActions } from "@/components/common/FormActions"
+import { NoPermission } from "@/components/common/NoPermission"
+import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
+import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -49,7 +50,6 @@ const CategoryForm = () => {
   const existing = singleData as Category | null
   const { categories, options } = useCategoryOptions()
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const preview = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile])
 
   useDocumentTitle(isEditing ? (existing?.name ? `Edit ${existing.name}` : "Edit Category") : "Add Category")
 
@@ -82,10 +82,6 @@ const CategoryForm = () => {
     }
   }, [existing, id, isEditing, reset])
 
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview)
-  }, [preview])
-
   // A category can't be moved under itself or one of its own descendants.
   const parentOptions = useMemo(() => {
     if (!isEditing || !id) return options
@@ -108,12 +104,7 @@ const CategoryForm = () => {
 
   if (!canManage) {
     return (
-      <div className="section-container py-16 text-center text-sm text-muted-foreground">
-        You don't have permission to edit categories.{" "}
-        <Link className="text-primary underline" to="/categories">
-          Back to categories
-        </Link>
-      </div>
+      <NoPermission message="You don't have permission to edit categories." backTo="/categories" backLabel="Back to categories" />
     )
   }
 
@@ -161,13 +152,12 @@ const CategoryForm = () => {
     }
   }
 
-  const currentImage = preview ?? existing?.image ?? null
 
   return (
     <div className="section-container">
       <PageHeader
         title={isEditing ? "Edit Category" : "Add Category"}
-        description={isEditing ? `Editing ${existing?.name ?? ""}` : "Create a category to organise your catalog"}
+        description={isEditing ? `Editing ${existing?.name ?? ""}` : undefined}
         back={{ to: "/categories", label: "Back" }}
       />
 
@@ -177,13 +167,7 @@ const CategoryForm = () => {
             <CardTitle>Category details</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <FieldContent>
-                <Input id="name" placeholder="e.g. T-Shirts" {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
+            <TextField label="Name" id="name" placeholder="e.g. T-Shirts" error={errors.name} {...register("name")} />
 
             <Field>
               <FieldLabel htmlFor="parent_id">Parent category</FieldLabel>
@@ -232,45 +216,30 @@ const CategoryForm = () => {
               <SwitchField control={control} name="is_active" label="Active" />
             )}
 
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="description">Description</FieldLabel>
-              <FieldContent>
-                <Textarea id="description" rows={3} {...register("description")} />
-                <FieldError errors={[errors.description]} />
-              </FieldContent>
-            </Field>
+            <TextareaField
+              className="md:col-span-2"
+              label="Description"
+              id="description"
+              rows={3}
+              error={errors.description}
+              {...register("description")}
+            />
 
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="category-image">Image</FieldLabel>
-              <FieldContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-                    {currentImage ? (
-                      <img src={currentImage} alt="" className="size-full object-cover" />
-                    ) : (
-                      <ImageIcon className="size-6 text-muted-foreground" />
-                    )}
-                  </div>
-                  <Input
-                    id="category-image"
-                    type="file"
-                    accept="image/*"
-                    className="max-w-xs"
-                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-                  />
-                </div>
-                <FieldDescription>Uploaded when you save.</FieldDescription>
-              </FieldContent>
-            </Field>
+            <FormField
+              className="md:col-span-2"
+              label="Image"
+              htmlFor="category-image"
+              description="Uploaded when you save."
+            >
+              <ImagePicker id="category-image" src={existing?.image} onSelect={setImageFile} />
+            </FormField>
           </CardContent>
-          <CardFooter className="justify-end gap-3 border-t p-4">
-            <Button type="button" variant="outline" onClick={() => navigate("/categories")}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {isEditing ? "Save changes" : "Create category"}
-            </Button>
+          <CardFooter className="justify-end border-t p-4">
+            <FormActions
+              onCancel={() => navigate("/categories")}
+              submitLabel={isEditing ? "Save changes" : "Create category"}
+              submitting={isSubmitting}
+            />
           </CardFooter>
         </Card>
       </form>

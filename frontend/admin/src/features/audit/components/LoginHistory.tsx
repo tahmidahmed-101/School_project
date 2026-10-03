@@ -65,7 +65,7 @@ const LoginHistory = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Login History" description="Sign-in attempts to the dashboard and storefront." />
+      <PageHeader title="Login History" />
 
       <FilterToolbar
         searchPlaceholder="Search by email or IP address..."

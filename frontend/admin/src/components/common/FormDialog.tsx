@@ -1,5 +1,6 @@
 import { useId, type FormEventHandler, type ReactNode } from "react"
-import { Loader2 } from "lucide-react"
+import { X, Check } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -12,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SubmitButton } from "@/components/common/FormActions"
 import { cn } from "@/lib/utils"
 
 const SIZE_CLASS = {
@@ -71,22 +73,62 @@ export function FormDialog({
           {children}
         </form>
         {footerNote}
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant={destructive ? "destructive" : "default"}
-            disabled={submitting || submitDisabled}
-          >
-            {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            {submitLabel}
-          </Button>
-        </DialogFooter>
+        <DialogActions
+          onCancel={() => onOpenChange(false)}
+          form={formId}
+          submitLabel={submitLabel}
+          submitting={submitting}
+          submitDisabled={submitDisabled}
+          destructive={destructive}
+        />
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * The Cancel / action pair at the bottom of a dialog. Submits the form named by `form`,
+ * or calls `onSubmit` for dialogs that are not built around a <form>.
+ */
+export function DialogActions({
+  onCancel,
+  cancelLabel = "Cancel",
+  submitLabel,
+  submitting = false,
+  submitDisabled = false,
+  destructive = false,
+  icon = Check,
+  form,
+  onSubmit,
+}: {
+  onCancel: () => void
+  cancelLabel?: ReactNode
+  submitLabel: ReactNode
+  submitting?: boolean
+  submitDisabled?: boolean
+  destructive?: boolean
+  icon?: LucideIcon
+  form?: string
+  onSubmit?: () => void
+}) {
+  return (
+    <DialogFooter>
+      <Button type="button" variant="outline" disabled={submitting} onClick={onCancel}>
+        <X className="size-4" />
+        {cancelLabel}
+      </Button>
+      <SubmitButton
+        type={onSubmit ? "button" : "submit"}
+        form={form}
+        onClick={onSubmit}
+        loading={submitting}
+        disabled={submitDisabled}
+        icon={icon}
+        variant={destructive ? "destructive" : "default"}
+      >
+        {submitLabel}
+      </SubmitButton>
+    </DialogFooter>
   )
 }
 

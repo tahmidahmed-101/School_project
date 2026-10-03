@@ -4,15 +4,15 @@ import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
+import { CheckCircle2, Plus, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
+import { FieldError } from "@/components/ui/field"
 import { PageHeader } from "@/components/common/PageHeader"
+import { SubmitButton } from "@/components/common/FormActions"
+import { DateField, SelectField, TextareaField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
@@ -99,7 +99,6 @@ const PurchaseOrderCreate = () => {
       <PageHeader
         back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
         title="New Purchase Order"
-        description="Saved as a draft — submit it to the supplier when it's ready."
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
@@ -108,43 +107,16 @@ const PurchaseOrderCreate = () => {
             <CardTitle>Order details</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field>
-              <FieldLabel htmlFor="po-supplier">Supplier *</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="supplier_id"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="po-supplier" aria-invalid={!!errors.supplier_id}>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeSuppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError errors={[errors.supplier_id]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="po-date">Order date *</FieldLabel>
-              <FieldContent>
-                <Input id="po-date" type="date" aria-invalid={!!errors.order_date} {...register("order_date")} />
-                <FieldError errors={[errors.order_date]} />
-              </FieldContent>
-            </Field>
-            <Field className="md:col-span-3">
-              <FieldLabel htmlFor="po-notes">Notes</FieldLabel>
-              <FieldContent>
-                <Textarea id="po-notes" rows={2} {...register("notes")} />
-              </FieldContent>
-            </Field>
+            <SelectField
+              control={control}
+              name="supplier_id"
+              label="Supplier *"
+              id="po-supplier"
+              placeholder="Select supplier"
+              options={activeSuppliers.map((s) => ({ label: s.name, value: s.id }))}
+            />
+            <DateField label="Order date *" id="po-date" error={errors.order_date} {...register("order_date")} />
+            <TextareaField className="md:col-span-3" label="Notes" id="po-notes" rows={2} {...register("notes")} />
           </CardContent>
         </Card>
 
@@ -241,12 +213,11 @@ const PurchaseOrderCreate = () => {
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" size="action" asChild>
-            <Link to="/purchasing/orders">Cancel</Link>
+            <Link to="/purchasing/orders"><X className="size-4" /> Cancel</Link>
           </Button>
-          <Button type="submit" size="action" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+          <SubmitButton loading={isSubmitting} icon={CheckCircle2} size="action">
             Create Draft
-          </Button>
+          </SubmitButton>
         </div>
       </form>
     </div>

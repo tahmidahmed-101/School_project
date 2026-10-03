@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -23,6 +22,7 @@ import {
   type ShipmentStatus,
 } from "@/features/shipping/types"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { DialogActions } from "@/components/common/FormDialog"
 import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 
@@ -132,15 +132,13 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
               )}
             </FieldContent>
           </Field>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleStatus} disabled={!nextStatus || busy}>
-              {busy && <Loader2 className="size-4 animate-spin" />}
-              Save status
-            </Button>
-          </DialogFooter>
+          <DialogActions
+            onCancel={() => setOpen(false)}
+            onSubmit={handleStatus}
+            submitLabel="Save status"
+            submitting={busy}
+            submitDisabled={!nextStatus}
+          />
         </DialogContent>
       </Dialog>
     </div>

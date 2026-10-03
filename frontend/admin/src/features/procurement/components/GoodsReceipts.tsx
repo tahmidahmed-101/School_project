@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { SortSelect } from "@/components/common/SortSelect"
@@ -83,32 +82,48 @@ function ReceiptDetailDialog({ grn, onClose }: { grn: GoodsReceipt | null; onClo
               <Loader2 className="size-5 animate-spin text-primary" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>PRODUCT</TableHead>
-                  <TableHead className="text-right">QTY</TableHead>
-                  <TableHead>CONDITION</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {grn.lines.map((l) => {
-                  const poLine = lineInfo.get(l.purchase_order_line_id)
-                  return (
-                    <TableRow key={l.id}>
-                      <TableCell>
-                        <p className="text-sm font-medium">{poLine?.product_name ?? "—"}</p>
-                        <p className="text-xs font-mono text-muted-foreground">{poLine?.variant_sku ?? l.purchase_order_line_id}</p>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{l.quantity_received}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={l.condition} tone={l.condition === "accepted" ? "success" : "destructive"} />
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <DataTable
+              embedded
+              showPagination={false}
+              columns={
+                [
+                  {
+                    id: "product",
+                    header: "PRODUCT",
+                    cell: ({ row: { original: l } }) => {
+                      const poLine = lineInfo.get(l.purchase_order_line_id)
+                      return (
+                        <div>
+                          <p className="text-sm font-medium">{poLine?.product_name ?? "—"}</p>
+                          <p className="text-xs font-mono text-muted-foreground">
+                            {poLine?.variant_sku ?? l.purchase_order_line_id}
+                          </p>
+                        </div>
+                      )
+                    },
+                  },
+                  {
+                    id: "qty",
+                    header: "QTY",
+                    meta: { align: "right" },
+                    cell: ({ row }) => <span className="tabular-nums">{row.original.quantity_received}</span>,
+                  },
+                  {
+                    id: "condition",
+                    header: "CONDITION",
+                    cell: ({ row }) => (
+                      <StatusBadge
+                        status={row.original.condition}
+                        tone={row.original.condition === "accepted" ? "success" : "destructive"}
+                      />
+                    ),
+                  },
+                ] satisfies ColumnDef<GoodsReceipt["lines"][number]>[]
+              }
+              data={grn.lines}
+              minWidth="0px"
+              columnWidths={["auto", "80px", "130px"]}
+            />
           )}
         </DialogContent>
       )}
@@ -178,7 +193,6 @@ const GoodsReceipts = () => {
     <div className="section-container">
       <PageHeader
         title="Goods Receipts"
-        description="Deliveries received against purchase orders (GRNs)."
         actions={
           canManage && (
             <Button size="action" onClick={() => setReceiveOpen(true)}>

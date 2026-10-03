@@ -5,7 +5,7 @@ import { History } from "lucide-react"
 
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
+import { Combobox } from "@/components/common/ComboBox"
 import { ExportButton } from "@/components/common/ExportButton"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
@@ -137,7 +137,6 @@ const StockLedger = () => {
     <div className="section-container">
       <PageHeader
         title="Stock Ledger"
-        description="Every stock movement, newest first"
         actions={<ExportButton onExport={() => downloadLedgerExport(list.query)} />}
       />
 
@@ -151,9 +150,9 @@ const StockLedger = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Warehouse"
-                frameworks={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
+                options={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: w.id }))}
                 value={warehouse}
                 onValueChange={setWarehouse}
               />
@@ -161,9 +160,9 @@ const StockLedger = () => {
           },
           {
             component: (
-              <ExampleComboboxCustomItems
+              <Combobox
                 placeholder="Movement"
-                frameworks={movementTypeOptions}
+                options={movementTypeOptions}
                 value={movement}
                 onValueChange={setMovement}
               />

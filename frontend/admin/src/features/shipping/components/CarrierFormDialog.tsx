@@ -1,14 +1,13 @@
 import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
+import { SelectField, TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createCarrier, updateCarrier } from "@/features/shipping/slices/carrierSlice"
 import {
@@ -126,96 +125,56 @@ export function CarrierFormDialog({ open, onOpenChange, carrier, onSaved }: Carr
       size="lg"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field>
-          <FieldLabel htmlFor="carrier-name">Name *</FieldLabel>
-          <FieldContent>
-            <Input id="carrier-name" aria-invalid={!!errors.name} {...register("name")} />
-            <FieldError errors={[errors.name]} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="carrier-code">Provider</FieldLabel>
-          <FieldContent>
-            <Controller
-              control={control}
-              name="code"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="carrier-code">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CARRIER_PROVIDER_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="carrier-phone">Phone</FieldLabel>
-          <FieldContent>
-            <Input id="carrier-phone" {...register("phone")} />
-          </FieldContent>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="carrier-email">Contact email</FieldLabel>
-          <FieldContent>
-            <Input id="carrier-email" aria-invalid={!!errors.contact_email} {...register("contact_email")} />
-            <FieldError errors={[errors.contact_email]} />
-          </FieldContent>
-        </Field>
+        <TextField label="Name *" id="carrier-name" error={errors.name} {...register("name")} />
+        <SelectField
+          control={control}
+          name="code"
+          label="Provider"
+          id="carrier-code"
+          options={CARRIER_PROVIDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+        />
+        <TextField label="Phone" id="carrier-phone" {...register("phone")} />
+        <TextField
+          label="Contact email"
+          id="carrier-email"
+          error={errors.contact_email}
+          {...register("contact_email")}
+        />
       </div>
 
       <div className="space-y-4 rounded-lg border p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Courier integration</p>
-        <Field>
-          <FieldLabel htmlFor="carrier-url">API base URL</FieldLabel>
-          <FieldContent>
-            <Input id="carrier-url" placeholder="https://api.courier.example" {...register("api_base_url")} />
-          </FieldContent>
-        </Field>
+        <TextField
+          label="API base URL"
+          id="carrier-url"
+          placeholder="https://api.courier.example"
+          {...register("api_base_url")}
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field>
-            <FieldLabel htmlFor="carrier-key">API key</FieldLabel>
-            <FieldContent>
-              <Input
-                id="carrier-key"
-                type="password"
-                autoComplete="new-password"
-                placeholder={secretHint(!!carrier?.has_api_key)}
-                {...register("api_key")}
-              />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="carrier-secret">API secret</FieldLabel>
-            <FieldContent>
-              <Input
-                id="carrier-secret"
-                type="password"
-                autoComplete="new-password"
-                placeholder={carrier ? "Leave blank to keep" : ""}
-                {...register("api_secret")}
-              />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="carrier-webhook">Webhook secret</FieldLabel>
-            <FieldContent>
-              <Input
-                id="carrier-webhook"
-                type="password"
-                autoComplete="new-password"
-                placeholder={carrier ? "Leave blank to keep" : ""}
-                {...register("webhook_secret")}
-              />
-            </FieldContent>
-          </Field>
+          <TextField
+            label="API key"
+            id="carrier-key"
+            type="password"
+            autoComplete="new-password"
+            placeholder={secretHint(!!carrier?.has_api_key)}
+            {...register("api_key")}
+          />
+          <TextField
+            label="API secret"
+            id="carrier-secret"
+            type="password"
+            autoComplete="new-password"
+            placeholder={carrier ? "Leave blank to keep" : ""}
+            {...register("api_secret")}
+          />
+          <TextField
+            label="Webhook secret"
+            id="carrier-webhook"
+            type="password"
+            autoComplete="new-password"
+            placeholder={carrier ? "Leave blank to keep" : ""}
+            {...register("webhook_secret")}
+          />
         </div>
         <Field>
           <FieldLabel htmlFor="carrier-config">Config (JSON)</FieldLabel>

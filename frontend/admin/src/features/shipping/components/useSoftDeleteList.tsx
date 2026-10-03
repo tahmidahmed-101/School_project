@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 
-import { DeletedToggle } from "@/components/common/DeletedToggle"
+import type { BulkActions } from "@/components/common/data-table"
 import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge } from "@/components/common/cells"
 import { useListPage, type ListSliceState } from "@/hooks/use-list-page"
@@ -16,7 +16,7 @@ interface SoftDeletable {
 
 /**
  * List state for the carrier and zone pages: a searchable, paginated list of soft-deletable
- * records with a "Show deleted" filter, a status column and edit / delete / restore actions.
+ * records with a status column and edit / delete actions.
  */
 export function useSoftDeleteList<T extends SoftDeletable>({
   fetch,
@@ -25,6 +25,7 @@ export function useSoftDeleteList<T extends SoftDeletable>({
   canUpdate,
   remove,
   restore,
+  setActive,
   onEdit,
 }: {
   fetch: (params: Record<string, unknown>) => { abort?: () => void } | void
@@ -34,6 +35,7 @@ export function useSoftDeleteList<T extends SoftDeletable>({
   canUpdate: boolean
   remove: (id: string) => Promise<unknown>
   restore: (id: string) => Promise<unknown>
+  setActive: (id: string, active: boolean) => Promise<unknown>
   onEdit: (record: T) => void
 }) {
   const list = useListPage({ fetch, state })
@@ -83,14 +85,16 @@ export function useSoftDeleteList<T extends SoftDeletable>({
       : []),
   ]
 
-  /** FilterToolbar filters: the "Show deleted" toggle, for editors only. */
-  const filters = canUpdate
-    ? [
-        {
-          component: <DeletedToggle pressed={list.includeDeleted} onPressedChange={list.setIncludeDeleted} />,
-        },
-      ]
-    : []
+  /** <DataTable bulk>: tick-box bulk delete, for editors only. */
+  const bulk: BulkActions<T> | undefined = canUpdate
+    ? {
+        noun,
+        deleteRow: (record) => remove(record.id),
+        activate: (rows) => Promise.all(rows.map((r) => setActive(r.id, true))),
+        deactivate: (rows) => Promise.all(rows.map((r) => setActive(r.id, false))),
+        onDone: list.reload,
+      }
+    : undefined
 
-  return { list, trailingColumns, filters }
+  return { list, trailingColumns, bulk }
 }
