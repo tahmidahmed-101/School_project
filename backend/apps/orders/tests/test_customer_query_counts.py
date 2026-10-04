@@ -43,3 +43,11 @@ def test_order_history_query_count_does_not_grow_with_orders(api_client, custome
     first = response.data["data"]["results"][0]
     assert first["coupon_code"]
     assert first["shipments"][0]["carrier_name"]
+    # The history names each line's product (for the storefront's "My orders"),
+    # which must come from the prefetch too, not a query per line.
+    assert first["created_at"]
+    line = first["lines"][0]
+    assert line["product_name"]
+    assert line["product_slug"]
+    assert line["product_id"]
+    assert line["sku"]

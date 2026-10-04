@@ -47,7 +47,8 @@ def customer_order_summary(customer) -> dict:
 def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[SalesOrder]:
     queryset = (
         SalesOrder.objects.select_related("coupon")
-        .prefetch_related("lines", "shipments__carrier")
+        # The line serializer names each line's product, hence variant + product.
+        .prefetch_related("lines__variant__product", "shipments__carrier")
         .filter(customer=customer, deleted_at__isnull=True)
     )
     if status:

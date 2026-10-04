@@ -44,6 +44,7 @@ from .serializers import (
     ApplyCouponSerializer,
     CheckoutSerializer,
     CreateRMASerializer,
+    OrderHistorySerializer,
     RMASerializer,
     SalesOrderSerializer,
     ShippingOptionSerializer,
@@ -350,12 +351,12 @@ class PaymentCaptureView(APIView):
 
 @extend_schema(tags=["Orders"])
 class OrderHistoryListView(APIView):
-    serializer_class = SalesOrderSerializer
+    serializer_class = OrderHistorySerializer
     permission_classes: ClassVar[list] = [IsCustomer]
 
     def get(self, request) -> Response:
         orders = orders_for_customer(request.user).exclude(status=SalesOrder.Status.PENDING)
-        return list_response(request, orders, SalesOrderSerializer, view=self)
+        return list_response(request, orders, OrderHistorySerializer, view=self)
 
 
 @extend_schema(tags=["Orders"])

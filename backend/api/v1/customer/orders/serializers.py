@@ -49,6 +49,30 @@ class SalesOrderSerializer(serializers.Serializer):
         return CustomerShipmentSerializer(obj.shipments.all(), many=True).data
 
 
+class OrderHistoryLineSerializer(SalesOrderLineSerializer):
+    """A line as the order history shows it: what was bought, by name, so the
+    storefront can list and link the items without a catalogue lookup per
+    line. Kept off the base serializer, which carts and checkout also return
+    and which must not load a product per line."""
+
+    product_id = serializers.UUIDField(source="variant.product_id", read_only=True)
+    product_name = serializers.CharField(source="variant.product.name", read_only=True)
+    product_slug = serializers.CharField(source="variant.product.slug", read_only=True)
+    sku = serializers.CharField(source="variant.sku", read_only=True)
+    color = serializers.CharField(source="variant.color", read_only=True)
+    size = serializers.CharField(source="variant.size", read_only=True)
+
+
+class OrderHistorySerializer(SalesOrderSerializer):
+    """A placed order in the customer's history. Pair it with
+    `orders_for_customer`, which prefetches each line's variant and product."""
+
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_lines(self, obj) -> list[dict]:
+        return OrderHistoryLineSerializer(obj.lines.all(), many=True).data
+
+
 class AddLineSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
