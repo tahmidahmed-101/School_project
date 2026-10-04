@@ -12,14 +12,7 @@
     { "pattern": "www.kullmart.com", "custom_domain": true },
   ],
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "kull-mart-web" }],
-  "kv_namespaces": [{ "binding": "NEXT_INC_CACHE_KV", "id": "3846319644a6464998530c423f312ebb" }],
-  "d1_databases": [
-    {
-      "binding": "NEXT_TAG_CACHE_D1",
-      "database_name": "kull-mart-web-tags",
-      "database_id": "3e1bd394-f453-44c4-8b09-93f59076ec0a",
-    },
-  ],
+  // Unused without a page cache; kept so the deployed DOQueueHandler class needs no delete migration.
   "durable_objects": { "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
   "images": { "binding": "IMAGES" },
