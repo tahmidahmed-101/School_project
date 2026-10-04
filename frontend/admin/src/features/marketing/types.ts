@@ -38,9 +38,3 @@ export interface NewsletterSubscriber {
   unsubscribed_at: string | null
   created_at: string
 }
-
-/** AdminNewsletterSubscriberWriteSerializer */
-export interface NewsletterSubscriberPayload {
-  email?: string
-  is_active?: boolean
-}

@@ -44,12 +44,6 @@ export function rangeKey({ start, end }: DateRangeParams): string {
   return `${start}_${end}`
 }
 
-export function rangeLength({ start, end }: DateRangeParams): number {
-  const s = parseDate(start)
-  const e = parseDate(end)
-  return s && e ? differenceInCalendarDays(e, s) + 1 : 0
-}
-
 function validIso(value: string | null): string | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
   const d = parseDate(value)

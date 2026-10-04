@@ -13,6 +13,7 @@ import {
   SearchIcon,
 } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
+import { userDisplayName } from "@/lib/user-display"
 
 import {
   DropdownMenu,
@@ -56,17 +57,7 @@ const Navbar = () => {
     navigate("/login", { replace: true })
   }
 
-  const hasFullName = Boolean(user?.first_name?.trim() || user?.last_name?.trim())
-  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ")
-
-  const displayName = hasFullName
-    ? fullName
-    : user?.email
-      ? user.email
-          .split("@")[0]
-          .replace(/[._-]/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase())
-      : "Admin"
+  const displayName = userDisplayName(user, "Admin")
 
   const initials = useMemo(() => {
     return displayName

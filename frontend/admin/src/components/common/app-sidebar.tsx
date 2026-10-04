@@ -13,6 +13,7 @@ import {
 
 import { ChevronDown, Store } from "lucide-react"
 import { getNavGroups } from "@/app/modules"
+import { userDisplayName } from "@/lib/user-display"
 import type { NavItem } from "@/app/moduleTypes"
 
 // Detail/form routes (e.g. /order_detail/:id) don't appear in the nav; a link stays
@@ -31,16 +32,7 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed"
 
   const hasFullName = Boolean(user?.first_name?.trim() || user?.last_name?.trim())
-  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ")
-
-  const displayName = hasFullName
-    ? fullName
-    : user?.email
-      ? user.email
-          .split("@")[0]
-          .replace(/[._-]/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase())
-      : "Admin Workspace"
+  const displayName = userDisplayName(user, "Admin Workspace")
 
   const userEmail = user?.email || ""
   const userRole = user?.role ? user.role.replace(/_/g, " ").toUpperCase() : "ADMIN"

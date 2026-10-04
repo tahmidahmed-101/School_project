@@ -32,12 +32,6 @@ export interface IPBlock {
   created_at: string
 }
 
-export interface IPBlockPayload {
-  ip_address: string
-  reason: string
-  expires_at?: string | null
-}
-
 export type PhoneBlockStrength = "advance_only" | "blocked"
 export type PhoneBlockOrigin = "manual" | "automatic"
 
@@ -51,13 +45,6 @@ export interface PhoneBlock {
   is_active: boolean
   lifted_at: string | null
   created_at: string
-}
-
-/** BlockPhoneSerializer */
-export interface PhoneBlockPayload {
-  phone_number: string
-  reason: string
-  strength?: PhoneBlockStrength
 }
 
 export const PHONE_STRENGTH_LABELS: Record<PhoneBlockStrength, string> = {

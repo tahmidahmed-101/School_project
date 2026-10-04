@@ -80,15 +80,6 @@ const STATUS_TONES: Record<string, StatusTone> = {
   dismissed: "secondary",
 }
 
-/** Representative solid hex per tone, for contexts that need a literal color (e.g. recharts fill) rather than a Tailwind class. */
-export const STATUS_TONE_HEX: Record<StatusTone, string> = {
-  success: "#22c55e",
-  warning: "#eab308",
-  destructive: "#ef4444",
-  info: "#3b82f6",
-  secondary: "#6b7280",
-}
-
 export function getStatusTone(status: string | null | undefined, fallback: StatusTone = "secondary"): StatusTone {
   if (!status) return fallback
   return STATUS_TONES[status.toLowerCase()] ?? fallback

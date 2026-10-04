@@ -13,9 +13,6 @@ export type PaymentMethod =
   | "bank_transfer"
   | "manual"
 
-/** @deprecated Old name kept for importers outside this domain; use PaymentMethod. */
-export type PaymentProvider = PaymentMethod
-
 export interface Payment {
   id: string
   order_id: string

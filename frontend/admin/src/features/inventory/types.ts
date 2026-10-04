@@ -95,21 +95,6 @@ export interface StockStatusSummary {
   written_off: number
 }
 
-/** AdminStockLookupView: StockLookupVariantSerializer + found, or { found: false, query }. */
-export type StockLookupResult =
-  | {
-      found: true
-      variant_id: string
-      product_id: string
-      product_name: string
-      sku: string
-      barcode: string
-      price: string
-      cost_price: string
-      available: number
-    }
-  | { found: false; query: string }
-
 /** StockAdjustmentSerializer */
 export interface StockAdjustmentPayload {
   variant_id: string
@@ -134,17 +119,6 @@ export interface StockIntakePayload {
   quantity: number
   unit_cost?: string | null
   notes?: string
-}
-
-/** QuickProductCreateSerializer */
-export interface QuickProductPayload {
-  category_id: string
-  name: string
-  sku: string
-  price: string
-  cost_price?: string
-  barcode?: string
-  description?: string
 }
 
 export type ReservationStatus = "active" | "released"

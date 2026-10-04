@@ -83,11 +83,6 @@ export interface Order {
   rmas: Rma[]
 }
 
-/** @deprecated List rows are full orders now; kept for importers outside this domain. */
-export type OrderListItem = Order
-/** @deprecated Same shape as Order. */
-export type OrderDetail = Order
-
 /** PATCH /admin/orders/{id}/ (AdminOrderUpdateSerializer) — correctable fields only. */
 export interface OrderUpdatePayload {
   shipping_address_id?: string | null

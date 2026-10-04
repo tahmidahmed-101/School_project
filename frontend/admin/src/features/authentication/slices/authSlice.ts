@@ -115,11 +115,6 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    patchUser(state, action: { payload: Partial<AuthUser> }) {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload }
-      }
-    },
     // Marks the session authenticated without a backend round-trip. Only ever
     // dispatched when DEV_AUTH_BYPASS is on.
     devBypassLogin(state) {
@@ -187,5 +182,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { patchUser, devBypassLogin } = authSlice.actions
+export const { devBypassLogin } = authSlice.actions
 export default authSlice.reducer

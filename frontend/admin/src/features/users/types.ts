@@ -69,15 +69,6 @@ export interface StaffCreatePayload {
   permissions?: string[]
 }
 
-/** StaffUpdateSerializer */
-export interface StaffUpdatePayload {
-  first_name?: string
-  last_name?: string
-  phone?: string
-  profile_picture?: string
-  is_active?: boolean
-}
-
 /** The subset of AdminSalesOrderSerializer the customer page shows (GET /admin/orders/?customer_id=). */
 export interface CustomerOrderRow {
   id: string
