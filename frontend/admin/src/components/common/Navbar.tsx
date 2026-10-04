@@ -1,6 +1,5 @@
 import { SidebarTrigger } from "../ui/sidebar"
 import {
-  BellIcon,
   SunIcon,
   MoonIcon,
   LogOutIcon,
@@ -13,6 +12,7 @@ import {
   SearchIcon,
 } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
+import { NotificationBell } from "./NotificationBell"
 import { userDisplayName } from "@/lib/user-display"
 
 import {
@@ -156,47 +156,7 @@ const Navbar = () => {
           </button>
 
           {/* Notification */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                aria-label="Notifications"
-                className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-input dark:bg-background dark:text-gray-400 dark:hover:bg-gray-800"
-              >
-                <BellIcon className="size-5" />
-
-                <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring ring-white dark:ring-gray-800" />
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
-              <DropdownMenuLabel className="border-b border-gray-200 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
-                Notifications
-              </DropdownMenuLabel>
-
-              <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-3">
-                <p className="font-medium">New Order Received</p>
-                <span className="text-xs text-muted-foreground">
-                  Order #1024 has been placed
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-3">
-                <p className="font-medium">New Customer Registered</p>
-                <span className="text-xs text-muted-foreground">
-                  John Doe created an account
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-3">
-                <p className="font-medium">Inventory Alert</p>
-                <span className="text-xs text-muted-foreground">
-                  Product stock is running low
-                </span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <NotificationBell />
 
           {/* Profile */}
           <DropdownMenu>
