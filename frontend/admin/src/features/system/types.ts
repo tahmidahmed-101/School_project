@@ -79,3 +79,74 @@ export interface IntegrationStatus {
     from_number: string
   }
 }
+
+// ---- store policies (/admin/settings/policies/) ----
+
+export type PolicyKind = "shipping" | "returns" | "refund"
+
+/** POLICY_LOCALES in apps/business/policy_content.py — every piece of policy text exists in each. */
+export type PolicyLocale = "en" | "bn"
+export type LocalizedText = Record<PolicyLocale, string>
+
+export interface PolicySection {
+  heading: LocalizedText
+  body: LocalizedText
+}
+
+/** `StorePolicy.content`. A policy nobody has written yet holds `{}`, so every key may be missing. */
+export interface PolicyContent {
+  title?: LocalizedText
+  intro?: LocalizedText
+  sections?: PolicySection[]
+}
+
+/** AdminStorePolicySerializer */
+export interface StorePolicy {
+  kind: PolicyKind
+  label: string
+  content: PolicyContent
+  /** "YYYY-MM-DD" — the date the published terms apply from. */
+  effective_date: string | null
+  is_published: boolean
+  /** Paths still blank that block publishing, e.g. "content.sections[0].body.bn". */
+  missing_fields: string[]
+  /** Return eligibility; null for every kind except "returns". */
+  return_rules: {
+    /** Days after delivery a return is accepted; null = no limit. */
+    return_window_days: number | null
+    preorder_returns_allowed: boolean
+    non_returnable_categories: { id: string; name: string }[]
+  } | null
+  updated_at: string
+}
+
+/** AdminStorePolicyUpdateSerializer — every field optional (PATCH). The last three are for "returns" only. */
+export interface StorePolicyUpdate {
+  content?: Required<PolicyContent>
+  effective_date?: string | null
+  is_published?: boolean
+  return_window_days?: number | null
+  preorder_returns_allowed?: boolean
+  non_returnable_category_ids?: string[]
+}
+
+/** One side of a revision: the policy as it stood (rule keys only on the return policy). */
+export interface StorePolicySnapshot {
+  content: PolicyContent
+  effective_date: string | null
+  is_published: boolean
+  return_window_days?: number | null
+  preorder_returns_allowed?: boolean
+  non_returnable_category_ids?: string[]
+}
+
+/** AdminStorePolicyRevisionSerializer — written once per accepted change, never edited. */
+export interface StorePolicyRevision {
+  id: string
+  effective_date: string | null
+  changed_by_id: string | null
+  changed_by_name: string
+  previous: StorePolicySnapshot
+  current: StorePolicySnapshot
+  created_at: string
+}

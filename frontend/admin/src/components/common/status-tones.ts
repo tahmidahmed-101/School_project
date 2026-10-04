@@ -72,6 +72,12 @@ const STATUS_TONES: Record<string, StatusTone> = {
   consumed: "info",
   released: "secondary",
   expired: "destructive",
+
+  // product questions / price-issue reports
+  answered: "info",
+  open: "warning",
+  resolved: "success",
+  dismissed: "secondary",
 }
 
 /** Representative solid hex per tone, for contexts that need a literal color (e.g. recharts fill) rather than a Tailwind class. */

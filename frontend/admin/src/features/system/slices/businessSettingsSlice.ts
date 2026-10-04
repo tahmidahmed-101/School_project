@@ -9,6 +9,9 @@ import type {
   IntegrationStatus,
   ModuleUpdatePayload,
   PaymentMethodState,
+  PolicyKind,
+  StorePolicy,
+  StorePolicyUpdate,
 } from "../types"
 
 // Not sliceFactory-backed: /admin/settings/ is a singleton profile plus keyed (not id'd)
@@ -27,6 +30,7 @@ interface BusinessSettingsState {
   modules: Section<BusinessModule[]>
   paymentMethods: Section<PaymentMethodState[]>
   integrations: Section<IntegrationStatus | null>
+  policies: Section<StorePolicy[]>
 }
 
 const section = <T,>(data: T): Section<T> => ({ data, status: "idle", error: null })
@@ -36,6 +40,7 @@ const initialState: BusinessSettingsState = {
   modules: section([]),
   paymentMethods: section([]),
   integrations: section(null),
+  policies: section([]),
 }
 
 const get = <T,>(type: string, url: string) =>
@@ -88,6 +93,25 @@ export const fetchPaymentMethods = get<PaymentMethodState[]>(
   "/admin/settings/payment-methods/"
 )
 export const fetchIntegrations = get<IntegrationStatus>("businessSettings/fetchIntegrations", "/admin/settings/integrations/")
+
+/** GET /admin/settings/policies/ (settings.view) — shipping, return and refund policies, drafts included. */
+export const fetchPolicies = get<StorePolicy[]>("businessSettings/fetchPolicies", "/admin/settings/policies/")
+
+/**
+ * PATCH /admin/settings/policies/{kind}/ (settings.manage). Edits, publishes or unpublishes;
+ * the backend refuses to publish an incomplete policy (see services/policies.py).
+ */
+export const updatePolicy = createAsyncThunk(
+  "businessSettings/updatePolicy",
+  async ({ kind, patch }: { kind: PolicyKind; patch: StorePolicyUpdate }, { rejectWithValue }) => {
+    try {
+      const res = await api.patch(`/admin/settings/policies/${kind}/`, patch)
+      return unwrapEnvelope<StorePolicy>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
 
 /** PATCH /admin/settings/modules/{key}/ — send either {is_enabled} or {config}, never both. */
 export const updateModule = createAsyncThunk(
@@ -158,6 +182,12 @@ const businessSettingsSlice = createSlice({
         failed(state.integrations, action.payload ?? action.error)
       )
 
+      .addCase(fetchPolicies.pending, (state) => pending(state.policies))
+      .addCase(fetchPolicies.fulfilled, (state, action) => {
+        state.policies = { data: action.payload, status: "succeeded", error: null }
+      })
+      .addCase(fetchPolicies.rejected, (state, action) => failed(state.policies, action.payload ?? action.error))
+
     builder
       .addCase(updateBusinessProfile.fulfilled, (state, action) => {
         state.profile.data = action.payload
@@ -170,6 +200,9 @@ const businessSettingsSlice = createSlice({
         state.paymentMethods.data = state.paymentMethods.data.map((m) =>
           m.key === action.payload.key ? action.payload : m
         )
+      })
+      .addCase(updatePolicy.fulfilled, (state, action) => {
+        state.policies.data = state.policies.data.map((p) => (p.kind === action.payload.kind ? action.payload : p))
       })
   },
 })

@@ -27,6 +27,9 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
       { title: "Bundles", url: "/bundles", heading: "Bundles" },
       { title: "Categories", url: "/categories", heading: "Categories" },
       { title: "Brands", url: "/brands", heading: "Brands" },
+      { title: "Reviews", url: "/reviews", heading: "Reviews" },
+      { title: "Questions", url: "/questions", heading: "Questions" },
+      { title: "Price Reports", url: "/price_reports", heading: "Price Reports" },
     ],
   },
   {
@@ -85,6 +88,7 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "System",
     items: [
       { title: "Settings", url: "/settings", heading: "Settings" },
+      { title: "Store Policies", url: "/policies", heading: "Store Policies" },
       { title: "Audit Logs", url: "/audit-logs", heading: "Audit Logs" },
       { title: "Login History", url: "/login-history", heading: "Login History" },
     ],

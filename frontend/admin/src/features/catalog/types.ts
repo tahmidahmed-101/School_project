@@ -243,3 +243,58 @@ export interface ProductReview {
   is_verified_purchase: boolean
   created_at: string
 }
+
+/** AdminProductQuestionSerializer — a customer's question about a product, asked on the storefront. */
+export interface ProductQuestion {
+  id: string
+  product_id: string
+  product_name: string
+  customer_id: string
+  customer_name: string
+  question: string
+  /** "" until staff answer it. */
+  answer: string
+  /** Shown on the storefront product page. Only an answered question can be published. */
+  is_published: boolean
+  answered_by_name: string
+  answered_at: string | null
+  created_at: string
+}
+
+/** The `status` filter of /admin/catalog/questions/, derived from `answer` and `is_published`. */
+export type ProductQuestionStatus = "pending" | "answered" | "published"
+
+/** AdminProductQuestionUpdateSerializer */
+export interface ProductQuestionPayload {
+  answer?: string
+  is_published?: boolean
+}
+
+export type PriceReportStatus = "open" | "resolved" | "dismissed"
+
+/** AdminPriceReportSerializer — a customer's report of a suspected wrong price; staff-only. */
+export interface PriceReport {
+  id: string
+  product_id: string
+  product_name: string
+  /** Null when the report is about the product as a whole. */
+  variant_id: string | null
+  variant_sku: string | null
+  /** The variant's price right now (not when it was reported); null without a variant. */
+  current_price: string | null
+  expected_price: string | null
+  comment: string
+  reporter_id: string
+  reporter_name: string
+  status: PriceReportStatus
+  staff_note: string
+  resolved_by_name: string
+  resolved_at: string | null
+  created_at: string
+}
+
+/** AdminPriceReportUpdateSerializer */
+export interface PriceReportPayload {
+  status?: PriceReportStatus
+  staff_note?: string
+}
