@@ -81,11 +81,11 @@ export function ProductQuestions({ slug, productId }: { slug: string; productId:
         <ul className="divide-y divide-ink-100">
           {items.map((item) => (
             <li key={item.id} className="space-y-1.5 py-3 first:pt-0">
-              <p className="flex gap-2 font-bold text-fg">
+              <p className="flex gap-2 text-sm font-bold text-fg">
                 <span className="shrink-0 text-gold-800">{ui("questionsQ")}.</span>
                 <span className="whitespace-pre-line">{item.question}</span>
               </p>
-              <p className="flex gap-2">
+              <p className="flex gap-2 text-sm">
                 <span className="shrink-0 font-bold text-brand-800">{ui("questionsA")}.</span>
                 <span className="whitespace-pre-line">{item.answer}</span>
               </p>

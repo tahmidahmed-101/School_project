@@ -8,6 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { useAuth } from "../context";
 import { safeNextPath } from "../domain/redirect";
 import { authErrorMessage } from "./authError";
+import { AccountView } from "./AccountView";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Button } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
@@ -44,30 +45,7 @@ export function LoginView() {
 
   // Already logged in (and not mid-redirect after a fresh login): this page doubles as the account summary.
   if (status === "authenticated" && user && !submitting) {
-    return (
-      <div className="min-h-screen bg-white py-8 sm:py-12">
-        <Container width="narrow">
-          <PageHeader
-            breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: ui("navProfile") }]} />}
-            title={ui("navProfile")}
-          />
-          <div className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5">
-            <div>
-              <p className="text-xs font-semibold text-fg-muted">{ui("accountSignedInAs")}</p>
-              <p className="mt-1 text-sm font-bold text-fg">{user.name || user.email}</p>
-              {user.name && <p className="text-xs text-fg-muted">{user.email}</p>}
-            </div>
-            {user.role !== "customer" && <FormAlert>{ui("accountStaffNote")}</FormAlert>}
-            <Button variant="muted" size="lg" fullWidth onClick={() => void logout()}>
-              {ui("accountLogout")}
-            </Button>
-          </div>
-          <Link href="/shop" className="mt-5 block text-center text-sm font-semibold text-brand-800 hover:underline">
-            {ui("loginContinueShopping")}
-          </Link>
-        </Container>
-      </div>
-    );
+    return <AccountView user={user} onLogout={() => void logout()} />;
   }
 
   return (

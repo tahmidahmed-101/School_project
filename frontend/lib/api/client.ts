@@ -122,6 +122,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        // Names this app to the account API, which keeps a separate refresh cookie per app: a storefront login
+        // never replaces or ends a dashboard session in the same browser. It only selects the cookie.
+        ...(scope === "customer" ? { "X-Auth-Client": "storefront" } : {}),
         ...headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

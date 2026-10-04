@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { useAuth } from "@/modules/auth";
 import { forgetGuestCart, syncedGuestCartToken, useCart } from "@/modules/cart";
 import { ApiError } from "@/lib/api/client";
 import { placeOrder } from "../data/mutations";
@@ -31,6 +32,7 @@ import { CheckoutSummary } from "./CheckoutSummary";
 export function CheckoutView() {
   const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
+  const { withAuth } = useAuth();
 
   const [form, setForm] = useState<OrderForm>(EMPTY_ORDER_FORM);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
@@ -78,10 +80,9 @@ export function CheckoutView() {
       // The backend prices the order (shipping zone, tax, discounts); its response is what the shopper sees.
       // Check out the shopper's saved cart when the backend holds exactly these items, so it stops being an open cart.
       const cartToken = await syncedGuestCartToken(items);
-      const order = await placeOrder(
-        buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code }),
-        cartToken,
-      );
+      const request = buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code });
+      // Logged in: the order is placed on the customer's account. Guest: exactly as before.
+      const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
       if (cartToken) forgetGuestCart();
       setOrderResult(
         toOrderResult(order, {

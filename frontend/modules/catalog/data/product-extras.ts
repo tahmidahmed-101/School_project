@@ -21,6 +21,8 @@ export const fetchProductQuestions = (slug: string, page: number) =>
 
 /** Customer API paths (sent through useAuth().authRequest, which adds the access token). */
 export const questionPath = (productId: string) => `/questions/products/${productId}/`;
+/** POST { rating 1-5, comment? }: one review per product, only after a delivered order of it. */
+export const reviewPath = (productId: string) => `/reviews/products/${productId}/`;
 export const priceReportPath = (productId: string) => `/price-reports/products/${productId}/`;
 
 /**

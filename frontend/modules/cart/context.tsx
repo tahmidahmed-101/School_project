@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { CartItem, Product } from "@/lib/types";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
-import { syncGuestCart } from "./data/guestCart";
+import { useAuth } from "@/modules/auth";
+import { setCartCustomer, syncGuestCart } from "./data/guestCart";
 import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
@@ -102,13 +103,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Mirror the cart to the backend's guest cart. Not before the saved cart has loaded: the empty first render
-  // would otherwise wipe the server copy.
+  // Mirror the cart to the backend: the customer's own cart when logged in (so the store sees whose it is), an
+  // anonymous guest cart otherwise. Not before the saved cart has loaded (the empty first render would wipe the
+  // server copy), and not before the session is known (a logged-in customer would briefly get a guest cart).
+  const { status: authStatus, user, authRequest } = useAuth();
+  const asCustomer = authStatus === "authenticated" && user?.role === "customer";
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || authStatus === "loading") return;
+    setCartCustomer(asCustomer ? authRequest : null);
     const timer = setTimeout(() => void syncGuestCart(toCartTargets(items)), SYNC_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [items, isHydrated]);
+  }, [items, isHydrated, authStatus, asCustomer, authRequest]);
 
   const addItem = useCallback(
     (

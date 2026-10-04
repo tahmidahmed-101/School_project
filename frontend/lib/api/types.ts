@@ -145,6 +145,26 @@ export interface ApiStorePolicy {
   } | null;
 }
 
+/** One order from GET /customer/orders/ (newest first; open carts are not included). */
+export interface ApiCustomerOrder {
+  id: string;
+  order_number: string;
+  /** awaiting_payment | confirmed | shipped | delivered | closed | cancelled | ... */
+  status: string;
+  /** Decimal string. */
+  grand_total: string;
+  created_at: string;
+  lines: {
+    id: string;
+    quantity: number;
+    product_id: string;
+    product_name: string;
+    product_slug: string;
+    color: string;
+    size: string;
+  }[];
+}
+
 /** Customer account as returned by /customer/auth/login/ and /customer/auth/me/. */
 export interface ApiAuthUser {
   id: string;

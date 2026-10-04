@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "../context";
+import { suggestEmailCorrection } from "../domain/email";
 import { safeNextPath, splitFullName } from "../domain/redirect";
 import { authErrorMessage } from "./authError";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -25,6 +26,10 @@ export function RegisterView() {
   const [confirm, setConfirm] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // A likely misspelling of the email's domain ("gamil.com"). The customer is asked once per address: an account
+  // created under a mistyped email cannot be logged into with the right one.
+  const [emailFix, setEmailFix] = useState<string | null>(null);
+  const [checkedEmail, setCheckedEmail] = useState("");
   // Ids of the password fields currently shown as plain text; each has its own eye toggle.
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
 
@@ -42,6 +47,15 @@ export function RegisterView() {
       setErrorMsg(ui("registerMismatch"));
       return;
     }
+    const typed = email.trim();
+    const fix = suggestEmailCorrection(typed);
+    if (fix && checkedEmail !== typed) {
+      setErrorMsg("");
+      setEmailFix(fix);
+      setCheckedEmail(typed);
+      return;
+    }
+    setEmailFix(null);
     setErrorMsg("");
     setSubmitting(true);
     try {
@@ -90,6 +104,23 @@ export function RegisterView() {
           className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
         >
           {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
+          {emailFix && (
+            <div role="alert" className="space-y-2 rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs text-fg">
+              <p className="font-semibold">
+                {ui("registerEmailSuggestion")} <span className="break-all font-bold">{emailFix}</span>?
+              </p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEmail(emailFix);
+                  setEmailFix(null);
+                }}
+              >
+                {ui("registerEmailUse")}
+              </Button>
+              <p className="text-fg-muted">{ui("registerEmailKeep")}</p>
+            </div>
+          )}
 
           {fields.map((f) => (
             <FormField key={f.id} htmlFor={f.id} label={ui(f.label)}>

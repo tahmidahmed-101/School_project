@@ -19,21 +19,29 @@ const CART_UNUSABLE_CODES = new Set(["guest_cart_not_found", "not_pending", "emp
  *
  * `cartToken` (from `syncedGuestCartToken`) checks out the shopper's saved guest cart instead of the request's
  * item list. If that cart turns out to be unusable, nothing was ordered and the item list is sent as before.
+ *
+ * `authHeaders` (from `useAuth().withAuth`) carries a logged-in customer's access token. With it the backend puts
+ * the order on their account, where it shows in their order history and lets them review what they bought;
+ * without it the order goes to a guest identity keyed by the phone number.
  */
-export async function placeOrder(request: ApiCheckoutRequest, cartToken?: string | null): Promise<ApiOrder> {
+export async function placeOrder(
+  request: ApiCheckoutRequest,
+  cartToken?: string | null,
+  authHeaders: Record<string, string> = {},
+): Promise<ApiOrder> {
   if (cartToken) {
     try {
       // With the token the saved guest cart becomes the order, so it supplies the items.
       return await apiRequest<ApiOrder>("/checkout/", {
         method: "POST",
         body: { ...request, items: undefined },
-        headers: { [GUEST_CART_TOKEN_HEADER]: cartToken },
+        headers: { ...authHeaders, [GUEST_CART_TOKEN_HEADER]: cartToken },
       });
     } catch (error) {
       if (!(error instanceof ApiError && CART_UNUSABLE_CODES.has(error.code))) throw error;
     }
   }
-  return apiRequest<ApiOrder>("/checkout/", { method: "POST", body: request });
+  return apiRequest<ApiOrder>("/checkout/", { method: "POST", body: request, headers: authHeaders });
 }
 
 /**

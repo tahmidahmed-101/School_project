@@ -8,13 +8,14 @@ import { loginHref } from "@/modules/auth";
 type UiKey = "errNetwork" | "errTooMany" | "errServer" | "errGeneric" | "customerOnly";
 
 /**
- * Message for a failed question / price report. `duplicate` is the copy for the API's "you already sent this"
- * codes (`duplicate_question`, `already_reported`); other validation messages are shown as the API words them.
+ * Message for a failed question / price report / review. `duplicate` is the copy for the API's "you already sent
+ * this" codes (`duplicate_question`, `already_reported`, `already_reviewed`); other validation messages are shown as
+ * the API words them.
  */
 export function customerActionError(error: unknown, ui: (key: UiKey) => string, duplicate: string): string {
   if (!(error instanceof ApiError)) return ui("errGeneric");
   if (error.isNetwork) return ui("errNetwork");
-  if (error.code === "duplicate_question" || error.code === "already_reported") return duplicate;
+  if (["duplicate_question", "already_reported", "already_reviewed"].includes(error.code)) return duplicate;
   if (error.status === 429) return ui("errTooMany");
   if (error.status === 403) return ui("customerOnly");
   if (error.status >= 500 || error.status === 401) return ui("errGeneric");

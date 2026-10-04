@@ -25,6 +25,12 @@ interface AuthContextType {
   logout: () => Promise<void>;
   /** A customer-API request as the logged-in customer. Renews an expired access token once, then gives up. */
   authRequest: <T>(path: string, options?: Omit<RequestOptions, "scope">) => Promise<T>;
+  /**
+   * Runs a request that works for guests too (checkout) with the customer's credentials when there is a session,
+   * so the backend ties the result to their account. `send` gets the headers to add: empty for a guest. An
+   * expired access token is renewed once; if the session turns out to be gone, the request goes through as a guest.
+   */
+  withAuth: <T>(send: (headers: Record<string, string>) => Promise<T>) => Promise<T>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -161,9 +167,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [renewAccess, clearSession],
   );
 
+  const withAuth = useCallback(
+    async <T,>(send: (headers: Record<string, string>) => Promise<T>): Promise<T> => {
+      const bearer = (access: string) => ({ Authorization: `Bearer ${access}` });
+      /** A fresh access token, or null when there is no session to renew. */
+      const renew = async (): Promise<string | null> => {
+        try {
+          return await renewAccess();
+        } catch (error) {
+          // Offline: let the request itself report it. Anything else means the session is gone.
+          if (!(error instanceof ApiError && error.isNetwork)) clearSession();
+          return null;
+        }
+      };
+
+      let access = accessRef.current;
+      if (!access && hasSessionHint()) access = await renew();
+      if (!access) return send({});
+      try {
+        return await send(bearer(access));
+      } catch (error) {
+        // A stale token makes even a public endpoint answer 401; anything else is the request's own failure.
+        if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      }
+      const renewed = await renew();
+      return send(renewed ? bearer(renewed) : {});
+    },
+    [renewAccess, clearSession],
+  );
+
   const value = useMemo(
-    () => ({ status, user, login, register, logout, authRequest }),
-    [status, user, login, register, logout, authRequest],
+    () => ({ status, user, login, register, logout, authRequest, withAuth }),
+    [status, user, login, register, logout, authRequest, withAuth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

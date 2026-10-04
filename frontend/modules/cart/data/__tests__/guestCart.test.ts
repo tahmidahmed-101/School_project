@@ -109,3 +109,74 @@ describe("syncedGuestCartToken", () => {
     expect(calls().slice(2)).toEqual(["GET /cart/", "POST /cart/", "POST /cart/lines/"]);
   });
 });
+
+describe("logged-in customer", () => {
+  const customer = vi.fn();
+  const customerCalls = () => customer.mock.calls.map(([path, options]) => `${options?.method ?? "GET"} ${path}`);
+
+  beforeEach(() => {
+    customer.mockReset();
+  });
+
+  it("mirrors the cart to the customer's own cart, not a guest cart", async () => {
+    customer
+      .mockResolvedValueOnce(cart([]))
+      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 2 }]));
+    const { setCartCustomer, syncGuestCart } = await load();
+    setCartCustomer(customer);
+
+    expect(await syncGuestCart([{ variantId: "v-1", quantity: 2 }])).toBe(true);
+    expect(customerCalls()).toEqual(["GET /orders/cart/", "POST /orders/cart/lines/"]);
+    expect(customer.mock.calls[1][1]).toMatchObject({ body: { variant_id: "v-1", quantity: 2 } });
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("empties and forgets the guest cart the shopper had before logging in", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
+      .mockResolvedValueOnce(cart([{ id: "g-1", variant_id: "v-1", quantity: 1 }]))
+      // After login: the guest cart is read and its line removed.
+      .mockResolvedValueOnce(cart([{ id: "g-1", variant_id: "v-1", quantity: 1 }]))
+      .mockResolvedValueOnce(cart([]));
+    customer
+      .mockResolvedValueOnce(cart([]))
+      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 1 }]));
+    const { setCartCustomer, syncGuestCart } = await load();
+    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
+
+    setCartCustomer(customer);
+    expect(await syncGuestCart([{ variantId: "v-1", quantity: 1 }])).toBe(true);
+
+    expect(calls().slice(2)).toEqual(["GET /cart/", "DELETE /cart/lines/g-1/"]);
+    expect(customerCalls()).toEqual(["GET /orders/cart/", "POST /orders/cart/lines/"]);
+
+    // The guest token is gone: a later sync touches only the customer's cart.
+    customer.mockResolvedValueOnce(cart([]));
+    await syncGuestCart([]);
+    expect(calls()).toHaveLength(4);
+    expect(customerCalls().at(-1)).toBe("DELETE /orders/cart/lines/l-1/");
+  });
+
+  it("has no guest cart token to check out, so checkout sends the item list", async () => {
+    const { setCartCustomer, syncedGuestCartToken } = await load();
+    setCartCustomer(customer);
+
+    const items = [{ product: {} as never, quantity: 1, variantId: "v-1" }];
+    expect(await syncedGuestCartToken(items)).toBeNull();
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("goes back to a guest cart after logout", async () => {
+    customer.mockResolvedValueOnce(cart([]));
+    apiRequest
+      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
+      .mockResolvedValueOnce(cart([{ id: "g-1", variant_id: "v-1", quantity: 1 }]));
+    const { setCartCustomer, syncGuestCart } = await load();
+    setCartCustomer(customer);
+    await syncGuestCart([]);
+
+    setCartCustomer(null);
+    expect(await syncGuestCart([{ variantId: "v-1", quantity: 1 }])).toBe(true);
+    expect(calls()).toEqual(["POST /cart/", "POST /cart/lines/"]);
+  });
+});

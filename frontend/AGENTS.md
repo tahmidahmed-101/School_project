@@ -65,6 +65,8 @@ down (design-system or lib) rather than adding the cycle.
 - **Customer accounts live in `modules/auth`.** The browser calls `/api/v1/customer/*` (proxied in `next.config.mjs`
   under the backend's own path, because the HttpOnly refresh cookie is scoped to `Path=/api/v1/customer/auth/`). The
   access token is kept in memory only; send customer requests with `useAuth().authRequest`, never store a token.
+  Customer requests carry `X-Auth-Client: storefront` (set in `lib/api/client.ts`): the backend keeps a separate
+  refresh cookie for the dashboard, so the two apps never share or replace each other's session.
 - **Tracking route gotcha (`modules/tracking/data/mutations.ts`):** the real route is `/tracking/orders/track/`; `docs/Public API.yaml` lists
   `/tracking/track/`, which 404s. Do not "fix" the code to match the YAML.
 - Copy is bilingual (`T = { en, bn }`, dictionary in `lib/i18n.tsx`); add both languages for any new UI string.

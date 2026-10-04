@@ -67,7 +67,7 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
         )}
 
         <AccordionItem title={reviewsTitle}>
-          <ProductReviews slug={product.slug} />
+          <ProductReviews slug={product.slug} productId={product.id} />
         </AccordionItem>
 
         <AccordionItem title={ui("questionsTitle")}>

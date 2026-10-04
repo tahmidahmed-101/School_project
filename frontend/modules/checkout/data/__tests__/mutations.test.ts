@@ -28,7 +28,26 @@ describe("placeOrder", () => {
   it("sends the item list when there is no saved cart", async () => {
     apiRequest.mockResolvedValueOnce({ id: "o-1" });
     await placeOrder(request);
-    expect(apiRequest).toHaveBeenCalledWith("/checkout/", { method: "POST", body: request });
+    expect(apiRequest).toHaveBeenCalledWith("/checkout/", { method: "POST", body: request, headers: {} });
+  });
+
+  it("sends a logged-in customer's token so the order lands on their account", async () => {
+    apiRequest.mockResolvedValueOnce({ id: "o-1" });
+    await placeOrder(request, null, { Authorization: "Bearer abc" });
+    expect(apiRequest).toHaveBeenCalledWith("/checkout/", {
+      method: "POST",
+      body: request,
+      headers: { Authorization: "Bearer abc" },
+    });
+  });
+
+  it("sends the token together with the saved cart's token", async () => {
+    apiRequest.mockResolvedValueOnce({ id: "o-1" });
+    await placeOrder(request, "tok", { Authorization: "Bearer abc" });
+    expect(apiRequest.mock.calls[0][1].headers).toEqual({
+      Authorization: "Bearer abc",
+      "X-Guest-Cart-Token": "tok",
+    });
   });
 
   it("checks out the saved cart by token, without the item list", async () => {
@@ -46,7 +65,7 @@ describe("placeOrder", () => {
       .mockRejectedValueOnce(new ApiError({ status: 404, code: "guest_cart_not_found", message: "Cart not found." }))
       .mockResolvedValueOnce({ id: "o-1" });
     await placeOrder(request, "tok");
-    expect(apiRequest).toHaveBeenLastCalledWith("/checkout/", { method: "POST", body: request });
+    expect(apiRequest).toHaveBeenLastCalledWith("/checkout/", { method: "POST", body: request, headers: {} });
   });
 
   it("does not retry any other failure, so an order is never placed twice", async () => {
