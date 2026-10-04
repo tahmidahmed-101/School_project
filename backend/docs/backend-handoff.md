@@ -250,7 +250,12 @@ matching `StaffPermission` code.
 
 **Auth** `auth/` (mixed `AllowAny`/`IsAuthenticated`)
 - `POST register/`, `POST login/` (AllowAny)
-- `POST refresh/` (rotates access token from HttpOnly `vtc_refresh` cookie), `POST logout/` (AllowAny)
+- `POST refresh/` (rotates access token from the caller's HttpOnly refresh cookie), `POST logout/` (AllowAny)
+- Login, refresh and logout are shared by the storefront and the dashboard. Each app sends
+  `X-Auth-Client: storefront | dashboard` (absent = storefront) and gets its own cookie
+  (`vtc_refresh` / `vtc_refresh_admin`), so the two sessions are independent in one browser.
+  The header only picks the cookie. A customer account asking for a dashboard session is
+  refused with 403 `auth_not_staff`; admin APIs authorise from the user as before.
 - `GET me/`
 - `POST request-email-verification/`, `POST verify-email/`
 - `POST request-phone-verification/`, `POST verify-phone/`
@@ -314,8 +319,9 @@ matching `StaffPermission` code.
 ## 6. Security & platform behavior
 
 - **JWT**: 15-min access / 1-day refresh (30 days with `remember_me`), refresh
-  token rotated + blacklisted on use, stored in an HttpOnly `vtc_refresh`
-  cookie (`SameSite=Lax`) — not the response body or localStorage.
+  token rotated + blacklisted on use, stored in an HttpOnly cookie
+  (`SameSite=Lax`; `vtc_refresh` for the storefront, `vtc_refresh_admin` for the
+  dashboard, see `REFRESH_COOKIE_NAMES`) — not the response body or localStorage.
 - **Throttling** (`REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`): anon 300/hr,
   user 2000/hr, auth 20/min (login attempts per IP), `login_account` 10/min
   (per submitted account), `public_read` 1000/hr, `media_upload` 120/hr,

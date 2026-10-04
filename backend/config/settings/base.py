@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, cast
 
+from corsheaders.defaults import default_headers
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -315,7 +316,23 @@ REMEMBER_ME_REFRESH_TOKEN_LIFETIME = timedelta(days=30)
 REFRESH_COOKIE_NAME = "vtc_refresh"
 REFRESH_COOKIE_SAMESITE = "Lax"
 
+# The storefront and the admin dashboard log in through the same endpoint but
+# keep separate sessions: each sends `X-Auth-Client` and gets its own refresh
+# cookie. With a single cookie, the two apps shared one session slot whenever
+# they were served from the same host (cookies ignore the port), so signing in,
+# refreshing or signing out in one replaced or ended the session of the other.
+# A request without the header is treated as the storefront.
+AUTH_CLIENT_HEADER = "X-Auth-Client"
+AUTH_CLIENT_STOREFRONT = "storefront"
+AUTH_CLIENT_DASHBOARD = "dashboard"
+REFRESH_COOKIE_NAMES = {
+    AUTH_CLIENT_STOREFRONT: REFRESH_COOKIE_NAME,
+    AUTH_CLIENT_DASHBOARD: "vtc_refresh_admin",
+}
+
 CORS_ALLOW_CREDENTIALS = True
+# A dashboard served from another origin sends X-Auth-Client on every request.
+CORS_ALLOW_HEADERS = (*default_headers, "x-auth-client")
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Django Foundation API",
@@ -359,8 +376,8 @@ STOCK_RESERVATION_TTL_HOURS: int = config("STOCK_RESERVATION_TTL_HOURS", default
 
 # Mirrors the storefront's src/data/business.ts; blank values are dropped, not printed.
 BUSINESS_IDENTITY: dict[str, str] = {
-    "name": config("BUSINESS_NAME", default="LaunchCart"),
-    "legal_name": config("BUSINESS_LEGAL_NAME", default="LaunchCart Ltd"),
+    "name": config("BUSINESS_NAME", default="Kull Mart"),
+    "legal_name": config("BUSINESS_LEGAL_NAME", default="Kull Mart"),
     "address": config("BUSINESS_ADDRESS", default="123 Demo Street, Demo City"),
     "phone": config("BUSINESS_PHONE", default="+1 (555) 000-0000"),
     "email": config("BUSINESS_EMAIL", default="admin@example.com"),

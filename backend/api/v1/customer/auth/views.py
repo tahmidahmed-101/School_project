@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.constants import UserRole
 from apps.accounts.selectors.users import user_permissions
 from apps.accounts.services import authentication
 from apps.accounts.services.phone_verification import (
@@ -42,16 +43,32 @@ from .serializers import (
     VerifyEmailSerializer,
 )
 
+REFRESH_COOKIE_PATH = "/api/v1/customer/auth/"
 
-def _set_refresh_cookie(response: Response, refresh_token: str, *, max_age: int) -> None:
+
+def _auth_client(request) -> str:
+    """Which app is calling: the storefront or the admin dashboard. It only
+    selects which refresh cookie this request uses, so the two apps hold
+    independent sessions; what a user may *do* is always decided from the
+    authenticated user, never from this header. Anything unrecognised is the
+    storefront, the client that sent no header before this existed."""
+    client = request.headers.get(settings.AUTH_CLIENT_HEADER, "").strip().lower()
+    return client if client in settings.REFRESH_COOKIE_NAMES else settings.AUTH_CLIENT_STOREFRONT
+
+
+def _refresh_cookie_name(request) -> str:
+    return settings.REFRESH_COOKIE_NAMES[_auth_client(request)]
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str, *, max_age: int, name: str) -> None:
     response.set_cookie(
-        settings.REFRESH_COOKIE_NAME,
+        name,
         refresh_token,
         max_age=max_age,
         httponly=True,
         secure=not settings.DEBUG,
         samesite=settings.REFRESH_COOKIE_SAMESITE,
-        path="/api/v1/customer/auth/",
+        path=REFRESH_COOKIE_PATH,
     )
 
 
@@ -171,6 +188,15 @@ class LoginView(APIView):
             user = authentication.authenticate_user(**serializer.validated_data)
         except DomainError as exc:
             return error_from_exception(exc, status.HTTP_401_UNAUTHORIZED)
+        # The dashboard is for staff. Refusing here, before any token exists,
+        # means a customer never holds a dashboard session at all; the admin
+        # APIs still check the user's role and permissions on every request.
+        is_staff_account = user.is_superuser or user.role != UserRole.CUSTOMER
+        if _auth_client(request) == settings.AUTH_CLIENT_DASHBOARD and not is_staff_account:
+            exc = DomainError(
+                "This account does not have access to the dashboard.", code="auth_not_staff"
+            )
+            return error_from_exception(exc, status.HTTP_403_FORBIDDEN)
         tokens = authentication.issue_tokens(user, remember_me=remember_me)
         response = Response(
             {
@@ -185,7 +211,9 @@ class LoginView(APIView):
                 else settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
             ).total_seconds()
         )
-        _set_refresh_cookie(response, tokens["refresh"], max_age=max_age)
+        _set_refresh_cookie(
+            response, tokens["refresh"], max_age=max_age, name=_refresh_cookie_name(request)
+        )
         return response
 
 
@@ -211,8 +239,10 @@ class RefreshView(APIView):
     def post(self, request) -> Response:
         """Reads the refresh token from its HttpOnly cookie rather than the
         request body, and rotates that cookie in place when rotation is on —
-        the client never sees the refresh token at all."""
-        refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        the client never sees the refresh token at all. Only the calling
+        app's own cookie is read and rotated; the other app's is untouched."""
+        cookie_name = _refresh_cookie_name(request)
+        refresh_token = request.COOKIES.get(cookie_name)
         if not refresh_token:
             exc = DomainError("No refresh token.", code="auth_invalid_refresh")
             return error_from_exception(exc, status.HTTP_401_UNAUTHORIZED)
@@ -226,6 +256,7 @@ class RefreshView(APIView):
                 response,
                 tokens["refresh"],
                 max_age=int(tokens["refresh_max_age"]),
+                name=cookie_name,
             )
         return response
 
@@ -238,14 +269,16 @@ class LogoutView(APIView):
 
     @extend_schema(request=None, responses={204: None})
     def post(self, request) -> Response:
-        refresh_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        # Ends the calling app's session only: the other app's cookie stays.
+        cookie_name = _refresh_cookie_name(request)
+        refresh_token = request.COOKIES.get(cookie_name)
         if refresh_token:
             # Expired, already blacklisted or malformed — the session is gone
             # either way, so clear the cookie rather than 400.
             with contextlib.suppress(DomainError):
                 authentication.logout_refresh_token(refresh_token)
         response = Response(status=status.HTTP_204_NO_CONTENT)
-        response.delete_cookie(settings.REFRESH_COOKIE_NAME, path="/api/v1/customer/auth/")
+        response.delete_cookie(cookie_name, path=REFRESH_COOKIE_PATH)
         return response
 
 
