@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -113,6 +113,23 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
+/**
+ * A product is only listed on the storefront once it has a variant, and a simple product's one
+ * variant is created from the price, so a simple product needs a price. A variant product does
+ * not: its colours and sizes carry the prices (queued below, or generated on the detail page), and
+ * a price here would add an extra variant with no colour or size. (When editing a product that
+ * already has variants this rule is skipped: their prices are already set.)
+ */
+const schemaWithRequiredPrice = schema.superRefine((v, ctx) => {
+  if (v.product_type === "simple" && !v.price) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["price"],
+      message: "Enter a price. Without one the product is not shown on the storefront.",
+    })
+  }
+})
+
 const PREORDER_FIELDS = [
   "is_preorder",
   "preorder_price",
@@ -158,6 +175,10 @@ const ProductForm = () => {
 
   useDocumentTitle(isEditing ? (product?.name ? `Edit ${product.name}` : "Edit Product") : "Add Product")
 
+  // Editing a product that already has variants: pricing lives on them, so a blank price is fine.
+  const hasVariants = isEditing && product?.id === id && (product?.variants.length ?? 0) > 0
+  const formResolver = useMemo(() => zodResolver(hasVariants ? schema : schemaWithRequiredPrice), [hasVariants])
+
   const {
     control,
     register,
@@ -166,7 +187,7 @@ const ProductForm = () => {
     setError,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: formResolver,
     defaultValues: {
       name: "",
       category_id: "",
@@ -483,7 +504,9 @@ const ProductForm = () => {
                 ? "Price changes apply to every live variant of this product."
                 : hasQueuedVariants
                   ? "Applies to every variant below unless a variant sets its own price."
-                  : "Setting a price creates the product's first variant now, so it can be stocked and sold immediately."}
+                  : productType === "variant"
+                    ? "Optional for a variant product: add its colours and sizes below, or generate them from the product page."
+                    : "Required. The price creates the product's first variant, so it can be stocked, sold and shown on the storefront."}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

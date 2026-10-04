@@ -158,6 +158,8 @@ export const restoreCategory = (id: string) =>
 // ---- brands ----
 /** Every active brand (for pickers). */
 export const fetchAllBrands = () => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true })
+/** One brand by id, active or not. */
+export const fetchBrand = (id: string) => apiCall<Brand>(() => api.get(`${C}/brands/${id}/`))
 export const createBrand = (payload: BrandPayload) => apiCall<Brand>(() => api.post(`${C}/brands/`, payload))
 export const updateBrand = (id: string, payload: BrandPayload) =>
   apiCall<Brand>(() => api.patch(`${C}/brands/${id}/`, payload))

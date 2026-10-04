@@ -264,12 +264,6 @@ export interface ProductQuestion {
 /** The `status` filter of /admin/catalog/questions/, derived from `answer` and `is_published`. */
 export type ProductQuestionStatus = "pending" | "answered" | "published"
 
-/** AdminProductQuestionUpdateSerializer */
-export interface ProductQuestionPayload {
-  answer?: string
-  is_published?: boolean
-}
-
 export type PriceReportStatus = "open" | "resolved" | "dismissed"
 
 /** AdminPriceReportSerializer — a customer's report of a suspected wrong price; staff-only. */
@@ -291,10 +285,4 @@ export interface PriceReport {
   resolved_by_name: string
   resolved_at: string | null
   created_at: string
-}
-
-/** AdminPriceReportUpdateSerializer */
-export interface PriceReportPayload {
-  status?: PriceReportStatus
-  staff_note?: string
 }

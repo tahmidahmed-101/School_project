@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
-import { ArchiveRestore, RotateCcw } from "lucide-react"
+import { ArchiveRestore, ImageOff, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -22,8 +22,34 @@ interface Props<T> {
   label: (item: T) => ReactNode
   /** A second, muted line under the label (SKU, email, code…). */
   sub?: (item: T) => ReactNode
+  /**
+   * The record's picture, shown as a thumbnail on the left of its row. Pass it for records that
+   * have one (products); a row whose record has none, or whose file is missing, gets a placeholder.
+   */
+  image?: (item: T) => string | null | undefined
   /** Runs after each restore, e.g. to reload the list behind the dialog. */
   onRestored?: () => void
+}
+
+/** Small square picture for a row; a muted placeholder stands in when there is no usable image. */
+function Thumbnail({ src }: { src: string | null | undefined }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  return (
+    <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+      {src && failedSrc !== src ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover"
+          onError={() => setFailedSrc(src)}
+        />
+      ) : (
+        <ImageOff className="size-4 text-muted-foreground/60" aria-hidden />
+      )}
+    </span>
+  )
 }
 
 /**
@@ -37,6 +63,7 @@ export function RestoreDeletedButton<T extends { id: string; deleted_at?: string
   restore,
   label,
   sub,
+  image,
   onRestored,
 }: Props<T>) {
   const [open, setOpen] = useState(false)
@@ -106,6 +133,7 @@ export function RestoreDeletedButton<T extends { id: string; deleted_at?: string
             <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto rounded-lg border border-border">
               {items.map((item) => (
                 <li key={item.id} className="flex items-center gap-3 px-3 py-2.5">
+                  {image && <Thumbnail src={image(item)} />}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{label(item)}</span>
                     <span className="block truncate text-xs text-muted-foreground">

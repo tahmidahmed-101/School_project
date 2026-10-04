@@ -1,14 +1,13 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Boxes, Edit, Package, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DetailRow } from "@/components/common/DetailRow"
 import { ActiveStatusBadge } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -18,11 +17,22 @@ import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 
 import { fetchSingle } from "../slices/productSlice"
-import { restoreProduct } from "../api"
+import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
+
+/** One line of the details table: the title on the left, its value on the right. */
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] text-sm sm:grid-cols-[11rem_minmax(0,1fr)]">
+      {/* Padding is on the cells, not the row, so the divider after the title runs the row's full height. */}
+      <dt className="border-r border-border px-4 py-3 font-medium text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words px-4 py-3 text-foreground">{children}</dd>
+    </div>
+  )
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -43,6 +53,24 @@ const ProductDetail = () => {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // The product carries only brand_id. The name is kept with the id it belongs to, so a brand
+  // loaded for one product is never shown on another. A failed lookup just leaves the dash.
+  const brandId = product?.id === id ? (product?.brand_id ?? null) : null
+  const [brand, setBrand] = useState<{ id: string; name: string } | null>(null)
+  useEffect(() => {
+    if (!brandId) return
+    let cancelled = false
+    fetchBrand(brandId)
+      .then((b) => {
+        if (!cancelled) setBrand({ id: b.id, name: b.name })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [brandId])
+  const brandName = brandId && brand?.id === brandId ? brand.name : null
 
   const pageState = resolveDetailState(singleStatus, singleError, product?.id === id)
   if (pageState || !product || product.id !== id) {
@@ -77,14 +105,6 @@ const ProductDetail = () => {
         title={product.name}
         description={product.slug}
         back={{ to: "/products", label: "Back to products" }}
-        badges={
-          <span className="flex flex-wrap items-center gap-2">
-            <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
-            <Badge variant="secondary" className="capitalize">
-              {product.product_type}
-            </Badge>
-          </span>
-        }
         actions={
           canManage &&
           (product.deleted_at ? (
@@ -105,51 +125,56 @@ const ProductDetail = () => {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="overflow-hidden pt-0 lg:col-span-1">
-          <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-muted">
+      {/* Photo on the left; on the right a details table (title | value per row) that also holds the
+          description. On desktop the photo takes a third of the row and stretches to the table's
+          height, so both boxes are the same height. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <Card className="overflow-hidden p-0">
+          <div className="flex mx-auto aspect-square w-full max-w-64 items-center justify-center overflow-hidden bg-muted lg:aspect-auto lg:max-w-none lg:h-full lg:min-h-80">
             {product.primary_image ? (
               <img src={product.primary_image} alt={product.name} className="size-full object-cover" />
             ) : (
               <Package className="size-16 text-muted-foreground/40" />
             )}
           </div>
-          <CardContent className="pt-2">
-            <DetailRow label="Category">{nameById.get(product.category_id) ?? "—"}</DetailRow>
-            <DetailRow label="Price">
-              {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
-            </DetailRow>
-            {product.discount_price && <DetailRow label="List price">{formatCurrency(product.price)}</DetailRow>}
-            <DetailRow label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</DetailRow>
-            <DetailRow label="Available stock">{product.total_stock}</DetailRow>
-            <DetailRow label="Variants">{product.variants.length}</DetailRow>
-            {product.deleted_at && <DetailRow label="Deleted">{formatDateTime(product.deleted_at)}</DetailRow>}
-          </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 text-sm">
-            <p className="whitespace-pre-line text-muted-foreground">{product.description || "No description."}</p>
+        <Card className="p-0">
+          <dl className="divide-y divide-border">
+            <Row label="Status">
+              <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
+            </Row>
+            <Row label="Type">
+              <Badge variant="secondary" className="capitalize">
+                {product.product_type}
+              </Badge>
+            </Row>
+            <Row label="Category">{nameById.get(product.category_id) ?? "—"}</Row>
+            <Row label="Brand">{brandName ?? "—"}</Row>
+            <Row label="Price">
+              <span className="font-semibold">
+                {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
+              </span>
+            </Row>
+            {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
+            <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
+            <Row label="Available stock">{product.total_stock}</Row>
+            <Row label="Variants">{product.variants.length}</Row>
+            {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
+            <Row label="Description">
+              <p className="whitespace-pre-line">{product.description || "No description."}</p>
+            </Row>
             {product.highlights.length > 0 && (
-              <div>
-                <h3 className="mb-2 font-medium">Highlights</h3>
-                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+              <Row label="Highlights">
+                <ul className="list-disc space-y-1 pl-5">
                   {product.highlights.map((h, i) => (
                     <li key={i}>{h}</li>
                   ))}
                 </ul>
-              </div>
+              </Row>
             )}
-            {product.meta_keywords && (
-              <div>
-                <h3 className="mb-2 font-medium">Meta keywords</h3>
-                <p className="text-muted-foreground">{product.meta_keywords}</p>
-              </div>
-            )}
-          </CardContent>
+            {product.meta_keywords && <Row label="Meta keywords">{product.meta_keywords}</Row>}
+          </dl>
         </Card>
       </div>
 

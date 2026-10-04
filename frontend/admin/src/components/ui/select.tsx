@@ -4,7 +4,22 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+/**
+ * Radix reports a change to "" when a select holds a value whose item is not rendered yet (options
+ * still loading, or a form reset arriving before them). Passing that on wiped prefilled fields, e.g.
+ * the category on the product edit form. An item can never have "" as its value, so that event
+ * is never the user's choice and is dropped here.
+ */
+function Select({ onValueChange, ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  return (
+    <SelectPrimitive.Root
+      onValueChange={(value) => {
+        if (value !== "") onValueChange?.(value)
+      }}
+      {...props}
+    />
+  )
+}
 
 const SelectGroup = SelectPrimitive.Group
 

@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, ImageIcon, X } from "lucide-react"
+import { ImageIcon, X } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
 
 import type { StagedImage } from "../lib/stagedImages"
 import { ImageDropzone } from "./ImageDropzone"
@@ -31,50 +32,33 @@ export function StagedImagesCard({
       <CardContent className="space-y-4">
         <ImageDropzone onFiles={onAdd} />
         {images.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <ImageOrderGrid>
             {images.map((img, i) => (
-              <div key={img.preview} className="overflow-hidden rounded-lg border border-border bg-card">
-                <div className="relative aspect-square bg-muted">
-                  <img src={img.preview} alt={img.file.name} className="size-full object-cover" />
-                  {/* Position in the gallery; the first image is the product's main image. */}
-                  <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    {i === 0 ? "1 · Main" : i + 1}
-                  </span>
+              <ImageOrderTile
+                key={img.preview}
+                src={img.preview}
+                alt={img.file.name}
+                index={i}
+                count={images.length}
+                name={img.file.name}
+                onMove={(to) => onMove(i, to)}
+                action={
                   <button
                     type="button"
                     aria-label={`Remove ${img.file.name}`}
                     onClick={() => onRemove(i)}
-                    className="absolute right-1.5 top-1.5 rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
+                    className="rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
                   >
                     <X className="size-3.5" />
                   </button>
-                </div>
-                <div className="flex items-center gap-1 p-1.5">
-                  <button
-                    type="button"
-                    aria-label={`Move ${img.file.name} earlier`}
-                    disabled={i === 0}
-                    onClick={() => onMove(i, i - 1)}
-                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <p className="min-w-0 flex-1 truncate text-center text-xs text-muted-foreground" title={img.file.name}>
-                    {img.file.name}
-                  </p>
-                  <button
-                    type="button"
-                    aria-label={`Move ${img.file.name} later`}
-                    disabled={i === images.length - 1}
-                    onClick={() => onMove(i, i + 1)}
-                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-              </div>
+                }
+              >
+                <p className="truncate text-center text-xs text-muted-foreground" title={img.file.name}>
+                  {img.file.name}
+                </p>
+              </ImageOrderTile>
             ))}
-          </div>
+          </ImageOrderGrid>
         )}
       </CardContent>
     </Card>

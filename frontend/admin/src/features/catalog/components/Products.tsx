@@ -232,6 +232,7 @@ const Products = () => {
                 endpoint="/admin/catalog/products/"
                 restore={(item) => restoreProduct(item.id)}
                 label={(item) => item.name}
+                image={(item) => item.primary_image}
                 onRestored={list.reload}
               />
               <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>

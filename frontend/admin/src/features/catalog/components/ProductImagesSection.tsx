@@ -6,6 +6,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DeleteModal } from "@/components/common/DeleteModal"
+import { ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 import { createProductImage, deleteProductImage, listProductImages, updateProductImage, uploadMedia } from "../api"
@@ -30,6 +31,7 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
   const [images, setImages] = useState<ProductImage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [reordering, setReordering] = useState(false)
   const [target, setTarget] = useState<string>(PRODUCT_LEVEL)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -56,7 +58,12 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     onChanged()
   }
 
-  const variantImages = variants.flatMap((v) => v.images.map((img) => ({ img, variant: v })))
+  const byOrder = (a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order
+  const gallery = [...images].sort(byOrder)
+  // Each variant's images are ordered among themselves, like the gallery.
+  const variantGroups = variants
+    .map((variant) => ({ variant, list: [...variant.images].sort(byOrder) }))
+    .filter((group) => group.list.length > 0)
 
   const handleFiles = async (files: File[]) => {
     if (!files.length || uploading) return
@@ -84,7 +91,31 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     }
   }
 
-  const saveField = async (img: ProductImage, payload: { alt_text?: string; sort_order?: number }) => {
+  /**
+   * Moves one image within its list (the gallery, or one variant's images) and renumbers that list
+   * 0..n-1, saving only the images whose position changed. Same arrows as the add-product form.
+   */
+  const move = async (list: ProductImage[], from: number, to: number) => {
+    if (reordering || to < 0 || to >= list.length) return
+    const next = [...list]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    const changed = next.map((img, order) => ({ img, order })).filter(({ img, order }) => img.sort_order !== order)
+    // Show the new gallery order straight away; variant images come from the parent and follow on refresh.
+    const newOrder = new Map(next.map((img, order) => [img.id, order]))
+    setImages((prev) => prev.map((img) => (newOrder.has(img.id) ? { ...img, sort_order: newOrder.get(img.id)! } : img)))
+    setReordering(true)
+    try {
+      for (const { img, order } of changed) await updateProductImage(img.id, { sort_order: order })
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to reorder images"))
+    } finally {
+      setReordering(false)
+      refresh()
+    }
+  }
+
+  const saveField = async (img: ProductImage, payload: { alt_text?: string }) => {
     try {
       await updateProductImage(img.id, payload)
       toast.success("Image updated")
@@ -104,63 +135,52 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     }
   }
 
-  const tile = (img: ProductImage, caption?: string) => (
-    <div key={img.id} className="overflow-hidden rounded-lg border border-border bg-card">
-      <div className="relative aspect-square bg-muted">
-        <img loading="lazy" decoding="async"
-          src={img.url}
-          alt={img.alt_text || "Product image"}
-          className="size-full object-cover"
-          onError={(e) => ((e.target as HTMLElement).style.visibility = "hidden")}
-        />
-        {caption && (
-          <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[10px] text-white">
-            {caption}
-          </span>
-        )}
-        {canManage && (
-          <div className="absolute right-1.5 top-1.5">
-            <DeleteModal
-              title="Remove image?"
-              description="The image record is deleted; the uploaded file is left in storage."
-              onConfirm={() => void remove(img)}
-              trigger={
-                <button
-                  type="button"
-                  aria-label="Remove image"
-                  className="rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              }
-            />
-          </div>
-        )}
-      </div>
+  /** One saved image. `list` is the ordered list it belongs to and `index` its place in it. */
+  const tile = (img: ProductImage, list: ProductImage[], index: number, sku?: string) => (
+    <ImageOrderTile
+      key={img.id}
+      remote
+      src={img.url}
+      alt={img.alt_text || "Product image"}
+      index={index}
+      count={list.length}
+      badgePrefix={sku}
+      name={img.alt_text || "image"}
+      onMove={canManage ? (to) => void move(list, index, to) : undefined}
+      busy={reordering}
+      action={
+        canManage && (
+          <DeleteModal
+            title="Remove image?"
+            description="The image record is deleted; the uploaded file is left in storage."
+            onConfirm={() => void remove(img)}
+            trigger={
+              <button
+                type="button"
+                aria-label="Remove image"
+                className="rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            }
+          />
+        )
+      }
+    >
       {canManage ? (
-        <div className="grid grid-cols-[1fr_64px] gap-1.5 p-2">
-          <Input
-            aria-label="Alt text"
-            defaultValue={img.alt_text}
-            placeholder="Alt text"
-            className="h-7 text-xs"
-            onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
-          />
-          <Input
-            aria-label="Sort order"
-            type="number"
-            defaultValue={img.sort_order}
-            className="h-7 text-xs"
-            onBlur={(e) => {
-              const n = Number(e.target.value)
-              if (Number.isInteger(n) && n !== img.sort_order) void saveField(img, { sort_order: n })
-            }}
-          />
-        </div>
+        <Input
+          aria-label="Alt text"
+          defaultValue={img.alt_text}
+          placeholder="Alt text"
+          title="Alt text (click to edit)"
+          // Looks like the plain caption on the add page; the field outline only appears while editing.
+          className="h-6 truncate border-transparent bg-transparent px-1 py-0 text-center text-xs text-muted-foreground shadow-none dark:bg-transparent"
+          onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
+        />
       ) : (
-        img.alt_text && <p className="truncate p-2 text-xs text-muted-foreground">{img.alt_text}</p>
+        img.alt_text && <p className="truncate text-center text-xs text-muted-foreground">{img.alt_text}</p>
       )}
-    </div>
+    </ImageOrderTile>
   )
 
   return (
@@ -169,7 +189,11 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
         <CardTitle className="flex items-center gap-2">
           <ImageIcon className="size-4" /> Images
         </CardTitle>
-        <CardDescription>Lowest sort order shows first.</CardDescription>
+        <CardDescription>
+          {canManage
+            ? "The first image is the main one. Use the arrows to change the order."
+            : "The first image is the main one."}
+        </CardDescription>
         {canManage && variants.length > 1 && (
           <CardAction>
             <Select value={target} onValueChange={setTarget}>
@@ -196,15 +220,13 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Loading images…
           </div>
-        ) : images.length === 0 && variantImages.length === 0 ? (
+        ) : gallery.length === 0 && variantGroups.length === 0 ? (
           <p className="text-sm text-muted-foreground">No images yet.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {[...images]
-              .sort((a, b) => a.sort_order - b.sort_order)
-              .map((img) => tile(img))}
-            {variantImages.map(({ img, variant }) => tile(img, variant.sku))}
-          </div>
+          <ImageOrderGrid>
+            {gallery.map((img, i) => tile(img, gallery, i))}
+            {variantGroups.map(({ variant, list }) => list.map((img, i) => tile(img, list, i, variant.sku)))}
+          </ImageOrderGrid>
         )}
       </CardContent>
     </Card>
