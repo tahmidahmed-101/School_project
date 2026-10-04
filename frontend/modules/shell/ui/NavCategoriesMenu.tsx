@@ -41,27 +41,30 @@ export function NavCategoriesMenu() {
             : "pointer-events-none -translate-y-1 scale-y-95 opacity-0"
         }`}
       >
-        <WithActiveCategory>
-          {(activeCategory) =>
-            categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/shop?category=${category.slug}`}
-                onClick={close}
-                className={`flex cursor-pointer items-center justify-between px-5 py-2.5 text-xs font-semibold transition-colors ${
-                  activeCategory === category.slug
-                    ? "bg-gold-500/15 font-bold text-gold-800"
-                    : "text-ink-700 hover:bg-gold-50/70 hover:text-ink-950"
-                }`}
-              >
-                <span className="truncate">{t(category.name)}</span>
-                <span className="ml-2 shrink-0 text-2xs font-normal text-fg-muted">
-                  {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
-                </span>
-              </Link>
-            ))
-          }
-        </WithActiveCategory>
+        {/* The list scrolls past ~9 rows so a long catalogue cannot push the menu off screen; the footer link stays put. */}
+        <div className="max-h-80 overflow-y-auto overscroll-contain">
+          <WithActiveCategory>
+            {(activeCategory) =>
+              categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/shop?category=${category.slug}`}
+                  onClick={close}
+                  className={`flex cursor-pointer items-center justify-between px-5 py-2.5 text-xs font-semibold transition-colors ${
+                    activeCategory === category.slug
+                      ? "bg-gold-500/15 font-bold text-gold-800"
+                      : "text-ink-700 hover:bg-gold-50/70 hover:text-ink-950"
+                  }`}
+                >
+                  <span className="truncate">{t(category.name)}</span>
+                  <span className="ml-2 shrink-0 text-2xs font-normal text-fg-muted">
+                    {n(category.itemCount)} {lang === "bn" ? "টি" : "items"}
+                  </span>
+                </Link>
+              ))
+            }
+          </WithActiveCategory>
+        </div>
         <div className="mt-2 border-t border-ink-100 px-5 pt-2">
           <Link
             href="/shop"
