@@ -284,6 +284,10 @@ matching `StaffPermission` code.
 **Reviews** `reviews/`
 - `POST products/<product_id>/`, `GET/PATCH/DELETE <review_id>/`
 
+**Notifications** `notifications/`
+- `GET ""` (`?unread=true`; response adds `unread_count`), `POST <id>/read/`, `POST read-all/`
+- In-app only (`accounts.Notification`), created by `apps.accounts.services.notifications.notify` on order cancel / status override, shipment shipped / out for delivery / delivered / failed, and return approved / rejected / received. Guest identities are skipped.
+
 **Questions** `questions/` (throttle scope `product_question`)
 - `GET ""` (own questions, incl. pending), `POST products/<product_id>/`
 

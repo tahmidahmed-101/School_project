@@ -9,6 +9,7 @@ from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import SalesOrder, SalesOrderLine, StockReservation
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
 from apps.orders.services.carts import compute_line_tax
+from apps.orders.services.notifications import notify_order
 from apps.orders.services.reservations import release_stock_reservation
 
 UPDATABLE_ORDER_FIELDS = ("shipping_address", "notes", "contact_email", "contact_phone")
@@ -65,6 +66,7 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
     order.status = SalesOrder.Status.CANCELLED
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
+    notify_order(order, f"Order {order.order_number} was cancelled.")
     return order
 
 
@@ -166,6 +168,7 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
         target_id=order.id,
         metadata={"from": previous, "to": new_status},
     )
+    notify_order(order, f"Order {order.order_number} is now {order.get_status_display().lower()}.")
     return order
 
 

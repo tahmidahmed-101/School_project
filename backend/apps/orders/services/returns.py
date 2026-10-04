@@ -28,6 +28,7 @@ from apps.orders.models import (
     Shipment,
     ShipmentLine,
 )
+from apps.orders.services.notifications import notify_return
 
 # Only units that have physically left the building can come back. A partially
 # shipped order is still `confirmed`, so gate on the per-line shipped balance
@@ -209,6 +210,7 @@ def approve_rma(*, rma: ReturnRMA) -> ReturnRMA:
     _ensure_status(rma, ReturnRMA.Status.REQUESTED)
     rma.status = ReturnRMA.Status.APPROVED
     rma.save(update_fields=["status"])
+    notify_return(rma, f"Return {rma.rma_number} was approved.")
     return rma
 
 
@@ -223,6 +225,7 @@ def reject_rma(*, rma: ReturnRMA) -> ReturnRMA:
         order_line.save(update_fields=["returned_quantity", "updated_at"])
     rma.status = ReturnRMA.Status.REJECTED
     rma.save(update_fields=["status"])
+    notify_return(rma, f"Return {rma.rma_number} was rejected.")
     return rma
 
 
@@ -265,4 +268,5 @@ def receive_rma(*, rma: ReturnRMA, actor=None) -> ReturnRMA:
 
     rma.status = ReturnRMA.Status.RECEIVED
     rma.save(update_fields=["status"])
+    notify_return(rma, f"Return {rma.rma_number} was received.")
     return rma

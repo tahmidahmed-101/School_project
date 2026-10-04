@@ -13,6 +13,7 @@ from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement, release_reservation
 from apps.logistics.services.couriers.registry import get_gateway_for_carrier
 from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, ShipmentLine
+from apps.orders.services.notifications import notify_order
 from apps.orders.services.orders import lock_order
 from apps.orders.services.reservations import release_line_reservations
 
@@ -118,6 +119,7 @@ def create_shipment(
         order.status = SalesOrder.Status.SHIPPED
         order.save(update_fields=["status", "updated_at"])
     post_sales_shipment(shipment)
+    _notify_shipment_status(shipment)
     return shipment
 
 
@@ -145,6 +147,21 @@ _PROGRESSION_RANK: dict[str, int] = {
     Shipment.Status.IN_TRANSIT: 2,
     Shipment.Status.OUT_FOR_DELIVERY: 3,
 }
+
+
+# The steps a customer hears about. In-transit hops and courier-side
+# bookkeeping states would only add noise.
+CUSTOMER_NOTIFIED_SHIPMENT_STATUSES = (
+    Shipment.Status.SHIPPED,
+    Shipment.Status.OUT_FOR_DELIVERY,
+    Shipment.Status.DELIVERED,
+    Shipment.Status.FAILED,
+)
+
+
+def _notify_shipment_status(shipment: Shipment) -> None:
+    order = shipment.order
+    notify_order(order, f"Order {order.order_number}: {shipment.get_status_display().lower()}.")
 
 
 def can_advance_shipment_status(current: str, new: str) -> bool:
@@ -186,6 +203,7 @@ def update_shipment_status(
             code="invalid_status_transition",
         )
 
+    previous_status = shipment.status
     shipment.status = status
     update_fields = ["status", "updated_at"]
     if actor is not None:
@@ -202,6 +220,10 @@ def update_shipment_status(
         _mark_order_delivered_if_complete(shipment.order)
     if status in Shipment.TERMINAL_STATUSES:
         _refresh_phone_risk_profile(shipment)
+    # A repeated status (a courier re-sending the same event) still saves its
+    # courier details above, but must not alert the customer a second time.
+    if status != previous_status and status in CUSTOMER_NOTIFIED_SHIPMENT_STATUSES:
+        _notify_shipment_status(shipment)
     return shipment
 
 
