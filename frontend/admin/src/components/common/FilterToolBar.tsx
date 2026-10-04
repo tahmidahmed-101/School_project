@@ -27,10 +27,10 @@ interface FilterToolbarProps {
 }
 
 const SEARCH_INPUT_CLASS =
-  "h-10 w-full rounded-lg border border-field-border bg-transparent pl-11 pr-4 text-sm text-field-text transition-all placeholder:text-field-placeholder focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+  "h-10 w-full rounded-lg border border-field-border bg-white pl-11 pr-4 dark:bg-transparent text-sm text-field-text transition-all placeholder:text-field-placeholder focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
 
 const TOGGLE_CLASS =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-field-border bg-transparent px-4 text-sm font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-field-border bg-white px-4 text-sm font-medium dark:bg-transparent text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
 
 /**
  * Animated open/close: grid rows go 0fr -> 1fr so the panel eases to its natural height.

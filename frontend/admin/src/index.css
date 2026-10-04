@@ -272,16 +272,19 @@
 }
 
 /*
- * DataTable has no background of its own: it shows the surface it sits on. Its pinned parts
- * (sticky header, pinned actions column) still have to be opaque, and the row hover has to
- * contrast with that surface, so both are set here per surface and theme.
+ * In the light theme a DataTable is a white surface, wherever it sits (the page panel is grey). In
+ * the dark theme it has no background of its own and shows the surface it sits on. Its pinned parts
+ * (sticky header, pinned actions column) have to be opaque either way, and the row hover has to
+ * contrast with the surface, so both are set here per surface and theme.
  */
 .data-table {
-  --table-bg: var(--muted);
-  --table-hover: color-mix(in oklab, var(--foreground) 5%, var(--muted));
-  --table-active: color-mix(in oklab, var(--foreground) 9%, var(--muted));
+  --table-bg: var(--card);
+  --table-hover: var(--muted);
+  --table-active: var(--accent);
+  background: var(--table-bg);
 }
 .dark .data-table {
+  background: transparent;
   --table-bg: var(--background);
   --table-hover: var(--accent);
   --table-active: var(--border);
