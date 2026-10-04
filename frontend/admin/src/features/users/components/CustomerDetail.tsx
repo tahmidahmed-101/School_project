@@ -35,7 +35,7 @@ const RECENT_ORDERS = 10
 type Loadable<T> = { forId: string; status: "succeeded" | "failed"; rows: T[]; total: number }
 
 const StatCard = ({ label, value, icon: Icon, tone }: { label: string; value: string | number; icon: typeof Wallet; tone: string }) => (
-  <Card className="border-none shadow-sm">
+  <Card>
     <CardContent className="p-5">
       <div className="flex items-center justify-between">
         <div>
