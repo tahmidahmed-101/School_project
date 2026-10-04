@@ -44,6 +44,17 @@ export function ListStatus({ loading, failed, hasMore, onLoadMore, onRetry }: Li
   return null;
 }
 
+/** Shown in an accordion panel while its code is being fetched. */
+export function PanelLoading() {
+  const { ui } = useLang();
+  return (
+    <div role="status" className="flex items-center gap-2 pb-3 pt-3 text-xs text-fg-muted">
+      <Loader variant="inline" />
+      <span>{ui("loading")}</span>
+    </div>
+  );
+}
+
 /** "12 Mar 2026" / "১২ মার্চ, ২০২৬" from an API timestamp. */
 export function useShortDate(): (iso: string) => string {
   const { lang } = useLang();

@@ -54,15 +54,24 @@ const jostFont = localFont({
   weight: "100 900",
 });
 
-// Variable font trimmed to the 400-800 weights the UI uses. Not preloaded: pages are served in English and the
-// 76 KB file otherwise competes with the stylesheet and the LCP image on a slow connection. It still loads on
-// demand as soon as Bengali text is on screen.
+// Variable font trimmed to the 400-800 weights the UI uses. Not preloaded, and only in the font stack while the
+// page is in Bangla (theme.css): an English page must not download this 76 KB file.
 const bengaliFont = localFont({
   src: "./fonts/NotoSansBengali-Variable.woff2",
   weight: "400 800",
   display: "swap",
   preload: false,
   variable: "--font-ts-bengali",
+});
+
+// The taka sign (U+09F3) alone, cut from the font above with pyftsubset: 1 KB. Every price shows it, and it sits in
+// the Bengali Unicode block, so without this an English page fetched the whole Bengali font for one glyph.
+const takaFont = localFont({
+  src: "./fonts/NotoSansBengali-Taka.woff2",
+  weight: "400 800",
+  display: "swap",
+  variable: "--font-ts-taka",
+  declarations: [{ prop: "unicode-range", value: "U+09F3" }],
 });
 
 // Categories and contact details come from the LaunchCart API. Pages are static but re-generated at most every
@@ -82,7 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AnalyticsScripts />
       </head>
       <body>
-        <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable}`}>
+        <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable} ${takaFont.variable}`}>
           <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
             <LangProvider>
               <AuthProvider>

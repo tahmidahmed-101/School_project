@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useLazyMount } from "@/design-system/patterns/useLazyMount";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { CartDrawer } from "@/modules/cart";
 import { WishlistDrawer } from "@/modules/wishlist";
 import { MobileBottomBar } from "./MobileBottomBar";
-import { MobileNavMenu } from "./MobileNavMenu";
 import { FloatingContact } from "./FloatingContact";
 import { PreOrderModalProvider } from "@/modules/preorder";
 import { PreOrderConfirmationModal } from "@/modules/preorder";
+
+// Closed until the menu button is tapped, so it loads as its own chunk after the page (see useLazyMount).
+const MobileNavMenu = dynamic(() => import("./MobileNavMenu").then((m) => m.MobileNavMenu), { ssr: false });
 
 interface ClientShellProps {
   children: React.ReactNode;
@@ -17,6 +21,7 @@ interface ClientShellProps {
 
 export function ClientShell({ children }: ClientShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuReady = useLazyMount(isMenuOpen);
 
   return (
     <PreOrderModalProvider>
@@ -26,7 +31,7 @@ export function ClientShell({ children }: ClientShellProps) {
         <Footer />
         <CartDrawer />
         <WishlistDrawer />
-        <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+        {menuReady && <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />}
         <MobileBottomBar />
         <FloatingContact />
         <PreOrderConfirmationModal />

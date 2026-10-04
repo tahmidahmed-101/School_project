@@ -1,13 +1,33 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { AccordionItem } from "@/design-system/ui/AccordionItem";
-import { PriceReportForm } from "./PriceReportForm";
-import { ProductQuestions } from "./ProductQuestions";
-import { ProductReviews } from "./ProductReviews";
-import { ProductShare } from "./ProductShare";
-import { ShippingReturns } from "./ShippingReturns";
+import { PanelLoading } from "./ListStatus";
+
+// Each panel's code loads when its accordion is first opened, not with the product page. (next/dynamic needs its
+// options written out as a literal on every call.)
+const PriceReportForm = dynamic(() => import("./PriceReportForm").then((m) => m.PriceReportForm), {
+  ssr: false,
+  loading: PanelLoading,
+});
+const ProductQuestions = dynamic(() => import("./ProductQuestions").then((m) => m.ProductQuestions), {
+  ssr: false,
+  loading: PanelLoading,
+});
+const ProductReviews = dynamic(() => import("./ProductReviews").then((m) => m.ProductReviews), {
+  ssr: false,
+  loading: PanelLoading,
+});
+const ProductShare = dynamic(() => import("./ProductShare").then((m) => m.ProductShare), {
+  ssr: false,
+  loading: PanelLoading,
+});
+const ShippingReturns = dynamic(() => import("./ShippingReturns").then((m) => m.ShippingReturns), {
+  ssr: false,
+  loading: PanelLoading,
+});
 
 interface ProductAccordionsProps {
   product: Product;

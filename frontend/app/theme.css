@@ -37,6 +37,19 @@
   --whatsapp: #25d366;
 }
 
+/*
+ * The Bengali face in the font stack. In English it is the 1 KB taka-sign subset, so prices do not pull in the full
+ * 76 KB Bengali font; any other Bengali text on an English page (the language toggle) uses the device's own font.
+ * Switching to Bangla (LangProvider sets <html lang="bn">) swaps in the full font.
+ */
+.ts-font-scope {
+  --ts-bengali: var(--font-ts-taka);
+}
+
+html[lang="bn"] .ts-font-scope {
+  --ts-bengali: var(--font-ts-bengali);
+}
+
 .ts-font-scope,
 .ts-root {
   background-color: var(--bg);
@@ -44,7 +57,7 @@
   font-family:
     var(--font-ts-jost),
     "Jost",
-    var(--font-ts-bengali),
+    var(--ts-bengali),
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -59,7 +72,7 @@
   font-family:
     var(--font-ts-jost),
     "Jost",
-    var(--font-ts-bengali),
+    var(--ts-bengali),
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -69,7 +82,7 @@
 }
 
 .ts-display {
-  font-family: var(--font-ts-jost), "Jost", var(--font-ts-bengali), sans-serif !important;
+  font-family: var(--font-ts-jost), "Jost", var(--ts-bengali), sans-serif !important;
   letter-spacing: normal;
 }
 
