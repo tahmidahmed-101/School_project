@@ -12,7 +12,7 @@
     { "pattern": "www.kullmart.com", "custom_domain": true },
   ],
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "kull-mart-web" }],
-  "kv_namespaces": [{ "binding": "NEXT_INC_CACHE_KV", "id": "3846319644a6464998530c423f312ebb" }],
+  "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "kull-mart-web-cache" }],
   "d1_databases": [
     {
       "binding": "NEXT_TAG_CACHE_D1",
