@@ -78,7 +78,8 @@ export function Hero({
                     src={photo(s.image)}
                     alt={s.alt}
                     fill
-                    priority={i === 0}
+                    preload={i === 0}
+                    fetchPriority={i === 0 ? "high" : undefined}
                     sizes="(max-width: 1024px) 100vw, 620px"
                     aria-hidden={i !== index}
                     className={`object-cover transition-opacity duration-700 ease-in-out ${

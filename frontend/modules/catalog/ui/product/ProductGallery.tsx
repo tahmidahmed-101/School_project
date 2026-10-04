@@ -44,7 +44,8 @@ export function ProductGallery({ product }: { product: Product }) {
           src={photo(activeImage)}
           alt={t(product.name)}
           fill
-          priority
+          preload
+          fetchPriority="high"
           sizes="(max-width: 1024px) 100vw, 50vw"
           className="object-cover object-center"
         />

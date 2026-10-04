@@ -47,7 +47,8 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             src={photo(product.image)}
             alt={t(product.name)}
             fill
-            priority={priority}
+            loading={priority ? "eager" : undefined}
+            fetchPriority={priority ? "high" : undefined}
             sizes="(max-width: 640px) 30vw, (max-width: 1024px) 20vw, 180px"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />

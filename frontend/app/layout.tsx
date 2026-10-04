@@ -53,11 +53,14 @@ const jostFont = localFont({
   weight: "100 900",
 });
 
-// Variable font trimmed to the 400-800 weights the UI uses.
+// Variable font trimmed to the 400-800 weights the UI uses. Not preloaded: pages are served in English and the
+// 76 KB file otherwise competes with the stylesheet and the LCP image on a slow connection. It still loads on
+// demand as soon as Bengali text is on screen.
 const bengaliFont = localFont({
   src: "./fonts/NotoSansBengali-Variable.woff2",
   weight: "400 800",
   display: "swap",
+  preload: false,
   variable: "--font-ts-bengali",
 });
 

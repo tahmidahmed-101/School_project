@@ -90,7 +90,8 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 alt={BRAND_INFO.name}
                 width={382}
                 height={282}
-                priority
+                sizes="54px"
+                loading="eager"
                 className="h-6 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
               <span className="text-sm font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">

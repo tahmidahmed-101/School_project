@@ -24,7 +24,9 @@ export function ProductGrid({ products, title, viewAllLink, viewAllText, columns
       : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
   return (
-    <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
+    // content-visibility: a home page has a dozen of these shelves, and laying them all out up front was the
+    // largest cost before first paint on mobile. The intrinsic size is a placeholder until the shelf is measured.
+    <section className="border-b border-ink-200 bg-white py-8 [contain-intrinsic-size:auto_900px] [content-visibility:auto] sm:py-14">
       <Container>
         {(title || viewAllLink) && (
           <ScrollReveal className="mb-5 sm:mb-8">
