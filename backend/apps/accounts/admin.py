@@ -1,12 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
+from apps.common.admin import HTTPS_URL_FORMFIELD_OVERRIDES
+
 from .models import Address, StaffPermission, User, UserOTP
 
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     ordering = ("email",)
+    formfield_overrides = HTTPS_URL_FORMFIELD_OVERRIDES
     list_display = ("email", "role", "is_active", "is_staff", "is_email_verified", "date_joined")
     list_filter = ("role", "is_active", "is_staff", "is_superuser", "is_email_verified")
     search_fields = ("email", "first_name", "last_name", "phone")

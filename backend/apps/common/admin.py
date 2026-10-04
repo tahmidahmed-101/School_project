@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
+from django.db import models
+
+# Django 6 assumes https for a scheme-less URL typed into a form; opting in
+# now silences RemovedInDjango60Warning and matches the admin API, which
+# already assumes https (AdminBusinessProfileUpdateSerializer).
+HTTPS_URL_FORMFIELD_OVERRIDES: Mapping[type[models.Field], Mapping[str, Any]] = {
+    models.URLField: {"assume_scheme": "https"}
+}
+
 
 class StaffPermissionAdminMixin:
     """Gate a ModelAdmin with a StaffPermissionCode instead of Django's

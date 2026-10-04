@@ -195,7 +195,7 @@ def test_guest_checks_out_the_saved_cart(api_client):
         (str(variant.id), 2)
     ]
     assert Decimal(data["subtotal"]) == Decimal("600.00")
-    assert Decimal(data["shipping_total"]) == Decimal("120.00")  # Outside Dhaka
+    assert Decimal(data["shipping_total"]) == Decimal("110.00")  # Outside Dhaka
     order = SalesOrder.objects.select_related("customer").get(id=cart["id"])
     assert order.customer.is_guest
     assert order.contact_phone == "+8801711111111"

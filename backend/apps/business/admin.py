@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
 
+from apps.common.admin import HTTPS_URL_FORMFIELD_OVERRIDES
 from apps.common.exceptions import BusinessRuleViolationError
 
 from .constants import MODULES_BY_KEY
@@ -11,6 +12,7 @@ from .services.modules import set_module_config, set_module_enabled
 @admin.register(BusinessProfile)
 class BusinessProfileAdmin(admin.ModelAdmin):
     list_display = ("name", "phone", "email", "updated_at")
+    formfield_overrides = HTTPS_URL_FORMFIELD_OVERRIDES
 
     def has_add_permission(self, request) -> bool:
         return not BusinessProfile.objects.exists()

@@ -5,7 +5,7 @@ from typing import ClassVar
 from django.contrib import admin
 
 from apps.accounts.constants import StaffPermissionCode
-from apps.common.admin import StaffPermissionAdminMixin
+from apps.common.admin import HTTPS_URL_FORMFIELD_OVERRIDES, StaffPermissionAdminMixin
 
 from .models import Carrier, ShippingRate, ShippingZone
 
@@ -24,6 +24,7 @@ class CarrierAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     list_display = ("name", "code", "is_integration_enabled", "is_active")
     list_filter = ("code", "is_integration_enabled", "is_active")
     search_fields = ("name", "phone", "contact_email")
+    formfield_overrides = HTTPS_URL_FORMFIELD_OVERRIDES
 
 
 @admin.register(ShippingZone)

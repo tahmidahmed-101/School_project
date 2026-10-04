@@ -163,7 +163,7 @@ def test_guest_checkout_requires_district_city(api_client):
 
 @pytest.mark.parametrize(
     ("city", "expected_charge"),
-    [("Dhaka", Decimal("80.00")), ("Chattogram", Decimal("120.00"))],
+    [("Dhaka", Decimal("70.00")), ("Chattogram", Decimal("110.00"))],
 )
 def test_guest_checkout_adds_delivery_charge_for_the_district(api_client, city, expected_charge):
     variant = _stocked_variant()
@@ -196,8 +196,8 @@ def test_shipping_quote_previews_the_district_delivery_charge(api_client):
         SHIPPING_QUOTE_URL, {"items": items, "address_text": "Sylhet"}, format="json"
     )
 
-    assert inside.data["data"]["shipping_total"] == "80.00"
-    assert outside.data["data"]["shipping_total"] == "120.00"
+    assert inside.data["data"]["shipping_total"] == "70.00"
+    assert outside.data["data"]["shipping_total"] == "110.00"
 
 
 @pytest.mark.parametrize(

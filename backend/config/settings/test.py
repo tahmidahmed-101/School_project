@@ -21,6 +21,12 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# WhiteNoise serves the `collectstatic` output, which only the Docker image
+# builds. No test serves static files, and initialising it against the missing
+# STATIC_ROOT warns on every test client request.
+_WHITENOISE = "whitenoise.middleware.WhiteNoiseMiddleware"
+MIDDLEWARE = [m for m in MIDDLEWARE if m != _WHITENOISE]  # noqa: F405
+
 # Throttle counters live in the cache, which outlives any single test. Left on,
 # a test that logs in a few times would start failing purely because of what
 # ran before it. Tests that assert throttling re-enable the rates they need
