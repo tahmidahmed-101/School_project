@@ -1,42 +1,32 @@
-"""Bring databases that already ran 0010 onto the 70 / 110 Dhaka charges.
-
-0010 was edited from 80 / 120 to 70 / 110 after it had shipped, which only
-affects fresh installs. This moves existing installs the same way, but only
-for a rate still exactly as 0010 seeded it — a charge staff have changed
-since is theirs, and is left alone.
+"""Set the Dhaka delivery charges to 70 (inside) and 110 (outside) on every
+install, matching what 0010 seeds: one flat rate per zone, regardless of
+weight. Databases that ran 0010 before its charges changed get the same
+values a fresh install has.
 """
 
 from decimal import Decimal
 
 from django.db import migrations
 
-# zone name -> (charge 0010 originally seeded, charge it seeds now)
-CHANGES = {
-    "Inside Dhaka": (Decimal("80.00"), Decimal("70.00")),
-    "Outside Dhaka": (Decimal("120.00"), Decimal("110.00")),
+CHARGES = {
+    "Inside Dhaka": Decimal("70.00"),
+    "Outside Dhaka": Decimal("110.00"),
 }
 
 
-def _move(apps, *, forward: bool) -> None:
+def set_charges(apps, schema_editor):
     ShippingRate = apps.get_model("logistics", "ShippingRate")
-    for zone_name, (old, new) in CHANGES.items():
-        source, target = (old, new) if forward else (new, old)
-        ShippingRate.objects.filter(
-            zone__name=zone_name,
-            zone__deleted_at__isnull=True,
-            base_charge=source,
-            # The flat shape 0010 seeded; a weight-based rate was configured by hand.
+    for zone_name, charge in CHARGES.items():
+        ShippingRate.objects.filter(zone__name=zone_name, zone__deleted_at__isnull=True).update(
+            base_charge=charge,
             base_weight=Decimal("0"),
+            increment_weight=Decimal("1"),
             increment_charge=Decimal("0"),
-        ).update(base_charge=target)
+        )
 
 
-def lower_charges(apps, schema_editor):
-    _move(apps, forward=True)
-
-
-def restore_charges(apps, schema_editor):
-    _move(apps, forward=False)
+def revert(apps, schema_editor):
+    """Ops config, not data: leaving the charges in place on reverse, as 0010 does."""
 
 
 class Migration(migrations.Migration):
@@ -46,5 +36,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(lower_charges, restore_charges),
+        migrations.RunPython(set_charges, revert),
     ]

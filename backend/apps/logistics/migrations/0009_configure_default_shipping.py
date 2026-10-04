@@ -5,8 +5,8 @@ from django.utils import timezone
 
 # Placeholder flat rates (BDT) so checkout is never blocked after this
 # migration — replace via Admin > Logistics > Zones once real pricing is set.
-INSIDE_CHARGE = Decimal("60.00")
-OUTSIDE_CHARGE = Decimal("120.00")
+INSIDE_CHARGE = Decimal("70.00")
+OUTSIDE_CHARGE = Decimal("110.00")
 
 
 def configure_shipping(apps, schema_editor):
