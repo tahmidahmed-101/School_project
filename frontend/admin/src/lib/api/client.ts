@@ -6,11 +6,20 @@ export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
 
+/**
+ * Names this app to the backend. Login is shared with the storefront, but the backend keeps a
+ * separate refresh cookie per app, chosen by this header, so signing in, refreshing or signing
+ * out here never touches a storefront session in the same browser (and the other way round).
+ * It selects a cookie only; what the user may do is decided by the backend from the user.
+ */
+const AUTH_CLIENT_HEADERS = { "X-Auth-Client": "dashboard" }
+
 // The kull-mart backend keeps the refresh token in an HttpOnly cookie scoped to
 // /api/v1/customer/auth/, so requests must carry credentials for refresh/logout to work.
 export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  headers: AUTH_CLIENT_HEADERS,
 })
 
 api.interceptors.request.use((config) => {
@@ -23,7 +32,7 @@ api.interceptors.request.use((config) => {
 
 // Interceptor-free instance for the refresh call itself, so a 401 from /refresh can't
 // recurse into another refresh.
-const refreshClient = axios.create({ baseURL: API_BASE_URL, withCredentials: true })
+const refreshClient = axios.create({ baseURL: API_BASE_URL, withCredentials: true, headers: AUTH_CLIENT_HEADERS })
 
 // Dedup concurrent 401s so only one refresh call is ever in flight at a time.
 let refreshPromise: Promise<string> | null = null

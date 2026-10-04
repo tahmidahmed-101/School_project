@@ -1,15 +1,13 @@
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useLocation } from "react-router-dom"
 import { toast } from "sonner"
-import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
+import { LogInIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { FormField, TextField } from "@/components/common/form-fields"
+import { TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { login } from "@/features/authentication/slices/authSlice"
@@ -30,7 +28,6 @@ const SignInForm = () => {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const isLoading = useAppSelector((state) => state.auth.isLoading)
-  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -81,27 +78,15 @@ const SignInForm = () => {
               {...register("email")}
             />
 
-            <FormField label="Password" htmlFor="password" error={errors.password}>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  aria-invalid={errors.password ? true : undefined}
-                  className="pr-11"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((shown) => !shown)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-                </button>
-              </div>
-            </FormField>
+            <TextField
+              label="Password"
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              error={errors.password}
+              {...register("password")}
+            />
           </CardContent>
           <CardFooter>
             <Button type="submit" variant="apply" className="w-full" disabled={isSubmitting || isLoading}>
