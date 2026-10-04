@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type ComponentProps } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Ban, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered, ShieldAlert, Trash2 } from "lucide-react"
+import { Ban, Check, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered, ShieldAlert, Trash2, type LucideIcon } from "lucide-react"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
@@ -31,6 +31,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { SubmitButton } from "@/components/common/FormActions"
 import { downloadFile } from "@/lib/download"
 import { useCan } from "@/hooks/use-can"
+import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -53,6 +54,111 @@ interface RiskAssessment {
   recommended_action: string
   auto_blocked: boolean
   guidance: string
+}
+
+const PROGRESS_STEPS = ["Placed", "Confirmed", "Shipped", "Delivered"] as const
+
+/** How many progress steps an order in this status has completed. */
+function stepsDone(status: OrderStatus): number {
+  switch (status) {
+    case "confirmed":
+      return 2
+    case "shipped":
+      return 3
+    case "delivered":
+    case "closed":
+      return 4
+    default:
+      // pending, awaiting_payment
+      return 1
+  }
+}
+
+/** The order's journey as four steps; a cancelled order shows a notice instead. */
+function OrderProgress({ status }: { status: OrderStatus }) {
+  if (status === "cancelled") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm font-medium text-destructive">
+        <Ban className="size-4 shrink-0" />
+        This order was cancelled.
+      </div>
+    )
+  }
+  const done = stepsDone(status)
+  return (
+    <ol className="flex items-start" aria-label="Order progress">
+      {PROGRESS_STEPS.map((label, i) => {
+        const reached = i < done
+        return (
+          <li key={label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center">
+            <div className="flex w-full items-center">
+              {/* Connector to the previous step; the first step has none. */}
+              <span className={cn("h-0.5 flex-1", i === 0 ? "invisible" : reached ? "bg-primary" : "bg-border")} />
+              <span
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold",
+                  reached
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground"
+                )}
+                aria-current={i === done - 1 ? "step" : undefined}
+              >
+                {reached ? <Check className="size-3.5" /> : i + 1}
+              </span>
+              <span
+                className={cn(
+                  "h-0.5 flex-1",
+                  i === PROGRESS_STEPS.length - 1 ? "invisible" : i < done - 1 ? "bg-primary" : "bg-border"
+                )}
+              />
+            </div>
+            <span className={cn("truncate text-xs", reached ? "font-medium text-foreground" : "text-muted-foreground")}>
+              {label}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+/** A large button for one order action: icon, name and a line saying what it does. */
+function ActionTile({
+  icon: Icon,
+  title,
+  hint,
+  destructive = false,
+  className,
+  ...props
+}: ComponentProps<"button"> & { icon: LucideIcon; title: string; hint: string; destructive?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors disabled:pointer-events-none disabled:opacity-50",
+        destructive
+          ? "border-destructive/30 hover:bg-destructive/5"
+          : "border-border hover:border-primary/40 hover:bg-muted/50",
+        className
+      )}
+      {...props}
+    >
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-md",
+          destructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className={cn("block text-sm font-medium", destructive ? "text-destructive" : "text-foreground")}>
+          {title}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+      </span>
+    </button>
+  )
 }
 
 const OrderDetail = () => {
@@ -256,72 +362,98 @@ const OrderDetail = () => {
             <CardDescription>
               {isCancelled
                 ? "Cancelled orders can't be reopened — their stock holds are already released."
-                : "Override the status, take payment, ship or open a return."}
+                : "Where the order stands, and what you can do with it next."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Where the order is on its way from placed to delivered. */}
+            <OrderProgress status={order.status} />
+
             {canManage && !isCancelled && (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Select value={nextStatus} onValueChange={(v) => setNextStatus(v as OrderStatus)}>
-                  <SelectTrigger className="flex-1" aria-label="New order status">
-                    <SelectValue placeholder="Change order status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_STATUS_OPTIONS.filter((o) => o.value !== order.status).map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <SubmitButton type="button" loading={busy} icon={CheckCircle2} onClick={handleStatus} disabled={!nextStatus}>
-                  Apply status
-                </SubmitButton>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Change status manually</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Select value={nextStatus} onValueChange={(v) => setNextStatus(v as OrderStatus)}>
+                    <SelectTrigger className="h-10 shrink-0 bg-card sm:flex-1" aria-label="New order status">
+                      <SelectValue placeholder="Choose a status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORDER_STATUS_OPTIONS.filter((o) => o.value !== order.status).map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <SubmitButton
+                    type="button"
+                    loading={busy}
+                    icon={CheckCircle2}
+                    onClick={handleStatus}
+                    disabled={!nextStatus}
+                    className="h-10"
+                  >
+                    Apply status
+                  </SubmitButton>
+                </div>
               </div>
             )}
 
-            <div className="flex flex-wrap gap-3 border-t border-border/50 pt-3">
-              {canCapture && (
-                <Button variant="outline" size="sm" onClick={() => setDialog("capture")} disabled={busy}>
-                  <CreditCard className="h-4 w-4" />
-                  Capture payment
-                </Button>
-              )}
-              {canCreateShipment && (
-                <Button variant="outline" size="sm" onClick={() => setDialog("ship")} disabled={busy}>
-                  <Truck className="h-4 w-4" />
-                  Create shipment
-                </Button>
-              )}
-              {canCreateReturn && (
-                <Button variant="outline" size="sm" onClick={() => setDialog("return")} disabled={busy}>
-                  <RotateCcw className="h-4 w-4" />
-                  Create return
-                </Button>
-              )}
-              {canCancel && (
-                <ConfirmDialog
-                  destructive
-                  title={`Cancel order ${order.order_number}?`}
-                  description="Stock holds are released. Cancelling never refunds money — refund captured payments separately."
-                  confirmLabel="Cancel order"
-                  cancelLabel="Keep order"
-                  onConfirm={handleCancel}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      disabled={busy}
-                    >
-                      <Ban className="h-4 w-4" />
-                      Cancel order
-                    </Button>
-                  }
-                />
-              )}
+            {/* One tile per thing staff can do now; each says what it does. */}
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Actions</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {canCapture && (
+                  <ActionTile
+                    icon={CreditCard}
+                    title="Capture payment"
+                    hint="Record money received for this order."
+                    onClick={() => setDialog("capture")}
+                    disabled={busy}
+                  />
+                )}
+                {canCreateShipment && (
+                  <ActionTile
+                    icon={Truck}
+                    title="Create shipment"
+                    hint="Hand the items to a courier."
+                    onClick={() => setDialog("ship")}
+                    disabled={busy}
+                  />
+                )}
+                {canCreateReturn && (
+                  <ActionTile
+                    icon={RotateCcw}
+                    title="Create return"
+                    hint="Take items back from the customer."
+                    onClick={() => setDialog("return")}
+                    disabled={busy}
+                  />
+                )}
+                {canCancel && (
+                  <ConfirmDialog
+                    destructive
+                    title={`Cancel order ${order.order_number}?`}
+                    description="Stock holds are released. Cancelling never refunds money — refund captured payments separately."
+                    confirmLabel="Cancel order"
+                    cancelLabel="Keep order"
+                    onConfirm={handleCancel}
+                    trigger={
+                      <ActionTile
+                        destructive
+                        icon={Ban}
+                        title="Cancel order"
+                        hint="Release the stock; no refund is made."
+                        disabled={busy}
+                      />
+                    }
+                  />
+                )}
+              </div>
               {!canCapture && !canCreateShipment && !canCreateReturn && !canCancel && (
-                <p className="text-sm text-muted-foreground">No further actions available for this order.</p>
+                <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+                  No further actions available for this order.
+                </p>
               )}
             </div>
           </CardContent>
