@@ -4,6 +4,9 @@ const isDev = process.env.NODE_ENV !== "production";
 // NEXT_PUBLIC_API_URL so server code reads it, and the browser reaches it through the /api/public proxy.
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1/public").replace(/\/+$/, "");
 const API_ORIGIN = new URL(API_URL).origin;
+// Customer (account) API, a sibling of the public one. It is proxied under its backend path because the HttpOnly
+// refresh cookie is scoped to Path=/api/v1/customer/auth/ and the browser only sends it to that same path.
+const CUSTOMER_API_URL = `${API_ORIGIN}/api/v1/customer`;
 
 // Next injects inline bootstrap scripts, so script-src keeps 'unsafe-inline'; dev also needs eval and the HMR socket.
 // The analytics/ad-pixel origins are always allowed (harmless if unused) so the env-gated scripts in layout.tsx
@@ -54,11 +57,12 @@ const nextConfig = {
     // instead of failing the whole build.
     staticGenerationRetryCount: 2,
   },
-  // The browser only ever talks to this origin (CSP connect-src 'self', no CORS): /api/public/* is proxied
-  // to the LaunchCart API and /media/* to its uploaded files. Django routes end in "/", so it is re-added here.
+  // The browser only ever talks to this origin (CSP connect-src 'self', no CORS): /api/public/* and
+  // /api/v1/customer/* are proxied to the LaunchCart API and /media/* to its uploaded files. Django routes end in "/", so it is re-added here.
   async rewrites() {
     return [
       { source: "/api/public/:path*", destination: `${API_URL}/:path*/` },
+      { source: "/api/v1/customer/:path*", destination: `${CUSTOMER_API_URL}/:path*/` },
       { source: "/media/:path*", destination: `${API_ORIGIN}/media/:path*` },
     ];
   },

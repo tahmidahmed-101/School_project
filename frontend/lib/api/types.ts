@@ -95,7 +95,7 @@ export interface ApiProduct {
   meta_keywords?: string;
 }
 
-interface ApiReview {
+export interface ApiReview {
   id: string;
   customer_name: string;
   rating: number;
@@ -107,6 +107,54 @@ interface ApiReview {
 export interface ApiReviewPage extends ApiPage<ApiReview> {
   average_rating: number | null;
   review_count: number;
+}
+
+/** A customer question, public only once staff have answered and published it. */
+export interface ApiQuestion {
+  id: string;
+  customer_name: string;
+  question: string;
+  answer: string;
+  created_at: string;
+  answered_at: string | null;
+}
+
+/** Body of POST /customer/price-reports/products/{id}/: at least one of expected_price / comment. */
+export interface ApiPriceReportInput {
+  variant_id?: string | null;
+  /** Decimal string, e.g. "450.00". */
+  expected_price?: string | null;
+  comment?: string;
+}
+
+type ApiBilingual = { en?: string; bn?: string };
+
+/** GET /policies/{kind}/ — published store policy. 404 `policy_unavailable` until staff publish it. */
+export interface ApiStorePolicy {
+  kind: "shipping" | "returns" | "refund";
+  title: ApiBilingual;
+  intro: ApiBilingual;
+  sections: { heading: ApiBilingual; body: ApiBilingual }[];
+  effective_date: string | null;
+  /** Returns policy only. */
+  returns_enabled?: boolean;
+  eligibility?: {
+    return_window_days: number | null;
+    preorder_returns_allowed: boolean;
+    non_returnable_categories: { id: string; name: string; slug: string }[];
+  } | null;
+}
+
+/** Customer account as returned by /customer/auth/login/ and /customer/auth/me/. */
+export interface ApiAuthUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  phone: string;
+  /** "" when the customer has not uploaded one. */
+  profile_picture: string;
 }
 
 export interface ProductListParams {

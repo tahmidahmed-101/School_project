@@ -8,6 +8,7 @@ import { ShoppingCart, Heart, Globe, Phone, MapPin, Clock, Menu, Truck, User } f
 import { useBrand } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
+import { UserAvatar, useAuth } from "@/modules/auth";
 import { useWishlist } from "@/modules/wishlist";
 import { photo } from "@/lib/photo";
 import type { T } from "@/lib/types";
@@ -51,6 +52,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
   const BRAND_INFO = useBrand();
   const { totalItems, openDrawer } = useCart();
   const { totalWishlistItems, openWishlist } = useWishlist();
+  const { user } = useAuth();
 
   // Sticky shadow once the page has scrolled
   const [isScrolled, setIsScrolled] = useState(false);
@@ -142,12 +144,13 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
             <Link
               href="/login"
               aria-label={ui("navProfile")}
-              title={ui("navProfile")}
+              title={user ? user.name || user.email : ui("navProfile")}
               className={`relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors lg:flex ${
                 pathname === "/login" ? "text-gold-300" : "text-white hover:bg-white/10 hover:text-gold-300"
               }`}
             >
-              <User className="h-5 w-5" />
+              {/* Logged in: the customer's picture, or their initial, replaces the generic icon. */}
+              {user ? <UserAvatar user={user} /> : <User className="h-5 w-5" />}
             </Link>
 
             {/* Desktop only; on mobile the wishlist lives in the bottom bar */}

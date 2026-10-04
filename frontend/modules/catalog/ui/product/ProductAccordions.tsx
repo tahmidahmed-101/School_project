@@ -3,18 +3,35 @@
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { AccordionItem } from "@/design-system/ui/AccordionItem";
+import { PriceReportForm } from "./PriceReportForm";
+import { ProductQuestions } from "./ProductQuestions";
+import { ProductReviews } from "./ProductReviews";
+import { ProductShare } from "./ProductShare";
+import { ShippingReturns } from "./ShippingReturns";
 
-/** Description / specifications / shipping accordions plus the value-proposition row. */
-export function ProductAccordions({ product }: { product: Product }) {
-  const { t, ui } = useLang();
+interface ProductAccordionsProps {
+  product: Product;
+  /** The SKU currently selected in the picker and the price shown for it, for the price report. */
+  variantId?: string;
+  currentPrice: number;
+}
+
+/**
+ * Description, specifications, reviews, questions, shipping, price report and share accordions.
+ * The API-backed ones fetch when opened: a closed accordion does not mount its content.
+ */
+export function ProductAccordions({ product, variantId, currentPrice }: ProductAccordionsProps) {
+  const { t, ui, n } = useLang();
   // The API sends no description on list-sourced products and no specs for many, so empty sections are left out.
   const description = t(product.longDescription) || t(product.description);
   const hasHighlights = Boolean(product.highlights && product.highlights.length > 0);
   const hasSpecs = Boolean(product.specs && product.specs.length > 0);
+  const reviewsTitle =
+    product.reviewCount > 0 ? `${ui("reviewsTitle")} (${n(product.reviewCount)})` : ui("reviewsTitle");
 
   return (
     <>
-      <div className="mt-10 divide-y divide-ink-100 border-b border-t border-ink-200">
+      <div className="mt-8 divide-y divide-ink-100 border-b border-t border-ink-200 sm:mt-12">
         {(description || hasHighlights) && (
           <AccordionItem title={ui("description")} defaultOpen>
             <div className="space-y-3 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
@@ -49,11 +66,29 @@ export function ProductAccordions({ product }: { product: Product }) {
           </AccordionItem>
         )}
 
+        <AccordionItem title={reviewsTitle}>
+          <ProductReviews slug={product.slug} />
+        </AccordionItem>
+
+        <AccordionItem title={ui("questionsTitle")}>
+          <ProductQuestions slug={product.slug} productId={product.id} />
+        </AccordionItem>
+
         <AccordionItem title={ui("shippingReturnsTitle")}>
-          <div className="space-y-2 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
-            <p>{ui("shippingReturnsDelivery")}</p>
-            <p>{ui("shippingReturnsHelp")}</p>
-          </div>
+          <ShippingReturns />
+        </AccordionItem>
+
+        <AccordionItem title={ui("priceReportTitle")}>
+          <PriceReportForm
+            slug={product.slug}
+            productId={product.id}
+            variantId={variantId}
+            currentPrice={currentPrice}
+          />
+        </AccordionItem>
+
+        <AccordionItem title={ui("shareTitle")}>
+          <ProductShare slug={product.slug} name={t(product.name)} />
         </AccordionItem>
       </div>
     </>

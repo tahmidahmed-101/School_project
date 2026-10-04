@@ -42,10 +42,8 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
   const [selectedVariants, setSelectedVariants] = useState(() => defaultVariants(product));
 
   // The product as it looks with the chosen SKU: its price, stock and pre-order dates.
-  const shown = useMemo(
-    () => applyVariant(product, resolveVariant(product, selectedVariants)),
-    [product, selectedVariants],
-  );
+  const selectedSku = useMemo(() => resolveVariant(product, selectedVariants), [product, selectedVariants]);
+  const shown = useMemo(() => applyVariant(product, selectedSku), [product, selectedSku]);
   const isSoldOut = isPreOrderSoldOut(shown);
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
 
@@ -56,8 +54,8 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
           <Breadcrumbs items={[{ label: ui("navShop"), href: "/shop" }, { label: t(product.name) }]} />
         </div>
 
-        {/* 50/50 split: gallery | details */}
-        <div className="grid grid-cols-1 items-start gap-10 border-b border-ink-100 pb-8 sm:pb-16 lg:grid-cols-2 lg:gap-16 xl:gap-20">
+        {/* Gallery | details, the gallery slightly the narrower of the two */}
+        <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16 xl:gap-20">
           <ProductGallery product={product} />
 
           <div className="flex w-full flex-col justify-start lg:pl-4 xl:pl-8">
@@ -90,10 +88,11 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
             />
 
             {shown.isPreOrder && <PreOrderInfo product={shown} className="mt-5" />}
-
-            <ProductAccordions product={product} />
           </div>
         </div>
+
+        {/* Full width below the gallery and details */}
+        <ProductAccordions product={product} variantId={selectedSku?.id} currentPrice={shown.price} />
 
         {relatedProducts.length > 0 && (
           <div className="pt-6 sm:pt-12">

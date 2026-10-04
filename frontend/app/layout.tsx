@@ -6,6 +6,7 @@ import { LangProvider } from "@/lib/i18n";
 import { CatalogProvider } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { getBrand } from "@/modules/business/server";
+import { AuthProvider } from "@/modules/auth";
 import { CartProvider } from "@/modules/cart";
 import { WishlistProvider } from "@/modules/wishlist";
 import { ClientShell } from "@/modules/shell";
@@ -84,11 +85,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable}`}>
           <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
             <LangProvider>
-              <CartProvider>
-                <WishlistProvider>
-                  <ClientShell>{children}</ClientShell>
-                </WishlistProvider>
-              </CartProvider>
+              <AuthProvider>
+                <CartProvider>
+                  <WishlistProvider>
+                    <ClientShell>{children}</ClientShell>
+                  </WishlistProvider>
+                </CartProvider>
+              </AuthProvider>
             </LangProvider>
           </CatalogProvider>
         </div>

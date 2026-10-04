@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ProductDetailView } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
-import { getCatalog, getProductBySlug } from "@/modules/catalog/server";
+import { getCatalog, getProductBySlug, getRelatedProductsBySlug } from "@/modules/catalog/server";
 import { photo } from "@/lib/photo";
 
 interface ProductPageProps {
@@ -11,6 +11,8 @@ interface ProductPageProps {
     slug: string;
   }>;
 }
+
+const RELATED_COUNT = 4;
 
 // Known products are pre-rendered; a product added in the admin later is rendered on first request (dynamicParams
 // defaults to true) and an unknown slug still ends in a real 404 (notFound below).
@@ -37,13 +39,19 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function KullMartProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const [product, { products }] = await Promise.all([getProductBySlug(slug), getCatalog()]);
+  const [product, related, { products }] = await Promise.all([
+    getProductBySlug(slug),
+    getRelatedProductsBySlug(slug, RELATED_COUNT),
+    getCatalog(),
+  ]);
 
   if (!product) {
     notFound();
   }
 
-  const relatedProducts = products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
+  // The API ranks related products; if that call failed, fall back to others from the same category.
+  const relatedProducts =
+    related ?? products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, RELATED_COUNT);
 
   return (
     <>

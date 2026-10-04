@@ -7,12 +7,14 @@ import { SLIDE_EASE } from "@/design-system/patterns/usePresence";
 import { CountBadge } from "@/design-system/ui/CountBadge";
 import { Home, Store, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { UserAvatar, firstName, useAuth } from "@/modules/auth";
 import { useWishlist } from "@/modules/wishlist";
 
 function MobileBottomBarInner() {
   const pathname = usePathname();
   const { ui, n } = useLang();
   const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
+  const { user } = useAuth();
 
   // Active tab index (-1 = none, e.g. on the pre-order page which has its own nav entry):
   // 0 = Home, 1 = Shop, 2 = Track Order, 3 = Wishlist, 4 = Profile
@@ -65,7 +67,8 @@ function MobileBottomBarInner() {
     },
     {
       id: "profile",
-      label: ui("navProfile"),
+      // Logged in: the tab shows the customer's avatar and first name instead of the generic icon and "Profile".
+      label: (user && firstName(user)) || ui("navProfile"),
       href: "/login",
       icon: User,
       badge: 0,
@@ -113,18 +116,22 @@ function MobileBottomBarInner() {
                     isActive ? "-translate-y-px scale-[1.08]" : ""
                   }`}
                 >
-                  <Icon
-                    aria-hidden="true"
-                    className={`h-5 w-5 transition-colors duration-200 ${
-                      isActive ? "text-gold-300 drop-shadow-sm drop-shadow-gold-500/35" : "text-white/70"
-                    } ${
-                      tab.id === "wishlist" && isActive
-                        ? "fill-gold-300"
-                        : tab.id === "wishlist" && tab.badge > 0
-                          ? "fill-gold-300/30 text-gold-300"
-                          : ""
-                    }`}
-                  />
+                  {tab.id === "profile" && user ? (
+                    <UserAvatar user={user} className="h-6 w-6 text-2xs" />
+                  ) : (
+                    <Icon
+                      aria-hidden="true"
+                      className={`h-5 w-5 transition-colors duration-200 ${
+                        isActive ? "text-gold-300 drop-shadow-sm drop-shadow-gold-500/35" : "text-white/70"
+                      } ${
+                        tab.id === "wishlist" && isActive
+                          ? "fill-gold-300"
+                          : tab.id === "wishlist" && tab.badge > 0
+                            ? "fill-gold-300/30 text-gold-300"
+                            : ""
+                      }`}
+                    />
+                  )}
 
                   {tab.badge > 0 && <CountBadge className="-right-2 -top-1.5">{n(tab.badge)}</CountBadge>}
                 </span>

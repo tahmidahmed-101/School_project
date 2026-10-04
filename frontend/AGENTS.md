@@ -11,7 +11,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Kull Mart storefront
 
 Next.js 16 (App Router) + React 19 + Tailwind 4 storefront for the LaunchCart Django API in `../backend`. There is no
-database, auth or server state here: the catalogue, checkout and order tracking all go through the public API.
+database or server state here: the catalogue, checkout and order tracking all go through the public API, and
+customer accounts (login, product questions, price reports) through the customer API.
 
 ## Verify before you say "done"
 
@@ -61,6 +62,9 @@ down (design-system or lib) rather than adding the cycle.
 - **Colours:** new UI uses semantic utilities (`bg-surface`, `text-fg-muted`, `bg-action`, `bg-accent`, `border-line`)
   defined in `app/theme.css` + `app/globals.css`, not raw hex and not new primitive steps. Existing components still use
   the primitives (`brand-*`, `gold-*`, `ink-*`) and move over as they are touched.
+- **Customer accounts live in `modules/auth`.** The browser calls `/api/v1/customer/*` (proxied in `next.config.mjs`
+  under the backend's own path, because the HttpOnly refresh cookie is scoped to `Path=/api/v1/customer/auth/`). The
+  access token is kept in memory only; send customer requests with `useAuth().authRequest`, never store a token.
 - **Tracking route gotcha (`modules/tracking/data/mutations.ts`):** the real route is `/tracking/orders/track/`; `docs/Public API.yaml` lists
   `/tracking/track/`, which 404s. Do not "fix" the code to match the YAML.
 - Copy is bilingual (`T = { en, bn }`, dictionary in `lib/i18n.tsx`); add both languages for any new UI string.

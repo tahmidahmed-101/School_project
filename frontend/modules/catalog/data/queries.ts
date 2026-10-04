@@ -16,6 +16,10 @@ export const listAllProducts = (params: Omit<ProductListParams, "page" | "page_s
 export const getProduct = (slug: string) =>
   apiRequest<ApiProduct>(`/catalog/products/${encodeURIComponent(slug)}/`, CACHE);
 
+/** GET /catalog/products/{slug}/related/ — "you may also like", ranked by the API (same category and brand first). */
+export const getRelatedProducts = (slug: string, limit: number) =>
+  apiRequest<ApiProduct[]>(`/catalog/products/${encodeURIComponent(slug)}/related/`, { ...CACHE, query: { limit } });
+
 /** GET /catalog/products/{slug}/reviews/ — a page of reviews plus average_rating / review_count. */
 export const getProductReviews = (
   slug: string,

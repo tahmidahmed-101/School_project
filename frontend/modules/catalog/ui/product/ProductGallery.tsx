@@ -39,14 +39,14 @@ export function ProductGallery({ product }: { product: Product }) {
         </div>
       )}
 
-      <div className="relative aspect-[4/5] w-full flex-1 overflow-hidden rounded-xl border border-ink-200 bg-surface">
+      <div className="relative aspect-square w-full flex-1 overflow-hidden rounded-xl border border-ink-200 bg-surface">
         <Image
           src={photo(activeImage)}
           alt={t(product.name)}
           fill
           preload
           fetchPriority="high"
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          sizes="(max-width: 1024px) 100vw, 45vw"
           className="object-cover object-center"
         />
 

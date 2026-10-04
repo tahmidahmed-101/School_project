@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { getProduct, getProductReviews, listAllProducts, listCategories } from "./queries";
+import { getProduct, getProductReviews, getRelatedProducts, listAllProducts, listCategories } from "./queries";
 import { ApiError } from "@/lib/api/client";
 import { toCategoryInfo, toProduct, withReviewSummary } from "./adapters";
 import type { CategoryInfo, Product } from "@/lib/types";
@@ -52,5 +52,18 @@ export const getProductBySlug = cache(async (slug: string): Promise<Product | nu
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
+  }
+});
+
+/**
+ * The API's "you may also like" picks for a product, or null when they could not be loaded, so the page can fall
+ * back to its own same-category list instead of dropping the section.
+ */
+export const getRelatedProductsBySlug = cache(async (slug: string, limit: number): Promise<Product[] | null> => {
+  try {
+    const [related, categories] = await Promise.all([getRelatedProducts(slug, limit), listCategories()]);
+    return related.map((p) => toProduct(p, categories));
+  } catch {
+    return null;
   }
 });

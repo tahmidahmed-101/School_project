@@ -8,6 +8,8 @@ import type { ApiEnvelope, ApiErrorBody, ApiPage } from "@/lib/api/types";
  */
 const SERVER_BASE = publicEnv.apiUrl ?? "";
 const BROWSER_BASE = "/api/public";
+/** Customer (account) API: browser only, through the same-origin proxy in next.config.mjs. */
+const CUSTOMER_BROWSER_BASE = "/api/v1/customer";
 
 /** Failure of an API call, already normalised from the backend's { error: { code, message, fields } } body. */
 export class ApiError extends Error {
@@ -60,6 +62,8 @@ export interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   query?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
+  /** "customer" targets /api/v1/customer (accounts, questions, price reports) instead of the public API. */
+  scope?: "public" | "customer";
   /** Extra request headers (e.g. the guest cart token). */
   headers?: Record<string, string>;
   /** Server-side cache lifetime in seconds for GETs (ignored in the browser). Omit for no caching. */
@@ -70,12 +74,13 @@ export interface RequestOptions {
   timeoutMs?: number;
 }
 
-function buildUrl(path: string, query: RequestOptions["query"]): string {
+function buildUrl(path: string, query: RequestOptions["query"], scope: RequestOptions["scope"]): string {
   const isBrowser = typeof window !== "undefined";
+  const browserBase = scope === "customer" ? CUSTOMER_BROWSER_BASE : BROWSER_BASE;
   // Django routes end in "/". The proxy adds it back, and Next would 308-redirect a slash-terminated
   // browser URL, so the browser omits it.
   const cleanPath = isBrowser ? path.replace(/\/+$/, "") : path;
-  let url = `${isBrowser ? BROWSER_BASE : SERVER_BASE}${cleanPath}`;
+  let url = `${isBrowser ? browserBase : SERVER_BASE}${cleanPath}`;
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value === undefined || value === null || value === "") continue;
@@ -88,11 +93,15 @@ function buildUrl(path: string, query: RequestOptions["query"]): string {
 
 /**
  * One request to the public API. Resolves with the envelope's `data` on success, throws ApiError otherwise.
- * `path` is relative to /api/v1/public and keeps its trailing slash, exactly as in the OpenAPI document.
+ * `path` is relative to /api/v1/public (or /api/v1/customer with `scope: "customer"`) and keeps its trailing
+ * slash, exactly as in the OpenAPI document.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", query, body, headers, revalidate, tags, signal, timeoutMs = 10_000 } = options;
+  const { method = "GET", query, body, headers, revalidate, tags, signal, timeoutMs = 10_000, scope } = options;
 
+  if (typeof window === "undefined" && scope === "customer") {
+    throw new ApiError({ status: 0, code: "browser_only", message: "The customer API is called from the browser." });
+  }
   if (typeof window === "undefined" && !SERVER_BASE) {
     throw new ApiError({
       status: 0,
@@ -108,7 +117,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, query), {
+    response = await fetch(buildUrl(path, query, scope), {
       method,
       headers: {
         Accept: "application/json",
@@ -145,6 +154,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       fields: flattenFields(err?.fields),
     });
   }
+
+  // 204 (logout, deletes) has no envelope.
+  if (response.status === 204) return undefined as T;
 
   if (!json || typeof json !== "object" || !("data" in json)) {
     throw new ApiError({ status: response.status, code: "bad_response", message: "Unexpected response from the API." });
