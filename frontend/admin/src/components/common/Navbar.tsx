@@ -228,9 +228,10 @@ const Navbar = () => {
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" collisionPadding={16} className="w-56 overflow-hidden">
-              <DropdownMenuLabel className="flex items-center gap-3 px-4 py-3">
-                <Avatar className="size-10 shrink-0 ring-2 ring-primary-500/20">
+            <DropdownMenuContent align="end" collisionPadding={16} className="w-64 overflow-hidden">
+              {/* Stacked and centred: beside the avatar the email had too little width and was cut off. */}
+              <DropdownMenuLabel className="flex flex-col items-center gap-2 px-4 py-4 text-center">
+                <Avatar className="size-12 shrink-0 ring-2 ring-primary-500/20">
                   {user?.profile_picture ? (
                     <AvatarImage
                       src={user.profile_picture}
@@ -242,11 +243,12 @@ const Navbar = () => {
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="min-w-0">
+                <span className="w-full min-w-0">
                   <span className="block truncate text-sm font-semibold text-gray-800 dark:text-white/90">
                     {displayName || "Account"}
                   </span>
-                  <span className="block truncate text-xs text-gray-700 dark:text-gray-400">
+                  {/* Wraps instead of truncating, so a long address is always readable in full. */}
+                  <span className="mt-0.5 block break-all text-xs font-normal text-gray-700 dark:text-gray-400">
                     {user?.email}
                   </span>
                 </span>
@@ -262,10 +264,8 @@ const Navbar = () => {
                   <SettingsIcon /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-500 hover:text-red-600 dark:text-red-400"
-                  onClick={handleLogout}
-                >
+                {/* The destructive variant keeps the icon red on hover; a plain item recolours its icon. */}
+                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
                   <LogOutIcon /> Logout
                 </DropdownMenuItem>
               </DropdownMenuGroup>

@@ -1,14 +1,4 @@
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Banknote,
-  BarChart3,
-  Minus,
-  PackageX,
-  RefreshCw,
-  ShoppingCart,
-  type LucideIcon,
-} from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/common/EmptyState"
@@ -17,13 +7,6 @@ import { formatDelta, formatMeasure } from "../measure"
 import type { DashboardKpi, TrendDirection } from "../types"
 import { WidgetError } from "./ReportWidget"
 import { Sparkline } from "./Sparkline"
-
-const ICONS: Record<string, LucideIcon> = {
-  Revenue: Banknote,
-  Orders: ShoppingCart,
-  "Stock Turnover": RefreshCw,
-  "Low Stock": PackageX,
-}
 
 export function DeltaBadge({
   delta,
@@ -55,15 +38,8 @@ export function DeltaBadge({
 }
 
 function KpiCard({ kpi }: { kpi: DashboardKpi }) {
-  const Icon = ICONS[kpi.label] ?? BarChart3
   return (
-    <Card className="relative isolate gap-3 overflow-hidden p-4">
-      {/* The metric's icon is a faint watermark in the bottom-right corner, behind the content, so
-          it costs the label and badge no width. */}
-      <Icon
-        className="pointer-events-none absolute -right-5 -bottom-5 -z-10 size-24 -rotate-12 text-primary/10"
-        aria-hidden
-      />
+    <Card className="gap-3 p-4">
       {/* Label and badge always share one line; in a narrow card the label is cut short with an
           ellipsis rather than the badge overlapping it or dropping to a second line. */}
       <div className="flex items-center justify-between gap-2">

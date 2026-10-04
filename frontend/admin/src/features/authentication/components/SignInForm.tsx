@@ -1,13 +1,15 @@
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useLocation } from "react-router-dom"
 import { toast } from "sonner"
-import { LogInIcon } from "lucide-react"
+import { EyeIcon, EyeOffIcon, LogInIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { TextField } from "@/components/common/form-fields"
+import { Input } from "@/components/ui/input"
+import { FormField, TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { login } from "@/features/authentication/slices/authSlice"
@@ -28,6 +30,7 @@ const SignInForm = () => {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const isLoading = useAppSelector((state) => state.auth.isLoading)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -53,7 +56,15 @@ const SignInForm = () => {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm">
         <Card>
-          <CardHeader>
+          <CardHeader className="items-center text-center">
+            <img
+              src="/brand/logo.png"
+              alt=""
+              width={72}
+              height={72}
+              className="mx-auto size-18 rounded-full"
+            />
+            <p className="text-lg font-bold tracking-[0.12em] text-foreground">KULL MART</p>
             <CardTitle className="text-2xl">Sign in</CardTitle>
             <p className="text-sm text-muted-foreground">
               Sign in to access the admin dashboard
@@ -70,15 +81,27 @@ const SignInForm = () => {
               {...register("email")}
             />
 
-            <TextField
-              label="Password"
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              error={errors.password}
-              {...register("password")}
-            />
+            <FormField label="Password" htmlFor="password" error={errors.password}>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  aria-invalid={errors.password ? true : undefined}
+                  className="pr-11"
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((shown) => !shown)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+                </button>
+              </div>
+            </FormField>
           </CardContent>
           <CardFooter>
             <Button type="submit" variant="apply" className="w-full" disabled={isSubmitting || isLoading}>
