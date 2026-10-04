@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 const INPUT_SHAPE =
-  "w-full rounded-xl border text-sm text-fg placeholder-ink-400 transition-colors focus:border-gold-500 focus:outline-none";
+  "w-full rounded-xl border text-sm text-fg placeholder-ink-400 transition-colors focus:border-gold-500";
 const INPUT_OK = "border-ink-200 bg-card";
 
 /** Input look without padding, for controls that place their own icons (search fields). */

@@ -132,6 +132,28 @@ html.js [data-reveal]:not([data-shown]) {
     --tw-ring-shadow: 0 0 0 2px var(--color-brand-900);
     box-shadow: var(--tw-ring-shadow);
   }
+
+  /* Fields animate colours (transition-colors), outline colour included: starting from gold stops the outline from
+     flashing in the dark text colour on its way to gold. */
+  input,
+  textarea,
+  select {
+    outline-color: var(--color-gold-500);
+  }
+
+  /* Form fields show the gold outline alone, without the dark inner ring. */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+  }
+
+  /* Drawn inside the field, so a parent that clips its overflow (accordion panels) cannot cut the outline off. */
+  input:not([type="checkbox"], [type="radio"], [type="range"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 :root {
