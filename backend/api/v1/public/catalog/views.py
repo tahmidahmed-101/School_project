@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,10 +17,17 @@ from apps.catalog.selectors.categories import (
     get_category_by_id,
     get_category_by_slug,
 )
-from apps.catalog.selectors.products import get_product_by_slug, products_list
+from apps.catalog.selectors.products import (
+    MAX_RELATED_PRODUCTS,
+    RELATED_PRODUCTS_LIMIT,
+    get_product_by_slug,
+    products_list,
+    related_products,
+)
+from apps.catalog.selectors.questions import published_questions_for_product
 from apps.catalog.selectors.reviews import product_review_summary, reviews_for_product
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_related
+from apps.common.params import get_bool, get_choice, get_int, get_related
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
 
@@ -29,6 +36,7 @@ from .serializers import (
     PublicCategorySerializer,
     PublicProductDetailSerializer,
     PublicProductListSerializer,
+    PublicProductQuestionSerializer,
     PublicProductReviewSerializer,
     stock_context_for_products,
 )
@@ -141,6 +149,63 @@ class PublicProductReviewListView(GenericListAPIView):
         response = self.list_response(request)
         response.data["data"].update(product_review_summary(product))
         return response
+
+
+@extend_schema(tags=["Public Catalog"])
+class PublicProductQuestionListView(GenericListAPIView):
+    """Answered, published questions only. Pending or unpublished ones are
+    visible to their author via `/customer/questions/` and to staff."""
+
+    serializer_class = PublicProductQuestionSerializer
+    permission_classes: ClassVar[list] = [AllowAny]
+    throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
+
+    def get_queryset(self):
+        return published_questions_for_product(self._product)
+
+    def get(self, request, slug) -> Response:
+        product = get_product_by_slug(slug)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        self._product = product
+        return self.list_response(request)
+
+
+@extend_schema(
+    tags=["Public Catalog"],
+    parameters=[
+        OpenApiParameter(
+            "limit", int, description=f"1-{MAX_RELATED_PRODUCTS}, default {RELATED_PRODUCTS_LIMIT}."
+        )
+    ],
+)
+class PublicRelatedProductListView(APIView):
+    """Related products for one product page. A fixed-size list, not paginated."""
+
+    serializer_class = PublicProductListSerializer
+    permission_classes: ClassVar[list] = [AllowAny]
+    throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
+
+    def get(self, request, slug) -> Response:
+        limit = get_int(
+            request.query_params,
+            "limit",
+            default=RELATED_PRODUCTS_LIMIT,
+            min_value=1,
+            max_value=MAX_RELATED_PRODUCTS,
+        )
+        product = get_product_by_slug(slug)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        products = related_products(product, limit=limit)
+        return Response(
+            {
+                "data": PublicProductListSerializer(
+                    products, many=True, context=stock_context_for_products(products)
+                ).data,
+                "message": "Success",
+            }
+        )
 
 
 @extend_schema(tags=["Public Catalog"])

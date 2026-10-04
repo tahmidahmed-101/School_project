@@ -4,6 +4,10 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from rest_framework import serializers
 
+from apps.business.models import PolicyKind
+from apps.business.policy_content import missing_policy_fields
+from apps.common.serializers import user_label
+
 _validate_url = URLValidator()
 
 
@@ -164,3 +168,61 @@ class AdminPaymentMethodSerializer(serializers.Serializer):
 
 class AdminPaymentMethodUpdateSerializer(serializers.Serializer):
     is_enabled = serializers.BooleanField()
+
+
+class AdminPolicyCategorySerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(read_only=True)
+
+
+class AdminStorePolicySerializer(serializers.Serializer):
+    kind = serializers.CharField(read_only=True)
+    label = serializers.CharField(source="get_kind_display", read_only=True)
+    content = serializers.JSONField(read_only=True)
+    effective_date = serializers.DateField(read_only=True, allow_null=True)
+    is_published = serializers.BooleanField(read_only=True)
+    missing_fields = serializers.SerializerMethodField()
+    return_rules = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_missing_fields(self, obj) -> list[str]:
+        """What still blocks publishing, so the editor can show it up front."""
+        return missing_policy_fields(obj.content)
+
+    def get_return_rules(self, obj) -> dict | None:
+        if obj.kind != PolicyKind.RETURNS:
+            return None
+        return {
+            "return_window_days": obj.return_window_days,
+            "preorder_returns_allowed": obj.preorder_returns_allowed,
+            "non_returnable_categories": AdminPolicyCategorySerializer(
+                obj.non_returnable_categories.all(), many=True
+            ).data,
+        }
+
+
+class AdminStorePolicyUpdateSerializer(serializers.Serializer):
+    """Types only. Shape, completeness, date and rule checks live in
+    `update_store_policy` so every write path applies the same ones."""
+
+    content = serializers.JSONField(required=False)
+    effective_date = serializers.DateField(required=False, allow_null=True)
+    is_published = serializers.BooleanField(required=False)
+    return_window_days = serializers.IntegerField(required=False, allow_null=True)
+    preorder_returns_allowed = serializers.BooleanField(required=False)
+    non_returnable_category_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, max_length=200
+    )
+
+
+class AdminStorePolicyRevisionSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    effective_date = serializers.DateField(read_only=True, allow_null=True)
+    changed_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+    changed_by_name = serializers.SerializerMethodField()
+    previous = serializers.JSONField(read_only=True)
+    current = serializers.JSONField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_changed_by_name(self, obj) -> str:
+        return user_label(obj.changed_by)

@@ -269,6 +269,10 @@ REST_FRAMEWORK = {
         # Order tracking answers found/not-found per (order_number, phone)
         # guess, so it needs the same brute-force-guarding treatment as login.
         "tracking": "30/hour",
+        # Product questions and price-issue reports each create a row staff
+        # must triage, so they are capped per customer well below `user`.
+        "product_question": "10/hour",
+        "price_report": "10/hour",
     },
     "EXCEPTION_HANDLER": "apps.common.exception_handler.custom_exception_handler",
     # nginx appends to any client-supplied X-Forwarded-For, so without this DRF

@@ -3,8 +3,8 @@ from decimal import Decimal
 from django.db import migrations
 from django.utils import timezone
 
-INSIDE_CHARGE = Decimal("80.00")
-OUTSIDE_CHARGE = Decimal("120.00")
+INSIDE_CHARGE = Decimal("70.00")
+OUTSIDE_CHARGE = Decimal("110.00")
 
 # Matched against the customer's typed address, which is now the only location
 # text checkout collects. Broad on purpose: a Dhaka address that matches nothing

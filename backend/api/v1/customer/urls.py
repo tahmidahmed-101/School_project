@@ -12,4 +12,6 @@ urlpatterns = [
     path("orders/", include("api.v1.customer.orders.urls")),
     path("wishlist/", include("api.v1.customer.wishlist.urls")),
     path("reviews/", include("api.v1.customer.reviews.urls")),
+    path("questions/", include("api.v1.customer.questions.urls")),
+    path("price-reports/", include("api.v1.customer.price_reports.urls")),
 ]

@@ -9,7 +9,9 @@ from .views import (
     PublicCategoryListView,
     PublicProductDetailView,
     PublicProductListView,
+    PublicProductQuestionListView,
     PublicProductReviewListView,
+    PublicRelatedProductListView,
 )
 
 app_name = "public_catalog"
@@ -23,6 +25,16 @@ urlpatterns = [
         "products/<slug:slug>/reviews/",
         PublicProductReviewListView.as_view(),
         name="product-review-list",
+    ),
+    path(
+        "products/<slug:slug>/questions/",
+        PublicProductQuestionListView.as_view(),
+        name="product-question-list",
+    ),
+    path(
+        "products/<slug:slug>/related/",
+        PublicRelatedProductListView.as_view(),
+        name="product-related-list",
     ),
     path("bundles/", PublicBundleListView.as_view(), name="bundle-list"),
     path("bundles/<slug:slug>/", PublicBundleDetailView.as_view(), name="bundle-detail"),

@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import ClassVar
 
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from rest_framework import serializers
 
 from apps.catalog.selectors.products import get_product_by_id
 from apps.catalog.selectors.reviews import get_review_by_id, reviews_list
@@ -15,6 +13,7 @@ from apps.catalog.services.reviews import delete_review
 from apps.common.generics import GenericListAPIView
 from apps.common.params import get_choice, get_related
 from apps.common.responses import not_found
+from apps.common.serializers import user_label
 
 from .permissions import CatalogManagePermission, CatalogPermissionMixin
 
@@ -31,8 +30,7 @@ class AdminProductReviewSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_customer_name(self, obj) -> str:
-        customer = obj.customer
-        return customer.get_full_name().strip() or customer.email or customer.phone or "Customer"
+        return user_label(obj.customer, "Customer")
 
 
 @extend_schema(tags=["Catalog"])

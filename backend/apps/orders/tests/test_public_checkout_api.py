@@ -107,9 +107,9 @@ def test_guest_checkout_with_cod_confirms_the_order_immediately(api_client):
 
 def _dhaka_delivery():
     """Mirrors logistics migration 0010: a keyword-matched Inside Dhaka zone at
-    80 and a keyword-less (catch-all) Outside Dhaka zone at 120."""
+    70 and a keyword-less (catch-all) Outside Dhaka zone at 110."""
     carrier = CarrierFactory()
-    for keywords, charge in ((["dhaka"], "80.00"), ([], "120.00")):
+    for keywords, charge in ((["dhaka"], "70.00"), ([], "110.00")):
         ShippingRateFactory(
             zone=ShippingZoneFactory(country_codes=keywords),
             carrier=carrier,

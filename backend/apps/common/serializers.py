@@ -5,6 +5,13 @@ from rest_framework import serializers
 from apps.orders.constants import PaymentMethodKey
 
 
+def user_label(user, fallback: str = "User") -> str:
+    """How the dashboard names a customer or staff member on moderation rows."""
+    if user is None:
+        return ""
+    return user.get_full_name().strip() or user.email or user.phone or fallback
+
+
 class DateRangeSerializer(serializers.Serializer):
     """Shared `?start=&end=` window for report endpoints.
 

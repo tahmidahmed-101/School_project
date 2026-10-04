@@ -269,6 +269,11 @@ class PublicProductDetailSerializer(PublicProductListSerializer):
     meta_keywords = serializers.CharField(read_only=True, allow_blank=True)
 
 
+def public_customer_name(customer) -> str:
+    """Display name only — never the email or phone that identify the account."""
+    return customer.get_full_name().strip() or "Anonymous"
+
+
 class PublicProductReviewSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     customer_name = serializers.SerializerMethodField()
@@ -278,4 +283,18 @@ class PublicProductReviewSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_customer_name(self, obj) -> str:
-        return obj.customer.get_full_name().strip() or "Anonymous"
+        return public_customer_name(obj.customer)
+
+
+class PublicProductQuestionSerializer(serializers.Serializer):
+    """No `answered_by`: which staff member replied is internal."""
+
+    id = serializers.UUIDField(read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    question = serializers.CharField(read_only=True)
+    answer = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    answered_at = serializers.DateTimeField(read_only=True)
+
+    def get_customer_name(self, obj) -> str:
+        return public_customer_name(obj.customer)

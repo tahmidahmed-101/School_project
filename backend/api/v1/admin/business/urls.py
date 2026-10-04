@@ -7,6 +7,9 @@ from .views import (
     AdminModuleListView,
     AdminPaymentMethodDetailView,
     AdminPaymentMethodListView,
+    AdminStorePolicyDetailView,
+    AdminStorePolicyListView,
+    AdminStorePolicyRevisionListView,
 )
 
 urlpatterns = [
@@ -20,4 +23,15 @@ urlpatterns = [
         name="payment-method-detail",
     ),
     path("modules/<str:key>/", AdminModuleDetailView.as_view(), name="module-detail"),
+    path("policies/", AdminStorePolicyListView.as_view(), name="store-policy-list"),
+    path(
+        "policies/<str:kind>/",
+        AdminStorePolicyDetailView.as_view(),
+        name="store-policy-detail",
+    ),
+    path(
+        "policies/<str:kind>/revisions/",
+        AdminStorePolicyRevisionListView.as_view(),
+        name="store-policy-revision-list",
+    ),
 ]

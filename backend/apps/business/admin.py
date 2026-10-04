@@ -4,7 +4,7 @@ from django.contrib import admin, messages
 from apps.common.exceptions import BusinessRuleViolationError
 
 from .constants import MODULES_BY_KEY
-from .models import BusinessProfile, ModuleSetting
+from .models import BusinessProfile, ModuleSetting, StorePolicy, StorePolicyRevision
 from .services.modules import set_module_config, set_module_enabled
 
 
@@ -149,3 +149,29 @@ class ModuleSettingAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None) -> bool:
         return False
+
+
+class _ReadOnlyAdmin(admin.ModelAdmin):
+    """Viewable here, editable only through `PATCH /api/v1/admin/settings/policies/<kind>/`,
+    so every change passes the same validation and leaves a revision. A
+    ModelAdmin save would skip both."""
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+@admin.register(StorePolicy)
+class StorePolicyAdmin(_ReadOnlyAdmin):
+    list_display = ("kind", "is_published", "effective_date", "updated_at")
+
+
+@admin.register(StorePolicyRevision)
+class StorePolicyRevisionAdmin(_ReadOnlyAdmin):
+    list_display = ("policy", "effective_date", "changed_by", "created_at")
+    list_select_related = ("policy", "changed_by")

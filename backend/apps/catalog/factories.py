@@ -8,8 +8,10 @@ from apps.accounts.factories import CustomerUserFactory
 from apps.catalog.models import (
     BundleItem,
     Category,
+    PriceIssueReport,
     Product,
     ProductImage,
+    ProductQuestion,
     ProductReview,
     ProductVariant,
     WishlistItem,
@@ -87,3 +89,21 @@ class BundleItemFactory(factory.django.DjangoModelFactory):
     bundle_variant = factory.SubFactory(ProductVariantFactory)
     component_variant = factory.SubFactory(ProductVariantFactory)
     quantity = 1
+
+
+class ProductQuestionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProductQuestion
+
+    customer = factory.SubFactory(CustomerUserFactory)
+    product = factory.SubFactory(ProductFactory)
+    question = factory.Sequence(lambda n: f"Is item {n} waterproof?")
+
+
+class PriceIssueReportFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PriceIssueReport
+
+    reporter = factory.SubFactory(CustomerUserFactory)
+    product = factory.SubFactory(ProductFactory)
+    comment = "Listed higher than in store."

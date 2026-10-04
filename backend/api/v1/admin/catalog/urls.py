@@ -15,12 +15,14 @@ from .category_views import (
     AdminCategoryRestoreView,
 )
 from .image_views import AdminProductImageDetailView, AdminProductImageListCreateView
+from .price_report_views import AdminPriceReportDetailView, AdminPriceReportListView
 from .product_views import (
     AdminProductBulkStatusView,
     AdminProductDetailView,
     AdminProductListCreateView,
     AdminProductRestoreView,
 )
+from .question_views import AdminProductQuestionDetailView, AdminProductQuestionListView
 from .review_views import AdminProductReviewDetailView, AdminProductReviewListView
 from .variant_views import (
     AdminProductVariantDetailView,
@@ -94,6 +96,18 @@ urlpatterns = [
         "reviews/<uuid:review_id>/",
         AdminProductReviewDetailView.as_view(),
         name="review-detail",
+    ),
+    path("questions/", AdminProductQuestionListView.as_view(), name="question-list"),
+    path(
+        "questions/<uuid:question_id>/",
+        AdminProductQuestionDetailView.as_view(),
+        name="question-detail",
+    ),
+    path("price-reports/", AdminPriceReportListView.as_view(), name="price-report-list"),
+    path(
+        "price-reports/<uuid:report_id>/",
+        AdminPriceReportDetailView.as_view(),
+        name="price-report-detail",
     ),
     path("variants/", AdminProductVariantGlobalListView.as_view(), name="variant-global-list"),
     path("variants/export/", AdminVariantExportView.as_view(), name="variant-export"),

@@ -105,13 +105,13 @@ independent trees:
 - **Services**: `audit.py`, `exports.py`. Owns `RequestMetadataMiddleware` (captures IP/UA, consumed by risk too).
 
 ### business
-- **Models**: `BusinessProfile` (singleton store identity) · `ModuleSetting` (runtime module on/off + config)
+- **Models**: `BusinessProfile` (singleton store identity) · `ModuleSetting` (runtime module on/off + config) · `StorePolicy` (shipping / returns / refund, bilingual, see §14) · `StorePolicyRevision`
 - **Services**: `business_profile.py` · `modules.py` (`is_feature_enabled`, `require_feature`, `set_module_enabled`, disable-guards). Owns `ModuleEnabledMiddleware`.
 - Registered modules (`ModuleKey`): catalog, inventory, orders, accounting, audit, procurement (depends on inventory+accounting), logistics (depends on orders), reporting, cms. `catalog`/`inventory`/`orders`/`accounting`/`audit` are `can_disable=False`.
 
 ### catalog
-- **Models**: `Product` (simple/variant type; `meta_keywords` — optional SEO field, admin create/update only) · `ProductVariant` · `Brand` · `Category` (stock/pre-order type) · `ProductImage` · `BundleItem` (kit component) · `ProductReview` · `WishlistItem`
-- **Services**: `products.py`, `variants.py`, `brands.py`, `categories.py`, `bundles.py`, `reviews.py`, `wishlist.py` · `variant_import_export.py` (bulk CSV)
+- **Models**: `Product` (simple/variant type; `meta_keywords` — optional SEO field, admin create/update only) · `ProductVariant` · `Brand` · `Category` (stock/pre-order type) · `ProductImage` · `BundleItem` (kit component) · `ProductReview` · `ProductQuestion` (private until answered + published) · `PriceIssueReport` (staff-only) · `WishlistItem`
+- **Services**: `products.py`, `variants.py`, `brands.py`, `categories.py`, `bundles.py`, `reviews.py`, `questions.py`, `price_reports.py`, `wishlist.py` · `variant_import_export.py` (bulk CSV)
 
 ### common (shared, not a domain app)
 - **Base models**: `UUIDModel` → `TimeStampedModel` → `SoftDeleteModel`; `ActivatableModel`; `UserStampedModel`; `FullAuditModel` (full stack — default for new models)
@@ -173,6 +173,8 @@ matching `StaffPermission` code.
 - `GET/POST /products/<id>/variants/`, `POST /products/<id>/variants/generate/`
 - `GET/POST /products/<id>/images/`, `GET/PATCH/DELETE /images/<id>/`
 - `PATCH/DELETE /reviews/<id>/` (moderation)
+- `GET /questions/` (`?status=pending|answered|published`), `PATCH/DELETE /questions/<id>/` (answer / publish)
+- `GET /price-reports/` (`?status=open|resolved|dismissed`), `GET/PATCH /price-reports/<id>/`
 - `GET /variants/`, `GET /variants/export/`, `POST /variants/import/`, `GET/PATCH/DELETE /variants/<id>/`
 - `GET/POST /bundles/`, `GET/PATCH/DELETE /bundles/<id>/`, `POST /bundles/<id>/restore/`
 
@@ -233,6 +235,7 @@ matching `StaffPermission` code.
 - `GET/PATCH /business-profile/`
 - `GET /integrations/`
 - `GET /modules/`, `GET/PATCH /modules/<key>/`
+- `GET /policies/`, `GET/PATCH /policies/<kind>/`, `GET /policies/<kind>/revisions/` (`settings.view` reads, `settings.manage` writes; see §14)
 - `GET /payment-methods/`, `GET/PATCH /payment-methods/<key>/`
 
 **Risk** `risk/`
@@ -276,11 +279,18 @@ matching `StaffPermission` code.
 **Reviews** `reviews/`
 - `POST products/<product_id>/`, `GET/PATCH/DELETE <review_id>/`
 
+**Questions** `questions/` (throttle scope `product_question`)
+- `GET ""` (own questions, incl. pending), `POST products/<product_id>/`
+
+**Price reports** `price-reports/` (throttle scope `price_report`)
+- `POST products/<product_id>/` (no read endpoint — staff-only)
+
 ### 5.3 Public (`/api/v1/public/`) — anonymous, `AllowAny`
 
 **Catalog** `catalog/`
 - `GET categories/`, `GET categories/<slug>/`
 - `GET products/`, `GET products/<slug>/`, `GET products/<slug>/reviews/`
+- `GET products/<slug>/questions/` (answered + published only), `GET products/<slug>/related/?limit=1-24`
 - `GET bundles/`, `GET bundles/<slug>/`
 
 **Marketing** `marketing/`
@@ -294,6 +304,7 @@ matching `StaffPermission` code.
 
 **Business** (mounted at public root)
 - `GET business-profile/`, `GET payment-methods/`
+- `GET policies/<kind>/` — `shipping`, `returns`, `refund`; 404 `policy_unavailable` until published (see §14)
 
 ### 5.4 Webhooks (`/api/v1/webhooks/`) — signature-verified
 
@@ -545,3 +556,54 @@ and their earlier orders stay where they are. Order history from before and afte
 therefore separate for those people; staff still see every order. Migration `0021_user_is_guest`
 converts only accounts with **no email** — which only the short-lived phone-only checkout (0020)
 created — into guest identities, normalising their phones and soft-deleting any race duplicates.
+
+## 14. Recent changes (2026-10-04): store policies
+
+**Source of truth.** `apps.business.models.StorePolicy`, one row per kind (`shipping`, `returns`,
+`refund`), created empty and unpublished by migration `business/0010`. No policy wording is
+seeded. The short-lived `BusinessProfile.shipping_policy` / `return_policy` text fields were never
+released and are gone.
+
+**Content** is bilingual and sectioned:
+`{"title": {"en","bn"}, "intro": {"en","bn"}, "sections": [{"heading": {...}, "body": {...}}]}`.
+Shape and completeness rules live in `apps/business/policy_content.py`.
+
+**Writes** go only through `apps.business.services.policies.update_store_policy` (admin API
+`PATCH /api/v1/admin/settings/policies/<kind>/`). The Django admin shows policies and revisions
+read-only. Publishing requires every title/heading/body in both locales (an intro, if written, in
+both), and an `effective_date` that is not in the future. Changing published terms requires
+restating the date, which may not move earlier. Each accepted change writes a
+`StorePolicyRevision` (previous/current snapshot, effective date, staff user) plus a
+`store_policy.updated` audit entry; no-op and rejected requests write neither.
+
+**Public reads** (`GET /api/v1/public/policies/<kind>/`) return `kind`, `title`, `intro`,
+`sections`, `effective_date`; returns adds `returns_enabled` (the `orders.returns` flag) and
+`eligibility`. Unpublished or incomplete policies answer 404 `policy_unavailable` — the selector
+re-checks completeness, so a row edited around the service still cannot publish blank text.
+`effective_date` is the policy's date, never the row's `updated_at`.
+
+**Return eligibility** lives on the `returns` row (`return_window_days`,
+`preorder_returns_allowed`, `non_returnable_categories`) and defaults to imposing nothing.
+`create_rma` enforces it only while the return policy is published, for every caller, and
+per line applies the **version in force when that line was delivered**:
+- versions are the published snapshots in `StorePolicyRevision.current` (plus the live row),
+  rebuilt in one query by `return_rule_versions()`;
+- a version governs from its `effective_date`, inclusive, compared as a calendar date in
+  `settings.TIME_ZONE`; on a given date the most recently *published* version whose effective
+  date has arrived governs, so a same-day correction replaces the version it corrects;
+- a delivery before every published version keeps the legacy behaviour (no policy rules);
+  unpublishing the policy withdraws every version;
+- the governing moment is the latest `Shipment.delivered_at` among delivered consignments
+  carrying the line — the same moment the window runs from — so a split shipment straddling an
+  effective date is governed entirely by the later delivery; a line with no recorded delivery
+  falls under today's version and has not started its window;
+- category matching is exact (no descendant categories); a bundle line uses the bundle's category;
+- pre-order exclusion uses `SalesOrderLine.is_preorder`.
+
+**Refunds** remain manual: staff record them with `refund_payment` against a captured `Payment`
+(`refunds.approve`). There is no gateway payout, no RMA-to-refund link and no refund timing, so
+the backend exposes no refund method or timeline fields; any such promise belongs only in
+owner-approved refund policy text.
+
+The storefront's policy pages still render their own hardcoded copy and do not call these
+endpoints yet.

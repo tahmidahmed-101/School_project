@@ -75,6 +75,23 @@ def get_bool(params, name: str, default: bool | None = None) -> bool | None:
     return None
 
 
+def get_int(
+    params, name: str, default: int | None = None, *, min_value: int, max_value: int
+) -> int | None:
+    """Bounded on both sides: an unbounded int param on a public endpoint is a
+    caller-chosen query size."""
+    raw = params.get(name)
+    if raw in (None, ""):
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = None
+    if value is None or not min_value <= value <= max_value:
+        _fail(name, f"Enter a whole number between {min_value} and {max_value}.")
+    return value
+
+
 def get_search(params, name: str = "search") -> str | None:
     raw = params.get(name)
     if not raw:

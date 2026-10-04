@@ -1,16 +1,33 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Max
+from django.utils import timezone
 
 from apps.accounting.services.postings import post_sales_return
 from apps.business.constants import ModuleKey
+from apps.business.selectors.policies import (
+    ReturnRules,
+    governing_return_rules,
+    policy_date,
+    return_rule_versions,
+)
 from apps.business.services.modules import require_feature
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
-from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, SalesOrderLine
+from apps.orders.models import (
+    ReturnRMA,
+    ReturnRMALine,
+    SalesOrder,
+    SalesOrderLine,
+    Shipment,
+    ShipmentLine,
+)
 
 # Only units that have physically left the building can come back. A partially
 # shipped order is still `confirmed`, so gate on the per-line shipped balance
@@ -28,6 +45,71 @@ def rmas_in_use() -> str | None:
     if count:
         return f"{count} returns are still open on file. Close and remove them first."
     return None
+
+
+def _delivered_at_by_line(line_ids: list) -> dict:
+    """When each line reached the customer: the latest delivery among the
+    consignments that carried it, so a split shipment's window runs from the
+    last parcel rather than the first. Lines with no recorded delivery are
+    absent — their window has not started."""
+    rows = (
+        ShipmentLine.objects.filter(
+            order_line_id__in=line_ids,
+            shipment__status=Shipment.Status.DELIVERED,
+            shipment__delivered_at__isnull=False,
+            shipment__deleted_at__isnull=True,
+        )
+        .values("order_line_id")
+        .annotate(delivered_at=Max("shipment__delivered_at"))
+    )
+    return {row["order_line_id"]: row["delivered_at"] for row in rows}
+
+
+def _enforce_return_policy(versions: list[ReturnRules], order_lines: list[SalesOrderLine]) -> None:
+    """Apply, per line, the published version in force when that line reached
+    the customer. One governing moment per line drives both the version
+    choice and the window: the latest recorded delivery (the same moment
+    `_delivered_at_by_line` already gave the window), or now for a line with
+    no recorded delivery, since a delivery today would fall under today's
+    version. A delivery before every published version keeps the legacy
+    behaviour. Every RMA path (customer, staff, seeder) comes through
+    `create_rma`, so none can skip this."""
+    now = timezone.now()
+    delivered = _delivered_at_by_line([line.id for line in order_lines])
+    category_by_line: dict | None = None
+    for order_line in order_lines:
+        delivered_at = delivered.get(order_line.id)
+        rules = governing_return_rules(versions, policy_date(delivered_at or now))
+        if rules is None:
+            continue
+        if not rules.preorder_returns_allowed and order_line.is_preorder:
+            raise BusinessRuleViolationError(
+                f"Line {order_line.id} was a pre-order, which the return policy excludes.",
+                code="preorder_not_returnable",
+            )
+        if rules.non_returnable_category_ids:
+            if category_by_line is None:
+                category_by_line = {
+                    line_id: str(category_id)
+                    for line_id, category_id in SalesOrderLine.objects.filter(
+                        id__in=[line.id for line in order_lines]
+                    ).values_list("id", "variant__product__category_id")
+                }
+            if category_by_line.get(order_line.id) in rules.non_returnable_category_ids:
+                raise BusinessRuleViolationError(
+                    f"Line {order_line.id} is in a category the return policy excludes.",
+                    code="category_not_returnable",
+                )
+        if (
+            rules.window_days
+            and delivered_at is not None
+            and now > delivered_at + timedelta(days=rules.window_days)
+        ):
+            raise BusinessRuleViolationError(
+                f"Line {order_line.id} was delivered more than {rules.window_days} days "
+                "ago, outside the return window.",
+                code="return_window_expired",
+            )
 
 
 @transaction.atomic
@@ -83,6 +165,9 @@ def create_rma(*, order: SalesOrder, lines: list[dict], reason: str = "") -> Ret
                 "shipped units are still returnable.",
                 code="over_return",
             )
+    versions = return_rule_versions()
+    if versions:
+        _enforce_return_policy(versions, [locked_lines[line_id] for line_id in requested])
 
     rma_number = generate_document_number("RMA")
     while ReturnRMA.objects.filter(rma_number=rma_number).exists():

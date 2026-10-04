@@ -97,3 +97,18 @@ class TrackingRateThrottle(SettingsRateMixin, AnonRateThrottle):
     public-read one."""
 
     scope = "tracking"
+
+
+class ProductQuestionRateThrottle(SettingsRateMixin, UserRateThrottle):
+    """Every question lands in a staff moderation queue, so one account at
+    the generic `user` rate could bury real questions under thousands."""
+
+    scope = "product_question"
+
+
+class PriceReportRateThrottle(SettingsRateMixin, UserRateThrottle):
+    """Same reasoning as `ProductQuestionRateThrottle`: each report is staff
+    work, and the open-report dedupe alone does not stop one account sweeping
+    the whole catalog."""
+
+    scope = "price_report"

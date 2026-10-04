@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import Case, Prefetch, Q, QuerySet, Value, When
 from django.utils import timezone
 
 from apps.catalog.models import Product, ProductImage, ProductVariant
@@ -140,14 +140,48 @@ def get_product_by_id(product_id: str | UUID, *, include_deleted: bool = False) 
     return queryset.filter(id=product_id).first()
 
 
-def get_product_by_slug(slug: str) -> Product | None:
+def _public_products() -> QuerySet[Product]:
     # Same prefetch as `get_product_by_id`: this backs the public product page,
     # whose serializer walks variants -> images/components.
     return (
         Product.objects.select_related("category")
         .prefetch_related(_active_variants_prefetch(), "images")
-        .filter(SELLABLE_VARIANT_FILTER, slug=slug, deleted_at__isnull=True, is_active=True)
-        .first()
+        .filter(SELLABLE_VARIANT_FILTER, deleted_at__isnull=True, is_active=True)
+    )
+
+
+def get_product_by_slug(slug: str) -> Product | None:
+    return _public_products().filter(slug=slug).first()
+
+
+def get_public_product_by_id(product_id: str | UUID) -> Product | None:
+    """By-id counterpart to `get_product_by_slug`, for customer submissions
+    (questions, price reports) that must only target what the storefront shows."""
+    return _public_products().filter(id=product_id).first()
+
+
+RELATED_PRODUCTS_LIMIT = 8
+MAX_RELATED_PRODUCTS = 24
+
+
+def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -> list[Product]:
+    """Storefront "you may also like" for one product, ranked in a single query:
+    same category and brand, then same category, then same brand, then the
+    merchandised (featured/trending) catalog as a filler. Built on
+    `products_list` so it inherits the sellable filter and the prefetches the
+    public list serializer depends on."""
+    same_category = Q(category_id=product.category_id)
+    same_brand = Q(brand_id=product.brand_id) if product.brand_id else Q(pk__in=[])
+    merchandised = Q(featured=True) | Q(trending=True)
+    score = Case(When(same_category, then=Value(2)), default=Value(0)) + Case(
+        When(same_brand, then=Value(1)), default=Value(0)
+    )
+    return list(
+        products_list(is_active=True, sellable_only=True)
+        .exclude(pk=product.pk)
+        .filter(same_category | same_brand | merchandised)
+        .annotate(relevance=score)
+        .order_by("-relevance", "-featured", "-trending", "name")[:limit]
     )
 
 

@@ -10,10 +10,16 @@ from rest_framework.views import APIView
 from apps.accounts.constants import StaffPermissionCode
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.modules import get_module_state, modules_list
-from apps.business.services import update_business_profile
+from apps.business.selectors.policies import (
+    get_store_policy,
+    policy_revisions,
+    store_policies_list,
+)
+from apps.business.services import update_business_profile, update_store_policy
 from apps.business.services.modules import set_module_config, set_module_enabled
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
+from apps.common.generics import GenericListAPIView
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.orders.selectors.payment_methods import (
@@ -30,6 +36,9 @@ from .serializers import (
     AdminModuleUpdateSerializer,
     AdminPaymentMethodSerializer,
     AdminPaymentMethodUpdateSerializer,
+    AdminStorePolicyRevisionSerializer,
+    AdminStorePolicySerializer,
+    AdminStorePolicyUpdateSerializer,
 )
 
 SettingsViewPermission = require_any_staff_permission(
@@ -153,3 +162,74 @@ class AdminPaymentMethodDetailView(APIView):
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": AdminPaymentMethodSerializer(state).data, "message": "Success"})
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminStorePolicyListView(APIView):
+    """Shipping, return and refund policies, drafts included."""
+
+    serializer_class = AdminStorePolicySerializer
+    permission_classes: ClassVar[list] = [SettingsViewPermission]
+
+    def get(self, request) -> Response:
+        return Response(
+            {
+                "data": AdminStorePolicySerializer(store_policies_list(), many=True).data,
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminStorePolicyDetailView(APIView):
+    """Reading is open to `settings.view`; editing or publishing needs
+    `settings.manage`. Every accepted change records a revision."""
+
+    serializer_class = AdminStorePolicyUpdateSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request, kind) -> Response:
+        policy = get_store_policy(kind)
+        if policy is None:
+            return not_found("policy_not_found", "Unknown policy.")
+        return Response({"data": AdminStorePolicySerializer(policy).data, "message": "Success"})
+
+    def patch(self, request, kind) -> Response:
+        policy = get_store_policy(kind)
+        if policy is None:
+            return not_found("policy_not_found", "Unknown policy.")
+        serializer = AdminStorePolicyUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            update_store_policy(policy=policy, actor=request.user, data=serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {"data": AdminStorePolicySerializer(get_store_policy(kind)).data, "message": "Success"}
+        )
+
+    put = patch
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminStorePolicyRevisionListView(GenericListAPIView):
+    """Immutable change history for one policy, newest first."""
+
+    serializer_class = AdminStorePolicyRevisionSerializer
+    permission_classes: ClassVar[list] = [SettingsViewPermission]
+    ordering_fields = ("created_at",)
+    default_ordering = "-created_at"
+
+    def get_queryset(self):
+        return policy_revisions(self._policy)
+
+    def get(self, request, kind) -> Response:
+        policy = get_store_policy(kind)
+        if policy is None:
+            return not_found("policy_not_found", "Unknown policy.")
+        self._policy = policy
+        return self.list_response(request)
