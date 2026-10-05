@@ -478,7 +478,19 @@ def test_set_order_status_refuses_to_reopen_a_cancelled_order():
 def test_set_order_status_moves_forward_directly():
     order, _ = _checked_out_order(quantity=5, stock=20)
 
-    set_order_status(order=order, new_status=SalesOrder.Status.DELIVERED)
+    set_order_status(order=order, new_status=SalesOrder.Status.CLOSED)
 
     order.refresh_from_db()
-    assert order.status == SalesOrder.Status.DELIVERED
+    assert order.status == SalesOrder.Status.CLOSED
+
+
+def test_set_order_status_refuses_delivered_without_shipments():
+    order, _ = _checked_out_order(quantity=5, stock=20)
+    previous = order.status
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        set_order_status(order=order, new_status=SalesOrder.Status.DELIVERED)
+
+    assert exc.value.code == "shipments_incomplete"
+    order.refresh_from_db()
+    assert order.status == previous

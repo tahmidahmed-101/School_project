@@ -35,7 +35,11 @@ from apps.orders.selectors.sales_orders import (
     get_order_line_by_id,
     orders_list,
 )
-from apps.orders.selectors.shipments import get_shipment_by_id, shipments_list
+from apps.orders.selectors.shipments import (
+    get_shipment_by_id,
+    get_shipment_detail,
+    shipments_list,
+)
 from apps.orders.services.carts import add_line, create_order
 from apps.orders.services.checkout import checkout
 from apps.orders.services.exports import export_orders
@@ -64,6 +68,8 @@ from apps.orders.services.returns import (
 from apps.orders.services.shipments import (
     create_shipment,
     dispatch_to_courier,
+    receive_back_shipment,
+    replace_damaged_units,
     update_shipment_status,
 )
 
@@ -81,6 +87,8 @@ from .serializers import (
     CreateShipmentSerializer,
     GradeRMALineSerializer,
     RefundPaymentSerializer,
+    ShipmentDetailSerializer,
+    ShipmentReceiveBackSerializer,
     ShipmentSerializer,
     ShipmentStatusUpdateSerializer,
     StockReservationSerializer,
@@ -569,21 +577,26 @@ class AdminOrderShipmentCreateView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(
-            {"data": ShipmentSerializer(shipment).data, "message": "Success"},
+            {"data": _shipment_detail(shipment), "message": "Success"},
             status=status.HTTP_201_CREATED,
         )
 
 
+def _shipment_detail(shipment) -> dict:
+    """Re-read so the response carries the lines as just written."""
+    return ShipmentDetailSerializer(get_shipment_detail(shipment.id)).data
+
+
 @extend_schema(tags=["Orders"])
 class AdminShipmentDetailView(APIView):
-    serializer_class = ShipmentSerializer
+    serializer_class = ShipmentDetailSerializer
     permission_classes: ClassVar[list] = [ShipmentsViewPermission]
 
     def get(self, request, shipment_id) -> Response:
         shipment = get_shipment_by_id(shipment_id)
         if shipment is None:
             return not_found("shipment_not_found", "Shipment not found.")
-        return Response({"data": ShipmentSerializer(shipment).data, "message": "Success"})
+        return Response({"data": _shipment_detail(shipment), "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])
@@ -603,7 +616,7 @@ class AdminShipmentStatusUpdateView(APIView):
             )
         except DomainError as exc:
             return error_from_exception(exc)
-        return Response({"data": ShipmentSerializer(shipment).data, "message": "Success"})
+        return Response({"data": _shipment_detail(shipment), "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])
@@ -619,7 +632,83 @@ class AdminShipmentDispatchView(APIView):
             shipment = dispatch_to_courier(shipment=shipment)
         except DomainError as exc:
             return error_from_exception(exc)
-        return Response({"data": ShipmentSerializer(shipment).data, "message": "Success"})
+        return Response({"data": _shipment_detail(shipment), "message": "Success"})
+
+
+@extend_schema(
+    tags=["Orders"],
+    request=None,
+    description=(
+        "Confirm that a cancelled or returned consignment has physically arrived back, "
+        "stating for every shipment line how many units are sellable and how many damaged "
+        "(they must add up to the line's quantity). The shipment's revenue and COGS "
+        "postings are reversed. Sellable units are restocked and held again for the order "
+        "so they can be reshipped. Damaged units are written off to inventory shrinkage, "
+        "never reserved, and stay counted as shipped but undelivered: the order cannot be "
+        "delivered or reshipped for them until staff decide to replace, cancel or refund. "
+        "No customer payment is refunded; refunds stay a separate, manual step."
+    ),
+)
+class AdminShipmentReceiveBackView(APIView):
+    """Gated like receiving an RMA (`returns.manage`), since it moves stock and
+    the ledger."""
+
+    serializer_class = ShipmentReceiveBackSerializer
+    permission_classes: ClassVar[list] = [ReturnsManagePermission]
+
+    def post(self, request, shipment_id) -> Response:
+        shipment = get_shipment_by_id(shipment_id)
+        if shipment is None:
+            return not_found("shipment_not_found", "Shipment not found.")
+        serializer = ShipmentReceiveBackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dispositions = {
+            line["shipment_line_id"]: {
+                "sellable": line["sellable_quantity"],
+                "damaged": line["damaged_quantity"],
+            }
+            for line in serializer.validated_data["lines"]
+        }
+        if len(dispositions) != len(serializer.validated_data["lines"]):
+            return error_from_exception(
+                DomainError("Each shipment line may appear once.", code="dispositions_mismatch")
+            )
+        try:
+            shipment = receive_back_shipment(
+                shipment=shipment, dispositions=dispositions, actor=request.user
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response({"data": _shipment_detail(shipment), "message": "Success"})
+
+
+@extend_schema(
+    tags=["Orders"],
+    request=None,
+    description=(
+        "Replace the damaged units still owed on a received-back consignment. Replacement "
+        "stock is reserved for the order and the units become shippable again; the call is "
+        "refused with `insufficient_stock` if the stock is not available. Ship the "
+        "replacement as a normal shipment. No refund is made and nothing is posted to the "
+        "ledger here — the damaged units were already reversed and written off."
+    ),
+)
+class AdminShipmentReplaceDamagedView(APIView):
+    """Gated like receive-back (`returns.manage`): it reserves stock and reopens
+    the order for shipping."""
+
+    serializer_class = ShipmentDetailSerializer
+    permission_classes: ClassVar[list] = [ReturnsManagePermission]
+
+    def post(self, request, shipment_id) -> Response:
+        shipment = get_shipment_by_id(shipment_id)
+        if shipment is None:
+            return not_found("shipment_not_found", "Shipment not found.")
+        try:
+            shipment = replace_damaged_units(shipment=shipment, actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response({"data": _shipment_detail(shipment), "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])

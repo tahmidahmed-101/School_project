@@ -7,6 +7,7 @@ from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import SalesOrder, SalesOrderLine, StockReservation
+from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
 from apps.orders.services.carts import compute_line_tax
 from apps.orders.services.notifications import notify_order
@@ -155,6 +156,15 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
             "A cancelled order cannot be reopened — its stock reservations are already "
             "released. Place a new order instead.",
             code="order_cancelled",
+        )
+    # Delivery is reached by shipping and delivering consignments, which is
+    # where stock leaves and reservations are released. The override may only
+    # record it once that has already happened, never stand in for it.
+    if new_status == SalesOrder.Status.DELIVERED and not order_shipments_complete(order):
+        raise BusinessRuleViolationError(
+            "An order can only be marked delivered once delivered consignments cover "
+            "the full quantity of every line.",
+            code="shipments_incomplete",
         )
 
     previous = order.status

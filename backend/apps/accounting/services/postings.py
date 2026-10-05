@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.accounting.constants import ACCOUNT_CODES
 from apps.accounting.models import Account, JournalEntry
 from apps.accounting.selectors.accounts import get_account_by_code
-from apps.accounting.services.journal import post_journal_entry
+from apps.accounting.services.journal import post_journal_entry, reverse_journal_entry
 from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
@@ -136,8 +136,16 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
     # customer was actually charged at checkout), not shipment.shipping_charge
     # (an optional, per-shipment admin field that defaults to 0 and would
     # otherwise silently drop shipping revenue whenever it's left unset).
-    if shipment.order.status == SalesOrder.Status.SHIPPED:
-        revenue_total += shipment.order.shipping_total
+    # A consignment received back had its revenue, shipping included, reversed,
+    # so it no longer counts as having recognised shipping.
+    recognize_shipping = (
+        order.status == SalesOrder.Status.SHIPPED
+        and not order.shipments.exclude(pk=shipment.pk)
+        .filter(includes_shipping_revenue=True, received_back_at__isnull=True)
+        .exists()
+    )
+    if recognize_shipping:
+        revenue_total += order.shipping_total
     revenue_entry = post_journal_entry(
         entry_date=entry_date,
         reference_type="shipment_revenue",
@@ -163,7 +171,24 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
             {"account": _account("inventory_asset"), "debit": Decimal("0"), "credit": cogs_total},
         ],
     )
+    if recognize_shipping:
+        type(shipment).objects.filter(pk=shipment.pk).update(includes_shipping_revenue=True)
+        shipment.includes_shipping_revenue = True
     return [revenue_entry, cogs_entry]
+
+
+def reverse_sales_shipment(shipment) -> list[JournalEntry]:
+    """Undo `post_sales_shipment` for a consignment received back undelivered:
+    the contra of exactly what was posted (revenue, tax, any shipping, and COGS
+    at the cost charged then), never a recomputation at today's figures."""
+    entries = JournalEntry.objects.filter(
+        reference_type__in=("shipment_revenue", "shipment_cogs"),
+        reference_id=shipment.id,
+        reverses__isnull=True,
+        status=JournalEntry.Status.POSTED,
+        deleted_at__isnull=True,
+    ).order_by("created_at")
+    return [reverse_journal_entry(entry, reason="consignment received back") for entry in entries]
 
 
 def post_sales_return(rma) -> list[JournalEntry]:

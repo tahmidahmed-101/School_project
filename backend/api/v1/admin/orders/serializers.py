@@ -246,6 +246,49 @@ class ShipmentSerializer(serializers.Serializer):
     courier_status = serializers.CharField(allow_blank=True)
     shipped_at = serializers.DateTimeField(allow_null=True)
     delivered_at = serializers.DateTimeField(allow_null=True)
+    received_back_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    # Units written off as damaged at receive-back, and how many of them are
+    # still owed (not yet replaced). Read from the prefetched lines (see
+    # shipments_list / _orders_with_related).
+    damaged_quantity = serializers.SerializerMethodField()
+    unresolved_damaged_quantity = serializers.SerializerMethodField()
+
+    def get_damaged_quantity(self, obj) -> int:
+        return sum(line.damaged_quantity for line in obj.lines.all())
+
+    def get_unresolved_damaged_quantity(self, obj) -> int:
+        return sum(line.unresolved_damaged_quantity for line in obj.lines.all())
+
+
+class ShipmentLineSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    order_line_id = serializers.UUIDField(read_only=True)
+    sku = serializers.CharField(source="order_line.variant.sku", read_only=True)
+    product_name = serializers.CharField(source="order_line.variant.product.name", read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    damaged_quantity = serializers.IntegerField(read_only=True)
+    replaced_quantity = serializers.IntegerField(read_only=True)
+    unresolved_damaged_quantity = serializers.IntegerField(read_only=True)
+
+
+class ShipmentDetailSerializer(ShipmentSerializer):
+    """A single shipment with its lines, for the detail page and the responses
+    of actions taken from it (load with `get_shipment_detail`)."""
+
+    lines = ShipmentLineSerializer(many=True, read_only=True)
+
+
+class ShipmentReceiveBackLineSerializer(serializers.Serializer):
+    shipment_line_id = serializers.UUIDField()
+    sellable_quantity = serializers.IntegerField(min_value=0)
+    damaged_quantity = serializers.IntegerField(min_value=0)
+
+
+class ShipmentReceiveBackSerializer(serializers.Serializer):
+    """One entry per shipment line; the two quantities must add up to what the
+    line carried (checked by `receive_back_shipment`)."""
+
+    lines = ShipmentReceiveBackLineSerializer(many=True, allow_empty=False)
 
 
 class ShipmentStatusUpdateSerializer(serializers.Serializer):

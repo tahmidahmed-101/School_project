@@ -1184,11 +1184,25 @@ def test_admin_can_set_order_status(api_client):
     order, _ = _admin_checked_out_order(api_client, "status")
 
     response = api_client.post(
-        f"/api/v1/admin/orders/{order.id}/status/", {"status": "delivered"}, format="json"
+        f"/api/v1/admin/orders/{order.id}/status/", {"status": "closed"}, format="json"
     )
 
     assert response.status_code == 200
-    assert response.data["data"]["status"] == "delivered"
+    assert response.data["data"]["status"] == "closed"
+
+
+def test_admin_cannot_mark_an_unshipped_order_delivered(api_client):
+    order, _ = _admin_checked_out_order(api_client, "statusdelivered")
+    previous = order.status
+
+    response = api_client.post(
+        f"/api/v1/admin/orders/{order.id}/status/", {"status": "delivered"}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.data["error"]["code"] == "shipments_incomplete"
+    order.refresh_from_db()
+    assert order.status == previous
 
 
 def test_admin_status_cancel_releases_reservations(api_client):

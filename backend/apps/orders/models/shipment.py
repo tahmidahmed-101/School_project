@@ -45,9 +45,8 @@ class Shipment(FullAuditModel):
     courier_status = models.CharField(max_length=100, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
-    # Denormalised (not read from order.shipping_address) so risk/fraud
-    # signals can query delivery history per phone in one indexed lookup
-    # instead of joining through the order and address on every shipment.
+    received_back_at = models.DateTimeField(null=True, blank=True)
+    includes_shipping_revenue = models.BooleanField(default=False)
     recipient_phone = models.CharField(max_length=20, blank=True, db_index=True)
 
     class Meta:
@@ -69,6 +68,17 @@ class ShipmentLine(TimeStampedModel):
         SalesOrderLine, on_delete=models.PROTECT, related_name="shipment_lines"
     )
     quantity = models.PositiveIntegerField()
+    # Units that came back damaged when the consignment was received back.
+    # They were written off, so they stay counted as shipped but undelivered:
+    # the order cannot be delivered or reshipped for them until staff resolve it.
+    damaged_quantity = models.PositiveIntegerField(default=0)
+    # How many of those damaged units `replace_damaged_units` has since freed to
+    # ship again with replacement stock. Still owed = damaged - replaced.
+    replaced_quantity = models.PositiveIntegerField(default=0)
+
+    @property
+    def unresolved_damaged_quantity(self) -> int:
+        return self.damaged_quantity - self.replaced_quantity
 
     def __str__(self) -> str:
         return f"{self.shipment_id}: {self.order_line_id} x{self.quantity}"

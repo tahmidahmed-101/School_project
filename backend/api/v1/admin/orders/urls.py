@@ -27,6 +27,8 @@ from .views import (
     AdminShipmentDetailView,
     AdminShipmentDispatchView,
     AdminShipmentListCreateView,
+    AdminShipmentReceiveBackView,
+    AdminShipmentReplaceDamagedView,
     AdminShipmentStatusUpdateView,
 )
 
@@ -109,6 +111,16 @@ urlpatterns = [
         "shipments/<uuid:shipment_id>/dispatch/",
         AdminShipmentDispatchView.as_view(),
         name="shipment-dispatch",
+    ),
+    path(
+        "shipments/<uuid:shipment_id>/receive-back/",
+        AdminShipmentReceiveBackView.as_view(),
+        name="shipment-receive-back",
+    ),
+    path(
+        "shipments/<uuid:shipment_id>/replace-damaged/",
+        AdminShipmentReplaceDamagedView.as_view(),
+        name="shipment-replace-damaged",
     ),
     path("returns/", AdminRMAListView.as_view(), name="rma-list"),
     path("returns/<uuid:rma_id>/", AdminRMADetailView.as_view(), name="rma-detail"),

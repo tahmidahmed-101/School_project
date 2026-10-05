@@ -68,9 +68,9 @@ def test_status_override_notifies_the_customer():
     customer = CustomerUserFactory()
     order = _confirmed_order(customer)
 
-    set_order_status(order=order, new_status=SalesOrder.Status.DELIVERED)
+    set_order_status(order=order, new_status=SalesOrder.Status.CLOSED)
 
-    assert _titles(customer) == [f"Order {order.order_number} is now delivered."]
+    assert _titles(customer) == [f"Order {order.order_number} is now closed."]
 
 
 def test_shipping_and_delivery_notify_but_in_transit_does_not():
