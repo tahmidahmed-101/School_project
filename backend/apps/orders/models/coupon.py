@@ -25,6 +25,10 @@ class Coupon(FullAuditModel):
     )
     times_used = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
+    show_on_storefront = models.BooleanField(
+        default=False,
+        help_text="Advertise this code in the storefront's voucher strip. Leave off for private codes.",
+    )
 
     class Meta:
         indexes: ClassVar[list] = [

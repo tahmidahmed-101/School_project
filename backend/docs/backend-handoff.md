@@ -306,7 +306,7 @@ matching `StaffPermission` code.
 - `POST subscribe/`, `POST unsubscribe/`
 
 **Checkout** `checkout/` (`AllowAny`: anonymous → guest identity, signed in → `request.user`; see §13)
-- `POST ""`, `POST coupon/`, `POST shipping-quote/`, `GET shipping-options/`, `GET shipping-zones/`
+- `POST ""`, `POST coupon/`, `GET coupons/` (coupons flagged `show_on_storefront`), `POST shipping-quote/`, `GET shipping-options/`, `GET shipping-zones/`
 
 **Tracking** `tracking/`
 - `POST orders/track/` (by order number + email/phone)

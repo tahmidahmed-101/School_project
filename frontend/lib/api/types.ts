@@ -263,6 +263,15 @@ export interface ApiGuestCartCreated {
   cart: ApiGuestCart;
 }
 
+/** GET /checkout/coupons/: a coupon the store advertises. Decimals arrive as strings. */
+export interface ApiStorefrontCoupon {
+  code: string;
+  discount_type: string;
+  value: string;
+  min_order_amount: string;
+  expires_at: string | null;
+}
+
 /** POST /checkout/coupon/ */
 export interface ApiCouponPreview {
   code: string;

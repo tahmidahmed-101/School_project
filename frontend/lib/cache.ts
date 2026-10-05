@@ -22,6 +22,8 @@ export const CACHE_LIFE = {
   business: 300,
   /** Enabled payment methods. */
   paymentMethods: 300,
+  /** Coupons advertised in the voucher strip. */
+  vouchers: 60,
   /** /api/search-index (`revalidate = 300`). */
   searchIndex: 300,
   /** sitemap.xml, llms.txt, products.xml (`revalidate = 3600`). */

@@ -13,6 +13,7 @@ export interface Coupon {
   times_used: number
   expires_at: string | null
   is_active: boolean
+  show_on_storefront: boolean
   created_at: string
   deleted_at: string | null
 }
@@ -25,6 +26,7 @@ export interface CouponCreatePayload {
   min_order_amount?: string
   usage_limit?: number | null
   expires_at?: string | null
+  show_on_storefront?: boolean
 }
 
 /** CouponUpdateSerializer (PATCH, all optional). */

@@ -92,3 +92,14 @@ class GuestShippingQuoteRequestSerializer(GuestShippingLocationSerializer):
 class GuestCouponValidationSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=32)
     items = GuestCheckoutItemSerializer(many=True)
+
+
+class StorefrontCouponSerializer(serializers.Serializer):
+    """Only what a shopper needs to decide whether a code is worth using —
+    never the usage counters."""
+
+    code = serializers.CharField(read_only=True)
+    discount_type = serializers.CharField(read_only=True)
+    value = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    min_order_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    expires_at = serializers.DateTimeField(read_only=True, allow_null=True)

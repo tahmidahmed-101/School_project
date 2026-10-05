@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
-import { VoucherSection } from "@/modules/marketing";
+import { VoucherSection, type Voucher } from "@/modules/marketing";
 import { CategoryShowcase } from "@/modules/catalog";
 import { TrendingSection } from "@/modules/catalog";
 import { ProductGrid } from "@/modules/catalog";
@@ -14,7 +14,7 @@ import { BRAND_INFO } from "@/lib/brand";
 
 import { bestSellers, categoryShelf, trending } from "../domain/home-products";
 
-export function HomeSections() {
+export function HomeSections({ vouchers }: { vouchers: Voucher[] }) {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
   const { stockProducts } = useProducts();
@@ -36,7 +36,7 @@ export function HomeSections() {
     <div>
       <Hero heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`} />
       <PromoMarquee />
-      <VoucherSection />
+      <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 
       {/* Trending Picks */}

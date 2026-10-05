@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Sparkles, Calendar, Trash2 } from "lucide-react";
 import type { CartItem } from "@/lib/types";
 import { useCart } from "@/modules/cart";
+import { useCollectedVouchers, useVoucherText } from "@/modules/marketing";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
@@ -47,6 +48,8 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
       ? coupon.error.message
       : ui(errorKey(coupon.error));
   const { updateQuantity, removeItem } = useCart();
+  const vouchers = useCollectedVouchers();
+  const voucherText = useVoucherText();
 
   const preOrderItem = items.find((i) => i.product.isPreOrder);
   const hasPreOrder = Boolean(preOrderItem);
@@ -168,6 +171,28 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
           </div>
         )}
         {couponError && <FieldError id="co-coupon-error">{couponError}</FieldError>}
+        {!coupon.applied && vouchers.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-2xs font-semibold text-fg-subtle">{ui("checkoutYourVouchers")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {vouchers.map((voucher) => (
+                <button
+                  key={voucher.code}
+                  type="button"
+                  disabled={coupon.checking}
+                  title={voucherText.condition(voucher)}
+                  onClick={() => {
+                    setCouponInput(voucher.code);
+                    coupon.apply(voucher.code);
+                  }}
+                  className="cursor-pointer rounded-full border border-gold-300 bg-gold-50 px-2.5 py-1 text-2xs font-bold text-gold-900 transition-colors hover:bg-gold-100 disabled:cursor-default disabled:opacity-60"
+                >
+                  <span className="font-mono">{voucher.code}</span> · {voucherText.title(voucher)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2 border-t border-ink-200 pt-3 text-xs">

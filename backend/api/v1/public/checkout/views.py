@@ -23,6 +23,7 @@ from apps.logistics.selectors.rates import (
     zones_list,
 )
 from apps.logistics.services.rates import shipping_options, try_quote_shipping
+from apps.orders.selectors.coupons import storefront_coupons
 from apps.orders.services.coupons import preview_coupon
 from apps.orders.services.guest_checkout import guest_checkout, subtotal_for_items, weight_for_items
 from apps.risk.request_ip import client_ip
@@ -34,6 +35,7 @@ from .serializers import (
     GuestOrderSerializer,
     GuestShippingLocationSerializer,
     GuestShippingQuoteRequestSerializer,
+    StorefrontCouponSerializer,
 )
 
 
@@ -220,6 +222,24 @@ class CouponValidationView(APIView):
                     "discount_amount": str(result["discount_amount"]),
                     "subtotal": str(subtotal),
                 },
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Public Checkout"])
+class StorefrontCouponListView(APIView):
+    """The coupons staff chose to advertise, for the storefront's voucher
+    strip. A coupon not flagged `show_on_storefront` is never listed here."""
+
+    serializer_class = StorefrontCouponSerializer
+    permission_classes: ClassVar[list] = [AllowAny]
+    throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
+
+    def get(self, request) -> Response:
+        return Response(
+            {
+                "data": StorefrontCouponSerializer(storefront_coupons(), many=True).data,
                 "message": "Success",
             }
         )

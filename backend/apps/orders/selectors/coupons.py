@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from django.db.models import QuerySet
+from django.db.models import F, Q, QuerySet
+from django.utils import timezone
 
 from apps.orders.models import Coupon
 
@@ -25,3 +26,17 @@ def get_active_coupon_by_code(code: str) -> Coupon | None:
     return Coupon.objects.filter(
         code__iexact=code, is_active=True, deleted_at__isnull=True
     ).first()
+
+
+def storefront_coupons() -> QuerySet[Coupon]:
+    """Coupons the storefront may advertise: opted in by staff and still
+    redeemable right now. Everything else stays private — a code is only
+    ever confirmed to someone who already knows it."""
+    return (
+        Coupon.objects.filter(
+            show_on_storefront=True, is_active=True, deleted_at__isnull=True
+        )
+        .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+        .filter(Q(usage_limit__isnull=True) | Q(times_used__lt=F("usage_limit")))
+        .order_by("min_order_amount", "code")
+    )

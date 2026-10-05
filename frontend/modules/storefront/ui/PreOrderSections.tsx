@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
-import { VoucherSection } from "@/modules/marketing";
+import { VoucherSection, type Voucher } from "@/modules/marketing";
 import { TrendingSection } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
@@ -19,7 +19,7 @@ import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
 /** Same layout as the home page (Hero, browsable grid, newsletter), scoped to pre-order stock only. */
-export function PreOrderSections() {
+export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
   const { ui } = useLang();
   const { categories } = useCatalog();
   const { preorderProducts } = useProducts();
@@ -49,7 +49,7 @@ export function PreOrderSections() {
       </div>
       <Hero heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`} shopLink="/shop?type=preorder" preorder />
       <PromoMarquee />
-      <VoucherSection />
+      <VoucherSection vouchers={vouchers} />
 
       {preorderProducts.length === 0 ? (
         <section className="border-b border-ink-200 bg-white py-8 sm:py-14">

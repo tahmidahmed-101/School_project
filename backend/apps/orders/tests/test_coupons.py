@@ -261,3 +261,65 @@ def test_customer_cannot_manage_admin_coupons(api_client):
     response = api_client.get("/api/v1/admin/coupons/")
 
     assert response.status_code == 403
+
+
+STOREFRONT_COUPONS_URL = "/api/v1/public/checkout/coupons/"
+
+
+def test_storefront_lists_only_coupons_flagged_for_it(api_client):
+    CouponFactory(
+        code="PUBLIC10",
+        show_on_storefront=True,
+        value=Decimal("10"),
+        min_order_amount=Decimal("500"),
+    )
+    CouponFactory(code="PRIVATE10")
+
+    response = api_client.get(STOREFRONT_COUPONS_URL)
+
+    assert response.status_code == 200
+    assert response.data["data"] == [
+        {
+            "code": "PUBLIC10",
+            "discount_type": "percentage",
+            "value": "10.00",
+            "min_order_amount": "500.00",
+            "expires_at": None,
+        }
+    ]
+
+
+def test_storefront_hides_coupons_that_can_no_longer_be_redeemed(api_client):
+    CouponFactory(code="LIVE", show_on_storefront=True, usage_limit=5, times_used=4)
+    CouponFactory(code="INACTIVE", show_on_storefront=True, is_active=False)
+    CouponFactory(
+        code="EXPIRED", show_on_storefront=True, expires_at=timezone.now() - timedelta(days=1)
+    )
+    CouponFactory(code="USEDUP", show_on_storefront=True, usage_limit=5, times_used=5)
+    CouponFactory(code="DELETED", show_on_storefront=True, deleted_at=timezone.now())
+
+    response = api_client.get(STOREFRONT_COUPONS_URL)
+
+    assert [row["code"] for row in response.data["data"]] == ["LIVE"]
+
+
+def test_admin_can_flag_a_coupon_for_the_storefront(api_client):
+    admin = create_user(email="coupon-admin-flag@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    created = api_client.post(
+        "/api/v1/admin/coupons/",
+        {"code": "shown", "value": "15.00", "show_on_storefront": True},
+        format="json",
+    )
+    assert created.status_code == 201, created.data
+    assert created.data["data"]["show_on_storefront"] is True
+
+    hidden = api_client.patch(
+        f"/api/v1/admin/coupons/{created.data['data']['id']}/",
+        {"show_on_storefront": False},
+        format="json",
+    )
+    assert hidden.status_code == 200
+    assert hidden.data["data"]["show_on_storefront"] is False
+    assert api_client.get(STOREFRONT_COUPONS_URL).data["data"] == []

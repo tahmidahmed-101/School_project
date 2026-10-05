@@ -36,6 +36,7 @@ const couponSchema = z
     usage_limit: z.number().int("Must be a whole number").min(1, "Must be at least 1").nullable(),
     expires_at: z.string(),
     is_active: z.boolean(),
+    show_on_storefront: z.boolean(),
   })
   .superRefine((values, ctx) => {
     if (values.discount_type === "percentage" && values.value > 100) {
@@ -53,6 +54,7 @@ const defaultValues: CouponFormValues = {
   usage_limit: null,
   expires_at: "",
   is_active: true,
+  show_on_storefront: false,
 }
 
 const FORM_FIELDS = Object.keys(defaultValues)
@@ -99,6 +101,7 @@ const CouponForm = () => {
       usage_limit: existing.usage_limit,
       expires_at: toDatetimeLocal(existing.expires_at),
       is_active: existing.is_active,
+      show_on_storefront: existing.show_on_storefront,
     })
   }
 
@@ -124,6 +127,7 @@ const CouponForm = () => {
       min_order_amount: values.min_order_amount.toFixed(2),
       usage_limit: values.usage_limit,
       expires_at: fromDatetimeLocal(values.expires_at),
+      show_on_storefront: values.show_on_storefront,
     }
 
     try {
@@ -252,6 +256,27 @@ const CouponForm = () => {
                   name="is_active"
                   render={({ field }) => (
                     <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
+                  )}
+                />
+              </Field>
+
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="show_on_storefront">Show on storefront</FieldLabel>
+                  <FieldDescription>
+                    Advertises this code in the shop's "Collect vouchers" strip. Leave off for private codes.
+                  </FieldDescription>
+                </FieldContent>
+                <Controller
+                  control={control}
+                  name="show_on_storefront"
+                  render={({ field }) => (
+                    <Switch
+                      id="show_on_storefront"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={readOnly}
+                    />
                   )}
                 />
               </Field>

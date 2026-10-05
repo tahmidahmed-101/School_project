@@ -15,6 +15,7 @@ class CouponSerializer(serializers.Serializer):
     times_used = serializers.IntegerField(read_only=True)
     expires_at = serializers.DateTimeField(allow_null=True)
     is_active = serializers.BooleanField()
+    show_on_storefront = serializers.BooleanField()
     created_at = serializers.DateTimeField(read_only=True)
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
@@ -30,6 +31,7 @@ class CouponCreateSerializer(serializers.Serializer):
     )
     usage_limit = serializers.IntegerField(required=False, allow_null=True, default=None)
     expires_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    show_on_storefront = serializers.BooleanField(required=False, default=False)
 
 
 class CouponUpdateSerializer(serializers.Serializer):
@@ -40,3 +42,4 @@ class CouponUpdateSerializer(serializers.Serializer):
     usage_limit = serializers.IntegerField(required=False, allow_null=True)
     expires_at = serializers.DateTimeField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False)
+    show_on_storefront = serializers.BooleanField(required=False)

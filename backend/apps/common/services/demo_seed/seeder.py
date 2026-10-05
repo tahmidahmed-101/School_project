@@ -410,6 +410,7 @@ class DemoSeeder:
                 usage_limit=usage_limit,
                 expires_at=timezone.make_aware(datetime.combine(expiry_day, time(23, 59))),
                 is_active=not expired,
+                show_on_storefront=not expired,
             )
             Coupon.objects.filter(pk=coupon.pk).update(
                 created_at=self._moment(self.start_date, hour=9)

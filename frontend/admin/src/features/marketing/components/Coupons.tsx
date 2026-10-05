@@ -73,7 +73,14 @@ const Coupons = () => {
     {
       accessorKey: "code",
       header: "CODE",
-      cell: ({ row }) => <span className="font-mono text-sm font-semibold text-primary">{row.original.code}</span>,
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-mono text-sm font-semibold text-primary">{row.original.code}</span>
+          {row.original.show_on_storefront && (
+            <span className="text-xs text-muted-foreground">Shown on storefront</span>
+          )}
+        </div>
+      ),
     },
     {
       id: "discount",

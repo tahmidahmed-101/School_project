@@ -6,6 +6,7 @@ from .views import (
     ShippingOptionListView,
     ShippingQuoteView,
     ShippingZoneListView,
+    StorefrontCouponListView,
 )
 
 app_name = "public_checkout"
@@ -13,6 +14,7 @@ app_name = "public_checkout"
 urlpatterns = [
     path("", GuestCheckoutView.as_view(), name="guest-checkout"),
     path("coupon/", CouponValidationView.as_view(), name="coupon-validate"),
+    path("coupons/", StorefrontCouponListView.as_view(), name="coupon-list"),
     path("shipping-quote/", ShippingQuoteView.as_view(), name="shipping-quote"),
     path("shipping-options/", ShippingOptionListView.as_view(), name="shipping-options"),
     path("shipping-zones/", ShippingZoneListView.as_view(), name="shipping-zones"),

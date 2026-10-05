@@ -3,20 +3,22 @@
 import { Check, Ticket } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { SITE_SETTINGS } from "../domain/site-settings";
-import { usePersistedState } from "@/lib/usePersistedState";
+import type { Voucher } from "../domain/vouchers";
+import { useCollectedCodes, useVoucherText } from "./useVouchers";
 import { CardReveal, ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
-/** "Collect voucher" strip shown below the promo marquee; toggled via SITE_SETTINGS.voucherSection.enabled. */
-export function VoucherSection() {
-  const { lang, t, ui } = useLang();
-  const [collected, setCollected] = usePersistedState<string[]>("km-collected-vouchers", []);
-  const { enabled, vouchers } = SITE_SETTINGS.voucherSection;
+/**
+ * "Collect voucher" strip shown below the promo marquee; toggled via SITE_SETTINGS.voucherSection.enabled.
+ * Collecting reveals the code and saves it in this browser, where checkout offers it back in one tap.
+ */
+export function VoucherSection({ vouchers }: { vouchers: Voucher[] }) {
+  const { lang, ui } = useLang();
+  const { codes: collected, collect } = useCollectedCodes();
+  const text = useVoucherText();
 
-  if (!enabled || vouchers.length === 0) return null;
-
-  const collect = (code: string) => setCollected((prev) => (prev.includes(code) ? prev : [...prev, code]));
+  if (!SITE_SETTINGS.voucherSection.enabled || vouchers.length === 0) return null;
 
   return (
     <Container className="pb-4 pt-3 sm:pb-6 sm:pt-4">
@@ -43,8 +45,16 @@ export function VoucherSection() {
                   </div>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-3 sm:gap-3 sm:px-3 lg:gap-2 lg:px-2.5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-gold-800 sm:text-base">{t(v.title)}</p>
-                      <p className="truncate text-2xs text-fg-subtle">{t(v.condition)}</p>
+                      <p className="truncate text-sm font-extrabold text-gold-800 sm:text-base">{text.title(v)}</p>
+                      <p className="truncate text-2xs text-fg-subtle">
+                        {isCollected ? (
+                          <>
+                            {ui("voucherCode")}: <span className="font-mono font-bold text-fg">{v.code}</span>
+                          </>
+                        ) : (
+                          text.condition(v)
+                        )}
+                      </p>
                     </div>
                     <button
                       type="button"

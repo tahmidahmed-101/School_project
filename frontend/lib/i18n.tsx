@@ -162,6 +162,10 @@ const DICT = {
   voucherTitle: { en: "Collect vouchers", bn: "ভাউচার সংগ্রহ করুন" },
   voucherCollect: { en: "Collect", bn: "সংগ্রহ" },
   voucherCollected: { en: "Collected", bn: "সংগৃহীত" },
+  voucherOff: { en: "OFF", bn: "ছাড়" },
+  voucherMinSpend: { en: "Min. spend", bn: "সর্বনিম্ন খরচ" },
+  voucherNoMinSpend: { en: "No minimum spend", bn: "সর্বনিম্ন খরচ নেই" },
+  voucherCode: { en: "Code", bn: "কোড" },
   loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
@@ -527,6 +531,7 @@ const DICT = {
   checkoutCouponApply: { en: "Apply", bn: "প্রয়োগ" },
   checkoutCouponRemove: { en: "Remove", bn: "বাদ দিন" },
   checkoutCouponApplied: { en: "Coupon applied", bn: "কুপন প্রয়োগ হয়েছে" },
+  checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
   checkoutShippingChecking: { en: "Calculating…", bn: "হিসাব হচ্ছে…" },
   checkoutShippingUnavailable: { en: "Not available for this address", bn: "এই ঠিকানায় ডেলিভারি নেই" },
   errNoShipping: {
