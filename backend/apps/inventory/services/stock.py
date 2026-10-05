@@ -62,6 +62,42 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
 
 
 @transaction.atomic
+def lock_variant_stock(variant_ids) -> list[StockItem]:
+    """Row-lock every stock row of these variants in every warehouse, for the
+    rest of the transaction.
+
+    Rows missing for a warehouse are first created at zero (the same cache-fill
+    as `materialize_stock_items`), so a concurrent first movement or
+    reservation there blocks on the unique (variant, warehouse) row instead of
+    slipping in unseen. Movements and reservations lock these same rows.
+    """
+    variant_ids = list(variant_ids)
+    warehouse_ids = list(
+        Warehouse.objects.filter(deleted_at__isnull=True).values_list("id", flat=True)
+    )
+    existing = set(
+        StockItem.objects.filter(variant_id__in=variant_ids).values_list(
+            "variant_id", "warehouse_id"
+        )
+    )
+    StockItem.objects.bulk_create(
+        [
+            StockItem(variant_id=variant_id, warehouse_id=warehouse_id)
+            for variant_id in variant_ids
+            for warehouse_id in warehouse_ids
+            if (variant_id, warehouse_id) not in existing
+        ],
+        ignore_conflicts=True,
+    )
+    return list(
+        StockItem.objects.select_for_update()
+        .select_related("variant", "warehouse")
+        .filter(variant_id__in=variant_ids)
+        .order_by("pk")
+    )
+
+
+@transaction.atomic
 def record_movement(
     *,
     variant,

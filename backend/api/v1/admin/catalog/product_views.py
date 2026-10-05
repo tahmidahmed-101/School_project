@@ -21,6 +21,7 @@ from apps.catalog.services.products import (
     stage_product_status,
     update_product,
 )
+from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import (
     BulkActionMixin,
@@ -198,7 +199,10 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
         product = get_product_by_id(product_id)
         if product is None:
             return not_found("product_not_found", "Product not found.")
-        delete_product(product=product, actor=request.user)
+        try:
+            delete_product(product=product, actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": {}, "message": "Success"})
 
 

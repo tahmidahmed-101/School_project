@@ -126,10 +126,51 @@ def update_product(*, product: Product, data: dict) -> Product:
     return product
 
 
+MAX_STOCK_BLOCKERS_SHOWN = 3
+
+
+def _ensure_no_stock(product: Product) -> None:
+    """Refuse to delete a product while any of its variants, deleted ones
+    included, still has stock on hand or reserved in any warehouse, or an
+    active reservation. Stock must be cleared through the write-off flow and
+    reservations resolved first: deleting never writes anything off or
+    releases a hold by itself. The variants' stock rows stay locked until the
+    delete commits, so no movement or reservation can land in between."""
+    from apps.inventory.services.stock import lock_variant_stock
+    from apps.orders.models import StockReservation
+
+    variant_ids = list(product.variants.values_list("id", flat=True))
+    if not variant_ids:
+        return
+    blockers = [
+        f"{item.variant.sku} in {item.warehouse.name}: {item.quantity_on_hand} on hand, "
+        f"{item.quantity_reserved} reserved"
+        for item in lock_variant_stock(variant_ids)
+        if item.quantity_on_hand or item.quantity_reserved
+    ]
+    active_reservations = StockReservation.objects.filter(
+        Q(variant_id__in=variant_ids) | Q(order_line__variant_id__in=variant_ids),
+        status=StockReservation.Status.ACTIVE,
+    ).count()
+    if active_reservations:
+        blockers.append(f"{active_reservations} active order reservation(s)")
+    if not blockers:
+        return
+    shown = "; ".join(blockers[:MAX_STOCK_BLOCKERS_SHOWN])
+    if len(blockers) > MAX_STOCK_BLOCKERS_SHOWN:
+        shown += f"; and {len(blockers) - MAX_STOCK_BLOCKERS_SHOWN} more"
+    raise BusinessRuleViolationError(
+        f"{product.name} still has stock ({shown}). Write the stock off under Inventory and "
+        "resolve the orders holding it before deleting the product.",
+        code="product_stock_in_use",
+    )
+
+
 @transaction.atomic
 def delete_product(*, product: Product, actor=None) -> Product:
     from apps.common.services.soft_delete import soft_delete_instance
 
+    _ensure_no_stock(product)
     soft_delete_instance(product, actor=actor)
     product.variants.filter(deleted_at__isnull=True).update(
         deleted_at=timezone.now(), is_active=False
