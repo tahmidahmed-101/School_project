@@ -1,5 +1,6 @@
 // Mirrors kull-mart:
-//  - api/v1/admin/orders/serializers.py → ShipmentSerializer / CreateShipmentSerializer
+//  - api/v1/admin/orders/serializers.py → ShipmentSerializer / ShipmentDetailSerializer /
+//    ShipmentReceiveBackSerializer / CreateShipmentSerializer
 //  - api/v1/admin/logistics/serializers.py → Carrier*, ShippingZone*, ShippingRate*
 //  - apps/orders/models/shipment.py (Shipment.Status), apps/logistics/models/carrier.py (Carrier.Provider)
 
@@ -25,6 +26,33 @@ export interface Shipment {
   courier_status: string
   shipped_at: string | null
   delivered_at: string | null
+  /** Set once a returned or cancelled consignment is booked as physically back. */
+  received_back_at: string | null
+  /** Units written off as damaged at receive-back, and how many of them are not yet replaced. */
+  damaged_quantity: number
+  unresolved_damaged_quantity: number
+  /** Only on the detail endpoint and the responses of shipment actions. */
+  lines?: ShipmentLine[]
+}
+
+/** ShipmentLineSerializer */
+export interface ShipmentLine {
+  id: string
+  order_line_id: string
+  sku: string
+  product_name: string
+  quantity: number
+  damaged_quantity: number
+  replaced_quantity: number
+  unresolved_damaged_quantity: number
+}
+
+/** services/shipments.py RECEIVABLE_BACK_STATUSES — only these consignments can be received back. */
+export const RECEIVABLE_BACK_STATUSES: ShipmentStatus[] = ["returned", "cancelled"]
+
+/** POST /admin/orders/shipments/{id}/receive-back/ — each line's two quantities must add up to what it carried. */
+export interface ReceiveBackPayload {
+  lines: { shipment_line_id: string; sellable_quantity: number; damaged_quantity: number }[]
 }
 
 export const SHIPMENT_STATUS_OPTIONS: { label: string; value: ShipmentStatus }[] = [

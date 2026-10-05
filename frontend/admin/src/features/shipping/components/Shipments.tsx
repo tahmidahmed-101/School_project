@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, MoneyCell } from "@/components/common/cells"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
+import { ReturnOutcome } from "./ReturnOutcome"
 import { ShipmentActions } from "./ShipmentActions"
 
 const Shipments = () => {
@@ -60,6 +61,7 @@ const Shipments = () => {
       cell: ({ row }) => (
         <div className="flex flex-col items-start gap-1">
           <StatusBadge status={row.original.status} />
+          <ReturnOutcome shipment={row.original} />
           {row.original.courier_status && (
             <span className="text-xs text-muted-foreground">{row.original.courier_status}</span>
           )}

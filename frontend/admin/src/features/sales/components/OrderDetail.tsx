@@ -18,6 +18,7 @@ import {
   type OrderStatus,
 } from "@/features/sales/types"
 import { paymentMethodLabel } from "@/features/payments/types"
+import { ReturnOutcome } from "@/features/shipping/components/ReturnOutcome"
 import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -580,7 +581,10 @@ const OrderDetail = () => {
                       Charge {formatCurrency(s.shipping_charge)} · COD {formatCurrency(s.cod_amount)}
                     </p>
                   </div>
-                  <StatusBadge status={s.status} />
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge status={s.status} />
+                    <ReturnOutcome shipment={s} />
+                  </div>
                 </div>
                 <ShipmentActions shipment={s} onChanged={refresh} />
               </div>
