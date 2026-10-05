@@ -187,34 +187,41 @@ export function NotificationBell() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
+      <DropdownMenuContent
+        align="end"
+        collisionPadding={16}
+        className="w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl"
+      >
         <DropdownMenuLabel className="border-b border-gray-200 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
           Notifications
         </DropdownMenuLabel>
 
-        {notices === null ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading…</p>
-        ) : notices.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            You're all caught up. Nothing is waiting for you.
-          </p>
-        ) : (
-          notices.map(({ source, count }) => (
-            <DropdownMenuItem
-              key={source.key}
-              onClick={() => navigate(source.to)}
-              className="flex cursor-pointer items-start gap-3 px-3 py-3"
-            >
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <source.icon className="size-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block font-medium">{count === 1 ? source.one : source.many(count)}</span>
-                <span className="block text-xs text-muted-foreground">{source.hint}</span>
-              </span>
-            </DropdownMenuItem>
-          ))
-        )}
+        {/* Fixed height so the panel does not jump as counts load or change; shorter only when the screen is. */}
+        <div className="h-80 max-h-[calc(var(--radix-dropdown-menu-content-available-height)-5rem)] overflow-y-auto">
+          {notices === null ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : notices.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              You're all caught up. Nothing is waiting for you.
+            </p>
+          ) : (
+            notices.map(({ source, count }) => (
+              <DropdownMenuItem
+                key={source.key}
+                onClick={() => navigate(source.to)}
+                className="flex cursor-pointer items-start gap-3 px-3 py-3"
+              >
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <source.icon className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium">{count === 1 ? source.one : source.many(count)}</span>
+                  <span className="block text-xs text-muted-foreground">{source.hint}</span>
+                </span>
+              </DropdownMenuItem>
+            ))
+          )}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   )
