@@ -109,4 +109,16 @@ describe("fetchAllPages", () => {
     expect(fetchMock.mock.calls[0]![0]).toContain("page=1&page_size=100");
     expect(fetchMock.mock.calls[1]![0]).toContain("page=2&page_size=100");
   });
+
+  it("requests the pages after the first together, sized by what the first page returned", async () => {
+    const page = (results: number[], next: string | null) =>
+      json({ data: { results, count: 5, next, previous: null }, message: "" });
+    fetchMock.mockImplementation(async (url: string) => {
+      const n = Number(new URL(url, "http://x").searchParams.get("page"));
+      return page(n === 1 ? [1, 2] : n === 2 ? [3, 4] : [5], n < 3 ? "more" : null);
+    });
+    const { fetchAllPages } = await client();
+    await expect(fetchAllPages<number>("/catalog/products/")).resolves.toEqual([1, 2, 3, 4, 5]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });

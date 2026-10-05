@@ -5,7 +5,7 @@ import type { ApiPage, ApiPriceReportInput, ApiQuestion, ApiReviewPage } from "@
  * Reads behind the product page accordions. Called from the browser when an accordion opens, uncached, so a review
  * or an answer published in the dashboard shows up without waiting for the page to be regenerated.
  */
-export const EXTRAS_PAGE_SIZE = 5;
+const EXTRAS_PAGE_SIZE = 5;
 
 /** GET /catalog/products/{slug}/reviews/ — newest first; every review is a verified purchase. */
 export const fetchProductReviews = (slug: string, page: number) =>

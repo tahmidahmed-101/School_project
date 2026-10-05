@@ -6,7 +6,7 @@ import { useAuth } from "@/modules/auth";
 import { Button } from "@/design-system/ui/Button";
 import { FormAlert, FormField, inputClass } from "@/design-system/ui/FormField";
 import { priceReportPath, toPriceReportInput } from "../../data/product-extras";
-import { LoginPrompt, SentNote, customerActionError } from "./customerAction";
+import { LoginPrompt, SentNote, customerActionError, useCustomerSubmit } from "./customerAction";
 
 interface PriceReportFormProps {
   slug: string;
@@ -23,9 +23,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
   const { status, authRequest } = useAuth();
   const [expectedPrice, setExpectedPrice] = useState("");
   const [comment, setComment] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
+  const { error, setError, submitting, sent, clearSent, submit } = useCustomerSubmit();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -34,17 +32,13 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
       setError(ui(result.error === "required" ? "priceReportRequired" : "priceReportInvalidPrice"));
       return;
     }
-    setError("");
-    setSubmitting(true);
-    try {
-      await authRequest(priceReportPath(productId), { method: "POST", body: result.input });
+    const ok = await submit(
+      () => authRequest(priceReportPath(productId), { method: "POST", body: result.input }),
+      (err) => customerActionError(err, ui, ui("priceReportDuplicate")),
+    );
+    if (ok) {
       setExpectedPrice("");
       setComment("");
-      setSent(true);
-    } catch (err) {
-      setError(customerActionError(err, ui, ui("priceReportDuplicate")));
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -69,7 +63,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
               value={expectedPrice}
               onChange={(e) => {
                 setExpectedPrice(e.target.value);
-                setSent(false);
+                clearSent();
               }}
               className={inputClass({ padding: "px-3 py-2", className: "text-xs sm:max-w-[200px]" })}
             />
@@ -82,7 +76,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
               value={comment}
               onChange={(e) => {
                 setComment(e.target.value);
-                setSent(false);
+                clearSent();
               }}
               placeholder={ui("priceReportCommentPlaceholder")}
               className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}

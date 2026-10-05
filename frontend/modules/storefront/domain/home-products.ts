@@ -2,7 +2,7 @@ import type { Product } from "@/lib/types";
 
 export const TRENDING_SIZE = 10;
 export const BEST_SELLER_SIZE = 10;
-export const CATEGORY_SHELF_SIZE = 10;
+const CATEGORY_SHELF_SIZE = 10;
 
 /** Desktop rows hold 5 cards, so a shelf shows 10 or 5 when it can; shorter lists show everything. */
 export function shelfSize(available: number, cap: number): number {

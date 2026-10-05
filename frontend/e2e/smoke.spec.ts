@@ -54,12 +54,13 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   });
 
-  test("login explains that accounts are not available yet", async ({ page }) => {
+  test("login reports a failed sign-in on the form", async ({ page }) => {
     await page.goto("/login");
     const form = page.locator("main form");
     await form.locator('input[type="password"]').fill("secret");
     await form.locator("input").first().fill("someone@example.com");
     await form.getByRole("button", { name: "Log in" }).click();
-    await expect(form).toContainText(/coming soon/i);
+    // Wrong credentials with the backend running, a connection error without it: either way the form says so.
+    await expect(form.getByRole("alert")).toBeVisible();
   });
 });

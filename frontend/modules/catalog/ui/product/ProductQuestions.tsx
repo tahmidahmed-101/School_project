@@ -7,7 +7,7 @@ import { useAuth } from "@/modules/auth";
 import { Button } from "@/design-system/ui/Button";
 import { FormAlert, inputClass } from "@/design-system/ui/FormField";
 import { fetchProductQuestions, questionPath } from "../../data/product-extras";
-import { LoginPrompt, SentNote, customerActionError } from "./customerAction";
+import { LoginPrompt, SentNote, customerActionError, useCustomerSubmit } from "./customerAction";
 import { ListStatus, useShortDate } from "./ListStatus";
 import { usePagedList } from "./usePagedList";
 
@@ -17,9 +17,7 @@ function AskForm({ productId }: { productId: string }) {
   const { ui } = useLang();
   const { authRequest } = useAuth();
   const [question, setQuestion] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
+  const { error, setError, submitting, sent, clearSent, submit } = useCustomerSubmit();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,17 +26,11 @@ function AskForm({ productId }: { productId: string }) {
       setError(ui("questionsRequired"));
       return;
     }
-    setError("");
-    setSubmitting(true);
-    try {
-      await authRequest(questionPath(productId), { method: "POST", body: { question: text } });
-      setQuestion("");
-      setSent(true);
-    } catch (err) {
-      setError(customerActionError(err, ui, ui("questionsDuplicate")));
-    } finally {
-      setSubmitting(false);
-    }
+    const ok = await submit(
+      () => authRequest(questionPath(productId), { method: "POST", body: { question: text } }),
+      (err) => customerActionError(err, ui, ui("questionsDuplicate")),
+    );
+    if (ok) setQuestion("");
   };
 
   return (
@@ -55,7 +47,7 @@ function AskForm({ productId }: { productId: string }) {
         value={question}
         onChange={(e) => {
           setQuestion(e.target.value);
-          setSent(false);
+          clearSent();
         }}
         placeholder={ui("questionsPlaceholder")}
         className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}

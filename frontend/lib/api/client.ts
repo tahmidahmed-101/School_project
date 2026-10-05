@@ -179,14 +179,13 @@ export async function fetchAllPages<T>(
   path: string,
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<T[]> {
-  const all: T[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const data = await apiRequest<ApiPage<T>>(path, {
-      ...options,
-      query: { ...options.query, page, page_size: MAX_PAGE_SIZE },
-    });
-    all.push(...data.results);
-    if (!data.next) break;
-  }
-  return all;
+  const pageOf = (page: number) =>
+    apiRequest<ApiPage<T>>(path, { ...options, query: { ...options.query, page, page_size: MAX_PAGE_SIZE } });
+
+  const first = await pageOf(1);
+  if (!first.next || first.results.length === 0) return first.results;
+  // The first page says how many rows there are, so the rest are requested together rather than one after another.
+  const pageCount = Math.min(MAX_PAGES, Math.ceil(first.count / first.results.length));
+  const rest = await Promise.all(Array.from({ length: pageCount - 1 }, (_, i) => pageOf(i + 2)));
+  return [first, ...rest].flatMap((page) => page.results);
 }

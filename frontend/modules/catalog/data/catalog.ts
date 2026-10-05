@@ -41,14 +41,15 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
  */
 export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
   try {
-    const [product, categories] = await Promise.all([getProduct(slug), listCategories()]);
+    const [product, categories, reviews] = await Promise.all([
+      getProduct(slug),
+      listCategories(),
+      // A review summary is optional decoration: failing to load it must not break the page. It is asked for
+      // alongside the product rather than after it, so the page waits for one round trip instead of two.
+      getProductReviews(slug, { page_size: 1 }).catch(() => null),
+    ]);
     const base = toProduct(product, categories);
-    try {
-      // A review summary is optional decoration: failing to load it must not break the page.
-      return withReviewSummary(base, await getProductReviews(slug, { page_size: 1 }));
-    } catch {
-      return base;
-    }
+    return reviews ? withReviewSummary(base, reviews) : base;
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;

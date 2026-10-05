@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
@@ -20,6 +21,34 @@ export function customerActionError(error: unknown, ui: (key: UiKey) => string, 
   if (error.status === 403) return ui("customerOnly");
   if (error.status >= 500 || error.status === 401) return ui("errGeneric");
   return Object.values(error.fields)[0] ?? error.message ?? ui("errGeneric");
+}
+
+/**
+ * Submit state shared by the question, price-report and review forms: one request at a time, an error line, and
+ * a "sent" note that the form clears as soon as the customer edits again.
+ */
+export function useCustomerSubmit() {
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  /** Runs `send`; resolves true when it went through, otherwise shows `describeError`'s message. */
+  const submit = async (send: () => Promise<unknown>, describeError: (error: unknown) => string) => {
+    setError("");
+    setSubmitting(true);
+    try {
+      await send();
+      setSent(true);
+      return true;
+    } catch (err) {
+      setError(describeError(err));
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return { error, setError, submitting, sent, clearSent: () => setSent(false), submit };
 }
 
 /** Shown to guests in place of a form: logs in and comes back to this product. */

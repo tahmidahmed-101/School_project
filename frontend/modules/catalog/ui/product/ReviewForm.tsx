@@ -8,7 +8,7 @@ import { useAuth } from "@/modules/auth";
 import { Button } from "@/design-system/ui/Button";
 import { FormAlert, inputClass } from "@/design-system/ui/FormField";
 import { reviewPath } from "../../data/product-extras";
-import { SentNote, customerActionError } from "./customerAction";
+import { SentNote, customerActionError, useCustomerSubmit } from "./customerAction";
 
 const RATINGS = [1, 2, 3, 4, 5];
 
@@ -21,9 +21,7 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
   const { authRequest } = useAuth();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
+  const { error, setError, submitting, sent, clearSent, submit } = useCustomerSubmit();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -31,22 +29,17 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
       setError(ui("reviewsRatingRequired"));
       return;
     }
-    setError("");
-    setSubmitting(true);
-    try {
-      await authRequest(reviewPath(productId), { method: "POST", body: { rating, comment: comment.trim() } });
-      setRating(0);
-      setComment("");
-      setSent(true);
-      onPosted();
-    } catch (err) {
-      setError(
+    const ok = await submit(
+      () => authRequest(reviewPath(productId), { method: "POST", body: { rating, comment: comment.trim() } }),
+      (err) =>
         err instanceof ApiError && err.code === "purchase_required"
           ? ui("reviewsPurchaseRequired")
           : customerActionError(err, ui, ui("reviewsDuplicate")),
-      );
-    } finally {
-      setSubmitting(false);
+    );
+    if (ok) {
+      setRating(0);
+      setComment("");
+      onPosted();
     }
   };
 
@@ -66,7 +59,7 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
             aria-label={`${n(value)} ${ui("reviewsStars")}`}
             onClick={() => {
               setRating(value);
-              setSent(false);
+              clearSent();
             }}
             className="cursor-pointer rounded p-0.5 transition-transform hover:scale-110"
           >
@@ -87,7 +80,7 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
         value={comment}
         onChange={(e) => {
           setComment(e.target.value);
-          setSent(false);
+          clearSent();
         }}
         placeholder={ui("reviewsCommentPlaceholder")}
         className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}

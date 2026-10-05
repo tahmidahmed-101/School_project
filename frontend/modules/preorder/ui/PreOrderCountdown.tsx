@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 
@@ -71,6 +71,14 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
     );
   }
 
+  // The seconds box is tinted so the ticking one stands out.
+  const units = [
+    { label: "countdownDays", value: timeLeft.days, accent: false },
+    { label: "countdownHours", value: timeLeft.hours, accent: false },
+    { label: "countdownMins", value: timeLeft.minutes, accent: false },
+    { label: "countdownSecs", value: timeLeft.seconds, accent: true },
+  ] as const;
+
   return (
     <div
       className={`rounded-xl border border-gold-200/80 bg-gradient-to-r from-gold-50/90 via-gold-100/50 to-gold-50/90 p-3 sm:p-3.5 ${className}`}
@@ -81,41 +89,19 @@ export function PreOrderCountdown({ endDate, className = "", compact = false }: 
       </div>
 
       <div className="flex items-center gap-2 text-center">
-        {/* Days */}
-        <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
-          <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">{n(pad(timeLeft.days))}</span>
-          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownDays")}</span>
-        </div>
-
-        <span className="font-bold text-gold-400">:</span>
-
-        {/* Hours */}
-        <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
-          <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">
-            {n(pad(timeLeft.hours))}
-          </span>
-          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownHours")}</span>
-        </div>
-
-        <span className="font-bold text-gold-400">:</span>
-
-        {/* Minutes */}
-        <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
-          <span className="text-base font-extrabold tabular-nums text-ink-950 sm:text-lg">
-            {n(pad(timeLeft.minutes))}
-          </span>
-          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownMins")}</span>
-        </div>
-
-        <span className="font-bold text-gold-400">:</span>
-
-        {/* Seconds */}
-        <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
-          <span className="text-base font-extrabold tabular-nums text-gold-800 sm:text-lg">
-            {n(pad(timeLeft.seconds))}
-          </span>
-          <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui("countdownSecs")}</span>
-        </div>
+        {units.map((unit, index) => (
+          <Fragment key={unit.label}>
+            {index > 0 && <span className="font-bold text-gold-400">:</span>}
+            <div className="flex min-w-[50px] flex-1 flex-col items-center rounded-lg border border-gold-200/70 bg-white/90 px-2 py-1.5 shadow-2xs">
+              <span
+                className={`text-base font-extrabold tabular-nums sm:text-lg ${unit.accent ? "text-gold-800" : "text-ink-950"}`}
+              >
+                {n(pad(unit.value))}
+              </span>
+              <span className="text-2xs font-bold uppercase tracking-wider text-fg-subtle">{ui(unit.label)}</span>
+            </div>
+          </Fragment>
+        ))}
       </div>
     </div>
   );
