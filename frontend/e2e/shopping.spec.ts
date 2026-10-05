@@ -11,6 +11,8 @@ test.describe("shopping journey", () => {
     await firstProduct.click();
 
     await expect(page).toHaveURL(/\/product\//);
+    // The URL changes while the loading skeleton is still up; the structured data arrives with the product itself.
+    await expect(page.getByRole("button", { name: /add to cart/i }).first()).toBeVisible();
     const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
     const types = blocks.map((b) => (JSON.parse(b) as { "@type": string })["@type"]);
     expect(types).toContain("Product");

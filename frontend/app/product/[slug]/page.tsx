@@ -24,8 +24,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  // Raised here as well as in the page: metadata is resolved before streaming starts, so an unknown slug gets a
-  // real 404 status instead of a 200 "soft 404".
+  // Raised here as well as in the page. With loading.tsx the response starts streaming the skeleton before this
+  // resolves, so an unknown slug answers 200 with the not-found page and a noindex tag rather than a 404 status.
   if (!product) notFound();
 
   return pageMetadata({
