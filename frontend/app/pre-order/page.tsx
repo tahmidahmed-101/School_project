@@ -8,8 +8,7 @@ import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Pre-order Collection",
-  description:
-    "Reserve upcoming Kull Mart products — earbuds, power banks and more — before regular stock arrives, with delivery all across Bangladesh.",
+  description: "Reserve upcoming Kull Mart products before regular stock arrives, with delivery all across Bangladesh.",
   path: "/pre-order",
 });
 

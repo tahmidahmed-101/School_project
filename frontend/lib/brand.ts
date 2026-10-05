@@ -40,15 +40,22 @@ export type BrandInfo = typeof BRAND_INFO;
 
 const digitsOnly = (value: string) => value.replace(/\D/g, "");
 
+/** Values a fresh backend ships with before anyone fills in the business profile; never shown to shoppers. */
+const PLACEHOLDER_PHONES = new Set(["01700000000", "8801700000000"]);
+const isPlaceholderPhone = (value: string) => PLACEHOLDER_PHONES.has(digitsOnly(value));
+const isPlaceholderEmail = (value: string) => /@example\.(com|org|net)$/i.test(value);
+
 /**
  * BRAND_INFO with the storefront's live contact details from GET /business-profile/ laid over it.
  * The brand identity (name, logo, taglines, copy) stays static. Contact fields are replaced only when the
  * API actually has a value, so an empty field or an unreachable backend falls back to the static one.
+ * A placeholder left over from setup (admin@example.com, 01700000000) counts as empty.
  */
 export function mergeBrand(profile: ApiBusinessProfile | null | undefined): BrandInfo {
   if (!profile) return BRAND_INFO;
-  const phone = profile.phone.trim();
-  const whatsapp = digitsOnly(profile.whatsapp);
+  const phone = isPlaceholderPhone(profile.phone) ? "" : profile.phone.trim();
+  const whatsapp = isPlaceholderPhone(profile.whatsapp) ? "" : digitsOnly(profile.whatsapp);
+  const email = isPlaceholderEmail(profile.email.trim()) ? "" : profile.email.trim();
   const address = profile.address.trim();
   const facebook = profile.social?.facebook?.trim();
   return {
@@ -59,7 +66,7 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
       phoneTel: phone.replace(/[^\d+]/g, ""),
     }),
     ...(whatsapp && { whatsapp }),
-    ...(profile.email.trim() && { email: profile.email.trim() }),
+    ...(email && { email }),
     ...(address && { address: { en: address, bn: address } }),
     ...(facebook && { facebook }),
   };

@@ -93,7 +93,7 @@ export function pageMetadata({ title, description, path, canonical, image, keywo
 type JsonLdNode = Record<string, unknown>;
 
 /** Absolute URL for a catalogue asset; remote images are already absolute. */
-function assetUrl(path: string): string {
+export function assetUrl(path: string): string {
   const src = photo(path);
   return src.startsWith("http") ? src : absoluteUrl(src);
 }

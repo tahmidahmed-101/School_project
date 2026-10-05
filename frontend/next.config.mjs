@@ -8,6 +8,11 @@ const API_ORIGIN = new URL(API_URL).origin;
 // refresh cookie is scoped to Path=/api/v1/customer/auth/ and the browser only sends it to that same path.
 const CUSTOMER_API_URL = `${API_ORIGIN}/api/v1/customer`;
 
+// The one public address of the site (cf:deploy sets it). Its "www." twin is redirected to it below, so search
+// engines and shared links only ever see one host.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+const SITE_HOST = SITE_URL ? new URL(SITE_URL).hostname : "";
+
 // Next injects inline bootstrap scripts, so script-src keeps 'unsafe-inline'; dev also needs eval and the HMR socket.
 // The analytics/ad-pixel origins are always allowed (harmless if unused) so the env-gated scripts in layout.tsx
 // never get silently blocked once someone sets the tracking IDs.
@@ -64,6 +69,17 @@ const nextConfig = {
       { source: "/api/public/:path*", destination: `${API_URL}/:path*/` },
       { source: "/api/v1/customer/:path*", destination: `${CUSTOMER_API_URL}/:path*/` },
       { source: "/media/:path*", destination: `${API_ORIGIN}/media/:path*` },
+    ];
+  },
+  async redirects() {
+    if (!SITE_HOST || SITE_HOST.startsWith("www.") || SITE_HOST === "localhost") return [];
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: `www.${SITE_HOST}` }],
+        destination: `${SITE_URL}/:path*`,
+        permanent: true,
+      },
     ];
   },
   async headers() {

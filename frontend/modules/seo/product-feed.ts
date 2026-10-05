@@ -1,6 +1,5 @@
 import { isPreOrderSoldOut } from "@/lib/product";
-import { photo } from "@/lib/photo";
-import { CURRENCY_CODE, SITE_DESCRIPTION, SITE_NAME } from "./metadata";
+import { CURRENCY_CODE, SITE_DESCRIPTION, SITE_NAME, assetUrl } from "./metadata";
 import { absoluteUrl } from "@/lib/site-url";
 import type { Product } from "@/lib/types";
 
@@ -25,7 +24,7 @@ function availability(product: Product): string {
 
 function item(product: Product): string {
   const money = (amount: number) => `${amount.toFixed(2)} ${CURRENCY_CODE}`;
-  const [image, ...extraImages] = product.gallery.map((file) => absoluteUrl(photo(file)));
+  const [image, ...extraImages] = product.gallery.map(assetUrl);
   const onSale = product.compareAtPrice != null && product.compareAtPrice > product.price;
 
   const lines = [
