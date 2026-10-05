@@ -211,7 +211,7 @@ const CustomerDetail = () => {
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-sm dark:border-solid">
           <CardHeader>
             <CardTitle level={2} className="flex items-center gap-2 text-lg">
               <User className="h-5 w-5 text-primary" /> Account
@@ -220,8 +220,8 @@ const CustomerDetail = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
               <UserAvatar user={customer} className="h-12 w-12 text-lg" />
-              <div>
-                <p className="text-lg font-semibold">{name}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <p className="min-w-0 break-words text-lg font-semibold">{name}</p>
                 <StatusBadge status={customer.is_active ? "active" : "inactive"} />
               </div>
             </div>
@@ -252,7 +252,7 @@ const CustomerDetail = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-sm dark:border-solid">
           <CardHeader>
             <CardTitle level={2} className="flex items-center gap-2 text-lg">
               <MapPin className="h-5 w-5 text-primary" /> Addresses
@@ -309,7 +309,7 @@ const CustomerDetail = () => {
         </Card>
       </div>
 
-      <Card className="overflow-hidden border-none shadow-sm">
+      <Card className="overflow-hidden border-none shadow-sm dark:border-solid">
         <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
           <CardTitle level={2} className="flex items-center gap-2 text-lg">
             <ShoppingBag className="h-5 w-5 text-primary" /> Recent Orders
