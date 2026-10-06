@@ -1,5 +1,6 @@
 import { toast } from "sonner"
 import { useEffect, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, SlidersHorizontal, Truck, Undo2 } from "lucide-react"
 
@@ -88,10 +89,13 @@ const StockOverview = () => {
     }
   }, [statusKey])
 
+  // ?search= arrives from a refused product delete, pointing at the stock to write off.
+  const [searchParams] = useSearchParams()
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: stockState,
     pageSize: PAGE_SIZE,
+    initialSearch: searchParams.get("search") ?? "",
     params: {
       warehouse_id: warehouse?.value,
       ordering: ordering?.value,

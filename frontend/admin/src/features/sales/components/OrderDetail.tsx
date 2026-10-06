@@ -20,6 +20,7 @@ import {
 import { paymentMethodLabel } from "@/features/payments/types"
 import { ReturnOutcome } from "@/features/shipping/components/ReturnOutcome"
 import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
+import { RECEIVABLE_BACK_STATUSES } from "@/features/shipping/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -586,6 +587,24 @@ const OrderDetail = () => {
                     <ReturnOutcome shipment={s} />
                   </div>
                 </div>
+                {s.unresolved_damaged_quantity > 0 && (
+                  <p role="alert" className="text-xs font-medium text-destructive">
+                    {s.unresolved_damaged_quantity} damaged unit(s) written off and still owed to the customer —{" "}
+                    <Link to={`/shipment_detail/${s.id}`} className="underline">
+                      replace them
+                    </Link>
+                    .
+                  </p>
+                )}
+                {RECEIVABLE_BACK_STATUSES.includes(s.status) && !s.received_back_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Not yet received back.{" "}
+                    <Link to={`/shipment_detail/${s.id}`} className="text-primary hover:underline">
+                      Receive it back
+                    </Link>{" "}
+                    once the parcel arrives.
+                  </p>
+                )}
                 <ShipmentActions shipment={s} onChanged={refresh} />
               </div>
             ))}

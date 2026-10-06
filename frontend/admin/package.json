@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:unit": "node --test \"tests/unit/**/*.test.ts\"",
     "preview": "vite preview",
     "cf:deploy": "VITE_API_BASE_URL=https://api.kullmart.com/api/v1 npm run build && wrangler deploy"
   },

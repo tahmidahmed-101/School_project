@@ -28,6 +28,7 @@ import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
 import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
+import { isBlockedByStock, stockLevelsPath } from "../deleteGuard"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -109,6 +110,14 @@ const Products = () => {
       await dispatch(deleteData(product.id)).unwrap()
       toast.success(`${product.name} deleted`)
     } catch (err) {
+      if (isBlockedByStock(err)) {
+        // Stock has to be cleared through the existing write-off flow first.
+        toast.error(getApiErrorMessage(err, "This product still has stock"), {
+          duration: 15000,
+          action: { label: "Open stock levels", onClick: () => navigate(stockLevelsPath(product.name)) },
+        })
+        return
+      }
       toast.error(getApiErrorMessage(err, "Failed to delete product"))
     }
   }
