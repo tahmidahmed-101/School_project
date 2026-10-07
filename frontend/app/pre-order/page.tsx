@@ -22,7 +22,7 @@ export default async function KullMartPreOrderPage() {
           { name: "Pre-order Collection", path: "/pre-order" },
         ])}
       />
-      <ProductsProvider products={products}>
+      <ProductsProvider products={products.filter((product) => product.isPreOrder)}>
         <PreOrderSections vouchers={vouchers} />
       </ProductsProvider>
     </>

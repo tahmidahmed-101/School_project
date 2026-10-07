@@ -57,8 +57,9 @@ down (design-system or lib) rather than adding the cycle.
 - **Env vars go through `lib/env.ts`** (`publicEnv`, validated, `NEXT_PUBLIC_*` only) or `lib/env.server.ts`
   (`serverEnv`, secrets). Never read `process.env` elsewhere, never put a secret in a `NEXT_PUBLIC_` variable.
 - **Caching is centralised in `lib/cache.ts`** (`CACHE_TAGS`, `CACHE_LIFE`). Route-segment `revalidate` exports must be
-  literals, so they carry a comment naming their `CACHE_LIFE` entry. The backend can invalidate with
-  `POST /api/revalidate` (`Authorization: Bearer $REVALIDATE_SECRET`, body `{"tags":["catalog"]}`).
+  literals, so they carry a comment naming their `CACHE_LIFE` entry. Pages are dynamic; on the Worker,
+  `lib/api/edge-cache.ts` keeps each cacheable API answer for its `CACHE_LIFE`. `POST /api/revalidate` cannot purge
+  that, so a backend change shows on the storefront when the lifetime ends (60 s for the catalogue).
 - **Colours:** new UI uses semantic utilities (`bg-surface`, `text-fg-muted`, `bg-action`, `bg-accent`, `border-line`)
   defined in `app/theme.css` + `app/globals.css`, not raw hex and not new primitive steps. Existing components still use
   the primitives (`brand-*`, `gold-*`, `ink-*`) and move over as they are touched.
