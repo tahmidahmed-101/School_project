@@ -1,9 +1,12 @@
 /**
  * Every cache tag and lifetime the storefront uses, in one place.
  *
- * Route-segment exports (`export const revalidate = 60` in layout.tsx, sitemap.ts and the route handlers) must be
- * literal numbers Next can read statically, so they cannot import from here; each one carries a comment pointing
- * at the matching entry below. Keep them in step when changing a value.
+ * Route-segment exports (`export const revalidate = 3600` in sitemap.ts and the route handlers) must be literal
+ * numbers Next can read statically, so they cannot import from here; each one carries a comment pointing at the
+ * matching entry below. Keep them in step when changing a value.
+ *
+ * Pages are dynamic (layout.tsx). The lifetimes below are how long lib/api/edge-cache.ts keeps an API answer on the
+ * Worker; POST /api/revalidate cannot purge that cache, so a change shows once the lifetime runs out.
  */
 
 /** Tags passed to fetch(..., { next: { tags } }); invalidated by POST /api/revalidate. */
@@ -16,7 +19,7 @@ export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
 
 /** Seconds. */
 export const CACHE_LIFE = {
-  /** Categories, products, reviews. Also layout.tsx (`revalidate = 60`). */
+  /** Categories, products, reviews. */
   catalog: 60,
   /** Business profile (contact details). */
   business: 300,
