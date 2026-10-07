@@ -122,3 +122,36 @@ describe("fetchAllPages", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("apiRequest on a Worker", () => {
+  function stubEdgeCache() {
+    const store = new Map<string, string>();
+    vi.stubGlobal("caches", {
+      default: {
+        match: async (key: string) => (store.has(key) ? new Response(store.get(key)) : undefined),
+        put: async (key: string, value: Response) => void store.set(key, await value.text()),
+      },
+    });
+    return store;
+  }
+
+  it("answers a repeated cacheable GET from the edge cache", async () => {
+    stubEdgeCache();
+    fetchMock.mockImplementation(async () => json({ data: [{ id: 1 }], message: "" }));
+    const { apiRequest } = await client();
+    await expect(apiRequest("/catalog/categories/", { revalidate: 60 })).resolves.toEqual([{ id: 1 }]);
+    await expect(apiRequest("/catalog/categories/", { revalidate: 60 })).resolves.toEqual([{ id: 1 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not store failures, uncached requests or requests with caller headers", async () => {
+    const store = stubEdgeCache();
+    const { apiRequest } = await client();
+    fetchMock.mockImplementation(async () => json({ error: { code: "boom", message: "x" } }, 500));
+    await expect(apiRequest("/catalog/categories/", { revalidate: 60 })).rejects.toThrow();
+    fetchMock.mockImplementation(async () => json({ data: 1, message: "" }));
+    await apiRequest("/cart/");
+    await apiRequest("/cart/", { revalidate: 60, headers: { "X-Cart-Token": "t" } });
+    expect(store.size).toBe(0);
+  });
+});

@@ -1,4 +1,5 @@
 import { publicEnv } from "@/lib/env";
+import { readEdgeCache, writeEdgeCache } from "@/lib/api/edge-cache";
 import type { ApiEnvelope, ApiErrorBody, ApiPage } from "@/lib/api/types";
 
 /**
@@ -114,24 +115,30 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const timeout = AbortSignal.timeout(timeoutMs);
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
   const cacheable = method === "GET" && revalidate !== undefined;
+  const url = buildUrl(path, query, scope);
+  // Answers that depend on a caller's headers (a cart token) are never shared.
+  const shared = cacheable && typeof window === "undefined" && !headers;
 
+  const stored = shared ? await readEdgeCache(url) : null;
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, query, scope), {
-      method,
-      headers: {
-        Accept: "application/json",
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        // Names this app to the account API, which keeps a separate refresh cookie per app: a storefront login
-        // never replaces or ends a dashboard session in the same browser. It only selects the cookie.
-        ...(scope === "customer" ? { "X-Auth-Client": "storefront" } : {}),
-        ...headers,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: combined,
-      // `next` is a Next.js extension of fetch (server only); the browser ignores it.
-      ...(cacheable ? { next: { revalidate, tags } } : { cache: "no-store" as const }),
-    });
+    response =
+      stored ??
+      (await fetch(url, {
+        method,
+        headers: {
+          Accept: "application/json",
+          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+          // Names this app to the account API, which keeps a separate refresh cookie per app: a storefront login
+          // never replaces or ends a dashboard session in the same browser. It only selects the cookie.
+          ...(scope === "customer" ? { "X-Auth-Client": "storefront" } : {}),
+          ...headers,
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: combined,
+        // `next` is a Next.js extension of fetch (server only); the browser ignores it.
+        ...(cacheable ? { next: { revalidate, tags } } : { cache: "no-store" as const }),
+      }));
   } catch (cause) {
     throw new ApiError({
       status: 0,
@@ -143,7 +150,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let json: unknown = null;
   try {
-    json = await response.json();
+    const text = await response.text();
+    json = JSON.parse(text);
+    if (shared && !stored && response.ok) await writeEdgeCache(url, text, revalidate);
   } catch {
     // Non-JSON body (proxy error page, 5xx HTML): handled below.
   }
