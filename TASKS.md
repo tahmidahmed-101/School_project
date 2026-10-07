@@ -13,8 +13,10 @@
 - [x] Deployed and verified live
 
 ## Phase B: storefront per-request cost
-- [ ] Root layout stops fetching the whole catalogue (API: category count + image)
-- [ ] Upstream API responses cached inside the Worker
+- [ ] Root layout stops fetching the whole catalogue (API: category count + image); low value now the answer is cached
+- [ ] Unknown product slug answers 200 with a skeleton instead of 404
+- [ ] Admin edits reach the storefront only when the 60 s cache expires: /api/revalidate cannot purge it
+- [x] Upstream API responses cached inside the Worker (warm pages 0.85-1.2 s -> 0.07-0.13 s)
 - [ ] Pre-order and shop pages send slim product data; single-language strings not doubled
 - [ ] Cart / wishlist context values memoised; drawer state split out
 - [ ] Payment methods fetched on the server
