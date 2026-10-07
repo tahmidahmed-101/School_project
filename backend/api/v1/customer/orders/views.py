@@ -27,11 +27,18 @@ from apps.logistics.services.rates import shipping_options, try_quote_shipping
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
+    get_cart,
     get_checked_out_order,
     get_order_by_id,
     orders_for_customer,
 )
-from apps.orders.services.carts import add_line, get_or_create_cart, remove_line, update_line
+from apps.orders.services.carts import (
+    add_line,
+    get_or_create_cart,
+    remove_line,
+    set_cart_contact_phone,
+    update_line,
+)
 from apps.orders.services.checkout import checkout, order_weight
 from apps.orders.services.coupons import apply_coupon, remove_coupon
 from apps.orders.services.orders import cancel_order
@@ -42,6 +49,8 @@ from apps.risk.request_ip import client_ip
 from .serializers import (
     AddLineSerializer,
     ApplyCouponSerializer,
+    CartContactResponseSerializer,
+    CartContactSerializer,
     CheckoutSerializer,
     CreateRMASerializer,
     OrderHistorySerializer,
@@ -130,6 +139,27 @@ class CartLineDetailView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
+
+
+@extend_schema(tags=["Orders"], responses=CartContactResponseSerializer)
+class CartContactView(APIView):
+    """Save the phone typed at checkout on the customer's own open cart. The
+    profile phone is left alone."""
+
+    serializer_class = CartContactSerializer
+    permission_classes: ClassVar[list] = [IsCustomer]
+
+    def patch(self, request) -> Response:
+        cart = get_cart(request.user)
+        if cart is None:
+            return not_found("cart_not_found", "Cart not found.")
+        serializer = CartContactSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            set_cart_contact_phone(cart=cart, phone=serializer.validated_data["phone"])
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response({"data": CartContactResponseSerializer(cart).data, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])

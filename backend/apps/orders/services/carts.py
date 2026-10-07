@@ -11,6 +11,7 @@ from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number, hash_code
+from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.sales_orders import get_cart
 
@@ -73,6 +74,28 @@ def create_guest_cart() -> tuple[SalesOrder, str]:
     unique column would refuse it if they did."""
     token = secrets.token_urlsafe(32)
     return create_order(customer=None, guest_token_hash=hash_code(token)), token
+
+
+@transaction.atomic
+def set_cart_contact_phone(*, cart: SalesOrder, phone: str) -> SalesOrder:
+    """Record the phone a shopper typed at checkout on their still-open cart,
+    so staff can follow up if they leave before placing the order. It is the
+    cart's contact detail only: the owner's profile phone is never touched,
+    and a guest checkout later overwrites it with the number submitted."""
+    # Deferred import: services.orders imports this module at load time.
+    from apps.orders.services.orders import lock_order
+
+    lock_order(cart)
+    if cart.status != SalesOrder.Status.PENDING or cart.deleted_at is not None:
+        raise BusinessRuleViolationError(
+            "Contact details can only be changed while the order is pending.", code="not_pending"
+        )
+    phone = (phone or "").strip()
+    if not is_bd_mobile(phone):
+        raise BusinessRuleViolationError(BD_MOBILE_HELP, code="invalid_phone")
+    cart.contact_phone = phone
+    cart.save(update_fields=["contact_phone", "updated_at"])
+    return cart
 
 
 def get_preordered_quantity(variant) -> int:

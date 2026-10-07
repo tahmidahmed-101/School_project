@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.urls import path
 
 from .views import (
+    CartContactView,
     CartCouponView,
     CartLineDetailView,
     CartLineListCreateView,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("cart/", CartView.as_view(), name="cart"),
     path("cart/lines/", CartLineListCreateView.as_view(), name="cart-line-list"),
     path("cart/lines/<uuid:line_id>/", CartLineDetailView.as_view(), name="cart-line-detail"),
+    path("cart/contact/", CartContactView.as_view(), name="cart-contact"),
     path("cart/coupon/", CartCouponView.as_view(), name="cart-coupon"),
     path("cart/shipping-quote/", CartShippingQuoteView.as_view(), name="cart-shipping-quote"),
     path(

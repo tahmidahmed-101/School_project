@@ -18,7 +18,12 @@ from apps.accounts.tests.helpers import create_user
 from apps.catalog.factories import ProductVariantFactory
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
-from apps.orders.services.carts import add_line, create_guest_cart, get_or_create_cart
+from apps.orders.services.carts import (
+    add_line,
+    create_guest_cart,
+    get_or_create_cart,
+    set_cart_contact_phone,
+)
 from apps.orders.services.checkout import checkout
 from apps.orders.services.payments import capture_payment
 
@@ -184,6 +189,72 @@ def test_guest_carts_are_listed_and_marked_without_customer_details_or_token(api
     assert guest_cart.guest_token_hash not in response.content.decode()
 
 
+def _save_guest_phone(api_client, token, phone):
+    response = api_client.patch(
+        "/api/v1/public/cart/contact/",
+        {"phone": phone},
+        format="json",
+        HTTP_X_GUEST_CART_TOKEN=token,
+    )
+    assert response.status_code == 200, response.data
+
+
+def test_guest_phone_saved_before_checkout_is_listed_without_an_identity(api_client):
+    guest_cart, token = _guest_cart((_variant(), 1))
+    _save_guest_phone(api_client, token, "01899887766")
+    _admin(api_client)
+
+    response = api_client.get(CARTS_URL)
+    [row] = response.data["data"]["results"]
+
+    assert row["id"] == str(guest_cart.id)
+    assert row["customer_phone"] == "01899887766"
+    assert row["is_guest_cart"] is True
+    assert row["customer_id"] is None
+    assert row["customer_email"] is None
+    assert row["customer_name"] is None
+    assert token not in response.content.decode()
+    assert guest_cart.guest_token_hash not in response.content.decode()
+
+
+def test_registered_cart_shows_the_captured_phone_else_the_profile_phone(api_client):
+    captured_owner = CustomerUserFactory(phone="01711223344", first_name="Rahim", last_name="Uddin")
+    captured = _cart(captured_owner, (_variant(), 1))
+    fallback_owner = CustomerUserFactory(phone="01755667788", first_name="Karim", last_name="Mia")
+    fallback = _cart(fallback_owner, (_variant(), 1))
+    api_client.force_authenticate(user=captured_owner)
+    saved = api_client.patch(
+        "/api/v1/customer/orders/cart/contact/", {"phone": "01899887766"}, format="json"
+    )
+    assert saved.status_code == 200, saved.data
+    _admin(api_client)
+
+    rows = {row["id"]: row for row in _listed(api_client)}
+
+    assert rows[str(captured.id)]["customer_phone"] == "01899887766"
+    assert rows[str(captured.id)]["customer_name"] == "Rahim Uddin"
+    assert rows[str(captured.id)]["customer_id"] == str(captured_owner.id)
+    assert rows[str(fallback.id)]["customer_phone"] == "01755667788"
+    assert rows[str(fallback.id)]["customer_name"] == "Karim Mia"
+    captured_owner.refresh_from_db()
+    assert captured_owner.phone == "01711223344"  # the profile is never rewritten
+
+
+def test_search_finds_a_guest_cart_by_its_saved_phone(api_client):
+    needle, needle_token = _guest_cart((_variant(), 1))
+    _save_guest_phone(api_client, needle_token, "01899887766")
+    _, other_token = _guest_cart((_variant(), 1))
+    _save_guest_phone(api_client, other_token, "01711223344")
+    _guest_cart((_variant(), 1))  # no phone captured
+    _cart(CustomerUserFactory(phone="01755667788"), (_variant(), 1))
+    _admin(api_client)
+
+    assert [row["id"] for row in _listed(api_client, search="01899887766")] == [str(needle.id)]
+    assert [row["id"] for row in _listed(api_client, search="99887")] == [str(needle.id)]
+    # The existing customer identity search still works alongside it.
+    assert len(_listed(api_client, search="01755667788")) == 1
+
+
 def test_empty_and_deleted_carts_are_excluded(api_client):
     _guest_cart()  # empty guest cart
     deleted, _ = _guest_cart((_variant(), 1))
@@ -204,10 +275,16 @@ def test_query_count_does_not_grow_with_carts_or_items(api_client):
     with CaptureQueriesContext(connection) as one:
         assert len(_listed(api_client)) == 1
 
-    for _ in range(5):
-        _cart(CustomerUserFactory(), (_variant(), 1), (_variant(), 2), (_variant(), 3))
-        _guest_cart((_variant(), 1), (_variant(), 2))
+    for index in range(5):
+        registered = _cart(CustomerUserFactory(), (_variant(), 1), (_variant(), 2), (_variant(), 3))
+        guest, _ = _guest_cart((_variant(), 1), (_variant(), 2))
+        # Captured phones on both kinds, and a guest cart without one.
+        set_cart_contact_phone(cart=registered, phone=f"0171122330{index}")
+        set_cart_contact_phone(cart=guest, phone=f"0189988770{index}")
+        _guest_cart((_variant(), 1))
     with CaptureQueriesContext(connection) as many:
-        assert len(_listed(api_client)) == 11
+        rows = _listed(api_client)
+        assert len(rows) == 16
 
     assert len(many) == len(one)
+    assert sum(1 for row in rows if row["is_guest_cart"] and row["customer_phone"]) == 5

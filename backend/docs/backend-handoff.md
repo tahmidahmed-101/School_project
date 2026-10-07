@@ -203,6 +203,7 @@ matching `StaffPermission` code.
 - `GET /`, `GET /export/`, `GET/PATCH /<id>/`, `GET /<id>/invoice/`, `POST /<id>/status/`
 - `GET/PATCH /<id>/lines/<line_id>/`, `POST /<id>/cancel/`
 - `POST /<id>/shipments/`, `POST /<id>/returns/`, `POST /<id>/capture-payment/`
+- `GET /carts/` — open, non-empty carts incl. guest carts (`?search=` matches the saved contact phone and the customer's email/phone/name; see §15)
 - `GET /payments/`, `GET/PATCH /payments/<id>/`, `POST /payments/<id>/refund/`
 - `GET /reservations/`, `GET/PATCH /reservations/<id>/`, `POST /reservations/<id>/release/`
 - `GET/POST /shipments/`, `GET/PATCH /shipments/<id>/`, `POST /shipments/<id>/status/`, `POST /shipments/<id>/dispatch/`
@@ -273,6 +274,7 @@ matching `StaffPermission` code.
 
 **Orders** `orders/`
 - `GET cart/`, `GET/POST cart/lines/`, `PATCH/DELETE cart/lines/<line_id>/`
+- `PATCH cart/contact/` — save the phone typed at checkout on the open cart (see §15)
 - `POST cart/coupon/`, `POST cart/shipping-quote/`, `GET cart/shipping-options/`, `GET cart/shipping-zones/`
 - `POST cart/checkout/`, `POST cart/payment/`
 - `GET ""` (order history), `GET <id>/`, `POST <id>/cancel/`
@@ -307,6 +309,11 @@ matching `StaffPermission` code.
 
 **Checkout** `checkout/` (`AllowAny`: anonymous → guest identity, signed in → `request.user`; see §13)
 - `POST ""`, `POST coupon/`, `GET coupons/` (coupons flagged `show_on_storefront`), `POST shipping-quote/`, `GET shipping-options/`, `GET shipping-zones/`
+
+**Cart** `cart/` (guest carts; every call but the first sends `X-Guest-Cart-Token`)
+- `POST ""` (start a cart; returns the token once), `GET ""`
+- `POST lines/`, `PATCH/DELETE lines/<line_id>/`
+- `PATCH contact/` — save the phone typed at checkout on the open cart (see §15)
 
 **Tracking** `tracking/`
 - `POST orders/track/` (by order number + email/phone)
@@ -617,3 +624,59 @@ owner-approved refund policy text.
 
 The storefront's policy pages still render their own hardcoded copy and do not call these
 endpoints yet.
+
+## 15. Recent changes (2026-10-07): phone capture on open carts
+
+**Why.** `SalesOrder.contact_phone` used to be written only by a successful guest checkout, so a
+shopper who typed a phone and left was listed in admin "Customer Carts" with no number (guest
+carts have no customer at all). The phone can now be saved on the still-pending cart. No
+migration: the existing `contact_phone` column holds it.
+
+**Endpoints.** Same request and response on both; the cart is chosen by who is calling, never by
+an id in the URL or body.
+
+| Caller | Endpoint | Identifies the cart by |
+| --- | --- | --- |
+| Guest | `PATCH /api/v1/public/cart/contact/` | `X-Guest-Cart-Token` header |
+| Signed-in customer | `PATCH /api/v1/customer/orders/cart/contact/` | the access token's user |
+
+(`PUT` works too — `apps.common.middleware` rewrites it to `PATCH`.)
+
+- Request: `{"phone": "01712345678"}` — required, max 32 chars, a Bangladeshi mobile number in any
+  form checkout accepts (`01XXXXXXXXX`, `+8801XXXXXXXXX`, `8801XXXXXXXXX`).
+- `200`: `{"data": {"contact_phone": "01712345678"}, "message": "Success"}`. The value is stored
+  trimmed, otherwise as typed. Calling again replaces it. There is no way to clear it.
+- Errors, in the standard `{"error": {"code", "message", "fields"}}` envelope:
+
+| Status | `code` | When |
+| --- | --- | --- |
+| 400 | `invalid_phone` | not a Bangladeshi mobile number |
+| 400 | validation error | `phone` missing, blank or over 32 chars |
+| 400 | `guest_cart_token_required` | guest call without the header (a token in the query string does not count) |
+| 404 | `guest_cart_not_found` | unknown token, or the cart is deleted, checked out or claimed |
+| 404 | `cart_not_found` | the customer has no open cart (none yet, deleted, or already checked out) |
+| 401 / 403 | — | customer endpoint without a customer session |
+
+**Rules.** Both views call one service, `apps.orders.services.carts.set_cart_contact_phone`, which
+locks the order row, requires it to be pending and not deleted, and validates with
+`apps.common.utils.phone.is_bd_mobile`. The guest view first runs the existing `lock_guest_cart`,
+so the token and cart state are re-checked under the lock. Nothing but `contact_phone` and
+`updated_at` is written: no guest identity is created, and a registered customer's profile phone
+is never changed. Saving bumps `updated_at`, so the cart moves to the top of the admin list.
+
+**What happens at checkout.** A guest checkout (`POST /public/checkout/`) overwrites the captured
+value with the phone it submits. The signed-in cart checkout (`POST /customer/orders/cart/checkout/`)
+takes no phone, so a captured value stays on the order — where, like any `contact_phone`, it is
+preferred over the address/profile phone for the admin order view, the courier recipient phone
+and risk scoring.
+
+**Admin.** `GET /api/v1/admin/orders/carts/` keeps its fields. `customer_phone` is now the cart's
+`contact_phone` when set, else the customer's profile phone, else `null`. A guest cart therefore
+shows a phone once captured while `customer_id`, `customer_email` and `customer_name` stay `null`.
+`?search=` also matches `contact_phone`. The token and its hash are never returned. Query count is
+unchanged (the phone is a column on the row already loaded).
+
+**Frontend work still needed.** The storefront does not call these endpoints yet, so nothing is
+captured until it does. It should send the phone once the checkout field holds a valid number
+(e.g. on blur), and only for a server-side cart: guest carts kept only in the browser have no
+token and no row to save to.

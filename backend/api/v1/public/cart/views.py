@@ -19,6 +19,8 @@ from rest_framework.views import APIView
 
 from api.v1.customer.orders.serializers import (
     AddLineSerializer,
+    CartContactResponseSerializer,
+    CartContactSerializer,
     SalesOrderSerializer,
     UpdateLineSerializer,
 )
@@ -29,7 +31,13 @@ from apps.common.throttling import GuestCheckoutRateThrottle, PublicReadRateThro
 from apps.common.utils.codes import hash_code
 from apps.orders.models import SalesOrder
 from apps.orders.selectors.sales_orders import get_guest_cart, get_order_line_by_id
-from apps.orders.services.carts import add_line, create_guest_cart, remove_line, update_line
+from apps.orders.services.carts import (
+    add_line,
+    create_guest_cart,
+    remove_line,
+    set_cart_contact_phone,
+    update_line,
+)
 from apps.orders.services.orders import lock_order
 
 GUEST_CART_TOKEN_HEADER = "X-Guest-Cart-Token"  # noqa: S105 -- a header name, not a secret
@@ -116,6 +124,29 @@ class GuestCartView(GuestCartAPIMixin, APIView):
     def get(self, request) -> Response:
         cart, error = resolve_guest_cart(request)
         return error or _cart_response(cart)
+
+
+@extend_schema(
+    tags=["Public Cart"], parameters=[TOKEN_PARAMETER], responses=CartContactResponseSerializer
+)
+class GuestCartContactView(GuestCartAPIMixin, APIView):
+    """Save the phone typed at checkout on the guest's own open cart, so it
+    is kept if they leave before placing the order."""
+
+    serializer_class = CartContactSerializer
+
+    @transaction.atomic
+    def patch(self, request) -> Response:
+        cart, error = lock_guest_cart(request)
+        if error:
+            return error
+        serializer = CartContactSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            set_cart_contact_phone(cart=cart, phone=serializer.validated_data["phone"])
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response({"data": CartContactResponseSerializer(cart).data, "message": "Success"})
 
 
 @extend_schema(tags=["Public Cart"], parameters=[TOKEN_PARAMETER])

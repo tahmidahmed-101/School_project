@@ -438,7 +438,9 @@ class AdminCustomerCartListView(GenericListAPIView):
 
     permission_classes: ClassVar[list] = [OrdersViewPermission]
     serializer_class = AdminCustomerCartSerializer
+    # contact_phone: a guest cart has no customer to search by.
     search_fields = (
+        "contact_phone",
         "customer__email",
         "customer__phone",
         "customer__first_name",

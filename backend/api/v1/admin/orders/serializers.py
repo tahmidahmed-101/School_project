@@ -138,7 +138,9 @@ class AdminCartItemSerializer(serializers.Serializer):
 class AdminCustomerCartSerializer(serializers.Serializer):
     """An open cart: who, what, and when they last touched it. An anonymous
     guest cart has no customer, so its customer fields are null and
-    `is_guest_cart` is true; its access token is never exposed."""
+    `is_guest_cart` is true; its access token is never exposed.
+    `customer_phone` is the number saved on the cart at checkout, else the
+    customer's profile phone — so a guest cart has one only once captured."""
 
     id = serializers.UUIDField(read_only=True)
     is_guest_cart = serializers.SerializerMethodField()
@@ -148,7 +150,7 @@ class AdminCustomerCartSerializer(serializers.Serializer):
         source="customer.email", read_only=True, allow_null=True
     )
     customer_name = serializers.SerializerMethodField()
-    customer_phone = serializers.CharField(source="customer.phone", read_only=True, allow_null=True)
+    customer_phone = serializers.SerializerMethodField()
     items = AdminCartItemSerializer(source="lines", many=True, read_only=True)
     item_count = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -160,6 +162,12 @@ class AdminCustomerCartSerializer(serializers.Serializer):
 
     def get_customer_name(self, obj) -> str | None:
         return obj.customer.get_full_name() if obj.customer else None
+
+    def get_customer_phone(self, obj) -> str | None:
+        # Both live on rows the list already loads: the cart and its customer.
+        if obj.contact_phone.strip():
+            return obj.contact_phone.strip()
+        return obj.customer.phone if obj.customer else None
 
     def get_item_count(self, obj) -> int:
         return sum(line.quantity for line in obj.lines.all())
