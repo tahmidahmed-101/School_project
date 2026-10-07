@@ -215,7 +215,7 @@ export function TrackOrderView() {
                 <MessageSquare className="h-4 w-4" />
                 <span>{ui("orderWhatsappConfirm")}</span>
               </a>
-              <a href={`tel:${BRAND_INFO.phone}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
+              <a href={`tel:${BRAND_INFO.phoneTel}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
                 <Phone className="h-4 w-4 text-gold-500" />
                 <span>
                   {ui("orderCallStore")} ({BRAND_INFO.phone})

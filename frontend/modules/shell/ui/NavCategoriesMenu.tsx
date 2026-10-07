@@ -49,6 +49,7 @@ export function NavCategoriesMenu() {
                 <Link
                   key={category.id}
                   href={`/shop?category=${category.slug}`}
+                  prefetch={false}
                   onClick={close}
                   className={`flex cursor-pointer items-center justify-between px-5 py-2.5 text-xs font-semibold transition-colors ${
                     activeCategory === category.slug

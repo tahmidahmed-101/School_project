@@ -65,7 +65,11 @@ export function Footer() {
             <ul className="space-y-2">
               {categories.map((cat) => (
                 <li key={cat.id}>
-                  <Link href={`/shop?category=${cat.slug}`} className="transition-colors hover:text-gold-300">
+                  <Link
+                    href={`/shop?category=${cat.slug}`}
+                    prefetch={false}
+                    className="transition-colors hover:text-gold-300"
+                  >
                     {t(cat.name)}
                   </Link>
                 </li>
@@ -125,7 +129,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-gold-300" />
-                <a href={`tel:${BRAND_INFO.phone}`} className="transition-colors hover:text-gold-300">
+                <a href={`tel:${BRAND_INFO.phoneTel}`} className="transition-colors hover:text-gold-300">
                   {BRAND_INFO.phoneInternational}
                 </a>
               </li>

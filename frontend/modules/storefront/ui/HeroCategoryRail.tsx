@@ -24,6 +24,7 @@ export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
           <Link
             key={category.id}
             href={preorder ? `/shop?category=${category.slug}&type=preorder` : `/shop?category=${category.slug}`}
+            prefetch={false}
             className="group flex items-center gap-2 rounded-lg px-1.5 py-2 transition-colors hover:bg-gold-50/70"
           >
             <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-surface-muted sm:h-9 sm:w-9">

@@ -77,7 +77,9 @@ const takaFont = localFont({
 // Categories and contact details come from the LaunchCart API. Pages are static but re-generated at most every
 // minute, so admin changes show up without a rebuild (and a backend outage at build time heals itself).
 // Only categories and brand go into the shell; pages that list products load them themselves (see ProductsProvider).
-export const revalidate = 60; // CACHE_LIFE.catalog in lib/cache.ts
+// Without a page cache a timed revalidate only told browsers to keep serving old HTML (stale-while-revalidate);
+// after a deploy that HTML asked for chunks that no longer exist. Dynamic pages are sent as no-store.
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [catalog, brand] = await Promise.all([getCatalog(), getBrand()]);
