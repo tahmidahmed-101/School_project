@@ -73,13 +73,11 @@ const nextConfig = {
   },
   async redirects() {
     if (!SITE_HOST || SITE_HOST.startsWith("www.") || SITE_HOST === "localhost") return [];
+    const has = [{ type: "host", value: `www.${SITE_HOST}` }];
     return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: `www.${SITE_HOST}` }],
-        destination: `${SITE_URL}/:path*`,
-        permanent: true,
-      },
+      // The Worker leaves ":path*" unfilled when the path is empty, so the root needs its own rule.
+      { source: "/", has, destination: `${SITE_URL}/`, permanent: true },
+      { source: "/:path*", has, destination: `${SITE_URL}/:path*`, permanent: true },
     ];
   },
   async headers() {
