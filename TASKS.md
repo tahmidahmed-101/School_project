@@ -9,7 +9,8 @@
 - [x] Admin: dead print stylesheet removed
 - [x] Admin: notification bell refreshes every 5 min and pauses in hidden tabs
 - [x] Hero banner PNG 1.5 MB -> JPG; admin login logo 154 KB -> 26 KB
-- [ ] Deployed and verified live
+- [x] Pages sent as no-store: browsers were replaying old HTML after a deploy and asking for deleted chunks
+- [x] Deployed and verified live
 
 ## Phase B: storefront per-request cost
 - [ ] Root layout stops fetching the whole catalogue (API: category count + image)
