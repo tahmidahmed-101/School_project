@@ -116,6 +116,7 @@ function CategoryTrack({
             <Link
               draggable={false}
               href={`/shop?category=${cat.slug}`}
+              prefetch={false}
               className={`py-4.5 group relative flex h-full w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition-all duration-300 sm:rounded-2xl sm:px-3.5 sm:py-5 ${
                 isActive
                   ? "border-gold-500 bg-gold-50/70 shadow-sm ring-1 ring-gold-400/30"

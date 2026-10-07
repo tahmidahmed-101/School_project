@@ -224,7 +224,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 <Phone className="h-3 w-3" />
               </div>
               <a
-                href={`tel:${BRAND_INFO.phone}`}
+                href={`tel:${BRAND_INFO.phoneTel}`}
                 className="whitespace-nowrap text-xs font-bold text-white transition-colors hover:text-gold-300"
               >
                 {BRAND_INFO.phone}

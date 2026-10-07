@@ -12,7 +12,7 @@ export const HERO_CTA_TEXT: T = { en: "Shop now", bn: "কিনুন" };
 
 export const HERO_SLIDES: HeroSlide[] = [
   {
-    image: "brand/hero-banner.png",
+    image: "brand/hero-banner.jpg",
     alt: "Kull Mart hero banner: phones, earbuds, laptop, headphones and everyday accessories",
     tag: { en: "NEW ARRIVALS · TECH & LIFESTYLE", bn: "নতুন সংগ্রহ · টেক ও লাইফস্টাইল" },
     title: {

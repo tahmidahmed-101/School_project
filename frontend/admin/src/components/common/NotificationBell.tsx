@@ -119,7 +119,7 @@ interface Notice {
   count: number
 }
 
-const REFRESH_MS = 60_000
+const REFRESH_MS = 5 * 60_000
 /** What the user last saw when they opened the bell, so the dot only returns when something changed. */
 const SEEN_KEY = "notifications:seen"
 
@@ -147,11 +147,17 @@ export function NotificationBell() {
   }, [permissions])
 
   useEffect(() => {
-    const first = setTimeout(() => void load(), 0)
-    const timer = setInterval(() => void load(), REFRESH_MS)
+    // A hidden tab stops asking; it catches up the moment it is shown again.
+    const refresh = () => {
+      if (!document.hidden) void load()
+    }
+    const first = setTimeout(refresh, 0)
+    const timer = setInterval(refresh, REFRESH_MS)
+    document.addEventListener("visibilitychange", refresh)
     return () => {
       clearTimeout(first)
       clearInterval(timer)
+      document.removeEventListener("visibilitychange", refresh)
     }
   }, [load])
 

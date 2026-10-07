@@ -30,6 +30,10 @@
 
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-field-bg: var(--field-bg);
+  --color-field-border: var(--field-border);
+  --color-field-text: var(--field-text);
+  --color-field-placeholder: var(--field-placeholder);
   --color-ring: var(--ring);
 
   --color-primary: var(--primary);
@@ -247,29 +251,6 @@
   scrollbar-color: #374151 transparent;
 }
 
-@media print {
-  body * {
-    visibility: hidden;
-  }
-
-  .print-area,
-  .print-area * {
-    visibility: visible;
-  }
-
-  .print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  button,
-  textarea,
-  input {
-    display: none !important;
-  }
-}
 
 /*
  * In the light theme a DataTable is a white surface, wherever it sits (the page panel is grey). In
