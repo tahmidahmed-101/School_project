@@ -126,7 +126,7 @@ export interface Order {
   /** Money received and not refunded; uncollected cash on delivery is not in it. */
   paid_total: string
   balance_due: string
-  deposit_due: string
+  deposit_due: string | null
   /** Statuses the manual override accepts from here (services/orders.py STATUS_OVERRIDES). */
   allowed_statuses: OrderStatus[]
   coupon_code: string | null

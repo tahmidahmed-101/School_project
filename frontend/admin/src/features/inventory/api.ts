@@ -37,8 +37,7 @@ export const postAdjustment = (payload: StockAdjustmentPayload) =>
 /** All-or-nothing batch: the server rolls the whole batch back if any line fails. */
 export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[], kind: Kind) =>
   apiCall<{ results: { index: number; entry: StockLedgerEntry }[]; count: number }>(() =>
-    // TODO(ask): is `kind` read on the batch or on each line? It is sent on both until the server side is fixed.
-    api.post(`${I}/adjustments/bulk/`, { kind, adjustments: adjustments.map((line) => ({ ...line, kind })) })
+    api.post(`${I}/adjustments/bulk/`, { kind, adjustments })
   )
 export const postWriteOff = (payload: StockWriteOffPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/write-offs/`, payload))
