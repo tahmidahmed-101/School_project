@@ -10,10 +10,13 @@ import {
   fetchSingle,
   selectOrderDetail,
   updateOrderStatus,
+  updatePreorderStage,
 } from "@/features/sales/slices/orderSlice"
 import {
   NON_RETURNABLE_STATUSES,
   ORDER_STATUS_OPTIONS,
+  PREORDER_STAGE_OPTIONS,
+  preorderStageLabel,
   PRE_SHIPMENT_STATUSES,
   type OrderStatus,
 } from "@/features/sales/types"
@@ -184,6 +187,7 @@ const OrderDetail = () => {
   useDocumentTitle(order?.order_number ? `${order.order_number} — Order` : "Order Details")
 
   const [nextStatus, setNextStatus] = useState<OrderStatus | "">("")
+  const [nextStage, setNextStage] = useState("")
   const [busy, setBusy] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [dialog, setDialog] = useState<"edit" | "capture" | "ship" | "return" | null>(null)
@@ -214,6 +218,18 @@ const OrderDetail = () => {
     } finally {
       setBusy(false)
     }
+  }
+
+  const handleStage = () => {
+    if (!nextStage) return
+    return run(
+      async () => {
+        await dispatch(updatePreorderStage({ id: order.id, stage: nextStage })).unwrap()
+        setNextStage("")
+      },
+      `Pre-order stage set to ${preorderStageLabel(nextStage).toLowerCase()}`,
+      "Failed to update pre-order stage"
+    )
   }
 
   const handleStatus = () => {
@@ -390,6 +406,53 @@ const OrderDetail = () => {
                     Apply status
                   </SubmitButton>
                 </div>
+              </div>
+            )}
+
+            {order.has_preorder && order.status !== "pending" && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs font-medium text-muted-foreground">Pre-order stage</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                  {order.preorder_stage ? preorderStageLabel(order.preorder_stage) : "Not set yet"}
+                </p>
+                {canManage && (
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <Select value={nextStage} onValueChange={setNextStage}>
+                      <SelectTrigger className="h-10 shrink-0 bg-card sm:flex-1" aria-label="New pre-order stage">
+                        <SelectValue placeholder="Choose a stage..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PREORDER_STAGE_OPTIONS.filter((o) => o.value !== order.preorder_stage).map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <SubmitButton
+                      type="button"
+                      loading={busy}
+                      icon={CheckCircle2}
+                      onClick={handleStage}
+                      disabled={!nextStage}
+                      className="h-10"
+                    >
+                      Apply stage
+                    </SubmitButton>
+                  </div>
+                )}
+                {order.preorder_stage_events.length > 0 && (
+                  <ol className="mt-3 space-y-1 border-t border-border pt-2">
+                    {order.preorder_stage_events.map((event) => (
+                      <li key={event.created_at} className="flex justify-between gap-3 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">{preorderStageLabel(event.stage)}</span>
+                        <span className="shrink-0">
+                          {[formatDateTime(event.created_at), event.changed_by_name].filter(Boolean).join(" · ")}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </div>
             )}
 

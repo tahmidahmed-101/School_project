@@ -57,3 +57,7 @@
 - [x] Language resolved from a cookie: first HTML and `<html lang>` are in the shopper's language
 - [x] Footer and policy pages are server components (`getServerText`); language toggle refreshes them. Other components need hooks or state and stay client
 - [x] Home page HTML size checked: 597 kB raw, 34 kB on the wire (brotli, live). 60 product cards by design; no change needed
+## Phase G: owner requests (2026-10-08)
+- [x] Header: Home and Shop all removed, Ready stock added beside Pre-order (PR #19)
+- [x] Abandoned checkout: name + phone typed at checkout saved on the open cart; admin Carts shows them with a "Left at checkout" badge
+- [x] Pre-order stages: owner's 24 stages on the order, admin sets and filters them, each change logged, customer sees them on track-order

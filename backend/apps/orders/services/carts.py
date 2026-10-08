@@ -77,10 +77,11 @@ def create_guest_cart() -> tuple[SalesOrder, str]:
 
 
 @transaction.atomic
-def set_cart_contact_phone(*, cart: SalesOrder, phone: str) -> SalesOrder:
-    """Record the phone a shopper typed at checkout on their still-open cart,
-    so staff can follow up if they leave before placing the order. It is the
-    cart's contact detail only: the owner's profile phone is never touched,
+def set_cart_contact_phone(*, cart: SalesOrder, phone: str, name: str = "") -> SalesOrder:
+    """Record the phone, and the name if given, a shopper typed at checkout on
+    their still-open cart, so staff can follow up if they leave before placing
+    the order. A blank name keeps the one already saved. These are the
+    cart's contact details only: the owner's profile phone is never touched,
     and a guest checkout later overwrites it with the number submitted."""
     # Deferred import: services.orders imports this module at load time.
     from apps.orders.services.orders import lock_order
@@ -94,7 +95,10 @@ def set_cart_contact_phone(*, cart: SalesOrder, phone: str) -> SalesOrder:
     if not is_bd_mobile(phone):
         raise BusinessRuleViolationError(BD_MOBILE_HELP, code="invalid_phone")
     cart.contact_phone = phone
-    cart.save(update_fields=["contact_phone", "updated_at"])
+    name = " ".join((name or "").split())[:120]
+    if name:
+        cart.contact_name = name
+    cart.save(update_fields=["contact_phone", "contact_name", "updated_at"])
     return cart
 
 

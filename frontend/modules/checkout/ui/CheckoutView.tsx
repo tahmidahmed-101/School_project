@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/modules/auth";
-import { forgetGuestCart, syncedGuestCartToken, useCart } from "@/modules/cart";
+import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from "@/modules/cart";
 import { ApiError } from "@/lib/api/client";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
@@ -14,6 +14,7 @@ import {
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
   buildCheckoutRequest,
+  isBdMobile,
   mapApiFieldErrors,
   validateOrderForm,
   type FormErrors,
@@ -46,6 +47,16 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
+
+  // An abandoned checkout is only worth a call back with a number, so the cart learns it as soon as it is valid.
+  const contactPhone = form.phone.trim();
+  const contactName = form.name.trim();
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    if (!hasItems || !isBdMobile(contactPhone)) return;
+    const timer = setTimeout(() => void saveCartContact({ phone: contactPhone, name: contactName }), 800);
+    return () => clearTimeout(timer);
+  }, [contactPhone, contactName, hasItems]);
 
   /** Turns the "required" / "invalid" / "invalidPhone" markers from local validation into text in the shopper's language. */
   const localise = (errors: FormErrors): FormErrors =>

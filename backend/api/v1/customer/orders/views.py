@@ -156,7 +156,11 @@ class CartContactView(APIView):
         serializer = CartContactSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            set_cart_contact_phone(cart=cart, phone=serializer.validated_data["phone"])
+            set_cart_contact_phone(
+                cart=cart,
+                phone=serializer.validated_data["phone"],
+                name=serializer.validated_data.get("name", ""),
+            )
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": CartContactResponseSerializer(cart).data, "message": "Success"})

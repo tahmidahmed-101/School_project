@@ -8,6 +8,7 @@ from apps.catalog.selectors.images import variant_image_url
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
+    PreorderStage,
     ReturnRMA,
     ReturnRMALine,
     SalesOrder,
@@ -48,6 +49,16 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
         return variant_image_url(obj.variant)
 
 
+class PreorderStageEventSerializer(serializers.Serializer):
+    stage = serializers.CharField(read_only=True)
+    note = serializers.CharField(read_only=True)
+    changed_by_name = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_changed_by_name(self, obj) -> str | None:
+        return obj.changed_by.get_full_name() if obj.changed_by else None
+
+
 class AdminSalesOrderSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_number = serializers.CharField(read_only=True)
@@ -61,6 +72,10 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     notes = serializers.CharField(read_only=True, allow_blank=True)
     contact_email = serializers.CharField(read_only=True, allow_blank=True)
     contact_phone = serializers.CharField(read_only=True, allow_blank=True)
+    contact_name = serializers.CharField(read_only=True, allow_blank=True)
+    has_preorder = serializers.SerializerMethodField()
+    preorder_stage = serializers.CharField(read_only=True, allow_blank=True)
+    preorder_stage_events = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2)
     tax_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     shipping_total = serializers.DecimalField(max_digits=14, decimal_places=2)
@@ -115,6 +130,12 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     def get_lines(self, obj) -> list[dict]:
         return AdminSalesOrderLineSerializer(obj.lines.all(), many=True).data
 
+    def get_has_preorder(self, obj) -> bool:
+        return any(line.is_preorder for line in obj.lines.all())
+
+    def get_preorder_stage_events(self, obj) -> list[dict]:
+        return PreorderStageEventSerializer(obj.preorder_stage_events.all(), many=True).data
+
     def get_payments(self, obj) -> list[dict]:
         return AdminPaymentSerializer(obj.payments.all(), many=True).data
 
@@ -139,8 +160,9 @@ class AdminCustomerCartSerializer(serializers.Serializer):
     """An open cart: who, what, and when they last touched it. An anonymous
     guest cart has no customer, so its customer fields are null and
     `is_guest_cart` is true; its access token is never exposed.
-    `customer_phone` is the number saved on the cart at checkout, else the
-    customer's profile phone — so a guest cart has one only once captured."""
+    `customer_phone` and `customer_name` are what was typed at checkout, else
+    the customer's profile — so a guest cart has them only once captured.
+    `reached_checkout` is true once a phone was typed there."""
 
     id = serializers.UUIDField(read_only=True)
     is_guest_cart = serializers.SerializerMethodField()
@@ -151,6 +173,7 @@ class AdminCustomerCartSerializer(serializers.Serializer):
     )
     customer_name = serializers.SerializerMethodField()
     customer_phone = serializers.SerializerMethodField()
+    reached_checkout = serializers.SerializerMethodField()
     items = AdminCartItemSerializer(source="lines", many=True, read_only=True)
     item_count = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -161,7 +184,12 @@ class AdminCustomerCartSerializer(serializers.Serializer):
         return obj.customer_id is None
 
     def get_customer_name(self, obj) -> str | None:
+        if obj.contact_name.strip():
+            return obj.contact_name.strip()
         return obj.customer.get_full_name() if obj.customer else None
+
+    def get_reached_checkout(self, obj) -> bool:
+        return bool(obj.contact_phone.strip())
 
     def get_customer_phone(self, obj) -> str | None:
         # Both live on rows the list already loads: the cart and its customer.
@@ -219,6 +247,11 @@ class AdminOrderUpdateSerializer(serializers.Serializer):
 
 class AdminOrderStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=SalesOrder.Status.choices)
+
+
+class AdminPreorderStageSerializer(serializers.Serializer):
+    stage = serializers.ChoiceField(choices=PreorderStage.choices)
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class AdminOrderLineUpdateSerializer(serializers.Serializer):
