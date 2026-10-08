@@ -11,18 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { ActiveStatusBadge } from "@/components/common/cells"
 import { TextField, TextareaField } from "@/components/common/form-fields"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useListPage } from "@/hooks/use-list-page"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 
 import { deleteData, fetchAll, patchData, postData, restoreExpenseCategory } from "../slices/expenseCategorySlice"
 import type { Account, ExpenseCategory, ExpenseCategoryPayload } from "../types"
@@ -147,22 +144,22 @@ const ExpenseCategories = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ExpenseCategory | null>(null)
 
-  const list = useListPage({ fetch: (params) => dispatch(fetchAll(params)), state: listState })
-
-  const setActive = (rows: ExpenseCategory[], is_active: boolean) =>
-    Promise.all(
-      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<ExpenseCategory> })).unwrap())
-    )
-
-  const handleDelete = async (category: ExpenseCategory) => {
-    try {
-      await dispatch(deleteData(category.id)).unwrap()
-      toast.success("Category deleted")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete category"))
-    }
+  const openForm = (category: ExpenseCategory | null) => {
+    setEditing(category)
+    setFormOpen(true)
   }
 
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<ExpenseCategory>({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: listState,
+    noun: "category",
+    canUpdate: canPost,
+    remove: (id) => dispatch(deleteData(id)).unwrap(),
+    setActive: (id, is_active) =>
+      dispatch(patchData({ id, payload: { is_active } as Partial<ExpenseCategory> })).unwrap(),
+    onEdit: openForm,
+    onDeleted: () => toast.success("Category deleted"),
+  })
 
   const columns: ColumnDef<ExpenseCategory>[] = [
     {
@@ -184,29 +181,8 @@ const ExpenseCategories = () => {
         <span className="text-sm text-muted-foreground">{accountLabel(accountsById.get(row.original.expense_account_id))}</span>
       ),
     },
-    {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
-    },
-    {
-      id: "actions",
-      header: "ACTIONS",
-      cell: ({ row }) => {
-        const cat = row.original
-        if (!canPost) return null
-        return (
-          <TableActions
-            itemName={cat.name}
-            onEdit={() => {
-              setEditing(cat)
-              setFormOpen(true)
-            }}
-            onDelete={() => handleDelete(cat)}
-          />
-        )
-      },
-    },
+    statusColumn,
+    actionsColumn,
   ]
 
   return (
@@ -224,13 +200,7 @@ const ExpenseCategories = () => {
                 label={(item) => item.name}
                 onRestored={list.reload}
               />
-              <Button
-                size="action"
-                onClick={() => {
-                  setEditing(null)
-                  setFormOpen(true)
-                }}
-              >
+              <Button size="action" onClick={() => openForm(null)}>
                 <Plus className="size-5" /> New Category
               </Button>
             </>
@@ -246,33 +216,14 @@ const ExpenseCategories = () => {
 
       <DataTable
         columns={columns}
-        bulk={
-          canPost
-            ? {
-                noun: "expense category",
-                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
-                activate: (rows) => setActive(rows, true),
-                deactivate: (rows) => setActive(rows, false),
-                onDone: () => {
-                  list.reload()
-                },
-              }
-            : undefined
-        }
+        bulk={bulk && { ...bulk, noun: "expense category" }}
         data={listState.data}
         {...list.tableProps}
         emptyIcon={Tags}
         emptyTitle="No expense categories"
         emptyDescription="Create categories so expenses can be grouped without picking ledger accounts."
         emptyActionLabel={canPost ? "New Category" : undefined}
-        onEmptyAction={
-          canPost
-            ? () => {
-                setEditing(null)
-                setFormOpen(true)
-              }
-            : undefined
-        }
+        onEmptyAction={canPost ? () => openForm(null) : undefined}
         minWidth="760px"
         columnWidths={["320px", "220px", "110px", "80px"]}
       />
