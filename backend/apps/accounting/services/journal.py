@@ -18,6 +18,7 @@ def post_journal_entry(
     reference_type: str = "",
     reference_id: UUID | None = None,
     description: str = "",
+    kind: str = "",
 ) -> JournalEntry:
     """The single writer for the ledger — every posting function in
     `services/postings.py` funnels through this, exactly like
@@ -41,6 +42,7 @@ def post_journal_entry(
         reference_id=reference_id,
         status=JournalEntry.Status.POSTED,
         description=description,
+        kind=kind,
     )
     JournalEntryLine.objects.bulk_create(
         [
@@ -104,6 +106,7 @@ def reverse_journal_entry(
         reference_type=entry.reference_type,
         reference_id=entry.reference_id,
         description=description[:255],
+        kind=entry.kind,
         lines=[
             {"account": line.account, "debit": line.credit, "credit": line.debit}
             for line in original_lines

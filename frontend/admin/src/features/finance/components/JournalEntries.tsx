@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { BookOpen, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
@@ -31,21 +32,33 @@ const ORDERING_OPTIONS: Option[] = [
 ]
 
 // reference_type values written by the backend's posting services.
-const REFERENCE_TYPES = [
-  "expense",
-  "vendor_bill",
-  "vendor_payment",
-  "goods_receipt",
+const KIND_REFERENCE_TYPES = [
   "customer_payment",
   "customer_refund",
-  "shipment",
-  "rma",
+  "shipment_revenue",
+  "shipment_cogs",
+  "rma_revenue_reversal",
+  "rma_cogs_reversal",
+  "goods_receipt_line",
+  "vendor_bill",
+  "vendor_payment",
   "stock_adjustment",
-  "stock_intake",
   "stock_writeoff",
-  "write_off",
-  "adjustment",
 ]
+
+type JournalView = "stock" | "preorder" | "company"
+
+const VIEWS: { value: JournalView; label: string }[] = [
+  { value: "stock", label: "Stock" },
+  { value: "preorder", label: "Pre-order" },
+  { value: "company", label: "Company" },
+]
+
+const REFERENCE_TYPES: Record<JournalView, string[]> = {
+  stock: KIND_REFERENCE_TYPES,
+  preorder: KIND_REFERENCE_TYPES,
+  company: ["expense"],
+}
 
 const JournalEntries = () => {
   useDocumentTitle("Journal Entries")
@@ -55,6 +68,7 @@ const JournalEntries = () => {
   const canPost = useCan("accounting.post")
   const { accounts } = useAccounts()
 
+  const [view, setView] = useState<JournalView>("stock")
   const [referenceType, setReferenceType] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -62,7 +76,7 @@ const JournalEntries = () => {
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: listState,
-    params: { reference_type: referenceType?.value, ordering: ordering?.value },
+    params: { kind: view, reference_type: referenceType?.value, ordering: ordering?.value },
   })
 
   const columns: ColumnDef<JournalEntry>[] = [
@@ -129,6 +143,27 @@ const JournalEntries = () => {
         }
       />
 
+      <Tabs
+        value={view}
+        onValueChange={(next) => {
+          setView(next as JournalView)
+          setReferenceType(null)
+        }}
+      >
+        <TabsList aria-label="Show entries for">
+          {VIEWS.map((v) => (
+            <TabsTrigger key={v.value} value={v.value} className="px-3">
+              {v.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <p className="text-sm text-muted-foreground">
+        {view === "company"
+          ? "Entries for the whole business: expenses, owner money and anything not marked stock or pre-order."
+          : `Entries posted for ${view === "preorder" ? "pre-order" : "stock"} orders, purchases and goods.`}
+      </p>
+
       <FilterToolbar
         searchPlaceholder="Search description..."
         searchValue={list.search}
@@ -137,7 +172,7 @@ const JournalEntries = () => {
           {
             component: (
               <Combobox
-                options={REFERENCE_TYPES.map((t) => ({ label: humanize(t), value: t }))}
+                options={REFERENCE_TYPES[view].map((t) => ({ label: humanize(t), value: t }))}
                 placeholder="Source"
                 value={referenceType}
                 onValueChange={setReferenceType}
@@ -159,7 +194,7 @@ const JournalEntries = () => {
         columnWidths={["110px", "320px", "150px", "70px", "130px", "110px", "80px"]}
       />
 
-      <JournalEntryFormDialog open={formOpen} onOpenChange={setFormOpen} accounts={accounts} />
+      <JournalEntryFormDialog open={formOpen} onOpenChange={setFormOpen} accounts={accounts} defaultBelongsTo={view} />
     </div>
   )
 }

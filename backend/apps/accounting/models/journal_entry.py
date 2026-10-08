@@ -14,6 +14,10 @@ class JournalEntry(FullAuditModel):
         DRAFT = "draft", "Draft"
         POSTED = "posted", "Posted"
 
+    class Kind(models.TextChoices):
+        STOCK = "stock", "Stock"
+        PREORDER = "preorder", "Pre-order"
+
     entry_date = models.DateField()
     reference_type = models.CharField(max_length=50, blank=True)
     reference_id = models.UUIDField(null=True, blank=True)
@@ -21,6 +25,8 @@ class JournalEntry(FullAuditModel):
         max_length=20, choices=Status.choices, default=Status.DRAFT
     )
     description = models.CharField(max_length=255, blank=True)
+    # Blank means company-wide (rent, salaries, capital): never guessed into a half.
+    kind = models.CharField(max_length=10, choices=Kind.choices, blank=True, default="")
     reverses = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True, related_name="reversals"
     )
@@ -31,6 +37,7 @@ class JournalEntry(FullAuditModel):
             models.Index(fields=["reference_type", "reference_id"]),
             models.Index(fields=["status", "entry_date"]),
             models.Index(fields=["deleted_at", "entry_date"], name="je_deleted_date_idx"),
+            models.Index(fields=["kind", "entry_date"], name="je_kind_date_idx"),
         ]
 
     def __str__(self) -> str:
