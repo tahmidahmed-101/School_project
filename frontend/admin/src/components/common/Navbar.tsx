@@ -1,17 +1,5 @@
 import { SidebarTrigger } from "../ui/sidebar"
-import {
-  SunIcon,
-  MoonIcon,
-  LogOutIcon,
-  SettingsIcon,
-  UserIcon,
-  Plus,
-  Package,
-  ShoppingBasket,
-  Ticket,
-  UserPlus,
-  SearchIcon,
-} from "lucide-react"
+import { SunIcon, MoonIcon, LogOutIcon, SettingsIcon, UserIcon, Plus, Package, ShoppingBasket, Ticket, UserPlus, SearchIcon, CalendarClock } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
 import { NotificationBell } from "./NotificationBell"
 import { userDisplayName } from "@/lib/user-display"
@@ -43,6 +31,7 @@ const quickCreateItems = {
     { label: "New Staff Member", icon: UserPlus, url: "/staff_form/new", permission: "*" },
   ],
   preorder: [
+    { label: "New pre-order", icon: CalendarClock, url: "/preorders/new", permission: "orders.manage" },
     {
       label: "New pre-order product",
       icon: Package,

@@ -508,7 +508,7 @@ def test_effective_price_uses_preorder_price_when_active():
     assert variant.is_preorder_price_applied is True
 
 
-def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
+def test_effective_price_is_list_price_once_preorder_has_ended():
     product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
@@ -523,7 +523,7 @@ def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
         release_date=now - timedelta(days=15),
     )
 
-    assert variant.effective_price == Decimal("950")
+    assert variant.effective_price == Decimal("1000")
     assert variant.is_preorder_price_applied is False
 
 
@@ -644,7 +644,7 @@ def test_preorder_that_has_not_opened_is_rejected_at_cart():
     assert exc.value.code == "preorder_not_active"
 
 
-def test_lower_of_discount_and_preorder_price_is_charged():
+def test_preorder_price_is_charged_whatever_discount_price_is_left_over():
     product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
     window = {
@@ -670,8 +670,8 @@ def test_lower_of_discount_and_preorder_price_is_charged():
         **window,
     )
 
-    assert discount_lower.effective_price == Decimal("800")
-    assert discount_lower.is_preorder_price_applied is False
+    assert discount_lower.effective_price == Decimal("900")
+    assert discount_lower.is_preorder_price_applied is True
     assert preorder_lower.effective_price == Decimal("900")
     assert preorder_lower.is_preorder_price_applied is True
 
