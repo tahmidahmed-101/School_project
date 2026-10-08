@@ -56,3 +56,4 @@
 ## Phase F: storefront language on the server
 - [x] Language resolved from a cookie: first HTML and `<html lang>` are in the shopper's language
 - [x] Footer and policy pages are server components (`getServerText`); language toggle refreshes them. Other components need hooks or state and stay client
+- [x] Home page HTML size checked: 597 kB raw, 34 kB on the wire (brotli, live). 60 product cards by design; no change needed
