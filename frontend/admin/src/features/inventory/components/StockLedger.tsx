@@ -35,7 +35,7 @@ const StockLedgerList = () => {
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const ledgerState = useAppSelector((s) => s.inventoryLedger)
-  const { warehouses } = useWarehouses()
+  const { warehouses } = useWarehouses(kind)
   const [searchParams, setSearchParams] = useSearchParams()
   const variantId = searchParams.get("variant_id")
   const variantSku = searchParams.get("sku")

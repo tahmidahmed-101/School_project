@@ -10,7 +10,7 @@ from .stock import (
 from .warehouse import (
     active_warehouses,
     all_warehouses,
-    get_default_warehouse,
+    default_warehouse,
     get_or_create_default_warehouse,
     get_warehouse_by_id,
 )
@@ -20,7 +20,7 @@ __all__ = [
     "all_warehouses",
     "available_quantities_for_variants",
     "available_quantity_for_variant",
-    "get_default_warehouse",
+    "default_warehouse",
     "get_or_create_default_warehouse",
     "get_stock_item",
     "get_stock_item_by_id",

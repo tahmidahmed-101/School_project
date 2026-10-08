@@ -12,6 +12,7 @@ from apps.catalog.factories import BundleItemFactory, ProductVariantFactory
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
 from apps.inventory.selectors.stock import get_stock_item
+from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement
 from apps.logistics.factories import CarrierFactory, ShippingRateFactory, ShippingZoneFactory
 from apps.orders.factories import SalesOrderFactory
@@ -99,6 +100,7 @@ def test_preorder_line_ships_only_after_arrived_stock_is_allocated():
         create_shipment(order=order, lines=[{"order_line": order_line, "quantity": 3}])
     assert exc.value.code == "preorder_not_allocated"
 
+    get_or_create_default_warehouse("preorder")
     record_movement(
         variant=variant,
         movement_type=MovementType.PURCHASE_IN,

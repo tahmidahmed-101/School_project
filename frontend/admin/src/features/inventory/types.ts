@@ -30,6 +30,7 @@ export interface Warehouse {
   id: string
   name: string
   code: string
+  kind: Kind
   address: string
   is_active: boolean
   is_default: boolean
@@ -42,6 +43,7 @@ export interface Warehouse {
 export interface WarehousePayload {
   name?: string
   code?: string
+  kind?: Kind
   address?: string
   is_active?: boolean
   is_default?: boolean

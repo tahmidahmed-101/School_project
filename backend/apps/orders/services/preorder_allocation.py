@@ -5,8 +5,9 @@ from django.db.models import F
 
 from apps.audit.services.audit import log_action
 from apps.catalog.selectors.bundles import expand_variant
+from apps.common.params import KIND_PREORDER
 from apps.inventory.services.stock import (
-    get_or_create_default_warehouse,
+    default_warehouse_for,
     lock_variant_stock,
     reserve_stock,
 )
@@ -21,8 +22,7 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
     deposit has not come in. Each allocated unit is a normal reservation, which
     is what lets the line ship and what cancelling the order releases.
     """
-    # TODO(ask): arrived pre-order goods share the default warehouse with shop stock. Keep?
-    warehouse = get_or_create_default_warehouse()
+    warehouse = default_warehouse_for(KIND_PREORDER)
     lines = list(
         SalesOrderLine.objects.select_for_update()
         .select_related("order", "variant")

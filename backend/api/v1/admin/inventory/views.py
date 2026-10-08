@@ -25,7 +25,6 @@ from apps.common.permissions import require_any_staff_permission, require_staff_
 from apps.common.responses import error_from_exception, not_found
 from apps.common.utils.export import CsvRenderer, csv_response
 from apps.inventory.constants import MovementType
-from apps.inventory.models import Warehouse
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     get_stock_item_by_id,
@@ -46,6 +45,7 @@ from apps.inventory.services.stock import (
     stock_intake,
     write_off_stock,
 )
+from apps.inventory.services.warehouses import create_warehouse, update_warehouse
 
 from .serializers import (
     BulkStockAdjustmentSerializer,
@@ -378,7 +378,8 @@ class AdminWarehouseListCreateView(InventoryPermissionMixin, GenericListAPIView)
         is_active = get_bool(self.request.query_params, "is_active")
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
-        return queryset
+        kind = get_kind(self.request.query_params)
+        return queryset.filter(kind=kind) if kind else queryset
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -386,16 +387,7 @@ class AdminWarehouseListCreateView(InventoryPermissionMixin, GenericListAPIView)
     def post(self, request) -> Response:
         serializer = WarehouseCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = dict(serializer.validated_data)
-
-        if data.get("is_default"):
-            Warehouse.objects.filter(is_default=True).update(is_default=False)
-
-        warehouse = Warehouse.objects.create(created_by=request.user, **data)
-        # Materialize once at creation so the new warehouse shows up (at 0 on
-        # hand) when the stock list is filtered to it — filtering no longer
-        # materializes on every read (see AdminStockItemListView.get_queryset).
-        materialize_stock_items(warehouse=warehouse)
+        warehouse = create_warehouse(data=dict(serializer.validated_data), actor=request.user)
         return Response(
             {"data": WarehouseSerializer(warehouse).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
@@ -424,16 +416,12 @@ class AdminWarehouseDetailView(InventoryPermissionMixin, APIView):
             return not_found("warehouse_not_found", "Warehouse not found.")
         serializer = WarehouseUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        data = dict(serializer.validated_data)
-
-        if data.get("is_default"):
-            Warehouse.objects.filter(is_default=True).exclude(pk=warehouse.pk).update(is_default=False)
-
-        for field, value in data.items():
-            setattr(warehouse, field, value)
-        warehouse.updated_by = request.user
-        update_fields = [*list(data.keys()), "updated_at", "updated_by"]
-        warehouse.save(update_fields=update_fields)
+        try:
+            warehouse = update_warehouse(
+                warehouse=warehouse, data=dict(serializer.validated_data), actor=request.user
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
         return Response({"data": WarehouseSerializer(warehouse).data, "message": "Success"})
 
     def delete(self, request, warehouse_id) -> Response:

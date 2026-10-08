@@ -50,7 +50,7 @@ const PreorderArrivals = () => {
   const canAllocate = useCan("orders.manage")
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
   const stockState = useAppSelector((s) => s.inventoryPreorderStockItems)
-  const { warehouses } = useWarehouses()
+  const { warehouses } = useWarehouses("preorder")
 
   const [demand, setDemand] = useState<PreorderDemandRow[]>([])
   const [demandLoading, setDemandLoading] = useState(canSeeOrders)
@@ -235,7 +235,7 @@ const PreorderArrivals = () => {
           <CardTitle>Arrived</CardTitle>
           <CardDescription>
             Units received for pre-order items. "Set aside for orders" hands them to waiting orders with a paid deposit,
-            oldest order first, from the default warehouse.
+            oldest order first, from the default pre-order warehouse.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

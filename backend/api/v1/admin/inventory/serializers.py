@@ -3,7 +3,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.catalog.selectors.images import variant_image_url
-from apps.common.params import KINDS
+from apps.common.params import KIND_STOCK, KINDS
 from apps.inventory.constants import MovementType
 
 
@@ -11,6 +11,7 @@ class WarehouseSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
     code = serializers.CharField()
+    kind = serializers.CharField(read_only=True)
     address = serializers.CharField(allow_blank=True)
     is_active = serializers.BooleanField()
     is_default = serializers.BooleanField(read_only=True)
@@ -22,6 +23,7 @@ class WarehouseSerializer(serializers.Serializer):
 class WarehouseCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     code = serializers.CharField()
+    kind = serializers.ChoiceField(choices=KINDS, required=False, default=KIND_STOCK)
     address = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False, default=True)
     is_default = serializers.BooleanField(required=False, default=False)
@@ -30,6 +32,7 @@ class WarehouseCreateSerializer(serializers.Serializer):
 class WarehouseUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     code = serializers.CharField(required=False)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     address = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
     is_default = serializers.BooleanField(required=False)
