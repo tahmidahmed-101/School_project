@@ -32,6 +32,10 @@ export interface ApiCategory {
   parent_id: string | null;
   /** A subcategory always shares its root ancestor's type. */
   category_type: "stock" | "preorder";
+  /** Listed products in this category. Absent on an API deployed before the field existed. */
+  product_count?: number;
+  /** Picture of the first listed product that has one. */
+  image?: string | null;
 }
 
 interface ApiProductImage {
