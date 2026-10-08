@@ -1,16 +1,21 @@
 import type { BrandInfo } from "@/lib/brand";
-import { isPreOrderShopProduct } from "@/lib/product";
+import { shopListing } from "@/lib/product";
 import type { Catalog } from "@/modules/catalog/server";
 import { SITE_DESCRIPTION, SITE_NAME } from "./metadata";
 import { absoluteUrl } from "@/lib/site-url";
 
 /** Plain-text site summary for AI crawlers and LLM assistants, following the llms.txt convention. */
 export function buildLlmsTxt({ products: PRODUCTS, categories: CATEGORIES }: Catalog, BRAND_INFO: BrandInfo): string {
-  const categoryLines = CATEGORIES.map(
-    (category) => `- ${category.name.en}: ${absoluteUrl(`/shop?category=${category.slug}`)}`,
-  ).join("\n");
-
-  const preOrderCount = PRODUCTS.filter(isPreOrderShopProduct).length;
+  const categoryLines = (kind: "stock" | "preorder") =>
+    CATEGORIES.filter((category) => category.type === kind)
+      .map((category) => `- ${category.name.en}: ${absoluteUrl(shopListing(kind, { category: category.slug }))}`)
+      .join("\n");
+  const count = (kind: "stock" | "preorder") => ({
+    products: PRODUCTS.filter((product) => product.kind === kind).length,
+    categories: CATEGORIES.filter((category) => category.type === kind).length,
+  });
+  const stock = count("stock");
+  const preorder = count("preorder");
 
   const sections = [
     `# ${SITE_NAME}`,
@@ -23,12 +28,13 @@ export function buildLlmsTxt({ products: PRODUCTS, categories: CATEGORIES }: Cat
       `- Product pages: ${absoluteUrl("/product/{slug}")} — full details, price, specs and images`,
       `- Product feed (machine-readable): ${absoluteUrl("/products.xml")}`,
     ].join("\n"),
-    ["## Categories", "", categoryLines].join("\n"),
+    ["## Shop categories (in stock)", "", categoryLines("stock")].join("\n"),
+    ["## Pre-order categories", "", categoryLines("preorder")].join("\n"),
     [
       "## Catalogue",
       "",
-      `- ${PRODUCTS.length} products across ${CATEGORIES.length} categories`,
-      `- ${preOrderCount} available for pre-order`,
+      `- Shop: ${stock.products} in-stock products across ${stock.categories} categories`,
+      `- Pre-order: ${preorder.products} pre-order products across ${preorder.categories} categories`,
       `- Prices in Bangladeshi Taka (BDT)`,
     ].join("\n"),
     [

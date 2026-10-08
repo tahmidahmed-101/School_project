@@ -34,8 +34,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const isOutOfStock = !product.isPreOrder && !product.inStock;
 
   const buyNow = () => {
-    addItem(product, 1, undefined, { openDrawer: false });
-    router.push("/checkout");
+    if (addItem(product, 1, undefined, { openDrawer: false })) router.push("/checkout");
   };
 
   return (

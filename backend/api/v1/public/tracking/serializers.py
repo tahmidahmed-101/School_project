@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.orders.models import SalesOrder, Shipment
+from apps.orders.selectors.payments import order_balance_due, order_paid_total
 
 
 class PublicTrackOrderItemSerializer(serializers.Serializer):
@@ -32,6 +33,15 @@ class PublicTrackOrderSerializer(serializers.Serializer):
     tracking_timeline = serializers.SerializerMethodField()
     preorder_stage = serializers.CharField(read_only=True)
     preorder_timeline = serializers.SerializerMethodField()
+    order_type = serializers.CharField(read_only=True)
+    paid_total = serializers.SerializerMethodField()
+    balance_due = serializers.SerializerMethodField()
+
+    def get_paid_total(self, obj) -> str:
+        return str(order_paid_total(obj))
+
+    def get_balance_due(self, obj) -> str:
+        return str(order_balance_due(obj))
 
     def get_status(self, obj) -> str:
         if obj.status == SalesOrder.Status.PENDING:

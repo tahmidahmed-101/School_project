@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { isPreOrderSoldOut } from "@/lib/product";
+import { isPreOrderSoldOut, productKind, shopHome } from "@/lib/product";
 import { applyVariant, defaultVariant, resolveVariant, selectionFor } from "@/lib/variants";
 import { ProductCardGrid } from "./ProductCardGrid";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -46,12 +46,18 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
   const shown = useMemo(() => applyVariant(product, selectedSku), [product, selectedSku]);
   const isSoldOut = isPreOrderSoldOut(shown);
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
+  const kind = productKind(product);
 
   return (
     <div className="w-full bg-canvas pb-24 pt-8 sm:pt-12 lg:pb-12">
       <Container>
         <div className="mb-8 border-b border-ink-100 pb-4">
-          <Breadcrumbs items={[{ label: ui("navShop"), href: "/shop" }, { label: t(product.name) }]} />
+          <Breadcrumbs
+            items={[
+              { label: ui(kind === "preorder" ? "navPreOrder" : "navShop"), href: shopHome(kind) },
+              { label: t(product.name) },
+            ]}
+          />
         </div>
 
         {/* Gallery | details, the gallery slightly the narrower of the two */}

@@ -2,11 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { CartItem, Product } from "@/lib/types";
-import { getMaxOrderQuantity } from "@/lib/product";
+import { getMaxOrderQuantity, productKind, type ProductKind } from "@/lib/product";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
-import { setCartCustomer, syncGuestCart } from "./data/guestCart";
+import { MIXED_BASKET_CODE, cartRefusalCode, setCartCustomer, syncGuestCart } from "./data/guestCart";
+import { acceptsProduct, basketGroups, basketKind, type BasketGroup } from "./domain/kind";
 import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
@@ -18,7 +19,7 @@ interface CartContextType {
     quantity?: number,
     selectedVariant?: Record<string, string>,
     options?: { openDrawer?: boolean },
-  ) => void;
+  ) => boolean;
   updateQuantity: (productId: string, quantity: number, selectedVariant?: Record<string, string>) => void;
   removeItem: (productId: string, selectedVariant?: Record<string, string>) => void;
   clearCart: () => void;
@@ -29,6 +30,13 @@ interface CartContextType {
   totalItems: number;
   /** Sum of the SKU prices in the cart. An estimate: the backend prices the order at checkout. */
   subtotal: number;
+  kind: ProductKind | "mixed" | null;
+  /** One entry per kind held; more than one only for a cart saved before kinds were kept apart. */
+  groups: BasketGroup[];
+  /** Kind of the product the last `addItem` turned away because the cart holds the other kind. */
+  refusedKind: ProductKind | null;
+  /** The server would not take a line because its copy of the cart holds the other kind. */
+  serverRefusedMixed: boolean;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -92,6 +100,8 @@ function sanitizeCart(raw: unknown): CartItem[] {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [storedItems, setStoredItems, isHydrated] = usePersistedState<unknown>(CART_KEY, []);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [refusedKind, setRefusedKind] = useState<ProductKind | null>(null);
+  const [serverRefusedMixed, setServerRefusedMixed] = useState(false);
 
   const items = useMemo(() => sanitizeCart(storedItems), [storedItems]);
   const setItems = useCallback(
@@ -115,8 +125,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isHydrated || authStatus === "loading") return;
     setCartCustomer(asCustomer ? authRequest : null);
-    const timer = setTimeout(() => void syncGuestCart(toCartTargets(items)), SYNC_DELAY_MS);
-    return () => clearTimeout(timer);
+    let stale = false;
+    const timer = setTimeout(
+      () =>
+        void syncGuestCart(toCartTargets(items)).then(() => {
+          if (!stale) setServerRefusedMixed(cartRefusalCode() === MIXED_BASKET_CODE);
+        }),
+      SYNC_DELAY_MS,
+    );
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
   }, [items, isHydrated, authStatus, asCustomer, authRequest]);
 
   const addItem = useCallback(
@@ -128,12 +148,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const variant = resolveVariant(product, selectedVariant);
       // No SKU means the product did not come from the API (e.g. an old wishlist entry): it cannot be ordered.
-      if (!variant || !variant.inStock) return;
+      if (!variant || !variant.inStock) return false;
 
       const line = toCartProduct(applyVariant(product, variant));
       const selection = selectionFor(variant);
 
+      if (!acceptsProduct(items, line)) {
+        setRefusedKind(productKind(line));
+        setIsDrawerOpen(true);
+        return false;
+      }
+      setRefusedKind(null);
+
       setItems((prev) => {
+        // Several adds in one tick (move all to cart) each see the same `items`, so the rule is applied here too.
+        if (!acceptsProduct(prev, line)) return prev;
         const existingIdx = prev.findIndex((item) => item.variantId === variant.id);
         if (existingIdx > -1) {
           const updated = [...prev];
@@ -157,8 +186,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (openDrawer) setIsDrawerOpen(true);
+      return true;
     },
-    [setItems],
+    [items, setItems],
   );
 
   const removeItem = useCallback(
@@ -195,12 +225,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [setItems]);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
-  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
+  const closeDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
+    setRefusedKind(null);
+  }, []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
 
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [items]);
+  const kind = useMemo(() => basketKind(items), [items]);
+  const groups = useMemo(() => basketGroups(items), [items]);
 
   const value = useMemo(
     () => ({
@@ -215,6 +250,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       toggleDrawer,
       totalItems,
       subtotal,
+      kind,
+      groups,
+      refusedKind,
+      serverRefusedMixed,
     }),
     [
       items,
@@ -228,6 +267,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       toggleDrawer,
       totalItems,
       subtotal,
+      kind,
+      groups,
+      refusedKind,
+      serverRefusedMixed,
     ],
   );
 

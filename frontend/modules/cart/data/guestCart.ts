@@ -115,6 +115,13 @@ function send(op: CartSyncOp, token: string): Promise<ApiGuestCart> {
 
 /** The server cart's lines as last seen; only trusted while `mustReload` is false. */
 let lines: ServerCartLine[] = [];
+let refusalCode: string | null = null;
+
+/** Refused when the server cart holds the other kind: stock and pre-order items are ordered separately. */
+export const MIXED_BASKET_CODE = "mixed_basket";
+
+/** Why the backend turned a line away in the latest sync, or null when it took every line. */
+export const cartRefusalCode = (): string | null => refusalCode;
 let mustReload = true;
 let target: CartTarget[] = [];
 let pending = false;
@@ -160,6 +167,7 @@ async function reconcileAsCustomer(want: CartTarget[], request: CustomerRequest)
       }
       // The backend refused this line (e.g. a pre-order that closed). The rest of the cart still syncs.
       inSync = false;
+      refusalCode = error.code;
     }
   }
   return inSync;
@@ -167,6 +175,7 @@ async function reconcileAsCustomer(want: CartTarget[], request: CustomerRequest)
 
 /** One pass: makes the server cart hold `want`. True when it does; throws when the backend could not be reached. */
 async function reconcile(want: CartTarget[]): Promise<boolean> {
+  refusalCode = null;
   if (customerRequest) return reconcileAsCustomer(want, customerRequest);
   let token = readToken();
 
@@ -205,6 +214,7 @@ async function reconcile(want: CartTarget[]): Promise<boolean> {
       }
       // The backend refused this line (e.g. a pre-order that closed). The rest of the cart still syncs.
       inSync = false;
+      refusalCode = error.code;
     }
   }
   return inSync;

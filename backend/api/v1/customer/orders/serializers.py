@@ -3,7 +3,11 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
-from apps.orders.selectors.payments import order_deposit_due
+from apps.orders.selectors.payments import (
+    order_balance_due,
+    order_deposit_due,
+    order_paid_total,
+)
 
 
 class SalesOrderLineSerializer(serializers.Serializer):
@@ -74,6 +78,15 @@ class OrderHistorySerializer(SalesOrderSerializer):
     `orders_for_customer`, which prefetches each line's variant and product."""
 
     created_at = serializers.DateTimeField(read_only=True)
+    preorder_stage = serializers.CharField(read_only=True)
+    paid_total = serializers.SerializerMethodField()
+    balance_due = serializers.SerializerMethodField()
+
+    def get_paid_total(self, obj) -> str:
+        return str(order_paid_total(obj))
+
+    def get_balance_due(self, obj) -> str:
+        return str(order_balance_due(obj))
 
     def get_lines(self, obj) -> list[dict]:
         return OrderHistoryLineSerializer(obj.lines.all(), many=True).data

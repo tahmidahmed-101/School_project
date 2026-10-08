@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import type { CartItem, OrderForm } from "@/lib/types";
 import { makeProduct } from "@/tests/fixtures";
-import { EMPTY_ORDER_FORM, buildCheckoutRequest, mapApiFieldErrors, validateOrderForm } from "../checkout";
+import {
+  EMPTY_ORDER_FORM,
+  acceptsCoupon,
+  buildCheckoutRequest,
+  mapApiFieldErrors,
+  validateOrderForm,
+} from "../checkout";
 
 const validForm: OrderForm = {
   name: " Rahim Uddin ",
@@ -102,5 +108,20 @@ describe("mapApiFieldErrors", () => {
 
   it("ignores fields with no input of their own", () => {
     expect(mapApiFieldErrors(apiError({ "items.0.variant_id": "Unknown variant" }))).toEqual({});
+  });
+});
+
+describe("acceptsCoupon", () => {
+  const preorderLine: CartItem = {
+    product: makeProduct({ id: "p-9", kind: "preorder", isPreOrder: true }),
+    quantity: 1,
+    variantId: "variant-9",
+  };
+
+  it("offers coupons on a stock basket only", () => {
+    expect(acceptsCoupon(items)).toBe(true);
+    expect(acceptsCoupon([preorderLine])).toBe(false);
+    expect(acceptsCoupon([...items, preorderLine])).toBe(false);
+    expect(acceptsCoupon([])).toBe(false);
   });
 });

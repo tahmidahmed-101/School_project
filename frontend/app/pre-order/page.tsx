@@ -5,7 +5,6 @@ import { JsonLd } from "@/modules/seo";
 import { ProductsProvider, forListing } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { isPreOrderShopProduct } from "@/lib/product";
-import { getVouchers } from "@/modules/marketing/server";
 import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -15,7 +14,8 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function KullMartPreOrderPage() {
-  const [{ products }, vouchers, content] = await Promise.all([getCatalog(), getVouchers(), getStorefrontContent()]);
+  const [{ products }, content] = await Promise.all([getCatalog(), getStorefrontContent()]);
+  const preorderProducts = products.filter(isPreOrderShopProduct);
   return (
     <>
       <JsonLd
@@ -24,8 +24,8 @@ export default async function KullMartPreOrderPage() {
           { name: "Pre-order Collection", path: "/pre-order" },
         ])}
       />
-      <ProductsProvider products={products.filter(isPreOrderShopProduct).map(forListing)}>
-        <PreOrderSections vouchers={vouchers} content={content} hasOffers={hasDiscountedProduct(products)} />
+      <ProductsProvider products={preorderProducts.map(forListing)}>
+        <PreOrderSections content={content} hasOffers={hasDiscountedProduct(preorderProducts)} />
       </ProductsProvider>
     </>
   );

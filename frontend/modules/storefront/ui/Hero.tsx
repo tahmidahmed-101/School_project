@@ -179,7 +179,7 @@ export function Hero({
 
           {/* Right: welcome card + quick links (desktop only; mobile shows just the banner) */}
           <ScrollReveal y={24} duration={0.85} delay={0.1} className="hidden lg:order-3 lg:col-span-3 lg:block">
-            <HeroWelcomePanel hasOffers={hasOffers} />
+            <HeroWelcomePanel hasOffers={hasOffers} kind={preorder ? "preorder" : "stock"} />
           </ScrollReveal>
         </div>
       </div>

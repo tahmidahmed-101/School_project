@@ -1,6 +1,14 @@
 import { ApiError } from "@/lib/api/client";
 import type { ApiCheckoutRequest } from "@/lib/api/types";
+import { productKind } from "@/lib/product";
 import type { CartItem, OrderForm } from "@/lib/types";
+
+/** Coupons are for stock orders only: the backend refuses one on any basket holding a pre-order line. */
+export const COUPON_STOCK_ONLY_CODE = "coupon_stock_only";
+
+export function acceptsCoupon(items: CartItem[]): boolean {
+  return items.length > 0 && items.every((item) => productKind(item.product) === "stock");
+}
 
 export const EMPTY_ORDER_FORM: OrderForm = {
   name: "",

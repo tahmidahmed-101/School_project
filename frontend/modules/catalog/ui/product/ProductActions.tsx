@@ -53,8 +53,7 @@ export function ProductActions({
   const maxQuantity = getMaxOrderQuantity(product);
 
   const buyNow = () => {
-    addItem(product, quantity, selectedVariants, { openDrawer: false });
-    router.push("/checkout");
+    if (addItem(product, quantity, selectedVariants, { openDrawer: false })) router.push("/checkout");
   };
 
   const buyNowButton = (

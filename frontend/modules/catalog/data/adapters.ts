@@ -46,11 +46,11 @@ function formatDate(iso: string | null): T | undefined {
 
 const CLOSING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
 
-function toSkuVariant(v: ApiVariant): SkuVariant {
+function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
   const isPreOrder = v.is_preorder_enabled && v.is_preorder_active;
   const isUpcoming = v.is_preorder_upcoming;
-  // Once its window has ended a pre-order SKU sells from warehouse stock like any other.
-  const inStock = isPreOrder || (!isUpcoming && v.in_stock);
+  // A pre-order product is only ever sold as a pre-order: outside its window it cannot be ordered at all.
+  const inStock = isPreOrder || (kind !== "preorder" && !isUpcoming && v.in_stock);
   const price = toNumber(v.effective_price);
   const list = toNumber(v.price);
   const compareAt = v.compare_at_price ? toNumber(v.compare_at_price) : list > price ? list : undefined;
@@ -62,7 +62,7 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
     else preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
   } else if (isUpcoming) {
     preorderStatus = "upcoming";
-  } else if (v.is_preorder_enabled && !inStock) {
+  } else if (kind === "preorder" || (v.is_preorder_enabled && !inStock)) {
     preorderStatus = "closed";
   }
 
@@ -143,7 +143,7 @@ export function toCategoryInfo(category: ApiCategory): CategoryInfo {
 }
 
 export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
-  const skus = (api.variants ?? []).map(toSkuVariant);
+  const skus = (api.variants ?? []).map((v) => toSkuVariant(v, api.kind));
   const preferred = skus.find((v) => v.inStock) ?? skus[0];
   const category = categories.find((c) => c.id === api.category_id);
 

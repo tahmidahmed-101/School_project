@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ProductDetailView } from "@/modules/catalog";
+import { ProductDetailView, relatedForProduct } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
 import { getCatalog, getProductBySlug, getRelatedProductsBySlug } from "@/modules/catalog/server";
@@ -49,9 +49,11 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
     notFound();
   }
 
-  // The API ranks related products; if that call failed, fall back to others from the same category.
-  const relatedProducts =
-    related ?? products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, RELATED_COUNT);
+  const relatedProducts = relatedForProduct(product, related, products, RELATED_COUNT);
+  const shop =
+    product.kind === "preorder"
+      ? { name: "Pre-order Collection", path: "/pre-order" }
+      : { name: "Shop", path: "/shop" };
 
   return (
     <>
@@ -59,7 +61,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
-          { name: "Shop", path: "/shop" },
+          shop,
           { name: product.name.en, path: `/product/${product.slug}` },
         ])}
       />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { humanizeStatus, orderStatusKey, orderStatusTone, variantLabel } from "../orders";
+import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone, variantLabel } from "../orders";
 
 describe("orderStatusKey", () => {
   it("maps the statuses a customer sees to their copy", () => {
@@ -34,5 +34,13 @@ describe("variantLabel", () => {
     expect(variantLabel({ color: "Black", size: "M" })).toBe("Black / M");
     expect(variantLabel({ color: "", size: "M" })).toBe("M");
     expect(variantLabel({ color: "", size: "" })).toBe("");
+  });
+});
+
+describe("preorderStageTone", () => {
+  it("colours a pre-order by its own stage, not by a stock status", () => {
+    expect(preorderStageTone("completed")).toBe("done");
+    expect(preorderStageTone("cancelled")).toBe("bad");
+    expect(preorderStageTone("received_in_bd_airport")).toBe("progress");
   });
 });

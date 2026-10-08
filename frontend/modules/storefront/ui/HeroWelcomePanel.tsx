@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ChevronRight, Clock, Gift, Sparkles, Store } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { shopListing, type ProductKind } from "@/lib/product";
 
 const QUICK_LINKS = [
   {
     id: "featured",
-    href: "/shop?sort=featured",
+    href: { stock: "/shop?sort=featured", preorder: shopListing("preorder", { sort: "featured" }) },
     icon: Sparkles,
     titleKey: "heroFeaturedTitle",
     subtitleKey: "heroFeaturedSubtitle",
@@ -16,7 +17,7 @@ const QUICK_LINKS = [
   },
   {
     id: "preorder",
-    href: "/pre-order",
+    href: { stock: "/pre-order", preorder: shopListing("preorder") },
     icon: Clock,
     titleKey: "heroPreorderTitle",
     subtitleKey: "heroPreorderSubtitle",
@@ -25,7 +26,7 @@ const QUICK_LINKS = [
   },
   {
     id: "promotion",
-    href: "/shop?sort=discount",
+    href: { stock: "/shop?sort=discount", preorder: shopListing("preorder", { sort: "discount" }) },
     icon: Gift,
     titleKey: "heroPromotionTitle",
     subtitleKey: "heroPromotionSubtitle",
@@ -34,8 +35,8 @@ const QUICK_LINKS = [
   },
 ] as const;
 
-/** Welcome card + quick-link stack shown on the right of the hero on desktop. */
-export function HeroWelcomePanel({ hasOffers }: { hasOffers: boolean }) {
+/** Welcome card + quick-link stack on the right of the hero on desktop; on the pre-order page every tile stays in the pre-order shop. */
+export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind: ProductKind }) {
   const { ui } = useLang();
   const links = hasOffers ? QUICK_LINKS : QUICK_LINKS.filter((link) => link.id !== "promotion");
 
@@ -69,7 +70,7 @@ export function HeroWelcomePanel({ hasOffers }: { hasOffers: boolean }) {
         {links.map(({ id, href, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
           <Link
             key={id}
-            href={href}
+            href={href[kind]}
             className={`group flex flex-1 items-center gap-2 rounded-xl ${tint} p-2.5 shadow-sm transition-all duration-200 hover:shadow-md sm:rounded-2xl sm:p-3`}
           >
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTint}`}>
