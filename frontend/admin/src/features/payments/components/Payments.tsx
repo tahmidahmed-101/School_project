@@ -1,14 +1,14 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import type { DateRange } from "react-day-picker"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { XIcon } from "lucide-react"
 
 import { DataTable } from "@/components/common/data-table"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { Combobox } from "@/components/common/ComboBox"
-import { MoneyCell, TextCell } from "@/components/common/cells"
+import { LinkCell, MoneyCell, TextCell } from "@/components/common/cells"
 import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
@@ -67,14 +67,9 @@ const Payments = () => {
       accessorKey: "order_number",
       header: "ORDER",
       cell: ({ row }) => (
-        <Link
-          to={`/order_detail/${row.original.order_id}`}
-          className="text-sm font-medium text-primary hover:underline"
-          onClick={(e) => e.stopPropagation()}
-          data-no-row-click="true"
-        >
+        <LinkCell to={`/order_detail/${row.original.order_id}`} className="font-medium">
           {row.original.order_number}
-        </Link>
+        </LinkCell>
       ),
     },
     {

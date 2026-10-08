@@ -14,7 +14,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
-import { MoneyCell, ProductCell } from "@/components/common/cells"
+import { MoneyCell, ProductCell, Thumbnail } from "@/components/common/cells"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
@@ -116,13 +116,7 @@ const StockOverview = () => {
       header: "ITEM",
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
-            {row.original.product_image ? (
-              <img loading="lazy" decoding="async" src={row.original.product_image} alt="" className="size-full object-cover" />
-            ) : (
-              <Package className="size-4 text-muted-foreground" />
-            )}
-          </div>
+          <Thumbnail src={row.original.product_image} />
           <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />
         </div>
       ),

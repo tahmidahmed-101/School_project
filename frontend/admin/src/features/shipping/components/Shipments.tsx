@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllShipments } from "@/features/shipping/slices/shipmentSlice"
 import type { Shipment } from "@/features/shipping/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { DateCell, MoneyCell } from "@/components/common/cells"
+import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { ReturnOutcome } from "./ReturnOutcome"
@@ -40,14 +40,7 @@ const Shipments = () => {
       id: "order",
       header: "ORDER",
       cell: ({ row }) => (
-        <Link
-          to={`/order_detail/${row.original.order_id}`}
-          className="text-sm text-primary hover:underline"
-          onClick={(e) => e.stopPropagation()}
-          data-no-row-click="true"
-        >
-          View order
-        </Link>
+        <LinkCell to={`/order_detail/${row.original.order_id}`}>View order</LinkCell>
       ),
     },
     {

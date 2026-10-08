@@ -21,7 +21,7 @@ import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { DateCell, MoneyCell } from "@/components/common/cells"
+import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { DialogActions } from "@/components/common/FormDialog"
 import { DateField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -331,13 +331,12 @@ const VendorBills = () => {
       accessorKey: "purchase_order_number",
       header: "PO",
       cell: ({ row }) => (
-        <Link
+        <LinkCell
           to={`/purchasing/orders/${row.original.purchase_order_id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-sm text-muted-foreground hover:text-primary hover:underline"
+          className="font-mono text-muted-foreground hover:text-primary"
         >
           {row.original.purchase_order_number}
-        </Link>
+        </LinkCell>
       ),
     },
     {

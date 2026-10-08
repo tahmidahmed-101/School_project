@@ -1,13 +1,13 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { Combobox } from "@/components/common/ComboBox"
-import { TextCell } from "@/components/common/cells"
+import { LinkCell, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { RMA_STATUS_OPTIONS, type Rma } from "@/features/returns/types"
@@ -41,14 +41,7 @@ const Returns = () => {
       id: "order",
       header: "ORDER",
       cell: ({ row }) => (
-        <Link
-          to={`/order_detail/${row.original.order_id}`}
-          className="text-sm text-primary hover:underline"
-          onClick={(e) => e.stopPropagation()}
-          data-no-row-click="true"
-        >
-          View order
-        </Link>
+        <LinkCell to={`/order_detail/${row.original.order_id}`}>View order</LinkCell>
       ),
     },
     {
