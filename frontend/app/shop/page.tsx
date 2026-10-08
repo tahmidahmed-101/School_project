@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ShopCatalog, ShopSkeleton } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
-import { ProductsProvider } from "@/modules/catalog";
+import { ProductsProvider, forListing } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 import { photo } from "@/lib/photo";
@@ -72,7 +72,7 @@ export default async function KullMartShopPage({ searchParams }: { searchParams:
     <>
       <JsonLd data={breadcrumbJsonLd(trail)} />
       <Suspense fallback={<ShopSkeleton />}>
-        <ProductsProvider products={products}>
+        <ProductsProvider products={products.map(forListing)}>
           <ShopCatalog />
         </ProductsProvider>
       </Suspense>

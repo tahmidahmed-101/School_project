@@ -13,11 +13,11 @@
 - [x] Deployed and verified live
 
 ## Phase B: storefront per-request cost
-- [ ] Root layout stops fetching the whole catalogue (API: category count + image); low value now the answer is cached
+- [x] Root layout stops fetching the whole catalogue (public category API sends `product_count` + `image`; needs the API deployed first)
 - [ ] Unknown product slug answers 200 with a skeleton instead of 404
-- [ ] Admin edits reach the storefront only when the 60 s cache expires: /api/revalidate cannot purge it
+- [ ] Admin edits reach the storefront only when the 60 s cache expires: the Worker cache is per data centre, a real purge needs a shared store (new service, owner approval)
 - [x] Upstream API responses cached inside the Worker (warm pages 0.85-1.2 s -> 0.07-0.13 s)
-- [ ] Pre-order and shop pages send slim product data; single-language strings not doubled
+- [x] Listing pages send slim product data (`forListing`); single-language strings still doubled by `plain()`
 - [x] Cart / wishlist context values memoised (drawer state still in the same context)
 - [x] Payment methods fetched on the server
 - [x] Bell low-stock count from a count endpoint (API)
@@ -31,7 +31,7 @@
 - [x] Reference lists cached, pages fetched in parallel
 - [x] Reference-list cache max age (5 min)
 - [x] Money arithmetic through one module (4 of 5 sites)
-- [ ] Purchase-order totals still on floats: unit cost has 4 decimals, the scaffold money module has no multiply; owner to pick: API sends the totals, or scaffold gains a multiply (also PurchaseOrderCreate.tsx:72)
+- [x] Purchase-order totals come from the API as exact decimals (create form running total is still an on-screen estimate)
 - [x] Currency label from business profile, not "(BDT)"
 - [x] Bell low-stock source asks for the endpoint's own permission (reports or accounting view)
 

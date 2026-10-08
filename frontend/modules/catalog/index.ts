@@ -10,3 +10,4 @@ export { TrendingSection } from "./ui/TrendingSection";
 export { WithActiveCategory } from "./ui/WithActiveCategory";
 export { ProductDetailSkeleton, ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";
 export { ContactButtons } from "./ui/ContactButtons";
+export { forListing } from "./domain/listing";
