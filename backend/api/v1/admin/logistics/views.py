@@ -11,7 +11,7 @@ from apps.accounts.constants import StaffPermissionCode
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView, IncludeDeletedMixin, RestoreAPIView
-from apps.common.params import get_related
+from apps.common.params import get_kind, get_related
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.logistics.selectors.rates import (
@@ -133,7 +133,9 @@ class AdminShippingZoneListCreateView(
     include_deleted_permission = LogisticsUpdatePermission
 
     def get_queryset(self):
-        return zones_list(include_deleted=self.include_deleted())
+        return zones_list(
+            include_deleted=self.include_deleted(), kind=get_kind(self.request.query_params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -141,7 +143,10 @@ class AdminShippingZoneListCreateView(
     def post(self, request) -> Response:
         serializer = ShippingZoneCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        zone = create_zone(**serializer.validated_data)
+        try:
+            zone = create_zone(**serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
         return Response(
             {"data": ShippingZoneSerializer(zone).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
@@ -164,7 +169,10 @@ class AdminShippingZoneDetailView(LogisticsPermissionMixin, APIView):
             return not_found("zone_not_found", "Shipping zone not found.")
         serializer = ShippingZoneUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        zone = update_zone(zone=zone, **serializer.validated_data)
+        try:
+            zone = update_zone(zone=zone, **serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": ShippingZoneSerializer(zone).data, "message": "Success"})
 
     def delete(self, request, zone_id) -> Response:
@@ -197,7 +205,7 @@ class AdminShippingRateListView(LogisticsPermissionMixin, GenericListAPIView):
         params = self.request.query_params
         zone = get_related(params, "zone_id", get_zone_by_id, "Shipping zone not found.")
         carrier = get_related(params, "carrier_id", get_carrier_by_id, "Carrier not found.")
-        return rates_list(zone=zone, carrier=carrier)
+        return rates_list(zone=zone, carrier=carrier, kind=get_kind(params))
 
     def get(self, request) -> Response:
         return self.list_response(request)

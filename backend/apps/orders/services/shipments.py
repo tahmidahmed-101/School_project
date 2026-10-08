@@ -568,11 +568,12 @@ def _auto_select_carrier(shipment: Shipment):
     from apps.logistics.services.couriers.recipient import total_weight
 
     address = shipment.order.shipping_address
-    zone = find_zone_by_address_text(address_zone_text(address)) if address else None
+    kind = shipment.order.order_type
+    zone = find_zone_by_address_text(address_zone_text(address), kind=kind) if address else None
     if zone is None:
         raise BusinessRuleViolationError(
             "Cannot auto-select a carrier: no shipping zone for this order's address.",
             code="no_shipping_zone",
         )
-    selection = select_courier(zone=zone, weight=total_weight(shipment))
+    selection = select_courier(zone=zone, weight=total_weight(shipment), kind=kind)
     return selection.carrier

@@ -39,6 +39,7 @@ class PublicPaymentMethodSerializer(serializers.Serializer):
     the operator's reasons for it."""
 
     key = serializers.CharField(read_only=True)
+    kind = serializers.CharField(read_only=True)
     label = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     pay_to = serializers.CharField(read_only=True)

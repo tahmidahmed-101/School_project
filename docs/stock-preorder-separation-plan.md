@@ -109,35 +109,40 @@ Forms:
 - Storefront: one kind per cart, wishlist in two sections, search in two groups, order history in two tabs,
   pre-order tracking shows pre-order stages only, no coupon on a pre-order checkout.
 - Company-wide on purpose: staff and roles, audit log, tax rates, chart of accounts, expenses, business profile,
-  integrations, media, policy texts, customer accounts. Delivery zones / rates / carriers, payment methods and
-  warehouses are still one set: see "Delivery, payment and warehouse set-up" below for what a split needs.
+  integrations, media, policy texts, customer accounts, courier accounts (carriers). Delivery zones and rates and
+  payment methods are one set per half; warehouses: see "Delivery, payment and warehouse set-up" below.
 - Data commands, all dry run by default: `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`,
-  `split_both_placements`, `backfill_journal_kind`.
+  `split_both_placements`, `backfill_journal_kind`, `split_shared_delivery_and_payment_setup`.
 - Staff-created orders are stock only (`order_kind_mismatch`); a staff-made pre-order needs a deposit step first.
 - `kind` also on `inventory/stock-status/`, `reporting/low-stock/`, `accounting/reports/inventory-valuation/`,
   the ledger export; variants export takes `category_type`; variants import refuses pre-order rows.
 
 ## Delivery, payment and warehouse set-up: what the code does per kind (2026-10-09)
 
-Nothing below was changed. Each row with a `TODO(ask)` is one setting driving both halves; no second setting was made.
+Delivery zones, rates and payment methods are split per half. The warehouse rows are as the code stood before any split.
 
 | Area | Stock | Pre-order | Where |
 | --- | --- | --- | --- |
-| Delivery charge | Zone matched on the address text, rate by weight and carrier | The same; no kind check | `backend/apps/orders/services/checkout.py:156-166`, `backend/apps/logistics/services/rates.py:18-58` |
-| Zones, rates, carriers | One set | The same set; the models have no kind field | `backend/apps/logistics/models/shipping_zone.py`, `shipping_rate.py`, `carrier.py` |
-| Payment methods offered | Enabled methods that the storefront supports (cash on delivery, bKash, Nagad) | The same list | `backend/api/v1/public/business/views.py:48-53`, `backend/apps/orders/constants.py:20-24` |
+| Delivery charge | Stock zone matched on the address text, stock rate by weight and carrier | Pre-order zone and pre-order rate only; no fallback to stock (`no_shipping_zone`, `no_shipping_rate`) | `backend/apps/orders/services/checkout.py`, `backend/apps/logistics/services/rates.py`, `selectors/rates.py` |
+| Zones, rates | Own zones (name unique per kind) and rates (one per zone, carrier and kind) | Own zones and rates | `backend/apps/logistics/models/shipping_zone.py`, `shipping_rate.py` |
+| Carriers | One list for the company: a carrier is the courier account (credentials, webhook address by carrier id) | The same list; whether and at what price a half uses a carrier is set by that half's rates | `backend/apps/logistics/models/carrier.py`, `backend/api/v1/webhooks/couriers/views.py` |
+| Payment methods offered | Methods switched on for stock, with stock pay-to numbers | Methods switched on for pre-order, with pre-order pay-to numbers; checkout checks the method against the order's own kind | `backend/apps/orders/selectors/payment_methods.py`, `backend/apps/orders/services/payments.py`, `backend/api/v1/public/business/views.py` |
 | Amount due at checkout | Whole order total | `preorder_deposit_percent` of the total | `backend/apps/orders/selectors/payments.py:29-35` |
 | Cash on delivery | Order is confirmed at once | Stays "awaiting payment" until the deposit is recorded, when the deposit is above zero | `backend/apps/orders/services/payments.py:77-84` |
 | Coupon | Applied | Refused (`coupon_stock_only`) | `backend/apps/orders/services/checkout.py:62-64`, `guest_checkout.py:164-180` |
 | Stock at checkout | Reserved from the default warehouse | Nothing reserved; set aside later by "allocate" | `backend/apps/orders/services/checkout.py:136-140`, `backend/apps/orders/services/preorder_allocation.py:17-74` |
 
 - The only rule that differs by kind and has a setting is the deposit percent. It already has its page: `/preorder_settings`.
-- `TODO(ask)`: should a pre-order pay the local delivery charge by the same zone and weight table as a stock order?
-  A per-kind version needs a kind on `ShippingRate` (unique per zone, carrier and kind), `kind` on the rates list,
-  and `quote_shipping` taking the order's kind.
-- `TODO(ask)`: should the payment methods be switched on and off per half (for example no cash on delivery on
-  pre-orders)? A per-kind version needs one on/off per method per kind on `PaymentMethodSetting`, the public
-  `/payment-methods/` list taking the basket's kind, and the guest checkout check using it.
+- Delivery: `kind` on `ShippingZone` and `ShippingRate`; a rate always has its zone's kind (`rate_kind_mismatch`).
+  Admin `logistics/zones/` and `logistics/rates/` take `kind`; pages `/shipping_zones`, `/shipping_rates` and
+  `/preorder_shipping_zones`, `/preorder_shipping_rates`. The storefront quote reads the kind from the basket lines.
+- Payment methods: one on/off and one pay-to number per method per kind. `settings/payment-methods/` (admin) and
+  `/payment-methods/` (public) take `kind`, default stock. Pre-order switches are on `/preorder_settings`.
+- Deploy: after `migrate`, run `manage.py split_shared_delivery_and_payment_setup` (dry run), then `--apply`. It gives
+  the pre-order half a copy of every stock zone, rate and payment method row. Until it runs, a pre-order checkout
+  is refused with `no_shipping_zone` and pre-order payment methods are all on with empty pay-to numbers.
+- `TODO(ask)`: carriers stay one list. Should a courier account ever be switched off for one half only? Today that is
+  done by removing that half's rates for the carrier.
 - `TODO(ask)`: should arrived pre-order goods sit in their own warehouse?
 
 Warehouses today:

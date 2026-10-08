@@ -378,6 +378,10 @@ export const DICT = {
     bn: "ডেলিভারিম্যানের জন্য কোনো নির্দেশনা থাকলে লিখুন...",
   },
   checkoutPaymentMethod: { en: "Payment method", bn: "পেমেন্ট মাধ্যম" },
+  checkoutNoPaymentMethod: {
+    en: "No payment method is open for this order right now. Please contact the store to place it.",
+    bn: "এই অর্ডারের জন্য এখন কোনো পেমেন্ট মাধ্যম চালু নেই। অর্ডার করতে দোকানে যোগাযোগ করুন।",
+  },
   checkoutPayTo: { en: "Send payment to", bn: "টাকা পাঠাবেন এই নম্বরে" },
   checkoutDepositDue: { en: "Advance to pay now", bn: "এখন অগ্রিম দিতে হবে" },
   checkoutCodLabel: { en: "Cash on delivery", bn: "ক্যাশ অন ডেলিভারি" },

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.common.params import KINDS
 from apps.logistics.models import Carrier
 
 
@@ -64,6 +65,7 @@ class ShippingRateSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     zone_id = serializers.UUIDField(read_only=True)
     carrier_id = serializers.UUIDField(read_only=True)
+    kind = serializers.CharField(read_only=True)
     base_weight = serializers.DecimalField(max_digits=10, decimal_places=3)
     base_charge = serializers.DecimalField(max_digits=10, decimal_places=2)
     increment_weight = serializers.DecimalField(max_digits=10, decimal_places=3)
@@ -72,6 +74,7 @@ class ShippingRateSerializer(serializers.Serializer):
 
 class ShippingRateInputSerializer(serializers.Serializer):
     carrier_id = serializers.UUIDField()
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     base_weight = serializers.DecimalField(max_digits=10, decimal_places=3)
     base_charge = serializers.DecimalField(max_digits=10, decimal_places=2)
     increment_weight = serializers.DecimalField(max_digits=10, decimal_places=3)
@@ -88,6 +91,7 @@ class ShippingRateUpdateSerializer(serializers.Serializer):
 class ShippingZoneSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
+    kind = serializers.CharField(read_only=True)
     country_codes = serializers.ListField(child=serializers.CharField())
     is_active = serializers.BooleanField()
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
@@ -99,6 +103,7 @@ class ShippingZoneSerializer(serializers.Serializer):
 
 class ShippingZoneCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     country_codes = serializers.ListField(child=serializers.CharField(), required=False)
 
 

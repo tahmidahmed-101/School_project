@@ -177,6 +177,7 @@ class AdminIntegrationStatusSerializer(serializers.Serializer):
 
 class AdminPaymentMethodSerializer(serializers.Serializer):
     key = serializers.CharField(read_only=True)
+    kind = serializers.CharField(read_only=True)
     label = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     is_enabled = serializers.BooleanField(read_only=True)

@@ -8,6 +8,7 @@ import {
 } from "@/lib/sliceFactory"
 import { api } from "@/lib/api/client"
 import { fetchAllPages } from "@/lib/api/fetchAll"
+import type { Kind } from "@/hooks/use-kind"
 import type { ShippingRatePayload, ShippingZone, ShippingZonePayload } from "../types"
 
 const ENDPOINT = "/admin/logistics/zones/"
@@ -34,14 +35,14 @@ export const restoreZone = createActionThunk<ShippingZone>("shippingZones/restor
 
 /** POST /zones/{id}/rates/ — responds with the zone, rates included. */
 export const createZoneRate = createApiThunk<
-  { zoneId: string; payload: ShippingRatePayload & { carrier_id: string } },
+  { zoneId: string; payload: ShippingRatePayload & { carrier_id: string; kind: Kind } },
   ShippingZone
 >("shippingZones/createRate", ({ zoneId, payload }) => api.post(`${ENDPOINT}${zoneId}/rates/`, payload))
 
-/** Every live zone (all pages), for pickers and name lookups. */
-export const fetchZoneOptions = createAsyncThunk("shippingZones/options", async (_: void, { rejectWithValue }) => {
+/** Every live zone of one half (all pages), for pickers and name lookups. */
+export const fetchZoneOptions = createAsyncThunk("shippingZones/options", async (kind: Kind, { rejectWithValue }) => {
   try {
-    return await fetchAllPages<ShippingZone>(ENDPOINT, { ordering: "name" })
+    return await fetchAllPages<ShippingZone>(ENDPOINT, { ordering: "name", kind })
   } catch (err) {
     return rejectWithValue(err)
   }

@@ -149,15 +149,16 @@ def checkout(
     if shipping_address is not None:
         order.shipping_address = shipping_address
         order.shipping_address_snapshot = build_address_snapshot(shipping_address)
-        zone = find_zone_by_address_text(address_zone_text(shipping_address))
+        zone = find_zone_by_address_text(
+            address_zone_text(shipping_address), kind=order.order_type
+        )
         if zone is None:
             raise BusinessRuleViolationError(
                 "Delivery is not available yet — no shipping zones are configured.",
                 code="no_shipping_zone",
             )
-        # TODO(ask): pre-orders pay the same zone and weight rate as stock orders. Is that intended?
         order.shipping_total = quote_shipping(
-            zone=zone, weight=order_weight(order), carrier=carrier
+            zone=zone, weight=order_weight(order), kind=order.order_type, carrier=carrier
         )
     else:
         order.shipping_total = Decimal("0")

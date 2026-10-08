@@ -7,6 +7,7 @@ import {
   acceptsCoupon,
   buildCheckoutRequest,
   mapApiFieldErrors,
+  paymentMethodsFor,
   validateOrderForm,
 } from "../checkout";
 
@@ -123,5 +124,27 @@ describe("acceptsCoupon", () => {
     expect(acceptsCoupon([preorderLine])).toBe(false);
     expect(acceptsCoupon([...items, preorderLine])).toBe(false);
     expect(acceptsCoupon([])).toBe(false);
+  });
+});
+
+describe("paymentMethodsFor", () => {
+  const method = (key: string, kind: "stock" | "preorder") => ({ key, kind, label: key, description: "", pay_to: "" });
+  const byKind = { stock: [method("cod", "stock")], preorder: [method("bkash", "preorder")] };
+  const preorderLine: CartItem = {
+    product: makeProduct({ id: "p-pre", isPreOrder: true, kind: "preorder" }),
+    quantity: 1,
+    variantId: "variant-pre",
+  };
+
+  it("offers a stock basket the stock methods", () => {
+    expect(paymentMethodsFor(items, byKind)).toEqual(byKind.stock);
+  });
+
+  it("offers a pre-order basket only the pre-order methods", () => {
+    expect(paymentMethodsFor([preorderLine], byKind)).toEqual(byKind.preorder);
+  });
+
+  it("never offers a pre-order method to a basket that also holds a stock line", () => {
+    expect(paymentMethodsFor([...items, preorderLine], byKind)).toEqual(byKind.stock);
   });
 });

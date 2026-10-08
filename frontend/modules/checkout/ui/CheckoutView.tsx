@@ -19,11 +19,12 @@ import {
   buildCheckoutRequest,
   isBdMobile,
   mapApiFieldErrors,
+  paymentMethodsFor,
   validateOrderForm,
   type FormErrors,
+  type PaymentMethodsByKind,
 } from "../domain/checkout";
 import { useCoupon, useShippingQuote } from "./useCheckoutPricing";
-import type { ApiPaymentMethod } from "@/lib/api/types";
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -34,7 +35,7 @@ import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
-export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMethod[] }) {
+export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: PaymentMethodsByKind }) {
   const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
@@ -46,8 +47,9 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
 
+  const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind);
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
-  const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
+  const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
 
@@ -79,6 +81,10 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    if (!paymentMethod) {
+      setErrorMsg(ui("checkoutNoPaymentMethod"));
+      return;
+    }
 
     const problems = validateOrderForm(form);
     if (Object.keys(problems).length > 0) {
@@ -171,13 +177,17 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
 
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-7">
-            {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
+            {errorMsg ? (
+              <FormAlert>{errorMsg}</FormAlert>
+            ) : (
+              !paymentMethod && <FormAlert>{ui("checkoutNoPaymentMethod")}</FormAlert>
+            )}
             <CheckoutFields
               form={form}
               errors={fieldErrors}
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
               paymentMethods={paymentMethods}
-              paymentMethod={paymentMethod}
+              paymentMethod={paymentMethod ?? ""}
               onPaymentMethodChange={setChosenPayment}
             />
           </div>

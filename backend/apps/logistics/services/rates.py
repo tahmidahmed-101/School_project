@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_STOCK
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.logistics.models import Carrier, ShippingRate, ShippingZone
 from apps.logistics.selectors.rates import (
@@ -15,8 +16,10 @@ from apps.logistics.selectors.rates import (
 from apps.orders.models import Shipment
 
 
-def calculate_shipping_rate(*, zone: ShippingZone, carrier: Carrier, weight: Decimal) -> Decimal:
-    rate = get_rate_for_zone_and_carrier(zone=zone, carrier=carrier)
+def calculate_shipping_rate(
+    *, zone: ShippingZone, carrier: Carrier, weight: Decimal, kind: str
+) -> Decimal:
+    rate = get_rate_for_zone_and_carrier(zone=zone, carrier=carrier, kind=kind)
     if rate is None:
         raise BusinessRuleViolationError(
             "No shipping rate configured for this zone/carrier.", code="no_rate"
@@ -28,11 +31,11 @@ def calculate_shipping_rate(*, zone: ShippingZone, carrier: Carrier, weight: Dec
 
 
 def try_quote_shipping(
-    *, zone: ShippingZone | None, weight: Decimal, carrier=None
+    *, zone: ShippingZone | None, weight: Decimal, kind: str, carrier=None
 ) -> Decimal | None:
-    """Quote shipping, or None when nothing matches — for pickers and previews
-    that show "unavailable" rather than blocking. Checkout must use
-    `quote_shipping`, which refuses to guess."""
+    """Quote shipping from this kind's rates only, or None when nothing
+    matches — for pickers and previews that show "unavailable" rather than
+    blocking. Checkout must use `quote_shipping`, which refuses to guess."""
     if zone is None:
         return None
     # Any active carrier that has a rate here, not merely the first one — picking
@@ -40,16 +43,20 @@ def try_quote_shipping(
     candidates = [carrier] if carrier is not None else list(carriers_list().filter(is_active=True))
     for candidate in candidates:
         try:
-            return calculate_shipping_rate(zone=zone, carrier=candidate, weight=weight)
+            return calculate_shipping_rate(
+                zone=zone, carrier=candidate, weight=weight, kind=kind
+            )
         except BusinessRuleViolationError:
             continue
     return None
 
 
-def quote_shipping(*, zone: ShippingZone | None, weight: Decimal, carrier=None) -> Decimal:
+def quote_shipping(
+    *, zone: ShippingZone | None, weight: Decimal, kind: str, carrier=None
+) -> Decimal:
     """Refuses rather than returning None: a missing rate used to be coerced to
     zero, which shipped orders free."""
-    quote = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
+    quote = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
     if quote is None:
         raise BusinessRuleViolationError(
             "No shipping rate is configured for this destination and weight.",
@@ -95,12 +102,24 @@ def update_carrier(*, carrier: Carrier, **fields) -> Carrier:
 
 
 @transaction.atomic
-def create_zone(*, name: str, country_codes: list[str] | None = None) -> ShippingZone:
-    return ShippingZone.objects.create(name=name, country_codes=country_codes or [])
+def create_zone(
+    *, name: str, country_codes: list[str] | None = None, kind: str = KIND_STOCK
+) -> ShippingZone:
+    _check_zone_name_free(name=name, kind=kind)
+    return ShippingZone.objects.create(name=name, country_codes=country_codes or [], kind=kind)
+
+
+def _check_zone_name_free(*, name: str, kind: str, exclude_id=None) -> None:
+    if ShippingZone.objects.filter(name=name, kind=kind).exclude(id=exclude_id).exists():
+        raise BusinessRuleViolationError(
+            "A delivery zone with this name already exists.", code="zone_exists"
+        )
 
 
 @transaction.atomic
 def update_zone(*, zone: ShippingZone, **fields) -> ShippingZone:
+    if "name" in fields:
+        _check_zone_name_free(name=fields["name"], kind=zone.kind, exclude_id=zone.id)
     for field, value in fields.items():
         setattr(zone, field, value)
     zone.save(update_fields=[*fields.keys(), "updated_at"])
@@ -129,15 +148,24 @@ def create_rate(
     base_charge: Decimal,
     increment_weight: Decimal,
     increment_charge: Decimal,
+    kind: str | None = None,
 ) -> ShippingRate:
+    """A rate belongs to the same half as its zone; `kind` only lets a caller
+    state which half it means, so a mix-up is refused instead of saved."""
     _validate_rate_fields(base_weight, base_charge, increment_weight, increment_charge)
-    if get_rate_for_zone_and_carrier(zone=zone, carrier=carrier) is not None:
+    if kind is not None and kind != zone.kind:
+        raise BusinessRuleViolationError(
+            "This delivery zone belongs to the other half of the shop.",
+            code="rate_kind_mismatch",
+        )
+    if get_rate_for_zone_and_carrier(zone=zone, carrier=carrier, kind=zone.kind) is not None:
         raise BusinessRuleViolationError(
             "A rate is already configured for this zone and carrier.", code="rate_exists"
         )
     return ShippingRate.objects.create(
         zone=zone,
         carrier=carrier,
+        kind=zone.kind,
         base_weight=base_weight,
         base_charge=base_charge,
         increment_weight=increment_weight,
@@ -160,13 +188,13 @@ def update_rate(*, rate: ShippingRate, **fields) -> ShippingRate:
     return rate
 
 
-def shipping_options(*, zone: ShippingZone | None, weight: Decimal) -> list[dict]:
+def shipping_options(*, zone: ShippingZone | None, weight: Decimal, kind: str) -> list[dict]:
     """Quotes for every selectable carrier, so a storefront picker shows the
     same numbers checkout will charge. `cost` is None when nothing matches."""
     return [
         {
             "carrier": carrier,
-            "cost": try_quote_shipping(zone=zone, weight=weight, carrier=carrier),
+            "cost": try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier),
         }
         for carrier in carriers_list().filter(is_active=True)
     ]
