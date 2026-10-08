@@ -10,9 +10,11 @@ from apps.accounts.tests.helpers import create_user
 from apps.catalog.factories import CategoryFactory, ProductVariantFactory
 from apps.catalog.models import Category, Product
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_PREORDER
 from apps.inventory.constants import MovementType
 from apps.inventory.models import StockLedgerEntry
 from apps.inventory.selectors.stock import stock_items_list
+from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import (
     post_adjustment,
     post_bulk_adjustments,
@@ -22,6 +24,11 @@ from apps.inventory.services.stock import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _preorder_warehouse(db):
+    return get_or_create_default_warehouse(KIND_PREORDER)
 
 BASE = "/api/v1/admin/inventory/"
 STOCK = Category.CategoryType.STOCK

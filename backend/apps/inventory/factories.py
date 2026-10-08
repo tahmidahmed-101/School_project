@@ -16,7 +16,9 @@ class StockItemFactory(factory.django.DjangoModelFactory):
         django_get_or_create = ("variant", "warehouse")
 
     variant = factory.SubFactory(ProductVariantFactory)
-    warehouse = factory.LazyFunction(get_or_create_default_warehouse)
+    warehouse = factory.LazyAttribute(
+        lambda row: get_or_create_default_warehouse(row.variant.product.category.category_type)
+    )
     quantity_on_hand = 0
     quantity_reserved = 0
     avg_cost = Decimal("0")
@@ -29,7 +31,9 @@ class StockLedgerEntryFactory(factory.django.DjangoModelFactory):
         model = StockLedgerEntry
 
     variant = factory.SubFactory(ProductVariantFactory)
-    warehouse = factory.LazyFunction(get_or_create_default_warehouse)
+    warehouse = factory.LazyAttribute(
+        lambda row: get_or_create_default_warehouse(row.variant.product.category.category_type)
+    )
     movement_type = MovementType.PURCHASE_IN
     quantity = 10
     unit_cost = Decimal("8.00")

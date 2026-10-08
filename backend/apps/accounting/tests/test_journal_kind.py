@@ -25,6 +25,7 @@ from apps.accounts.constants import UserRole
 from apps.accounts.tests.helpers import create_user
 from apps.business.selectors.business_profile import get_business_profile
 from apps.catalog.factories import ProductVariantFactory
+from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import write_off_stock
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.selectors.payments import order_deposit_due
@@ -136,6 +137,7 @@ def _expense(amount: str = "75.00"):
 @pytest.fixture
 def books(settings):
     seed_chart_of_accounts()
+    get_or_create_default_warehouse(PREORDER)
     stock = _stock_sale()
     preorder = _preorder_deposit()
     expense = _expense()

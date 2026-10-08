@@ -8,7 +8,16 @@ from django.db.models import F, QuerySet
 from apps.catalog.models import Category
 from apps.inventory.models import StockItem, StockLedgerEntry
 
-from .warehouse import get_default_warehouse
+from .warehouse import default_warehouse_ids
+
+
+def _in_default_warehouse(queryset: QuerySet, warehouse) -> QuerySet:
+    """A variant only has rows in warehouses of its own kind, so the default
+    warehouses of both kinds together give one row per variant."""
+    if warehouse is not None:
+        return queryset.filter(warehouse=warehouse)
+    default_ids = default_warehouse_ids()
+    return queryset.filter(warehouse_id__in=default_ids) if default_ids else queryset
 
 
 def stock_items_list(
@@ -41,12 +50,7 @@ def stock_items_list(
 
 def get_stock_item(*, variant, warehouse=None) -> StockItem | None:
     queryset = StockItem.objects.filter(variant=variant)
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     return queryset.first()
 
 
@@ -71,24 +75,14 @@ def available_quantities_for_variants(
     """Batch version of `available_quantity_for_variant` — one query for many
     variants, so callers building a variant table/list don't issue an N+1."""
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     rows = queryset.values("variant_id", "quantity_on_hand", "quantity_reserved")
     return {row["variant_id"]: row["quantity_on_hand"] - row["quantity_reserved"] for row in rows}
 
 
 def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> dict[UUID, int]:
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     rows = queryset.values("variant_id", "reorder_point")
     return {row["variant_id"]: row["reorder_point"] for row in rows}
 

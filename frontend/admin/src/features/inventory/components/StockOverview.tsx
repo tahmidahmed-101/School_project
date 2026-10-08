@@ -54,7 +54,7 @@ const StockOverview = () => {
   const dispatch = useAppDispatch()
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
   const stockState = useAppSelector((s) => s.inventoryStockItems)
-  const { warehouses } = useWarehouses()
+  const { warehouses } = useWarehouses("stock")
 
   const [status, setStatus] = useState<StockStatusSummary | null>(null)
   const [statusError, setStatusError] = useState<unknown>(null)

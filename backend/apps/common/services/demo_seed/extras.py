@@ -42,6 +42,7 @@ from apps.catalog.services.questions import ask_question, moderate_question
 from apps.catalog.services.reviews import create_review
 from apps.catalog.services.wishlist import add_to_wishlist
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_PREORDER
 from apps.common.services.demo_seed.constants import (
     BUNDLE_NAME,
     BUNDLE_SKU,
@@ -67,6 +68,7 @@ from apps.common.services.demo_seed.constants import (
     SLUG_PREFIX,
 )
 from apps.inventory.constants import MovementType
+from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import PaymentMethodSetting, SalesOrder, SalesOrderLine
@@ -326,6 +328,7 @@ class DemoExtras:
             return
         to_ship = self._pay_deposit(first)
         ready = self._pay_deposit(self._place_preorder(arrived, 2))
+        get_or_create_default_warehouse(KIND_PREORDER)
         record_movement(
             variant=arrived,
             movement_type=MovementType.PURCHASE_IN,
