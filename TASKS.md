@@ -117,3 +117,10 @@
 - [ ] Owner decisions: which of suppliers / brands / customers / warehouses / delivery set-up / ledger reports to split; staff-created pre-orders (needs deposit step on server); keep featured / highlights / meta keywords on the pre-order product form; `both` slides and promo lines
 - [x] Duplicate React key warning on `/products`: nested fragment in header actions, keys fixed in `PageHeader`
 - [ ] Production: run `fix_product_kind_mismatches` (dry run first) only with a backup and the owner's go-ahead
+
+## Phase N: nothing shared between the halves (owner "no shared anything", "fix the rest and deep dive" 2026-10-09)
+- [ ] N1 Suppliers and brands carry a kind; lists and pickers per half
+- [ ] N2 Ledger reports: sales and cost of goods per kind; what cannot be split, stated with reason
+- [ ] N3 Home stock only + pre-order overview page; no `both` slides / promo lines; customers per half; delivery and payment set-up per kind where the checkout already differs
+- [ ] N4 Deep audit of every dashboard page and admin endpoint; leftovers fixed or logged
+- [ ] Merge, routes, typecheck, full backend suite once, browser pass
