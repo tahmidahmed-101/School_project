@@ -5,3 +5,4 @@ export { loginHref } from "./domain/redirect";
 export { LoginView } from "./ui/LoginView";
 export { UserAvatar } from "./ui/UserAvatar";
 export { RegisterView } from "./ui/RegisterView";
+export { ForgotPasswordView } from "./ui/ForgotPasswordView";

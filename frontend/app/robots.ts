@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/checkout", "/track-order", "/login", "/register", "/api/", "/*?q="],
+      disallow: ["/checkout", "/track-order", "/login", "/register", "/forgot-password", "/api/", "/*?q="],
     },
     // A sitemap line needs an absolute URL, so it is left out until the site URL is configured.
     ...(SITE_URL ? { sitemap: `${SITE_URL}/sitemap.xml` } : {}),

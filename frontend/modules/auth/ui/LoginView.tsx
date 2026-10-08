@@ -96,7 +96,9 @@ export function LoginView() {
         {ui("loginSubmit")}
       </Button>
 
-      <p className="text-center text-xs font-semibold text-fg-muted">{ui("loginForgot")}</p>
+      <Link href="/forgot-password" className="block text-center text-xs font-semibold text-fg-muted hover:underline">
+        {ui("loginForgot")}
+      </Link>
     </AuthCard>
   );
 }
