@@ -15,6 +15,7 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_categories", lazy: page(() => import("../catalog/components/Categories")) },
     { path: "preorder_brands", lazy: page(() => import("../catalog/components/Brands")) },
     { path: "preorder_arrivals", lazy: page(() => import("../inventory/components/PreorderArrivals")) },
+    { path: "preorder_warehouses", lazy: page(() => import("../inventory/components/Warehouses")) },
     { path: "preorder_payments", lazy: page(() => import("../payments/components/Payments")) },
     { path: "preorder_shipments", lazy: page(() => import("../shipping/components/Shipments")) },
     { path: "preorder_returns", lazy: page(() => import("../returns/components/Returns")) },
@@ -55,6 +56,11 @@ export const preorderModule: FeatureModule = {
         {
           title: "Arrivals",
           url: "/preorder_arrivals",
+          permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
+        },
+        {
+          title: "Warehouses",
+          url: "/preorder_warehouses",
           permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
         },
         { title: "Payments", url: "/preorder_payments", permission: ["orders.view", "orders.manage"] },
