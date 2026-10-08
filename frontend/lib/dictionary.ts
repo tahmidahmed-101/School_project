@@ -420,9 +420,9 @@ export const DICT = {
   footerRefundPolicy: { en: "Refund policy", bn: "রিফান্ড নীতি" },
   footerHours: { en: "Always open for online orders", bn: "অনলাইন অর্ডারের জন্য সবসময় খোলা" },
   footerRights: { en: "All rights reserved.", bn: "সর্বস্বত্ব সংরক্ষিত।" },
-  footerDisclaimer: {
-    en: "Brand name, logo, contact details and product photographs belong to Kull Mart. Prices, stock counts and pre-order dates on this site are sample values until confirmed by the store.",
-    bn: "ব্র্যান্ড নাম, লোগো, যোগাযোগের তথ্য ও পণ্যের ছবি কুল মার্টের নিজস্ব। এই সাইটের দাম, স্টক সংখ্যা ও প্রি-অর্ডারের তারিখ দোকান নিশ্চিত না করা পর্যন্ত নমুনা মান।",
+  footerCopyrightNotice: {
+    en: "The Kull Mart name, logo, product photographs and the content of this site are the property of Kull Mart. They may not be copied or reused without written permission.",
+    bn: "কুল মার্টের নাম, লোগো, পণ্যের ছবি ও এই সাইটের সব লেখা কুল মার্টের নিজস্ব সম্পত্তি। লিখিত অনুমতি ছাড়া এগুলো কপি বা অন্য কোথাও ব্যবহার করা যাবে না।",
   },
   // API errors and states
   errNetwork: {
