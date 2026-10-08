@@ -36,7 +36,7 @@ import { fetchAll, fetchSingle, recordVendorPayment, vendorBillPdfUrl, voidVendo
 import type { VendorBill } from "../types"
 import { useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
 import { useStatusSortFilters } from "../hooks/useStatusSortFilters"
-import { BILL_STATUS_TONE, openPdf } from "../utils"
+import { openPdf } from "../utils"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
 
 const PAYMENT_METHODS = ["Bank transfer", "Cash", "Cheque", "bKash", "Nagad", "Card"]
@@ -193,7 +193,7 @@ function BillDetailDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <span className="font-mono">{bill.bill_number}</span>
-              <StatusBadge status={bill.status} tone={BILL_STATUS_TONE[bill.status]} />
+              <StatusBadge status={bill.status} />
             </DialogTitle>
             <DialogDescription>
               {bill.supplier_name} · PO{" "}
@@ -362,7 +362,7 @@ const VendorBills = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => <StatusBadge status={row.original.status} tone={BILL_STATUS_TONE[row.original.status]} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
       id: "actions",

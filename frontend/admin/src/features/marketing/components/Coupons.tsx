@@ -34,7 +34,7 @@ const formatCouponValue = (coupon: Pick<Coupon, "discount_type" | "value">) =>
 
 function couponState(coupon: Coupon): { status: string; tone: "success" | "destructive" | "secondary" | "warning"; label: string } {
   if (coupon.deleted_at) return { status: "deleted", tone: "destructive", label: "Deleted" }
-  if (!coupon.is_active) return { status: "inactive", tone: "secondary", label: "Inactive" }
+  if (!coupon.is_active) return { status: "inactive", tone: "destructive", label: "Inactive" }
   if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
     return { status: "expired", tone: "destructive", label: "Expired" }
   if (coupon.usage_limit != null && coupon.times_used >= coupon.usage_limit)

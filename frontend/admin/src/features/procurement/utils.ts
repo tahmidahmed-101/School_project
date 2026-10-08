@@ -1,33 +1,23 @@
 import { toast } from "sonner"
 import { extractApiError, getApiErrorMessage } from "@/lib/api/client"
 import { openFileInTab } from "@/lib/download"
-import type { StatusTone } from "@/components/common/status-tones"
+import { withStatusTones } from "@/components/common/status-tones"
 import type { PurchaseOrder } from "./types"
 
-export const PO_STATUS_TONE: Record<string, StatusTone> = {
-  draft: "secondary",
+export const PO_STATUS_TONE = withStatusTones({
   submitted: "info",
   received: "success",
-  cancelled: "destructive",
-}
+})
 
-export const GRN_STATUS_TONE: Record<string, StatusTone> = {
-  pending: "warning",
+export const GRN_STATUS_TONE = withStatusTones({
   qc_pass: "success",
   qc_reject: "destructive",
-}
+})
 
 export const GRN_STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
   qc_pass: "QC pass",
   qc_reject: "QC reject",
-}
-
-export const BILL_STATUS_TONE: Record<string, StatusTone> = {
-  unpaid: "warning",
-  paid: "success",
-  overdue: "destructive",
-  void: "secondary",
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100
