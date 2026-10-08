@@ -15,7 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
-import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 import { fetchAll } from "../slices/ledgerSlice"
 import { downloadLedgerExport } from "../api"

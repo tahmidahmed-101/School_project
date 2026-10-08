@@ -20,7 +20,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
-import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 import { fetchAll } from "../slices/reservationSlice"
 import { releaseReservation } from "../api"

@@ -31,7 +31,7 @@ import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
 import { ProductImagesSection } from "./ProductImagesSection"
 import { StagedImagesCard } from "./StagedImagesCard"
-import { VariantPicker, type PickedVariant } from "./VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),

@@ -61,7 +61,7 @@ import {
 } from "../utils"
 import { GoodsReceiptDialog } from "./GoodsReceiptDialog"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
-import { VariantPicker, type PickedVariant } from "./VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 // ---- Dialogs -------------------------------------------------------------------------------
 
@@ -151,7 +151,9 @@ function LineDialog({
 }) {
   const dispatch = useAppDispatch()
   const [variant, setVariant] = useState<PickedVariant | null>(
-    line ? { id: line.variant_id, label: line.product_name, sku: line.variant_sku, cost_price: null } : null
+    line
+      ? { id: line.variant_id, product_name: line.product_name, label: line.product_name, sku: line.variant_sku, cost_price: null }
+      : null
   )
   const [quantity, setQuantity] = useState(line ? String(line.quantity_ordered) : "1")
   const [unitCost, setUnitCost] = useState(line ? Number(line.unit_cost).toFixed(2) : "")
@@ -199,6 +201,7 @@ function LineDialog({
         <FieldLabel htmlFor="line-variant">Variant *</FieldLabel>
         <FieldContent>
           <VariantPicker
+            variant="combobox"
             id="line-variant"
             value={variant}
             onChange={(v) => {
