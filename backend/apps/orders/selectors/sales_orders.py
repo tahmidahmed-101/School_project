@@ -9,6 +9,7 @@ from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
 from apps.common.utils.codes import hash_code
 from apps.common.utils.dates import day_after, day_start
 from apps.orders.models import SalesOrder, SalesOrderLine
+from apps.orders.selectors.shipments import with_delivered_quantity
 
 
 def customer_order_summary(customer) -> dict:
@@ -60,6 +61,8 @@ def _orders_with_related() -> QuerySet[SalesOrder]:
     return SalesOrder.objects.select_related(
         "customer", "shipping_address", "coupon"
     ).prefetch_related(
+        # Each line carries `delivered_quantity`, summed in the lines query itself.
+        Prefetch("lines", queryset=with_delivered_quantity(SalesOrderLine.objects.all())),
         "lines__variant__product",
         "lines__variant__images",
         "lines__variant__product__images",

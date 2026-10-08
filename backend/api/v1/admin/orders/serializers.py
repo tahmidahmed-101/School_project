@@ -15,6 +15,7 @@ from apps.orders.models import (
     Shipment,
     StockReservation,
 )
+from apps.orders.selectors.shipments import attach_delivered_quantities
 from apps.orders.services.address_snapshot import snapshot_or_live
 
 
@@ -26,6 +27,9 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
     product_image = serializers.SerializerMethodField()
     quantity = serializers.IntegerField()
     shipped_quantity = serializers.IntegerField(read_only=True)
+    # Units in DELIVERED consignments; set on the line by
+    # `_orders_with_related` or `attach_delivered_quantities`.
+    delivered_quantity = serializers.IntegerField(read_only=True)
     returned_quantity = serializers.IntegerField(read_only=True)
     shippable_quantity = serializers.IntegerField(read_only=True)
     returnable_quantity = serializers.IntegerField(read_only=True)
@@ -128,7 +132,8 @@ class AdminSalesOrderSerializer(serializers.Serializer):
         }
 
     def get_lines(self, obj) -> list[dict]:
-        return AdminSalesOrderLineSerializer(obj.lines.all(), many=True).data
+        lines = attach_delivered_quantities(list(obj.lines.all()))
+        return AdminSalesOrderLineSerializer(lines, many=True).data
 
     def get_has_preorder(self, obj) -> bool:
         return any(line.is_preorder for line in obj.lines.all())
