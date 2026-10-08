@@ -39,4 +39,20 @@ describe("mergeBrand", () => {
     expect(brand.whatsapp).toBe(BRAND_INFO.whatsapp);
     expect(brand.email).toBe(BRAND_INFO.email);
   });
+
+  it("takes the social profiles and the map link from the profile", () => {
+    const brand = mergeBrand(
+      profile({
+        google_maps_url: " https://maps.app.goo.gl/abc ",
+        social: { instagram: "https://instagram.com/kullmartbd", tiktok: "" },
+      }),
+    );
+    expect(brand.mapsUrl).toBe("https://maps.app.goo.gl/abc");
+    expect(brand.social).toEqual({
+      instagram: "https://instagram.com/kullmartbd",
+      tiktok: "",
+      youtube: "",
+      linkedin: "",
+    });
+  });
 });
