@@ -40,6 +40,20 @@ def test_admin_can_fetch_low_stock_summary(api_client):
     assert response.data["data"] == []
 
 
+def test_low_stock_count_only_returns_the_count_without_rows(api_client):
+    admin = create_user(email="report-count-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    _seed_low_stock(3)
+
+    counted = api_client.get("/api/v1/admin/reporting/low-stock/", {"count_only": "1"})
+    listed = api_client.get("/api/v1/admin/reporting/low-stock/")
+
+    assert counted.status_code == 200
+    assert counted.data == {"data": {"count": 3}, "message": "Success"}
+    assert len(listed.data["data"]) == 3
+    assert listed.data["data"][0]["variant_sku"]
+
+
 def test_low_stock_summary_exposes_human_labels_alongside_ids(api_client):
     admin = create_user(email="report-labels-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
