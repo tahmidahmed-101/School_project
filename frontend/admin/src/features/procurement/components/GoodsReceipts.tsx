@@ -17,7 +17,7 @@ import { SortSelect } from "@/components/common/SortSelect"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DateCell } from "@/components/common/cells"
+import { DateCell, LinkCell } from "@/components/common/cells"
 import { api } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
 import { formatDate } from "@/lib/format"
@@ -158,13 +158,9 @@ const GoodsReceipts = () => {
       accessorKey: "purchase_order_number",
       header: "PURCHASE ORDER",
       cell: ({ row }) => (
-        <Link
-          to={`/purchasing/orders/${row.original.purchase_order_id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-sm font-semibold text-primary hover:underline"
-        >
+        <LinkCell to={`/purchasing/orders/${row.original.purchase_order_id}`} className="font-mono font-semibold">
           {row.original.purchase_order_number}
-        </Link>
+        </LinkCell>
       ),
     },
     {

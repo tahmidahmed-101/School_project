@@ -2,6 +2,7 @@ import React, { useState, useEffect, useId, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { usePermissions } from "@/hooks/use-can"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Sheet,
   SheetClose,
@@ -81,27 +82,29 @@ const SearchField = ({
         onKeyDown={onKeyDown}
         placeholder="Search product, order, customer..."
         className={cn(
-          "w-full rounded-lg border border-gray-300 bg-gray-100 pl-9 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-500 dark:border-border dark:bg-transparent dark:text-gray-200 dark:placeholder:text-gray-500",
+          "w-full rounded-lg border border-border bg-muted pl-9 text-sm text-foreground transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-500 dark:bg-transparent",
           variant === "sheet" ? "h-12 pr-10 text-base" : "h-10 pr-13"
         )}
       />
 
       {query ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label="Clear search"
           onClick={onClear}
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 p-0.5 rounded-md hover:bg-gray-200 text-gray-600 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200 transition-colors",
+            "absolute top-1/2 size-auto -translate-y-1/2 rounded-md border-0 p-0.5 text-muted-foreground hover:text-muted-foreground dark:hover:text-foreground",
             variant === "sheet" ? "right-3" : "right-12"
           )}
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       ) : null}
 
       {variant === "inline" ? (
-        <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-xs text-gray-600 dark:border-border dark:bg-transparent">
+        <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-background text-xs text-muted-foreground dark:bg-transparent">
           ⌘K
         </span>
       ) : null}
@@ -486,13 +489,15 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
             <SheetTitle>Search</SheetTitle>
 
             <SheetClose asChild>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-lg"
                 aria-label="Close search"
-                className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                className="rounded-[10px] text-gray-700 hover:bg-muted hover:text-gray-700 dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-foreground"
               >
                 <X className="size-5" />
-              </button>
+              </Button>
             </SheetClose>
           </div>
 

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
+import { Package, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { StatusBadge } from "./StatusBadge"
@@ -70,8 +72,48 @@ export function TextCell({
 /** Status of a soft-deletable record: Deleted, else Active / Inactive. */
 export function ActiveStatusBadge({ deleted, active }: { deleted?: boolean | string | null; active: boolean }) {
   return deleted ? (
-    <StatusBadge status="deleted" tone="destructive" />
+    <StatusBadge status="deleted" />
   ) : (
     <StatusBadge status={active ? "active" : "inactive"} />
+  )
+}
+
+/** A link to the record a row refers to. A click on it never counts as a click on the row. */
+export function LinkCell({ to, className, children }: { to: string; className?: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className={cn("text-sm text-primary hover:underline", className)}
+      onClick={(e) => e.stopPropagation()}
+      data-no-row-click="true"
+    >
+      {children}
+    </Link>
+  )
+}
+
+/** Small square image with an icon in its place when there is none. */
+export function Thumbnail({
+  src,
+  icon: Icon = Package,
+  className,
+}: {
+  src?: string | null
+  icon?: LucideIcon
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted",
+        className
+      )}
+    >
+      {src ? (
+        <img loading="lazy" decoding="async" src={src} alt="" className="size-full object-cover" />
+      ) : (
+        <Icon className="size-4 text-muted-foreground" />
+      )}
+    </div>
   )
 }

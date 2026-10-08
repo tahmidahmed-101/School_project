@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ComponentProps } from "react"
+import { useState, type ComponentProps } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Ban, Check, CheckCircle2, Clock, CreditCard, FileText, MapPin, PencilIcon, RotateCcw, Tag, Truck, User, Wallet, Eye, ListOrdered, ShieldAlert, Trash2, type LucideIcon } from "lucide-react"
@@ -34,6 +34,7 @@ import { SubmitButton } from "@/components/common/FormActions"
 import { downloadFile } from "@/lib/download"
 import { useCan } from "@/hooks/use-can"
 import { cn } from "@/lib/utils"
+import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -187,16 +188,7 @@ const OrderDetail = () => {
   const [downloading, setDownloading] = useState(false)
   const [dialog, setDialog] = useState<"edit" | "capture" | "ship" | "return" | null>(null)
 
-  const load = useCallback(() => (id ? dispatch(fetchSingle(id)) : undefined), [dispatch, id])
-
-  useEffect(() => {
-    const request = load()
-    return () => request?.abort()
-  }, [load])
-
-  const refresh = () => {
-    load()
-  }
+  const refresh = useDetailLoad(fetchSingle, id)
 
   const pageState = resolveDetailState(singleStatus, singleError, !!order)
   if (pageState || !order) {

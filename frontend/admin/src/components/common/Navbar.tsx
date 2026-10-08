@@ -31,6 +31,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { logout } from "@/features/authentication/slices/authSlice"
 import { hasPermission } from "@/app/modules"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 
 // Each entry is shown only when the user holds `permission` (see hasPermission).
 const quickCreateItems = [
@@ -96,7 +97,7 @@ const Navbar = () => {
     <header className="bg-background">
       <nav className="flex items-center justify-between p-4 sm:p-5">
         <div className="flex items-center gap-4 flex-1 max-w-[460px]">
-          <SidebarTrigger className="rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white/90 shrink-0" />
+          <SidebarTrigger className="shrink-0 hover:bg-muted dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-foreground" />
 
           {/* Search */}
           <div className="relative hidden sm:flex w-full">
@@ -106,16 +107,18 @@ const Navbar = () => {
             />
           </div>
 
-          <button
+          <Button
             ref={mobileSearchTriggerRef}
             type="button"
+            variant="outline"
+            size="icon-lg"
             aria-label="Open search"
             aria-expanded={mobileSearchOpen}
             onClick={() => setMobileSearchOpen(true)}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800 sm:hidden"
+            className="rounded-[10px] text-gray-700 shadow-xs hover:bg-muted dark:hover:bg-accent dark:text-gray-300 sm:hidden"
           >
             <SearchIcon className="size-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -144,16 +147,18 @@ const Navbar = () => {
           </DropdownMenu>
 
           {/* Theme */}
-          <button
+          <Button
+            variant="outline"
+            size="icon-lg"
             onClick={toggleTheme}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800"
+            className="rounded-[10px] text-gray-700 shadow-xs hover:bg-muted dark:hover:bg-accent dark:text-gray-300"
           >
             {theme === "light" ? (
               <MoonIcon className="size-5" />
             ) : (
               <SunIcon className="size-5" />
             )}
-          </button>
+          </Button>
 
           {/* Notification */}
           <NotificationBell />
@@ -163,7 +168,7 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Open user profile menu"
-                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-300 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none focus-visible:ring-primary-500/40 dark:border-input"
+                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none focus-visible:ring-primary-500/40 dark:border-input"
               >
                 <Avatar className="size-full">
                   {user?.profile_picture ? (

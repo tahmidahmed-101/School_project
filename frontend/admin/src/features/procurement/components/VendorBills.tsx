@@ -21,7 +21,7 @@ import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { DateCell, MoneyCell } from "@/components/common/cells"
+import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { DialogActions } from "@/components/common/FormDialog"
 import { DateField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -36,7 +36,7 @@ import { fetchAll, fetchSingle, recordVendorPayment, vendorBillPdfUrl, voidVendo
 import type { VendorBill } from "../types"
 import { useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
 import { useStatusSortFilters } from "../hooks/useStatusSortFilters"
-import { BILL_STATUS_TONE, openPdf } from "../utils"
+import { openPdf } from "../utils"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
 
 const PAYMENT_METHODS = ["Bank transfer", "Cash", "Cheque", "bKash", "Nagad", "Card"]
@@ -193,7 +193,7 @@ function BillDetailDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <span className="font-mono">{bill.bill_number}</span>
-              <StatusBadge status={bill.status} tone={BILL_STATUS_TONE[bill.status]} />
+              <StatusBadge status={bill.status} />
             </DialogTitle>
             <DialogDescription>
               {bill.supplier_name} · PO{" "}
@@ -331,13 +331,12 @@ const VendorBills = () => {
       accessorKey: "purchase_order_number",
       header: "PO",
       cell: ({ row }) => (
-        <Link
+        <LinkCell
           to={`/purchasing/orders/${row.original.purchase_order_id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-sm text-muted-foreground hover:text-primary hover:underline"
+          className="font-mono text-muted-foreground hover:text-primary"
         >
           {row.original.purchase_order_number}
-        </Link>
+        </LinkCell>
       ),
     },
     {
@@ -362,7 +361,7 @@ const VendorBills = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => <StatusBadge status={row.original.status} tone={BILL_STATUS_TONE[row.original.status]} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
       id: "actions",

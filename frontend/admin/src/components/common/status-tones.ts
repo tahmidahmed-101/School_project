@@ -24,6 +24,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   published: "success",
   draft: "secondary",
   archived: "secondary",
+  deleted: "destructive",
 
   // order fulfillment (kull-mart: pending, awaiting_payment, confirmed, shipped,
   // delivered, cancelled, closed)
@@ -45,6 +46,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   failed: "destructive",
   partially_refunded: "warning",
   refunded: "info",
+  unpaid: "warning",
+  overdue: "destructive",
+  void: "secondary",
 
   // returns (RMA status + line condition grading)
   requested: "warning",
@@ -78,6 +82,11 @@ const STATUS_TONES: Record<string, StatusTone> = {
   open: "warning",
   resolved: "success",
   dismissed: "secondary",
+}
+
+/** A feature's own map: the shared tones plus the statuses only that feature has (or means differently). */
+export function withStatusTones(overrides: Record<string, StatusTone>): Record<string, StatusTone> {
+  return { ...STATUS_TONES, ...overrides }
 }
 
 export function getStatusTone(status: string | null | undefined, fallback: StatusTone = "secondary"): StatusTone {

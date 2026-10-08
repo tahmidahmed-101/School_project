@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Banknote } from "lucide-react"
 
@@ -9,7 +8,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { ExportButton } from "@/components/common/ExportButton"
 import { DateRangeInputs } from "@/components/common/DateRangeInputs"
-import { DateCell, MoneyCell, TextCell } from "@/components/common/cells"
+import { DateCell, LinkCell, MoneyCell, TextCell } from "@/components/common/cells"
 import { downloadFile } from "@/lib/download"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
@@ -38,9 +37,9 @@ const columns: ColumnDef<VendorPayment>[] = [
     accessorKey: "vendor_bill_number",
     header: "BILL",
     cell: ({ row }) => (
-      <Link to="/purchasing/bills" className="font-mono text-sm font-semibold text-primary hover:underline">
+      <LinkCell to="/purchasing/bills" className="font-mono font-semibold">
         {row.original.vendor_bill_number}
-      </Link>
+      </LinkCell>
     ),
   },
   {
