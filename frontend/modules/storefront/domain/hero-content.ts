@@ -1,11 +1,15 @@
 import type { T } from "@/lib/types";
 
 export interface HeroSlide {
+  /** Set on slides managed in the dashboard; the built-in slides are told apart by their image. */
+  id?: string;
   image: string;
   alt: string;
   tag: T;
   /** Lines are separated by "\n". */
   title: T;
+  /** Where the slide's button goes; the page's own shop link when unset. */
+  linkUrl?: string;
 }
 
 export const HERO_CTA_TEXT: T = { en: "Shop now", bn: "কিনুন" };
@@ -55,5 +59,24 @@ export const HERO_SLIDES: HeroSlide[] = [
       en: "All you love,\none store",
       bn: "সব পছন্দ,\nএক দোকানে",
     },
+  },
+];
+
+export const PROMO_LINES: T[] = [
+  {
+    en: "Cash on delivery available nationwide",
+    bn: "সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা",
+  },
+  {
+    en: "Wholesale & retail orders welcome",
+    bn: "পাইকারি ও খুচরা উভয় অর্ডার গ্রহণযোগ্য",
+  },
+  {
+    en: "Women's fashion, innerwear, kids & gadgets",
+    bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
+  },
+  {
+    en: "New arrivals added every week",
+    bn: "প্রতি সপ্তাহে নতুন পণ্য যুক্ত হয়",
   },
 ];

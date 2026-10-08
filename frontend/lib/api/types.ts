@@ -209,6 +209,29 @@ export interface ApiBusinessProfile {
   social: Record<string, string>;
 }
 
+type ApiLocalizedText = { en: string; bn: string };
+
+export interface ApiHeroSlide {
+  id: string;
+  /** Absolute URL. */
+  image: string;
+  alt: string;
+  tag: ApiLocalizedText;
+  title: ApiLocalizedText;
+  link_url: string;
+  placement: "home" | "preorder" | "both";
+}
+
+export interface ApiPromoLine {
+  id: string;
+  text: ApiLocalizedText;
+}
+
+export interface ApiStorefrontContent {
+  hero_slides: ApiHeroSlide[];
+  promo_lines: ApiPromoLine[];
+}
+
 export interface ApiPaymentMethod {
   key: string;
   label: string;

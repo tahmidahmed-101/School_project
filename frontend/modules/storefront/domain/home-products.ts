@@ -11,8 +11,11 @@ export function shelfSize(available: number, cap: number): number {
   return available;
 }
 
+/** Products flagged as trending first, then catalogue order to fill the shelf when too few are flagged. */
 export function trending(stockProducts: Product[]): Product[] {
-  return stockProducts.slice(0, TRENDING_SIZE);
+  const flagged = stockProducts.filter((p) => p.trending);
+  const rest = stockProducts.filter((p) => !p.trending);
+  return [...flagged, ...rest].slice(0, TRENDING_SIZE);
 }
 
 /** Featured products first, then catalogue order, skipping anything trending already shows. */
@@ -33,7 +36,7 @@ export function categoryShelf(stockProducts: Product[], categoryId: string): Pro
 
 /**
  * Only the products the home sections render, in catalogue order, so the page payload stays flat as the catalogue
- * grows. Every shelf picks a prefix in catalogue order, so the subset yields the same shelves as the full list.
+ * grows. Every shelf keeps catalogue order within its picks, so the subset yields the same shelves as the full list.
  */
 export function homeProducts(products: Product[]): Product[] {
   const stock = products.filter((p) => !p.isPreOrder);

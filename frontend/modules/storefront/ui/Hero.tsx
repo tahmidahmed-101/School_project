@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { HERO_CTA_TEXT, HERO_SLIDES } from "../domain/hero-content";
+import { HERO_CTA_TEXT, type HeroSlide } from "../domain/hero-content";
 import { useLang } from "@/lib/i18n";
 import { useCatalog } from "@/modules/catalog";
 import { photo } from "@/lib/photo";
@@ -18,11 +18,16 @@ const AUTOPLAY_MS = 5000;
 /** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
 export function Hero({
   heading,
+  slides,
+  hasOffers,
   shopLink = "/shop?type=normal",
   preorder = false,
 }: {
   /** The page's H1; slide titles rotate every few seconds, so they can't be it. */
   heading: string;
+  /** Never empty: the caller falls back to the built-in slides. */
+  slides: HeroSlide[];
+  hasOffers: boolean;
   shopLink?: string;
   preorder?: boolean;
 }) {
@@ -34,19 +39,26 @@ export function Hero({
   // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
   const [mounted, setMounted] = useState(1);
   const [rotated, setRotated] = useState(false);
-  const slide = HERO_SLIDES[index];
+  const count = slides.length;
+  const slide = slides[index] ?? slides[0];
+  const tag = slide.tag[lang];
+  const title = slide.title[lang];
 
-  const go = useCallback((next: number) => {
-    const target = (next + HERO_SLIDES.length) % HERO_SLIDES.length;
-    setIndex(target);
-    setRotated(true);
-    setMounted((m) => Math.max(m, target + 1));
-  }, []);
+  const go = useCallback(
+    (next: number) => {
+      const target = (next + count) % count;
+      setIndex(target);
+      setRotated(true);
+      setMounted((m) => Math.max(m, target + 1));
+    },
+    [count],
+  );
 
   useEffect(() => {
+    if (count < 2) return;
     const timer = setTimeout(() => go(index + 1), AUTOPLAY_MS);
     return () => clearTimeout(timer);
-  }, [index, go]);
+  }, [index, go, count]);
 
   return (
     <section
@@ -71,10 +83,10 @@ export function Hero({
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
           <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-6" : "lg:col-span-9"}`}>
             <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-3xl lg:min-h-[360px]">
-              {HERO_SLIDES.map((s, i) =>
+              {slides.map((s, i) =>
                 i > mounted ? null : (
                   <Image
-                    key={s.image}
+                    key={s.id ?? s.image}
                     src={photo(s.image)}
                     alt={s.alt}
                     fill
@@ -101,21 +113,25 @@ export function Hero({
                   <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-2xs font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
                     {badge[lang]}
                   </span>
-                  <div className="flex items-start gap-1.5 text-2xs font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
-                    <span className="sm:truncate">{slide.tag[lang]}</span>
-                  </div>
+                  {tag && (
+                    <div className="flex items-start gap-1.5 text-2xs font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
+                      <span className="sm:truncate">{tag}</span>
+                    </div>
+                  )}
 
-                  <p className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-3xl xl:text-4xl">
-                    {slide.title[lang].split("\n").map((line, i) => (
-                      <span key={i} className="block">
-                        {line}
-                      </span>
-                    ))}
-                  </p>
+                  {title && (
+                    <p className="ts-display mt-2 text-lg font-extrabold leading-tight tracking-tight text-white sm:mt-3 sm:text-2xl lg:text-3xl xl:text-4xl">
+                      {title.split("\n").map((line, i) => (
+                        <span key={i} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                 </div>
 
                 <Link
-                  href={shopLink}
+                  href={slide.linkUrl || shopLink}
                   className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-canvas px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-accent-hover hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
                 >
                   <span>{HERO_CTA_TEXT[lang]}</span>
@@ -123,7 +139,9 @@ export function Hero({
                 </Link>
               </div>
 
-              <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2.5">
+              <div
+                className={`absolute bottom-3 left-1/2 z-30 -translate-x-1/2 items-center gap-2.5 ${count > 1 ? "flex" : "hidden"}`}
+              >
                 <button
                   type="button"
                   onClick={() => go(index - 1)}
@@ -133,9 +151,9 @@ export function Hero({
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <div className="flex gap-4">
-                  {HERO_SLIDES.map((s, i) => (
+                  {slides.map((s, i) => (
                     <button
-                      key={s.image}
+                      key={s.id ?? s.image}
                       type="button"
                       onClick={() => go(i)}
                       aria-label={`${ui("slide")} ${n(i + 1)}`}
@@ -160,7 +178,7 @@ export function Hero({
 
           {/* Right: welcome card + quick links (desktop only; mobile shows just the banner) */}
           <ScrollReveal y={24} duration={0.85} delay={0.1} className="hidden lg:order-3 lg:col-span-3 lg:block">
-            <HeroWelcomePanel />
+            <HeroWelcomePanel hasOffers={hasOffers} />
           </ScrollReveal>
         </div>
       </div>

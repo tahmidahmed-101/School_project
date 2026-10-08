@@ -13,6 +13,7 @@
 export const CACHE_TAGS = {
   catalog: "catalog",
   business: "business",
+  storefrontContent: "storefront-content",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
@@ -29,6 +30,8 @@ export const CACHE_LIFE = {
   paymentMethods: 300,
   /** Coupons advertised in the voucher strip. */
   vouchers: 60,
+  /** Hero slides and promo strip lines managed in the dashboard. */
+  storefrontContent: 60,
   /** /api/search-index (`revalidate = 300`). */
   searchIndex: 300,
   /** sitemap.xml, llms.txt, products.xml (`revalidate = 3600`). */
