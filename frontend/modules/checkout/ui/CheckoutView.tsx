@@ -18,7 +18,8 @@ import {
   validateOrderForm,
   type FormErrors,
 } from "../domain/checkout";
-import { useCoupon, usePaymentMethods, useShippingQuote } from "./useCheckoutPricing";
+import { useCoupon, useShippingQuote } from "./useCheckoutPricing";
+import type { ApiPaymentMethod } from "@/lib/api/types";
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -29,7 +30,7 @@ import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
-export function CheckoutView() {
+export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMethod[] }) {
   const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
@@ -41,7 +42,6 @@ export function CheckoutView() {
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
 
-  const paymentMethods = usePaymentMethods();
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
   const shipping = useShippingQuote(items, form);
