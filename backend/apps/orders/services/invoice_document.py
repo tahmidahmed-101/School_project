@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Any
 
 from apps.orders.models import Payment, SalesOrder
+from apps.orders.selectors.payments import order_deposit_due
 from apps.orders.services.address_snapshot import snapshot_or_live
 
 INVOICE_TEMPLATE = "pdf/invoice.html"
@@ -75,11 +76,18 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
     balance = order.grand_total - paid
 
     address = snapshot_or_live(order)
+    is_preorder = order.order_type == SalesOrder.OrderType.PREORDER
     doc_meta = [{"label": "Issued", "value": order.created_at.strftime("%d %b %Y")}]
-    doc_meta.append({"label": "Status", "value": order.get_status_display()})
+    if not is_preorder:
+        doc_meta.append({"label": "Status", "value": order.get_status_display()})
+    elif order.preorder_stage:
+        doc_meta.append({"label": "Stage", "value": order.get_preorder_stage_display()})
 
     return {
-        "doc_title": "Invoice",
+        "doc_title": "Pre-order invoice" if is_preorder else "Invoice",
+        "is_preorder": is_preorder,
+        "paid_label": "Deposit paid" if is_preorder and balance > ZERO else "Paid",
+        "deposit_due": order_deposit_due(order) if is_preorder else None,
         "doc_number": order.order_number,
         "doc_meta": doc_meta,
         "doc_status": payment_label,

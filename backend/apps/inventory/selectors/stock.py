@@ -5,6 +5,7 @@ from uuid import UUID
 
 from django.db.models import F, QuerySet
 
+from apps.catalog.models import Category
 from apps.inventory.models import StockItem, StockLedgerEntry
 
 from .warehouse import get_default_warehouse
@@ -29,7 +30,10 @@ def stock_items_list(
     if kind:
         queryset = queryset.filter(variant__product__category__category_type=kind)
     if low_stock_only:
-        queryset = queryset.annotate(
+        # Reorder points exist for stock items only; a pre-order item is never low.
+        queryset = queryset.filter(
+            variant__product__category__category_type=Category.CategoryType.STOCK
+        ).annotate(
             low_stock_expr=F("quantity_on_hand") - F("quantity_reserved") - F("reorder_point")
         ).filter(low_stock_expr__lte=0)
     return queryset.order_by("warehouse__name", "variant__sku")

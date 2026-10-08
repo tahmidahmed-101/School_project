@@ -140,6 +140,10 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             preorder_status=preorder_status,
         )
         stock_status = get_choice(params, "stock_status", ("out", "low", "in"))
+        if stock_status == "low":
+            queryset = queryset.filter(
+                product__category__category_type=Category.CategoryType.STOCK
+            )
         if stock_status:
             variant_ids = list(queryset.values_list("id", flat=True))
             stock_by_variant = available_quantities_for_variants(variant_ids)
@@ -253,7 +257,9 @@ class AdminVariantExportView(APIView):
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
         category_type = get_choice(params, "category_type", Category.CategoryType.values)
         queryset = variants_list(product=product, category=category, category_type=category_type)
-        content = export_variants(filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt)
+        content = export_variants(
+            filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt, kind=category_type
+        )
         content_type = (
             "text/csv"
             if fmt == "csv"

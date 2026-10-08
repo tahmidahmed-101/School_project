@@ -225,9 +225,10 @@ class AdminProductBulkStatusView(BulkActionMixin, APIView):
         serializer = ProductBulkStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         is_active = serializer.validated_data["is_active"]
+        category_type = serializer.validated_data.get("category_type")
         return self.bulk_action(
             request,
-            queryset_fn=lambda: products_list(is_active=None),
+            queryset_fn=lambda: products_list(is_active=None, category_type=category_type),
             action_fn=lambda product: stage_product_status(product=product, is_active=is_active),
             update_fields=["is_active", "updated_at"],
         )

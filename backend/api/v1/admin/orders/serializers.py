@@ -20,6 +20,7 @@ from apps.orders.selectors.payments import (
     order_deposit_due,
     order_paid_total,
 )
+from apps.orders.selectors.sales_orders import order_kind
 from apps.orders.selectors.shipments import attach_delivered_quantities
 from apps.orders.services.address_snapshot import snapshot_or_live
 from apps.orders.services.orders import allowed_status_overrides
@@ -85,7 +86,7 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     contact_email = serializers.CharField(read_only=True, allow_blank=True)
     contact_phone = serializers.CharField(read_only=True, allow_blank=True)
     contact_name = serializers.CharField(read_only=True, allow_blank=True)
-    order_type = serializers.CharField(read_only=True)
+    order_type = serializers.SerializerMethodField()
     preorder_stage = serializers.CharField(read_only=True, allow_blank=True)
     preorder_stage_events = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2)
@@ -103,6 +104,17 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     payments = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
     rmas = serializers.SerializerMethodField()
+
+    def get_order_type(self, obj) -> str:
+        return order_kind(obj)
+
+    def to_representation(self, instance) -> dict:
+        data = super().to_representation(instance)
+        if data["order_type"] == SalesOrder.OrderType.PREORDER:
+            data["coupon_code"] = None
+        else:
+            data.update({"preorder_stage": "", "preorder_stage_events": [], "deposit_due": None})
+        return data
 
     def get_customer_email(self, obj) -> str:
         return obj.contact_email.strip() or getattr(obj.customer, "email", "") or ""
@@ -153,7 +165,7 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     def get_balance_due(self, obj) -> str:
         return str(order_balance_due(obj))
 
-    def get_deposit_due(self, obj) -> str:
+    def get_deposit_due(self, obj) -> str | None:
         return str(order_deposit_due(obj))
 
     def get_allowed_statuses(self, obj) -> list[str]:
@@ -211,7 +223,7 @@ class AdminCustomerCartSerializer(serializers.Serializer):
         return obj.customer_id is None
 
     def get_order_type(self, obj) -> str:
-        if any(line.is_preorder for line in obj.lines.all()):
+        if any(line.variant.is_preorder_kind for line in obj.lines.all()):
             return SalesOrder.OrderType.PREORDER
         return SalesOrder.OrderType.STOCK
 
@@ -391,6 +403,7 @@ class StockReservationSerializer(serializers.Serializer):
     order_line_id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(source="order_line.order_id", read_only=True)
     order_number = serializers.CharField(source="order_line.order.order_number", read_only=True)
+    order_type = serializers.CharField(source="order_line.order.order_type", read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
     product_name = serializers.CharField(source="variant.product.name", read_only=True)

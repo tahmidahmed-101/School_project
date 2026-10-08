@@ -100,6 +100,7 @@ class PublicProductVariantSerializer(serializers.Serializer):
     release_date = serializers.DateTimeField(allow_null=True)
     is_preorder_active = serializers.SerializerMethodField()
     is_preorder_upcoming = serializers.BooleanField(read_only=True)
+    is_preorder_closed = serializers.BooleanField(read_only=True)
     is_preorder_price_applied = serializers.SerializerMethodField()
     preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
     preordered_quantity = serializers.SerializerMethodField()
@@ -132,6 +133,9 @@ class PublicProductVariantSerializer(serializers.Serializer):
         return str(obj.effective_price)
 
     def get_in_stock(self, obj) -> bool:
+        # A pre-order item is never sold from stock, in or out of its window.
+        if obj.is_preorder_kind:
+            return False
         # Exact quantity stays internal — the storefront only needs yes/no.
         stock = self.context.get(STOCK_CONTEXT_KEY)
         if stock is None:

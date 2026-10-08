@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.catalog.selectors.images import variant_image_url
+from apps.common.params import KINDS
 from apps.inventory.constants import MovementType
 
 
@@ -87,10 +88,12 @@ class StockAdjustmentSerializer(serializers.Serializer):
         max_digits=12, decimal_places=4, required=False, allow_null=True
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class BulkStockAdjustmentSerializer(serializers.Serializer):
     adjustments = serializers.ListField(child=StockAdjustmentSerializer(), min_length=1)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class StockWriteOffSerializer(serializers.Serializer):
@@ -98,6 +101,7 @@ class StockWriteOffSerializer(serializers.Serializer):
     warehouse_id = serializers.UUIDField(required=False, allow_null=True)
     quantity = serializers.IntegerField(min_value=1)
     reason = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class StockLookupVariantSerializer(serializers.Serializer):
@@ -130,6 +134,7 @@ class StockIntakeSerializer(serializers.Serializer):
         max_digits=12, decimal_places=4, required=False, allow_null=True
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class QuickProductCreateSerializer(serializers.Serializer):

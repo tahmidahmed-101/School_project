@@ -78,6 +78,7 @@ def test_preorder_line_ships_only_after_arrived_stock_is_allocated():
     customer = CustomerUserFactory()
     now = timezone.now()
     variant = ProductVariantFactory(
+        product__category__category_type="preorder",
         is_preorder_enabled=True,
         preorder_start_date=now - timedelta(days=1),
         preorder_end_date=now + timedelta(days=1),

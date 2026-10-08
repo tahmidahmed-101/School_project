@@ -13,9 +13,10 @@ from apps.orders.services.carts import (
     _check_preorder_stock_limit,
     add_line,
     compute_line_tax,
+    ensure_purchasable,
     ensure_single_kind,
 )
-from apps.orders.services.notifications import notify_order
+from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.reservations import release_stock_reservation
 
 UPDATABLE_ORDER_FIELDS = ("shipping_address", "notes", "contact_email", "contact_phone")
@@ -106,7 +107,7 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
     order.status = SalesOrder.Status.CANCELLED
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
-    notify_order(order, f"Order {order.order_number} was cancelled.")
+    notify_order(order, f"{order_label(order)} was cancelled.")
     return order
 
 
@@ -224,7 +225,7 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
         target_id=order.id,
         metadata={"from": previous, "to": new_status},
     )
-    notify_order(order, f"Order {order.order_number} is now {order.get_status_display().lower()}.")
+    notify_order(order, f"{order_label(order)} is now {order.get_status_display().lower()}.")
     return order
 
 
@@ -316,12 +317,8 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
             "This item is already on the order. Change its quantity instead.",
             code="line_exists",
         )
-    if variant.is_preorder_upcoming:
-        raise BusinessRuleViolationError(
-            "This product is not available for pre-order at this time.",
-            code="preorder_not_active",
-        )
-    is_preorder = variant.is_preorder_active
+    ensure_purchasable(variant)
+    is_preorder = variant.is_preorder_kind
     ensure_single_kind(order, is_preorder=is_preorder)
     if is_preorder and variant.preorder_stock_limit is not None:
         _check_preorder_stock_limit(variant, quantity)

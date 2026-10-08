@@ -57,13 +57,41 @@ def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[Sale
     return queryset.order_by("-created_at")
 
 
+def _holds_preorder() -> Exists:
+    return Exists(
+        SalesOrderLine.objects.filter(
+            order=OuterRef("pk"),
+            variant__product__category__category_type=SalesOrder.OrderType.PREORDER,
+        )
+    )
+
+
+def _of_kind(kind: str) -> Q:
+    """An open cart has no order_type until checkout, so its lines decide; a
+    placed order is what checkout made it."""
+    pending = Q(status=SalesOrder.Status.PENDING)
+    holds_preorder = _holds_preorder()
+    if kind == SalesOrder.OrderType.PREORDER:
+        return (pending & Q(holds_preorder)) | (~pending & Q(order_type=kind))
+    return (pending & ~Q(holds_preorder)) | (~pending & Q(order_type=kind))
+
+
+def order_kind(order: SalesOrder) -> str:
+    """Python twin of `_of_kind`, for one loaded order."""
+    if order.status != SalesOrder.Status.PENDING:
+        return order.order_type
+    if any(line.variant.is_preorder_kind for line in order.lines.all()):
+        return SalesOrder.OrderType.PREORDER
+    return SalesOrder.OrderType.STOCK
+
+
 def _orders_with_related() -> QuerySet[SalesOrder]:
     return SalesOrder.objects.select_related(
         "customer", "shipping_address", "coupon"
     ).prefetch_related(
         # Each line carries `delivered_quantity`, summed in the lines query itself.
         Prefetch("lines", queryset=with_delivered_quantity(SalesOrderLine.objects.all())),
-        "lines__variant__product",
+        "lines__variant__product__category",
         "lines__variant__images",
         "lines__variant__product__images",
         "payments",
@@ -92,7 +120,7 @@ def orders_list(
     if preorder_stage:
         queryset = queryset.filter(preorder_stage=preorder_stage)
     if order_type:
-        queryset = queryset.filter(order_type=order_type)
+        queryset = queryset.filter(_of_kind(order_type))
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:
@@ -139,15 +167,17 @@ def customer_carts_list(*, kind: str | None = None) -> QuerySet[SalesOrder]:
         SalesOrder.objects.filter(status=SalesOrder.Status.PENDING, deleted_at__isnull=True)
         .filter(Exists(SalesOrderLine.objects.filter(order=OuterRef("pk"))))
         .select_related("customer")
-        # Lines carry product name and SKU snapshots, so no variant join.
-        .prefetch_related(Prefetch("lines", queryset=SalesOrderLine.objects.order_by("created_at")))
+        .prefetch_related(
+            Prefetch(
+                "lines",
+                queryset=SalesOrderLine.objects.select_related(
+                    "variant__product__category"
+                ).order_by("created_at"),
+            )
+        )
     )
     if kind:
-        # A cart has no order_type until checkout; its lines decide, the same
-        # flag the mixed-basket check reads.
-        holds_preorder = Exists(
-            SalesOrderLine.objects.filter(order=OuterRef("pk"), is_preorder=True)
-        )
+        holds_preorder = _holds_preorder()
         carts = carts.filter(
             holds_preorder if kind == SalesOrder.OrderType.PREORDER else ~holds_preorder
         )

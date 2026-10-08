@@ -75,8 +75,14 @@ class ProductVariant(FullAuditModel):
         ]
 
     @property
+    def is_preorder_kind(self) -> bool:
+        category = self.product.category
+        return category.category_type == category.CategoryType.PREORDER
+
+    @property
     def is_preorder_active(self) -> bool:
-        if not self.is_preorder_enabled:
+        """Open for ordering now. Only a variant in a pre-order category can be."""
+        if not self.is_preorder_enabled or not self.is_preorder_kind:
             return False
         if self.preorder_start_date is None or self.preorder_end_date is None:
             return False
@@ -98,16 +104,24 @@ class ProductVariant(FullAuditModel):
 
     @property
     def is_preorder_upcoming(self) -> bool:
-        """Not open for pre-order yet. Once the window has ended the variant
-        sells as an ordinary stock item again."""
+        """A pre-order variant that is not open yet, or has no window set up."""
+        if not self.is_preorder_kind:
+            return False
         if not self.is_preorder_enabled:
-            # In the pre-order shop a variant with no pre-order set up is not
-            # on sale yet; it must never be bought there as a stock item.
-            category = self.product.category
-            return category.category_type == category.CategoryType.PREORDER
+            return True
         if self.preorder_start_date is None or self.preorder_end_date is None:
             return True
         return timezone.now() < self.preorder_start_date
+
+    @property
+    def is_preorder_closed(self) -> bool:
+        """A pre-order variant whose ordering window has ended. It stays a
+        pre-order item and cannot be bought."""
+        return (
+            self.is_preorder_kind
+            and not self.is_preorder_active
+            and not self.is_preorder_upcoming
+        )
 
     @property
     def effective_price(self) -> Decimal:

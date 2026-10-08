@@ -350,7 +350,7 @@ def test_variant_export_honours_category_type(admin_client):
         assert response.status_code == 200
         return response.content.decode("utf-8")
 
-    assert stock.sku in exported() and preorder.sku in exported()
+    assert stock.sku in exported() and preorder.sku not in exported()
     assert preorder.sku not in exported(category_type="stock")
     assert stock.sku not in exported(category_type="preorder")
     response = admin_client.get(f"{BASE}variants/export/", {"category_type": "mixed"})

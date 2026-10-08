@@ -25,7 +25,12 @@ from apps.logistics.selectors.rates import (
 from apps.logistics.services.rates import shipping_options, try_quote_shipping
 from apps.orders.selectors.coupons import storefront_coupons
 from apps.orders.services.coupons import preview_coupon
-from apps.orders.services.guest_checkout import guest_checkout, subtotal_for_items, weight_for_items
+from apps.orders.services.guest_checkout import (
+    guest_checkout,
+    items_hold_preorder,
+    subtotal_for_items,
+    weight_for_items,
+)
 from apps.risk.request_ip import client_ip
 
 from .serializers import (
@@ -209,7 +214,11 @@ class CouponValidationView(APIView):
 
         try:
             subtotal = subtotal_for_items(data["items"])
-            result = preview_coupon(code=data["code"], subtotal=subtotal)
+            result = preview_coupon(
+                code=data["code"],
+                subtotal=subtotal,
+                holds_preorder=items_hold_preorder(data["items"]),
+            )
         except DomainError as exc:
             return error_from_exception(exc)
 

@@ -605,7 +605,7 @@ def test_preorder_not_available_when_disabled():
     assert variant.can_preorder is False
 
 
-def test_variant_sells_as_stock_once_its_preorder_window_has_ended():
+def test_preorder_variant_cannot_be_bought_once_its_window_has_ended():
     product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
     variant = create_variant(
@@ -619,13 +619,11 @@ def test_variant_sells_as_stock_once_its_preorder_window_has_ended():
     )
     cart = get_or_create_cart(create_user(email="test@example.com", role=UserRole.CUSTOMER))
 
-    line = add_line(order=cart, variant=variant, quantity=1)
-
-    assert line.is_preorder is False
-    assert line.unit_price == Decimal("1000")
+    assert variant.is_preorder_closed is True
     with pytest.raises(BusinessRuleViolationError) as exc:
-        checkout(order=cart)
-    assert exc.value.code == "insufficient_stock"
+        add_line(order=cart, variant=variant, quantity=1)
+    assert exc.value.code == "preorder_closed"
+    assert not cart.lines.exists()
 
 
 def test_preorder_that_has_not_opened_is_rejected_at_cart():

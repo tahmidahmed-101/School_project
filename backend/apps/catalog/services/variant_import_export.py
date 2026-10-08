@@ -11,7 +11,7 @@ from django.db.models import QuerySet
 
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
-from apps.catalog.models import Product, ProductVariant
+from apps.catalog.models import Category, Product, ProductVariant
 from apps.catalog.services.kind_rules import PREORDER_ONLY_FIELDS, is_preorder_category
 from apps.common.utils.export import build_csv, sanitize_cell
 from apps.inventory.selectors.stock import available_quantities_for_variants
@@ -31,20 +31,43 @@ EXPORT_COLUMNS = [
 ]
 
 
-def export_variants(queryset: QuerySet[ProductVariant], *, fmt: Literal["csv", "xlsx"]) -> bytes:
-    variants = list(queryset.select_related("product"))
-    stock_by_variant = available_quantities_for_variants(v.id for v in variants)
+PREORDER_EXPORT_COLUMNS = [
+    "product_name",
+    "sku",
+    "price",
+    "cost_price",
+    "preorder_price",
+    "preorder_start_date",
+    "preorder_end_date",
+    "release_date",
+    "preorder_stock_limit",
+    "weight",
+    "color",
+    "size",
+    "is_active",
+]
 
-    rows = [
+
+def _text(value) -> str:
+    return "" if value is None else str(value)
+
+
+def _date(value) -> str:
+    return value.isoformat() if value is not None else ""
+
+
+def _stock_rows(variants: list[ProductVariant]) -> list[list]:
+    stock_by_variant = available_quantities_for_variants(v.id for v in variants)
+    return [
         [
             variant.product.name,
             variant.sku,
             variant.barcode,
             str(variant.price),
             str(variant.cost_price),
-            str(variant.discount_price) if variant.discount_price is not None else "",
+            _text(variant.discount_price),
             stock_by_variant.get(variant.id, 0),
-            str(variant.weight) if variant.weight is not None else "",
+            _text(variant.weight),
             variant.color,
             variant.size,
             "1" if variant.is_active else "0",
@@ -52,15 +75,53 @@ def export_variants(queryset: QuerySet[ProductVariant], *, fmt: Literal["csv", "
         for variant in variants
     ]
 
+
+def _preorder_rows(variants: list[ProductVariant]) -> list[list]:
+    return [
+        [
+            variant.product.name,
+            variant.sku,
+            str(variant.price),
+            str(variant.cost_price),
+            _text(variant.preorder_price),
+            _date(variant.preorder_start_date),
+            _date(variant.preorder_end_date),
+            _date(variant.release_date),
+            _text(variant.preorder_stock_limit),
+            _text(variant.weight),
+            variant.color,
+            variant.size,
+            "1" if variant.is_active else "0",
+        ]
+        for variant in variants
+    ]
+
+
+def export_variants(
+    queryset: QuerySet[ProductVariant],
+    *,
+    fmt: Literal["csv", "xlsx"],
+    kind: str | None = None,
+) -> bytes:
+    """One kind per file, each with its own columns. No `kind` means stock."""
+    kind = kind or Category.CategoryType.STOCK
+    variants = list(
+        queryset.filter(product__category__category_type=kind).select_related("product")
+    )
+    if kind == Category.CategoryType.PREORDER:
+        columns, rows = PREORDER_EXPORT_COLUMNS, _preorder_rows(variants)
+    else:
+        columns, rows = EXPORT_COLUMNS, _stock_rows(variants)
+
     if fmt == "csv":
-        return build_csv(EXPORT_COLUMNS, rows)
+        return build_csv(columns, rows)
 
     from openpyxl import Workbook
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Variants"
-    sheet.append(EXPORT_COLUMNS)
+    sheet.append(columns)
     for row in rows:
         sheet.append([sanitize_cell(cell) for cell in row])
     output = io.BytesIO()

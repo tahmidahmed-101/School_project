@@ -35,11 +35,13 @@ def _search_q(search: str) -> Q:
 
 
 def fraud_cases_list(
-    *, status: str | None = None, search: str | None = None
+    *, status: str | None = None, search: str | None = None, kind: str | None = None
 ) -> QuerySet[FraudCase]:
     queryset = FraudCase.objects.select_related("customer", "order", "assigned_to")
     if status:
         queryset = queryset.filter(status=status)
+    if kind:
+        queryset = queryset.filter(order__order_type=kind)
     if search:
         # Every searched relation is a forward foreign key, so the joins
         # can't duplicate a case row.

@@ -6,7 +6,7 @@ from django.db.models import Case, Count, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from apps.catalog.models import Product, ProductImage, ProductVariant
+from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 
 
 def _active_variants_prefetch() -> Prefetch:
@@ -111,6 +111,7 @@ def products_list(
         queryset = queryset.filter(SELLABLE_VARIANT_FILTER).distinct()
     if preorder_only or preorder_status:
         preorder_filter = Q(
+            category__category_type=Category.CategoryType.PREORDER,
             variants__is_preorder_enabled=True,
             variants__deleted_at__isnull=True,
         )
@@ -246,7 +247,7 @@ def get_variant_by_sku_or_barcode(identifier: str) -> ProductVariant | None:
             Q(sku__iexact=identifier) | Q(barcode__iexact=identifier),
             deleted_at__isnull=True,
         )
-        .select_related("product")
+        .select_related("product__category")
         .first()
     )
 
@@ -254,7 +255,7 @@ def get_variant_by_sku_or_barcode(identifier: str) -> ProductVariant | None:
 def variants_for_product(product: Product) -> QuerySet[ProductVariant]:
     return (
         ProductVariant.objects.filter(product=product, deleted_at__isnull=True)
-        .select_related("product")
+        .select_related("product__category")
         .prefetch_related("images", "product__images")
         .order_by("sku")
     )
@@ -295,6 +296,7 @@ def variants_list(
         queryset = queryset.filter(is_active=is_active)
     if preorder_only or preorder_status:
         preorder_filter = Q(
+            product__category__category_type=Category.CategoryType.PREORDER,
             is_preorder_enabled=True,
             deleted_at__isnull=True,
         )

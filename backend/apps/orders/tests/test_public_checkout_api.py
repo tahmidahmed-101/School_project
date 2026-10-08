@@ -343,6 +343,7 @@ def test_guest_checkout_combines_duplicate_variants_before_preorder_limit_check(
     preorder_stock_limit."""
     now = timezone.now()
     variant = ProductVariantFactory(
+        product__category__category_type="preorder",
         is_preorder_enabled=True,
         preorder_start_date=now - timedelta(days=1),
         preorder_end_date=now + timedelta(days=1),
