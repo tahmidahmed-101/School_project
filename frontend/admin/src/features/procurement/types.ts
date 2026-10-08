@@ -149,15 +149,3 @@ export interface VendorBillUpdatePayload {
   amount?: string
   due_date?: string
 }
-
-/** Subset of the catalog ProductVariantSerializer used by the PO line picker. */
-export interface VariantOption {
-  id: string
-  product_name: string
-  sku: string
-  color: string
-  size: string
-  cost_price: string | null
-  primary_image: string | null
-  stock: number
-}

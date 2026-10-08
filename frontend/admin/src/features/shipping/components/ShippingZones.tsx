@@ -15,8 +15,8 @@ import { deleteZone, fetchZones, restoreZone, updateZone } from "@/features/ship
 import type { ShippingZone } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 import { ZoneFormDialog } from "./ZoneFormDialog"
-import { useSoftDeleteList } from "./useSoftDeleteList"
 
 const MAX_AREAS_SHOWN = 6
 
@@ -35,7 +35,7 @@ const ShippingZones = () => {
     setFormOpen(true)
   }
 
-  const { list, trailingColumns, bulk } = useSoftDeleteList<ShippingZone>({
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<ShippingZone>({
     fetch: (p) => dispatch(fetchZones(p)),
     state: zoneState,
     noun: "zone",
@@ -90,7 +90,8 @@ const ShippingZones = () => {
         </Button>
       ),
     },
-    ...trailingColumns,
+    statusColumn,
+    ...(canUpdate ? [actionsColumn] : []),
   ]
 
   return (

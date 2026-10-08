@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, createAction } from "@reduxjs/toolkit"
 import { api, extractApiError, refreshAccessToken } from "@/lib/api/client"
 import { setAccessToken, clearTokens, broadcastLogout } from "@/lib/api/tokenStore"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 import { DEV_AUTH_BYPASS, DEV_USER } from "../devAuth"
 import type { AuthUser, LoginPayload } from "../types"
 
@@ -37,6 +38,8 @@ export const login = createAsyncThunk(
       const res = await api.post("/customer/auth/login/", payload)
       const data = res.data.data as LoginResponseData
       setAccessToken(data.access)
+      // The next user of this tab may not be allowed to see what the last one loaded.
+      invalidateAllPages()
       return data.user
     } catch (err) {
       return rejectWithValue(extractApiError(err))

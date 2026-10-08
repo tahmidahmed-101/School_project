@@ -6,7 +6,7 @@ import { toast } from "sonner"
 
 import { DateField, TextField } from "@/components/common/form-fields"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
+import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/format"
 import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
@@ -153,7 +153,7 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
         {text("barcode", "Barcode")}
         {text("color", "Colour")}
         {text("size", "Size")}
-        {text("price", "Price (BDT)", { placeholder: "0.00" })}
+        {text("price", `Price (${getDefaultCurrency()})`, { placeholder: "0.00" })}
         {text("discount_price", "Discount price", { placeholder: "Optional" })}
         {text("cost_price", "Cost price", { placeholder: "0.00" })}
         {text("weight", "Weight (kg)", { placeholder: "Optional" })}

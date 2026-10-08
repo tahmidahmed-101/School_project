@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FieldError } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 import { postBulkAdjustments } from "../api"
 import type { Warehouse } from "../types"

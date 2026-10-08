@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Loader2, Package, Search } from "lucide-react"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useDebounced } from "@/hooks/use-debounced"
+import { useDebouncedSearch } from "@/hooks/use-debounced-search"
 
 import { searchProducts } from "../api"
 import type { Product } from "../types"
@@ -19,29 +19,12 @@ interface Props {
 /** Search-and-pick dialog over /admin/catalog/products/ (bundles excluded: they have no variants of their own). */
 export function ProductPickerDialog({ open, onOpenChange, title, description, onPick }: Props) {
   const [query, setQuery] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<Product[]>([])
-  const debouncedQuery = useDebounced(query.trim(), 250)
-
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    const run = async () => {
-      setLoading(true)
-      try {
-        const items = await searchProducts(debouncedQuery)
-        if (!cancelled) setResults(items.filter((p) => p.product_type !== "bundle"))
-      } catch {
-        if (!cancelled) setResults([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [open, debouncedQuery])
+  const { results, loading } = useDebouncedSearch<Product>({
+    query: query.trim(),
+    delay: 250,
+    enabled: open,
+    search: async (search) => (await searchProducts(search)).filter((p) => p.product_type !== "bundle"),
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

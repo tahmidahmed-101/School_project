@@ -9,18 +9,16 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
+import { TextCell } from "@/components/common/cells"
 import { TextField } from "@/components/common/form-fields"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useListPage } from "@/hooks/use-list-page"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 
 import { deleteData, fetchAll, patchData, postData, restoreTaxRate } from "../slices/taxRateSlice"
 import type { TaxRate, TaxRatePayload } from "../types"
@@ -146,22 +144,21 @@ const TaxRates = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<TaxRate | null>(null)
 
-  const list = useListPage({ fetch: (params) => dispatch(fetchAll(params)), state: listState })
-
-  const setActive = (rows: TaxRate[], is_active: boolean) =>
-    Promise.all(
-      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<TaxRate> })).unwrap())
-    )
-
-  const handleDelete = async (rate: TaxRate) => {
-    try {
-      await dispatch(deleteData(rate.id)).unwrap()
-      toast.success("Tax rate deleted")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete tax rate"))
-    }
+  const openForm = (rate: TaxRate | null) => {
+    setEditing(rate)
+    setFormOpen(true)
   }
 
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<TaxRate>({
+    fetch: (params) => dispatch(fetchAll(params)),
+    state: listState,
+    noun: "tax rate",
+    canUpdate: canPost,
+    remove: (id) => dispatch(deleteData(id)).unwrap(),
+    setActive: (id, is_active) => dispatch(patchData({ id, payload: { is_active } as Partial<TaxRate> })).unwrap(),
+    onEdit: openForm,
+    onDeleted: () => toast.success("Tax rate deleted"),
+  })
 
   const columns: ColumnDef<TaxRate>[] = [
     {
@@ -186,29 +183,8 @@ const TaxRates = () => {
       header: "REGION",
       cell: ({ row }) => <TextCell value={row.original.region} muted />,
     },
-    {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
-    },
-    {
-      id: "actions",
-      header: "ACTIONS",
-      cell: ({ row }) => {
-        const rate = row.original
-        if (!canPost) return null
-        return (
-          <TableActions
-            itemName={rate.name}
-            onEdit={() => {
-              setEditing(rate)
-              setFormOpen(true)
-            }}
-            onDelete={() => handleDelete(rate)}
-          />
-        )
-      },
-    },
+    statusColumn,
+    actionsColumn,
   ]
 
   return (
@@ -225,13 +201,7 @@ const TaxRates = () => {
                 label={(item) => item.name}
                 onRestored={list.reload}
               />
-              <Button
-                size="action"
-                onClick={() => {
-                  setEditing(null)
-                  setFormOpen(true)
-                }}
-              >
+              <Button size="action" onClick={() => openForm(null)}>
                 <Plus className="size-5" /> New Tax Rate
               </Button>
             </>
@@ -247,19 +217,7 @@ const TaxRates = () => {
 
       <DataTable
         columns={columns}
-        bulk={
-          canPost
-            ? {
-                noun: "tax rate",
-                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
-                activate: (rows) => setActive(rows, true),
-                deactivate: (rows) => setActive(rows, false),
-                onDone: () => {
-                  list.reload()
-                },
-              }
-            : undefined
-        }
+        bulk={bulk}
         data={listState.data}
         {...list.tableProps}
         emptyIcon={Percent}

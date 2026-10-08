@@ -31,7 +31,7 @@ import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { CategoryTreeSelect } from "./CategoryTreeSelect"
 import { ProductImagesSection } from "./ProductImagesSection"
 import { StagedImagesCard } from "./StagedImagesCard"
-import { VariantPicker, type PickedVariant } from "./VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -330,7 +330,8 @@ const BundleForm = () => {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <MoneyField
-              label="Price (BDT)"
+              label="Price"
+              showCurrency
               id="price"
               placeholder={componentTotal ? componentTotal.toFixed(2) : "0.00"}
               error={errors.price}

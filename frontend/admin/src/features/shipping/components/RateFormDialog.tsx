@@ -13,6 +13,7 @@ import { createZoneRate } from "@/features/shipping/slices/zoneSlice"
 import { updateRate } from "@/features/shipping/slices/rateSlice"
 import type { Carrier, ShippingRate, ShippingZone } from "@/features/shipping/types"
 import { reportFormError } from "@/lib/forms"
+import { getDefaultCurrency } from "@/lib/format"
 
 const nonNegative = (label: string) =>
   z
@@ -160,9 +161,9 @@ export function RateFormDialog({ open, onOpenChange, rate, zones, carriers, defa
         {picker("zone_id", "Zone", zones)}
         {picker("carrier_id", "Carrier", carriers)}
         {numberField("base_weight", "Base weight", "0.001", "kg")}
-        {numberField("base_charge", "Base charge", "0.01", "BDT")}
+        {numberField("base_charge", "Base charge", "0.01", getDefaultCurrency())}
         {numberField("increment_weight", "Increment weight", "0.001", "kg")}
-        {numberField("increment_charge", "Increment charge", "0.01", "BDT")}
+        {numberField("increment_charge", "Increment charge", "0.01", getDefaultCurrency())}
       </div>
       {rate && <FieldDescription>Zone and carrier can't change — delete the rate and add a new one.</FieldDescription>}
     </FormDialog>

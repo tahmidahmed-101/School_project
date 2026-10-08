@@ -21,7 +21,7 @@ import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
-import type { PickedVariant } from "@/features/catalog/components/VariantPicker"
+import type { PickedVariant } from "@/components/common/VariantPicker"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 import { fetchAll } from "../slices/stockItemSlice"

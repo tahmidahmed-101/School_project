@@ -9,7 +9,7 @@ import { FormDialog } from "@/components/common/FormDialog"
 import { DateField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { reportFormError } from "@/lib/forms"
-import { todayLocalISODate } from "@/lib/format"
+import { getDefaultCurrency, todayLocalISODate } from "@/lib/format"
 import { patchData, postData } from "../slices/expenseSlice"
 import type { Account, Expense, ExpenseCategory, ExpenseCreatePayload, ExpenseUpdatePayload } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
@@ -168,7 +168,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense, accounts, categ
           {...register("expense_date")}
         />
         <TextField
-          label="Amount (BDT) *"
+          label={`Amount (${getDefaultCurrency()}) *`}
           id="exp-amount"
           type="number"
           step="0.01"

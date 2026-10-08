@@ -13,8 +13,8 @@ import { deleteCarrier, fetchCarriers, restoreCarrier, updateCarrier } from "@/f
 import { CARRIER_PROVIDER_OPTIONS, type Carrier } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 import { CarrierFormDialog } from "./CarrierFormDialog"
-import { useSoftDeleteList } from "./useSoftDeleteList"
 
 const providerLabel = (code: string) => CARRIER_PROVIDER_OPTIONS.find((o) => o.value === code)?.label ?? code
 
@@ -32,7 +32,7 @@ const Carriers = () => {
     setFormOpen(true)
   }
 
-  const { list, trailingColumns, bulk } = useSoftDeleteList<Carrier>({
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<Carrier>({
     fetch: (p) => dispatch(fetchCarriers(p)),
     state: carrierState,
     noun: "carrier",
@@ -78,7 +78,8 @@ const Carriers = () => {
         </div>
       ),
     },
-    ...trailingColumns,
+    statusColumn,
+    ...(canUpdate ? [actionsColumn] : []),
   ]
 
   return (

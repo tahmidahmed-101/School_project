@@ -60,6 +60,8 @@ class LowStockSummaryView(APIView):
 
     def get(self, request) -> Response:
         items = low_stock_summary()
+        if request.query_params.get("count_only") in {"1", "true"}:
+            return Response({"data": {"count": items.count()}, "message": "Success"})
         return Response(
             {"data": LowStockItemSerializer(items, many=True).data, "message": "Success"}
         )

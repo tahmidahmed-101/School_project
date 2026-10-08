@@ -2,6 +2,7 @@ import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { fetchAllPages } from "@/lib/api/fetchAll"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 import type {
   Brand,
   BrandPayload,
@@ -99,16 +100,6 @@ export const deleteVariant = (id: string) => apiCall<unknown>(() => api.delete(`
 export const generateVariants = (productId: string, payload: VariantGeneratePayload) =>
   apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
 
-/** Search variants across the catalog (for pickers). */
-export async function searchVariants(search: string, extra: Record<string, unknown> = {}) {
-  try {
-    const res = await api.get(`${C}/variants/`, { params: { page: 1, page_size: 20, search, ...extra } })
-    return unwrapList<ProductVariant>(res.data, 1, 20).items
-  } catch (err) {
-    throw extractApiError(err)
-  }
-}
-
 /** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
 export async function downloadVariantsExport(
   fileFormat: "csv" | "xlsx",
@@ -140,20 +131,25 @@ export const categoryListParams = (includeDeleted = false) => ({
   ordering: "name",
   ...(includeDeleted ? { include_deleted: true } : {}),
 })
+const categoriesChanged = <R>(res: R) => {
+  invalidateAllPages(CATEGORIES_ENDPOINT)
+  return res
+}
 export const fetchAllCategories = (params: { include_deleted?: boolean } = {}) =>
   fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(params.include_deleted))
 export const createCategory = (payload: CategoryPayload) =>
-  apiCall<Category>(() => api.post(`${C}/categories/`, payload))
+  apiCall<Category>(() => api.post(`${C}/categories/`, payload).then(categoriesChanged))
 export const updateCategory = (id: string, payload: CategoryPayload) =>
-  apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, payload))
+  apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, payload).then(categoriesChanged))
 export const uploadCategoryImage = (id: string, file: File) => {
   const form = new FormData()
   form.append("image", file)
-  return apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, form))
+  return apiCall<Category>(() => api.patch(`${C}/categories/${id}/`, form).then(categoriesChanged))
 }
-export const deleteCategory = (id: string) => apiCall<unknown>(() => api.delete(`${C}/categories/${id}/`))
+export const deleteCategory = (id: string) =>
+  apiCall<unknown>(() => api.delete(`${C}/categories/${id}/`).then(categoriesChanged))
 export const restoreCategory = (id: string) =>
-  apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`))
+  apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`).then(categoriesChanged))
 
 // ---- brands ----
 /** Every active brand (for pickers). */

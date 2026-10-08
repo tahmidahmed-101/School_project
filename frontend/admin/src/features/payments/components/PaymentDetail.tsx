@@ -19,9 +19,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency } from "@/lib/format"
-
-// Decimal-string money math in integer paisa, so 0.1 + 0.2 style drift can't creep in.
-const toPaisa = (v: string) => Math.round(Number(v) * 100)
+import { fromPaisa, toPaisa } from "@/lib/money"
 
 const PaymentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -59,7 +57,7 @@ const PaymentDetail = () => {
   }
 
   const outstandingPaisa = toPaisa(payment.amount) - toPaisa(payment.refunded_amount)
-  const outstanding = (outstandingPaisa / 100).toFixed(2)
+  const outstanding = fromPaisa(outstandingPaisa)
   const refundable = canRefund && payment.status === "captured" && outstandingPaisa > 0
 
   // Blank = refund everything outstanding; otherwise 0 < amount ≤ outstanding.
@@ -73,8 +71,8 @@ const PaymentDetail = () => {
   const handleRefund = async () => {
     try {
       const partial = amount.trim() !== "" && amountPaisa < outstandingPaisa
-      await dispatch(refundPayment({ id: payment.id, amount: partial ? (amountPaisa / 100).toFixed(2) : undefined })).unwrap()
-      toast.success(`Refunded ${formatCurrency(amountPaisa / 100)}`)
+      await dispatch(refundPayment({ id: payment.id, amount: partial ? fromPaisa(amountPaisa) : undefined })).unwrap()
+      toast.success(`Refunded ${formatCurrency(fromPaisa(amountPaisa))}`)
       setAmount("")
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Refund failed"))
@@ -136,7 +134,7 @@ const PaymentDetail = () => {
         destructive
         title="Refund payment"
         description={`Up to ${formatCurrency(outstanding)} is still refundable. The payment is marked refunded once nothing is left outstanding.`}
-        confirmLabel={amountError ? "Refund" : `Refund ${formatCurrency(amountPaisa / 100)}`}
+        confirmLabel={amountError ? "Refund" : `Refund ${formatCurrency(fromPaisa(amountPaisa))}`}
         confirmDisabled={!!amountError}
         onConfirm={handleRefund}
       >
