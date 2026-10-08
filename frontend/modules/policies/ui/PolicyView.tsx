@@ -22,7 +22,7 @@ export function PolicyView({ policy }: PolicyViewProps) {
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}
           title={t(policy.title)}
-          subtitle={t(policy.updated)}
+          subtitle={policy.updated && t(policy.updated)}
         />
 
         <p className="max-w-3xl text-sm leading-relaxed text-ink-700 sm:text-base lg:max-w-4xl lg:text-lg">
