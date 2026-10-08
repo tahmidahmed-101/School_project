@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,27 +12,34 @@ import { DataTable } from "@/components/common/data-table"
 import { TableActions } from "@/components/common/TableActions"
 import { ProductCell, TextCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { FormField, SelectField, TextField } from "@/components/common/form-fields"
+import { FormField, TextField } from "@/components/common/form-fields"
 import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteHeroSlide, fetchHeroSlides, saveHeroSlide } from "@/features/system/slices/businessSettingsSlice"
-import type { HeroSlide, HeroSlidePlacement } from "@/features/system/types"
+import type { HeroSlide, ShopPlacement } from "@/features/system/types"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
-import type { Option } from "@/lib/types"
+import { onShop, SHARED_EDIT_NOTE } from "./placement"
+import { SharedCell } from "./SharedCell"
 
-const PLACEMENT_LABEL: Record<HeroSlidePlacement, string> = {
-  home: "Home",
-  preorder: "Pre-order",
-  both: "Both",
+const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
+  home: {
+    title: "Hero Slides",
+    description:
+      "The large banners at the top of the storefront. The storefront shows its built-in slides until at least one active slide exists.",
+  },
+  preorder: {
+    title: "Pre-order Hero Slides",
+    description: "The large banners at the top of the pre-order shop.",
+  },
 }
-const placementOptions: Option[] = Object.entries(PLACEMENT_LABEL).map(([value, label]) => ({ value, label }))
 
 const slideName = (slide: HeroSlide) => slide.title_en || slide.alt_text || "Untitled slide"
 
-export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
+export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; placement: ShopPlacement }) {
   const dispatch = useAppDispatch()
-  const { data, status, error } = useAppSelector((state) => state.businessSettings.heroSlides)
+  const { data: allSlides, status, error } = useAppSelector((state) => state.businessSettings.heroSlides)
+  const data = useMemo(() => onShop(allSlides, placement), [allSlides, placement])
   const [saving, setSaving] = useState<string | null>(null)
   const [editing, setEditing] = useState<HeroSlide | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -70,9 +77,9 @@ export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
       ),
     },
     {
-      accessorKey: "placement",
-      header: "PLACEMENT",
-      cell: ({ row }) => <TextCell value={PLACEMENT_LABEL[row.original.placement] ?? row.original.placement} />,
+      id: "shared",
+      header: "SHARED",
+      cell: ({ row }) => <SharedCell placement={row.original.placement} />,
     },
     {
       accessorKey: "sort_order",
@@ -114,11 +121,8 @@ export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hero Slides</CardTitle>
-        <CardDescription>
-          The large banners at the top of the storefront. The storefront shows its built-in slides until at least one
-          active slide exists.
-        </CardDescription>
+        <CardTitle>{CARD_COPY[placement].title}</CardTitle>
+        <CardDescription>{CARD_COPY[placement].description}</CardDescription>
         {canManage && (
           <CardAction>
             <Button
@@ -146,9 +150,9 @@ export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
           onRetry={() => dispatch(fetchHeroSlides())}
           emptyIcon={Images}
           emptyTitle="No hero slides"
-          emptyDescription="The storefront is showing its built-in slides."
-          minWidth="640px"
-          columnWidths={["auto", "120px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
+          emptyDescription={placement === "home" ? "The storefront is showing its built-in slides." : undefined}
+          minWidth="700px"
+          columnWidths={["auto", "190px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -158,6 +162,7 @@ export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
           open={formOpen}
           onOpenChange={setFormOpen}
           slide={editing}
+          placement={placement}
           nextSortOrder={data.length ? Math.max(...data.map((s) => s.sort_order)) + 1 : 0}
         />
       )}
@@ -172,7 +177,6 @@ const schema = z.object({
   title_en: z.string().trim(),
   title_bn: z.string().trim(),
   link_url: z.string().trim(),
-  placement: z.enum(["home", "preorder", "both"]),
   sort_order: z.string().trim().regex(/^\d+$/, "Enter a whole number"),
   is_active: z.boolean(),
 })
@@ -182,11 +186,13 @@ function HeroSlideFormDialog({
   open,
   onOpenChange,
   slide,
+  placement,
   nextSortOrder,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   slide: HeroSlide | null
+  placement: ShopPlacement
   nextSortOrder: number
 }) {
   const dispatch = useAppDispatch()
@@ -208,7 +214,6 @@ function HeroSlideFormDialog({
       title_en: "",
       title_bn: "",
       link_url: "",
-      placement: "home",
       sort_order: "0",
       is_active: true,
     },
@@ -223,7 +228,6 @@ function HeroSlideFormDialog({
       title_en: slide?.title_en ?? "",
       title_bn: slide?.title_bn ?? "",
       link_url: slide?.link_url ?? "",
-      placement: slide?.placement ?? "home",
       sort_order: String(slide?.sort_order ?? nextSortOrder),
       is_active: slide?.is_active ?? true,
     })
@@ -246,7 +250,7 @@ function HeroSlideFormDialog({
       await dispatch(
         saveHeroSlide({
           id: slide?.id,
-          values: { ...values, sort_order: Number(values.sort_order) },
+          values: { ...values, placement, sort_order: Number(values.sort_order) },
           image: imageFile,
         })
       ).unwrap()
@@ -264,7 +268,9 @@ function HeroSlideFormDialog({
       open={open}
       onOpenChange={close}
       title={slide ? "Edit slide" : "Add slide"}
-      description="Tag and title are shown over the image, in the language the shopper is browsing in."
+      description={`Tag and title are shown over the image, in the language the shopper is browsing in.${
+        slide?.placement === "both" ? ` ${SHARED_EDIT_NOTE}` : ""
+      }`}
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={slide ? "Save slide" : "Add slide"}
@@ -312,19 +318,16 @@ function HeroSlideFormDialog({
         error={errors.link_url}
         {...register("link_url")}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <SelectField control={control} name="placement" label="Placement" id="slide-placement" options={placementOptions} />
-        <TextField
-          label="Sort order"
-          id="slide-sort-order"
-          type="number"
-          min={0}
-          step={1}
-          description="Lower numbers come first."
-          error={errors.sort_order}
-          {...register("sort_order")}
-        />
-      </div>
+      <TextField
+        label="Sort order"
+        id="slide-sort-order"
+        type="number"
+        min={0}
+        step={1}
+        description="Lower numbers come first."
+        error={errors.sort_order}
+        {...register("sort_order")}
+      />
       <SwitchField control={control} name="is_active" label="Active" description="Inactive slides stay off the storefront." />
     </FormDialog>
   )

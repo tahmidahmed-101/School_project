@@ -5,7 +5,7 @@ import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
@@ -169,6 +169,7 @@ const CouponForm = () => {
         <Card>
           <CardHeader>
             <CardTitle>Coupon Details</CardTitle>
+            <CardDescription>Coupons work on stock orders only. They do not apply to pre-orders.</CardDescription>
           </CardHeader>
           <CardContent>
             <fieldset disabled={readOnly} className="grid grid-cols-1 gap-4 md:grid-cols-2">

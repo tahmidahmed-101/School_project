@@ -27,8 +27,8 @@ export function RevenueComparisonChart({ points, isLoading, error, onRetry, clas
 
   return (
     <ReportWidget
-      title="Revenue"
-      description="Paid, non-cancelled orders per day vs. the previous period"
+      title="Stock revenue"
+      description="Paid, non-cancelled stock orders per day vs. the previous period"
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}

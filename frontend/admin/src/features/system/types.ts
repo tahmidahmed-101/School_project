@@ -88,6 +88,9 @@ export interface IntegrationStatus {
 
 export type HeroSlidePlacement = "home" | "preorder" | "both"
 
+/** The placement one settings page edits: `home` on stock Settings, `preorder` on Pre-order Settings. */
+export type ShopPlacement = Exclude<HeroSlidePlacement, "both">
+
 export interface HeroSlide {
   id: string
   /** Absolute URL. */
