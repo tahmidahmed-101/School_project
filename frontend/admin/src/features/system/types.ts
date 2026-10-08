@@ -27,6 +27,8 @@ export interface BusinessProfile {
   tiktok_url: string
   youtube_url: string
   linkedin_url: string
+  about_en: string
+  about_bn: string
   updated_at: string
 }
 
@@ -79,6 +81,37 @@ export interface IntegrationStatus {
     from_number: string
   }
 }
+
+// ---- storefront content (/admin/settings/hero-slides/, /admin/settings/promo-lines/) ----
+
+export type HeroSlidePlacement = "home" | "preorder" | "both"
+
+export interface HeroSlide {
+  id: string
+  /** Absolute URL. */
+  image: string
+  alt_text: string
+  tag_en: string
+  tag_bn: string
+  title_en: string
+  title_bn: string
+  link_url: string
+  placement: HeroSlidePlacement
+  sort_order: number
+  is_active: boolean
+}
+
+export type HeroSlideInput = Omit<HeroSlide, "id" | "image">
+
+export interface PromoLine {
+  id: string
+  text_en: string
+  text_bn: string
+  sort_order: number
+  is_active: boolean
+}
+
+export type PromoLineInput = Omit<PromoLine, "id">
 
 // ---- store policies (/admin/settings/policies/) ----
 
