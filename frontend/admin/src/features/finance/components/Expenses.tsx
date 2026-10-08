@@ -178,7 +178,7 @@ const Expenses = () => {
       header: "REFERENCE",
       cell: ({ row }) =>
         row.original.deleted_at ? (
-          <StatusBadge status="deleted" tone="destructive" />
+          <StatusBadge status="deleted" />
         ) : (
           <span className="text-xs font-mono text-muted-foreground">{row.original.reference_number || "—"}</span>
         ),

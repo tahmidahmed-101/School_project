@@ -72,7 +72,7 @@ export function TextCell({
 /** Status of a soft-deletable record: Deleted, else Active / Inactive. */
 export function ActiveStatusBadge({ deleted, active }: { deleted?: boolean | string | null; active: boolean }) {
   return deleted ? (
-    <StatusBadge status="deleted" tone="destructive" />
+    <StatusBadge status="deleted" />
   ) : (
     <StatusBadge status={active ? "active" : "inactive"} />
   )

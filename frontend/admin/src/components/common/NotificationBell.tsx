@@ -9,6 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/app/hooks";
 import { hasPermission } from "@/app/modules";
 import { api } from "@/lib/api/client";
@@ -174,15 +175,17 @@ export function NotificationBell() {
       }}
     >
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
+          variant="outline"
+          size="icon-lg"
           aria-label={hasNew ? "Notifications (new)" : "Notifications"}
-          className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-300 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-input dark:bg-background dark:text-gray-400 dark:hover:bg-gray-800"
+          className="rounded-[10px] text-gray-700 shadow-xs hover:bg-muted dark:hover:bg-accent dark:border-input dark:text-muted-foreground"
         >
           <BellIcon className="size-5" />
           {hasNew && (
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring ring-white dark:ring-gray-800" />
+            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring ring-background" />
           )}
-        </button>
+        </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
