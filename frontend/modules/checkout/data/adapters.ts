@@ -6,6 +6,7 @@ import type { OrderResult } from "@/lib/types";
 export function toOrderResult(
   order: ApiOrder,
   customer: { name: string; address: string; district: string },
+  payTo: string,
 ): OrderResult {
   return {
     orderNumber: order.order_number,
@@ -29,6 +30,9 @@ export function toOrderResult(
     shipping: toNumber(order.shipping_total),
     discount: toNumber(order.discount_total),
     total: toNumber(order.grand_total),
+    isPreOrderOrder: order.order_type === "preorder",
+    depositDue: toNumber(order.deposit_due),
+    payTo,
     couponCode: order.coupon_code,
     shipments: order.shipments.map((s) => ({
       id: s.id,

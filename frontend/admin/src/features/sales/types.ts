@@ -79,6 +79,8 @@ export interface OrderLine {
   delivered_quantity: number
   returned_quantity: number
   shippable_quantity: number
+  /** Pre-order units with no arrived stock set aside yet. */
+  awaiting_stock_quantity: number
   returnable_quantity: number
   unit_price: string
   discount_amount: string
@@ -112,7 +114,7 @@ export interface Order {
   contact_email: string
   contact_phone: string
   contact_name: string
-  has_preorder: boolean
+  order_type: "stock" | "preorder"
   /** Blank until staff record the first stage. */
   preorder_stage: string
   preorder_stage_events: PreorderStageEvent[]
@@ -124,6 +126,7 @@ export interface Order {
   /** Money received and not refunded; uncollected cash on delivery is not in it. */
   paid_total: string
   balance_due: string
+  deposit_due: string
   /** Statuses the manual override accepts from here (services/orders.py STATUS_OVERRIDES). */
   allowed_statuses: OrderStatus[]
   coupon_code: string | null
@@ -188,4 +191,22 @@ export interface CustomerCart {
   created_at: string
   /** The last cart change: every line edit saves the cart. */
   updated_at: string
+}
+
+/** AdminPreorderReportView */
+export interface PreorderReport {
+  summary: { open_orders: number; order_value: string; deposits_held: string; balances_outstanding: string }
+  demand: {
+    variant_id: string
+    variant_sku: string
+    product_name: string
+    waiting: number
+    available: number
+    to_buy: number
+  }[]
+}
+
+/** AdminPreorderAllocationView */
+export interface PreorderAllocationResult {
+  allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
 }

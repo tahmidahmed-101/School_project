@@ -6,7 +6,9 @@ from uuid import UUID
 
 from django.db.models import QuerySet
 
+from apps.business.selectors.business_profile import get_business_profile
 from apps.common.utils.dates import day_after, day_start
+from apps.common.utils.money import percent_of, quantize
 from apps.orders.models import Payment
 
 
@@ -22,6 +24,15 @@ def order_paid_total(order) -> Decimal:
 
 def order_balance_due(order) -> Decimal:
     return max(order.grand_total - order_paid_total(order), Decimal("0.00"))
+
+
+def order_deposit_due(order) -> Decimal:
+    """What must be received before the order is confirmed: the whole total for
+    a stock order, the shop's deposit share for a pre-order."""
+    if order.order_type != order.OrderType.PREORDER:
+        return order.grand_total
+    percent = get_business_profile().preorder_deposit_percent
+    return quantize(percent_of(order.grand_total, percent))
 
 
 def payments_list(

@@ -81,7 +81,7 @@ export interface Product {
   /** SEO keywords from the product detail endpoint. */
   metaKeywords?: string;
   /** Which shop the product belongs to, from its category. */
-  kind?: "stock" | "preorder";
+  kind: "stock" | "preorder";
   // Pre-order attributes
   isPreOrder?: boolean;
   preorderEndDate?: string;
@@ -152,6 +152,9 @@ export interface OrderResult {
   shipping: number;
   discount: number;
   total: number;
+  isPreOrderOrder: boolean;
+  depositDue: number;
+  payTo: string;
   couponCode: string | null;
   shipments: { id: string; carrier: string | null; trackingNumber: string; status: string }[];
 }

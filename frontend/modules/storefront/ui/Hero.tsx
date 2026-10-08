@@ -25,7 +25,7 @@ export function Hero({
 }: {
   /** The page's H1; slide titles rotate every few seconds, so they can't be it. */
   heading: string;
-  /** Never empty: the caller falls back to the built-in slides. */
+  /** Empty until staff add a slide for this page; the banner then shows only its shop button. */
   slides: HeroSlide[];
   hasOffers: boolean;
   shopLink?: string;
@@ -41,11 +41,12 @@ export function Hero({
   const [rotated, setRotated] = useState(false);
   const count = slides.length;
   const slide = slides[index] ?? slides[0];
-  const tag = slide.tag[lang];
-  const title = slide.title[lang];
+  const tag = slide?.tag[lang];
+  const title = slide?.title[lang];
 
   const go = useCallback(
     (next: number) => {
+      if (count === 0) return;
       const target = (next + count) % count;
       setIndex(target);
       setRotated(true);
@@ -82,11 +83,11 @@ export function Hero({
 
           {/* Middle: banner slider (first slide is the LCP image, so no reveal animation) */}
           <div className={`flex h-full flex-col lg:order-2 ${hasRail ? "lg:col-span-6" : "lg:col-span-9"}`}>
-            <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl shadow-lg sm:min-h-[280px] sm:rounded-3xl lg:min-h-[360px]">
+            <div className="relative flex h-full min-h-[220px] flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-ink-950 shadow-lg sm:min-h-[280px] sm:rounded-3xl lg:min-h-[360px]">
               {slides.map((s, i) =>
                 i > mounted ? null : (
                   <Image
-                    key={s.id ?? s.image}
+                    key={s.id}
                     src={photo(s.image)}
                     alt={s.alt}
                     fill
@@ -131,7 +132,7 @@ export function Hero({
                 </div>
 
                 <Link
-                  href={slide.linkUrl || shopLink}
+                  href={slide?.linkUrl || shopLink}
                   className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-canvas px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-accent-hover hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
                 >
                   <span>{HERO_CTA_TEXT[lang]}</span>
@@ -153,7 +154,7 @@ export function Hero({
                 <div className="flex gap-4">
                   {slides.map((s, i) => (
                     <button
-                      key={s.id ?? s.image}
+                      key={s.id}
                       type="button"
                       onClick={() => go(i)}
                       aria-label={`${ui("slide")} ${n(i + 1)}`}

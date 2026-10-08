@@ -258,7 +258,9 @@ def test_admin_order_shows_what_is_owed_and_which_lines_are_preorder(api_client)
         user=create_user(email="unpaid-admin@example.com", role=UserRole.ADMIN)
     )
     order, _ = _cod_order("admin-view-cod@example.com")
-    preorder = SalesOrderFactory(status=SalesOrder.Status.CONFIRMED)
+    preorder = SalesOrderFactory(
+        status=SalesOrder.Status.CONFIRMED, order_type=SalesOrder.OrderType.PREORDER
+    )
     SalesOrderLineFactory(order=preorder, is_preorder=True)
 
     response = api_client.get(f"/api/v1/admin/orders/{order.id}/")
@@ -269,7 +271,7 @@ def test_admin_order_shows_what_is_owed_and_which_lines_are_preorder(api_client)
     assert data["allowed_statuses"] == ["delivered", "cancelled", "closed"]
     assert data["lines"][0]["is_preorder"] is False
 
-    response = api_client.get("/api/v1/admin/orders/", {"has_preorder": "true"})
+    response = api_client.get("/api/v1/admin/orders/", {"order_type": "preorder"})
     assert [row["id"] for row in response.data["data"]["results"]] == [str(preorder.id)]
-    response = api_client.get("/api/v1/admin/orders/", {"has_preorder": "false"})
+    response = api_client.get("/api/v1/admin/orders/", {"order_type": "stock"})
     assert [row["id"] for row in response.data["data"]["results"]] == [str(order.id)]

@@ -169,6 +169,17 @@ def _ensure_pending(order: SalesOrder) -> None:
         )
 
 
+MIXED_BASKET_MESSAGE = (
+    "Stock items and pre-order items are ordered separately. "
+    "Finish or empty the current basket first."
+)
+
+
+def ensure_single_kind(order: SalesOrder, *, is_preorder: bool) -> None:
+    if order.lines.filter(is_preorder=not is_preorder).exists():
+        raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")
+
+
 @transaction.atomic
 def add_line(
     *,
@@ -190,6 +201,7 @@ def add_line(
 
     unit_price = variant.effective_price
     is_preorder = variant.is_preorder_active
+    ensure_single_kind(order, is_preorder=is_preorder)
     tax_amount = compute_line_tax(unit_price=unit_price, quantity=quantity)
     line, created = SalesOrderLine.objects.get_or_create(
         order=order,

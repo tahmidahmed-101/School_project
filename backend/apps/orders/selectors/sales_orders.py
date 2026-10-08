@@ -79,7 +79,7 @@ def orders_list(
     customer=None,
     status: str | None = None,
     preorder_stage: str | None = None,
-    has_preorder: bool | None = None,
+    order_type: str | None = None,
     search: str | None = None,
     start: date | None = None,
     end: date | None = None,
@@ -91,11 +91,8 @@ def orders_list(
         queryset = queryset.filter(status=status)
     if preorder_stage:
         queryset = queryset.filter(preorder_stage=preorder_stage)
-    if has_preorder is not None:
-        preorder_lines = SalesOrderLine.objects.filter(order=OuterRef("pk"), is_preorder=True)
-        queryset = queryset.filter(
-            Exists(preorder_lines) if has_preorder else ~Exists(preorder_lines)
-        )
+    if order_type:
+        queryset = queryset.filter(order_type=order_type)
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:

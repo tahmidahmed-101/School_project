@@ -1,12 +1,15 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPaymentMethods, updatePaymentMethod } from "@/features/system/slices/businessSettingsSlice"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { SectionState } from "./SectionState"
+
+const PAY_TO_METHODS = new Set(["bkash", "nagad", "rocket", "bank_transfer"])
 
 export function PaymentMethodsPanel({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
@@ -37,6 +40,15 @@ export function PaymentMethodsPanel({ canManage }: { canManage: boolean }) {
     }
   }
 
+  const savePayTo = async (key: string, label: string, pay_to: string) => {
+    try {
+      await dispatch(updatePaymentMethod({ key, pay_to })).unwrap()
+      toast.success(`${label} number saved`)
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, `Couldn't update ${label}`))
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -57,6 +69,20 @@ export function PaymentMethodsPanel({ canManage }: { canManage: boolean }) {
                   <p className="text-sm text-muted-foreground">{method.description}</p>
                   {locked && method.locked_reason && (
                     <p className="text-xs text-amber-600 dark:text-amber-500">{method.locked_reason}</p>
+                  )}
+                  {PAY_TO_METHODS.has(method.key) && (
+                    <Input
+                      key={method.pay_to}
+                      aria-label={`${method.label} number or account shown to customers`}
+                      placeholder="Number or account shown to customers"
+                      defaultValue={method.pay_to}
+                      disabled={!canManage}
+                      className="mt-2 max-w-xs"
+                      onBlur={(event) => {
+                        const value = event.target.value.trim()
+                        if (value !== method.pay_to) void savePayTo(method.key, method.label, value)
+                      }}
+                    />
                   )}
                 </div>
                 <Switch

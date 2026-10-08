@@ -9,7 +9,11 @@ from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import Payment, SalesOrder, SalesOrderLine, StockReservation
 from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
-from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
+from apps.orders.services.carts import (
+    _check_preorder_stock_limit,
+    compute_line_tax,
+    ensure_single_kind,
+)
 from apps.orders.services.notifications import notify_order
 from apps.orders.services.reservations import release_stock_reservation
 
@@ -248,6 +252,13 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         had_reservations = True
         release_stock_reservation(reservation=reservation, actor=actor)
 
+    # A pre-order line goes back to the queue; allocation hands stock out again.
+    if line.is_preorder:
+        if line.allocated_quantity:
+            line.allocated_quantity = 0
+            line.save(update_fields=["allocated_quantity", "updated_at"])
+        return
+
     # A pending order has not reserved anything yet — checkout does that.
     if not had_reservations:
         return
@@ -288,6 +299,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
             code="preorder_not_active",
         )
     is_preorder = variant.is_preorder_active
+    ensure_single_kind(order, is_preorder=is_preorder)
     if is_preorder and variant.preorder_stock_limit is not None:
         _check_preorder_stock_limit(variant, quantity)
 

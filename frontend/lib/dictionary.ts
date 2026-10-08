@@ -307,8 +307,8 @@ export const DICT = {
     bn: "এটি একটি প্রি-অর্ডার পণ্য এবং স্টক আসার সাথে সাথে পাঠানো হবে।",
   },
   cartMixedNotice: {
-    en: "Note: Your order contains pre-order items. Items may ship separately or together depending on availability.",
-    bn: "বিশেষ দ্রষ্টব্য: আপনার অর্ডারে প্রি-অর্ডার পণ্য রয়েছে। প্রাপ্যতা অনুযায়ী আইটেমগুলো একসাথে বা পৃথকভাবে পাঠানো হতে পারে।",
+    en: "Stock items and pre-order items are ordered separately. Remove one kind to continue.",
+    bn: "স্টকের পণ্য আর প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। এগোতে চাইলে যেকোনো এক ধরনের পণ্য সরিয়ে দিন।",
   },
 
   // Wishlist Drawer
@@ -340,6 +340,8 @@ export const DICT = {
     bn: "ডেলিভারিম্যানের জন্য কোনো নির্দেশনা থাকলে লিখুন...",
   },
   checkoutPaymentMethod: { en: "Payment method", bn: "পেমেন্ট মাধ্যম" },
+  checkoutPayTo: { en: "Send payment to", bn: "টাকা পাঠাবেন এই নম্বরে" },
+  checkoutDepositDue: { en: "Advance to pay now", bn: "এখন অগ্রিম দিতে হবে" },
   checkoutCodLabel: { en: "Cash on delivery", bn: "ক্যাশ অন ডেলিভারি" },
   payCash: { en: "Cash", bn: "ক্যাশ" },
   payCard: { en: "Card", bn: "কার্ড" },

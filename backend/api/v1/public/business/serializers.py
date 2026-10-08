@@ -41,6 +41,7 @@ class PublicPaymentMethodSerializer(serializers.Serializer):
     key = serializers.CharField(read_only=True)
     label = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
+    pay_to = serializers.CharField(read_only=True)
 
 
 class PublicPolicySectionSerializer(serializers.Serializer):

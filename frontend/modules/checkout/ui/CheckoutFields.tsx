@@ -51,6 +51,7 @@ export function CheckoutFields({
 }: CheckoutFieldsProps) {
   const { ui } = useLang();
   const inputClass = (field: keyof OrderForm) => fieldClass({ invalid: Boolean(errors[field]) });
+  const payTo = paymentMethods.find((m) => m.key === paymentMethod)?.pay_to;
 
   return (
     <>
@@ -170,6 +171,11 @@ export function CheckoutFields({
             );
           })}
         </div>
+        {payTo && (
+          <p className="text-xs text-fg-muted">
+            {ui("checkoutPayTo")}: <span className="font-bold text-fg">{payTo}</span>
+          </p>
+        )}
       </div>
     </>
   );

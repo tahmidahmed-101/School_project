@@ -36,10 +36,6 @@ describe("toCategoryInfo", () => {
     expect(info.itemCount).toBe(0);
     expect(info.image).toBe("brand/category-placeholder.png");
   });
-
-  it("counts nothing when an older API sends no count and no products are given", () => {
-    expect(toCategoryInfo(category).itemCount).toBe(0);
-  });
 });
 
 describe("toProduct pre-order state", () => {

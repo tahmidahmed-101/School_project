@@ -4,6 +4,7 @@ import logging
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from apps.accounting.services.money import quantize_money
@@ -13,6 +14,7 @@ from apps.common.exceptions import BusinessRuleViolationError
 from apps.orders.constants import PAYMENT_METHODS_BY_KEY, PaymentMethodKey
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
+from apps.orders.selectors.payments import order_deposit_due
 from apps.orders.services.orders import lock_order
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,14 @@ def _require_enabled_method(method: str):
     return spec
 
 
+def _balance_due(order: SalesOrder) -> Decimal:
+    """Read from the table, not `order.payments`, which a caller may have prefetched."""
+    received = Payment.objects.filter(
+        order=order, status__in=(Payment.Status.CAPTURED, Payment.Status.REFUNDED)
+    ).aggregate(total=Sum(F("amount") - F("refunded_amount")))["total"] or Decimal("0.00")
+    return max(order.grand_total - received, Decimal("0.00"))
+
+
 @transaction.atomic
 def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
     """Record how a checked-out order will be paid without claiming the money
@@ -64,7 +74,12 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
         method=method,
         status=Payment.Status.PENDING,
     )
-    if method == PaymentMethodKey.COD:
+    # A pre-order waits for its deposit whatever the method; the balance is then
+    # collected against this same row.
+    needs_deposit = (
+        order.order_type == SalesOrder.OrderType.PREORDER and order_deposit_due(order) > 0
+    )
+    if method == PaymentMethodKey.COD and not needs_deposit:
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
         _assess_order_risk(order)
@@ -119,18 +134,19 @@ def capture_payment(
             .filter(order=order, status=Payment.Status.PENDING)
             .first()
         )
-    if not awaiting and owed is None:
+    balance = _balance_due(order)
+    if not (awaiting or order.status in COD_COLLECTABLE_STATUSES) or balance <= 0:
         raise BusinessRuleViolationError(
-            "Payment can only be captured for a checked-out order awaiting payment.",
+            "Payment can only be captured for a placed order with a balance due.",
             code="invalid_order_status",
         )
     if not order.lines.exists():
         raise BusinessRuleViolationError(
             "Cannot capture payment for an empty order.", code="empty_order"
         )
-    if amount != order.grand_total:
+    if amount <= 0 or amount > balance:
         raise BusinessRuleViolationError(
-            "Payment amount does not match the order total.", code="amount_mismatch"
+            f"Enter an amount up to the balance due ({balance}).", code="amount_mismatch"
         )
     method = method or PaymentMethodKey.MANUAL
     spec = _require_enabled_method(method)
@@ -145,6 +161,10 @@ def capture_payment(
         # Own savepoint: catching IntegrityError inside the outer atomic
         # block would otherwise leave it unusable for the raise below.
         with transaction.atomic():
+            if owed is not None and amount < owed.amount:
+                owed.amount -= amount
+                owed.save(update_fields=["amount", "updated_at"])
+                owed = None
             if owed is not None:
                 owed.amount = amount
                 owed.method = method
@@ -169,7 +189,7 @@ def capture_payment(
         ) from None
     # A pending row dates from the order; the money arrived today.
     post_customer_payment(payment, entry_date=timezone.localdate() if owed else None)
-    if awaiting:
+    if awaiting and order.grand_total - balance + amount >= order_deposit_due(order):
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
         _assess_order_risk(order)

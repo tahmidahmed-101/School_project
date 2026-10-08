@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/api/client";
 import type { ApiPaymentMethod } from "@/lib/api/types";
 import { CACHE_LIFE } from "@/lib/cache";
 
-const COD_FALLBACK: ApiPaymentMethod[] = [{ key: "cod", label: "Cash on delivery", description: "" }];
+const COD_FALLBACK: ApiPaymentMethod[] = [{ key: "cod", label: "Cash on delivery", description: "", pay_to: "" }];
 
 /**
  * GET /payment-methods/ — enabled methods; the chosen `key` is sent as `payment_method` to POST /checkout/.

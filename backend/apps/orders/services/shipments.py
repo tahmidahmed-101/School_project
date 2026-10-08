@@ -82,6 +82,12 @@ def create_shipment(
     }
     for line_id, quantity in requested.items():
         order_line = locked_lines[line_id]
+        if order_line.is_preorder and quantity > order_line.shippable_quantity:
+            raise BusinessRuleViolationError(
+                f"Only {order_line.shippable_quantity} unit(s) of {order_line.variant.sku} have "
+                "arrived stock set aside for this order. Allocate arrived stock first.",
+                code="preorder_not_allocated",
+            )
         if quantity > order_line.shippable_quantity:
             raise BusinessRuleViolationError(
                 f"Cannot ship {quantity} units of line {order_line.id}: only "
@@ -108,20 +114,17 @@ def create_shipment(
     for line_id, quantity in requested.items():
         order_line = locked_lines[line_id]
         ShipmentLine.objects.create(shipment=shipment, order_line=order_line, quantity=quantity)
-        # Pre-order lines never reserved stock at checkout (see checkout.py),
-        # so there is nothing to release and no on-hand stock to post out.
-        if not order_line.is_preorder:
-            for component, component_qty in expand_variant(order_line.variant, quantity):
-                # Release before the stock-out: the reverse order dips through a
-                # state where reserved exceeds on-hand, which the CHECK rejects.
-                release_reservation(variant=component, quantity=component_qty)
-                record_movement(
-                    variant=component,
-                    movement_type=MovementType.SALES_OUT,
-                    quantity=component_qty,
-                    reference_type="shipment",
-                    reference_id=shipment.id,
-                )
+        for component, component_qty in expand_variant(order_line.variant, quantity):
+            # Release before the stock-out: the reverse order dips through a
+            # state where reserved exceeds on-hand, which the CHECK rejects.
+            release_reservation(variant=component, quantity=component_qty)
+            record_movement(
+                variant=component,
+                movement_type=MovementType.SALES_OUT,
+                quantity=component_qty,
+                reference_type="shipment",
+                reference_id=shipment.id,
+            )
         order_line.shipped_quantity += quantity
         order_line.save(update_fields=["shipped_quantity", "updated_at"])
         if order_line.shippable_quantity == 0:
@@ -385,11 +388,12 @@ def receive_back_shipment(*, shipment: Shipment, dispositions: dict, actor=None)
         sellable, damaged = splits[shipment_line.id]
         # Only sellable units become shippable again; damaged ones stay shipped.
         order_line.shipped_quantity -= sellable
-        order_line.save(update_fields=["shipped_quantity", "updated_at"])
+        if not shipment_line.stock_posted:
+            order_line.allocated_quantity -= sellable
+        order_line.save(update_fields=["shipped_quantity", "allocated_quantity", "updated_at"])
         shipment_line.damaged_quantity = damaged
         shipment_line.save(update_fields=["damaged_quantity", "updated_at"])
-        # Pre-order lines never reserved or posted stock out (see create_shipment).
-        if not order_line.is_preorder:
+        if shipment_line.stock_posted:
             _restock_returned_line(order_line, shipment, sellable, damaged, actor=actor)
             _top_up_reservation_rows(order_line, held_rows)
 
@@ -471,7 +475,7 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
                 f"Units of line {order_line.id} are claimed by a return; resolve it first.",
                 code="units_claimed_by_return",
             )
-        if not order_line.is_preorder:
+        if shipment_line.stock_posted:
             for component, component_qty in expand_variant(order_line.variant, quantity):
                 try:
                     reserve_stock(variant=component, quantity=component_qty)
@@ -484,8 +488,10 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
                         code="insufficient_stock",
                     ) from exc
         order_line.shipped_quantity -= quantity
-        order_line.save(update_fields=["shipped_quantity", "updated_at"])
-        if not order_line.is_preorder:
+        if not shipment_line.stock_posted:
+            order_line.allocated_quantity -= quantity
+        order_line.save(update_fields=["shipped_quantity", "allocated_quantity", "updated_at"])
+        if shipment_line.stock_posted:
             _top_up_reservation_rows(order_line, held_rows)
         shipment_line.replaced_quantity += quantity
         shipment_line.save(update_fields=["replaced_quantity", "updated_at"])

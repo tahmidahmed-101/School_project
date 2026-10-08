@@ -33,6 +33,7 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     inStock: true,
     stockCount: 10,
     sku: "SKU-1",
+    kind: "stock",
     ...overrides,
   };
 }

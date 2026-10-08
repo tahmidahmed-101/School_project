@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.db import transaction
 
-from apps.catalog.models import Category
+from apps.catalog.models import Category, Product
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_slug_for
 
@@ -33,6 +33,27 @@ def create_category(
     )
     category.save()
     return category
+
+
+def _subtree_ids(category: Category) -> list:
+    ids = [category.id]
+    level_ids = ids
+    while level_ids:
+        level_ids = list(
+            Category.objects.filter(parent_id__in=level_ids).values_list("id", flat=True)
+        )
+        ids.extend(level_ids)
+    return ids
+
+
+def _ensure_type_change_leaves_no_product_behind(category: Category) -> None:
+    if Product.objects.filter(
+        category_id__in=_subtree_ids(category), deleted_at__isnull=True
+    ).exists():
+        raise BusinessRuleViolationError(
+            "Move this category's products out before changing it between stock and pre-order.",
+            code="category_type_has_products",
+        )
 
 
 def _cascade_category_type(category: Category, category_type: str) -> None:
@@ -82,6 +103,8 @@ def update_category(*, category: Category, data: dict) -> Category:
         resolved_type = data["category_type"]
         type_changed = resolved_type != category.category_type
 
+    if type_changed:
+        _ensure_type_change_leaves_no_product_behind(category)
     for field, value in data.items():
         if field in allowed_fields:
             setattr(category, field, value)

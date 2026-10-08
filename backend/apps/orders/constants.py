@@ -16,6 +16,14 @@ class PaymentMethodKey(models.TextChoices):
     MANUAL = "manual", "Manual / other"
 
 
+# What a shopper may choose at checkout; staff can record any enabled method.
+STOREFRONT_PAYMENT_METHODS = (
+    PaymentMethodKey.COD,
+    PaymentMethodKey.BKASH,
+    PaymentMethodKey.NAGAD,
+)
+
+
 @dataclass(frozen=True)
 class PaymentMethodSpec:
     key: str

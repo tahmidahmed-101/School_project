@@ -23,9 +23,9 @@ export function isPreOrderSoldOut(product: Product): boolean {
   );
 }
 
-/** Belongs to the pre-order shop: its category is a pre-order one, or it is taking pre-orders right now. */
+/** Belongs to the pre-order shop: its category is a pre-order one. */
 export function isPreOrderShopProduct(product: Product): boolean {
-  return product.kind === "preorder" || Boolean(product.isPreOrder);
+  return product.kind === "preorder";
 }
 
 /** Dictionary key for why a product cannot be bought: a pre-order that is not open reads differently from no stock. */

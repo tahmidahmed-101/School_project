@@ -34,6 +34,7 @@ from apps.orders.models import (
     StockReservation,
 )
 from apps.orders.selectors.payments import get_payment_by_id, payments_list
+from apps.orders.selectors.preorder_demand import preorder_book_summary, preorder_demand
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
@@ -71,6 +72,7 @@ from apps.orders.services.payments import (
     refund_payment,
 )
 from apps.orders.services.preorder import set_preorder_stage
+from apps.orders.services.preorder_allocation import allocate_preorder_stock
 from apps.orders.services.reservations import release_stock_reservation
 from apps.orders.services.returns import (
     approve_rma,
@@ -150,7 +152,7 @@ class OrderQuerysetMixin:
             customer=customer,
             status=get_choice(params, "status", SalesOrder.Status.values),
             preorder_stage=get_choice(params, "preorder_stage", PreorderStage.values),
-            has_preorder=get_bool(params, "has_preorder"),
+            order_type=get_choice(params, "order_type", SalesOrder.OrderType.values),
             start=start,
             end=end,
         )
@@ -333,6 +335,35 @@ class AdminOrderStatusView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": AdminSalesOrderSerializer(order).data, "message": "Success"})
+
+
+@extend_schema(tags=["Orders"])
+class AdminPreorderReportView(APIView):
+    """What open pre-orders still need from the supplier, and the money held
+    and owed on them."""
+
+    permission_classes: ClassVar[list] = [OrdersViewPermission]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request) -> Response:
+        return Response(
+            {
+                "data": {"summary": preorder_book_summary(), "demand": preorder_demand()},
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Orders"])
+class AdminPreorderAllocationView(APIView):
+    """Hand arrived stock to waiting pre-orders, oldest order first."""
+
+    permission_classes: ClassVar[list] = [OrdersManagePermission]
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request) -> Response:
+        allocated = allocate_preorder_stock(actor=request.user)
+        return Response({"data": {"allocated": allocated}, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])

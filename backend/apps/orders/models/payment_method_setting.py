@@ -17,6 +17,8 @@ class PaymentMethodSetting(TimeStampedModel):
         max_length=32, unique=True, choices=PaymentMethodKey.choices
     )
     is_enabled = models.BooleanField(default=True)
+    # The shop's own number or account for this method, shown to the customer.
+    pay_to = models.CharField(max_length=200, blank=True, default="")
 
     class Meta:
         ordering: ClassVar[list] = ["key"]

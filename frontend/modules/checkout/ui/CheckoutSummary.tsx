@@ -241,7 +241,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
         <p className="text-2xs leading-relaxed text-fg-subtle">{ui("checkoutTotalPending")}</p>
       </div>
 
-      <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+      <Button type="submit" size="lg" fullWidth loading={isSubmitting} disabled={hasMixed}>
         {isSubmitting ? ui("checkoutPlacing") : ui("checkoutPlaceOrderBtn")}
       </Button>
       <div className="flex items-center justify-center pt-2 text-center">

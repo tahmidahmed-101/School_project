@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct } from "@/tests/fixtures";
 import type { ApiHeroSlide, ApiStorefrontContent } from "@/lib/api/types";
-import { HERO_SLIDES, PROMO_LINES } from "../domain/hero-content";
 import { hasDiscountedProduct, heroSlidesFor, promoLinesFor, toStorefrontContent } from "../domain/storefront-content";
 
 const apiSlide = (overrides: Partial<ApiHeroSlide> = {}): ApiHeroSlide => ({
@@ -32,11 +31,10 @@ describe("heroSlidesFor", () => {
     expect(heroSlidesFor("preorder", managed).map((s) => s.id)).toEqual(["pre", "both"]);
   });
 
-  it("uses the built-in slides when the page has none or the API failed", () => {
+  it("has no slides when the page has none or the API failed", () => {
     const homeOnly = content({ hero_slides: [apiSlide({ placement: "home" })] });
-    expect(heroSlidesFor("preorder", homeOnly)).toBe(HERO_SLIDES);
-    expect(heroSlidesFor("home", content({}))).toBe(HERO_SLIDES);
-    expect(heroSlidesFor("home", null)).toBe(HERO_SLIDES);
+    expect(heroSlidesFor("preorder", homeOnly)).toEqual([]);
+    expect(heroSlidesFor("home", null)).toEqual([]);
   });
 });
 
@@ -80,9 +78,9 @@ describe("promoLinesFor", () => {
   it("uses the API's lines, with Bangla falling back to English", () => {
     const managed = content({
       promo_lines: [
-        { id: "1", text: { en: "First", bn: "প্রথম" } },
-        { id: "2", text: { en: "Second", bn: "" } },
-        { id: "3", text: { en: "", bn: "" } },
+        { id: "1", text: { en: "First", bn: "প্রথম" }, placement: "both" },
+        { id: "2", text: { en: "Second", bn: "" }, placement: "both" },
+        { id: "3", text: { en: "", bn: "" }, placement: "both" },
       ],
     });
     expect(promoLinesFor("home", managed)).toEqual([
@@ -91,9 +89,9 @@ describe("promoLinesFor", () => {
     ]);
   });
 
-  it("uses the built-in lines when there are none or the API failed", () => {
-    expect(promoLinesFor("home", content({}))).toBe(PROMO_LINES);
-    expect(promoLinesFor("preorder", null)).toBe(PROMO_LINES);
+  it("has no lines when there are none or the API failed", () => {
+    expect(promoLinesFor("home", content({}))).toEqual([]);
+    expect(promoLinesFor("preorder", null)).toEqual([]);
   });
 
   it("keeps a line on the page it was placed on", () => {
@@ -105,10 +103,6 @@ describe("promoLinesFor", () => {
     });
     expect(promoLinesFor("preorder", managed).map((line) => line.en)).toEqual(["Everywhere"]);
     expect(promoLinesFor("home", managed).map((line) => line.en)).toEqual(["Stock only", "Everywhere"]);
-  });
-
-  it("makes no free-delivery claim in the built-in lines", () => {
-    expect(PROMO_LINES.some((line) => /free delivery/i.test(line.en) || line.bn.includes("ফ্রি ডেলিভারি"))).toBe(false);
   });
 });
 

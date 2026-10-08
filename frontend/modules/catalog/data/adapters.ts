@@ -48,7 +48,7 @@ const CLOSING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
 
 function toSkuVariant(v: ApiVariant): SkuVariant {
   const isPreOrder = v.is_preorder_enabled && v.is_preorder_active;
-  const isUpcoming = v.is_preorder_enabled && !isPreOrder && Boolean(v.is_preorder_upcoming);
+  const isUpcoming = v.is_preorder_upcoming;
   // Once its window has ended a pre-order SKU sells from warehouse stock like any other.
   const inStock = isPreOrder || (!isUpcoming && v.in_stock);
   const price = toNumber(v.effective_price);
@@ -128,21 +128,16 @@ function toBadge(badge: string): T | undefined {
   return plain(label);
 }
 
-export function toCategoryInfo(category: ApiCategory, products: Product[] = []): CategoryInfo {
-  const inCategory = products.filter((p) => p.category === category.slug);
-  const withImage = inCategory.find((p) => p.image !== PLACEHOLDER_IMAGE);
-  const counted = category.product_count !== undefined;
-  const apiImage = category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE;
+export function toCategoryInfo(category: ApiCategory): CategoryInfo {
   return {
     id: category.slug,
     apiId: category.id,
     slug: category.slug,
     name: plain(category.name),
-    // The API has no category description. Count and picture come from the API; an API deployed before those
-    // fields existed leaves them out, and the product list stands in.
+    // The API has no category description.
     description: plain(""),
-    image: counted ? apiImage : (withImage?.image ?? CATEGORY_PLACEHOLDER_IMAGE),
-    itemCount: category.product_count ?? inCategory.length,
+    image: category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE,
+    itemCount: category.product_count,
     type: category.category_type,
   };
 }
@@ -169,7 +164,7 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     price: preferred?.price ?? 0,
     compareAtPrice: preferred?.compareAtPrice,
     category: category?.slug ?? "",
-    kind: api.kind ?? category?.category_type,
+    kind: api.kind,
     categoryName: plain(category?.name ?? ""),
     image: gallery[0]!,
     gallery,

@@ -90,3 +90,12 @@
 - [x] `manage.py report_product_kind_mismatches` (report only)
 - [ ] Owner fixes the products the report lists, then backend validation is switched on
 - [ ] Not built: admin "one meaning of pre-order", pre-order fallback hero slides, cart quantity cap, search/wishlist check
+
+## Phase K: finish the plan (owner "continue ... you must complete" 2026-10-08, answers in the plan section 4)
+- [x] K1 Remove fallback and legacy paths (storefront built-in hero/promo, older-API branches, transitional shop rule)
+- [x] K2 Phase 1 leftovers: save-time kind validation, admin single pre-order meaning, cart quantity cap
+- [x] K3 Phase 2: order_type, mixed basket blocked, storefront checkout methods COD/bKash/Nagad
+- [x] K4 Phase 3: several payments per order, pre-order deposit, staff-only pre-order cancel with chosen refund, invoice balance
+- [x] K5 Phase 4: pre-order arrival allocated to waiting orders, ship from stock, returns one rule, demand view
+- [x] K6 Phase 5: reports (open pre-order book, deposits held, balances); SMS needs provider approval
+

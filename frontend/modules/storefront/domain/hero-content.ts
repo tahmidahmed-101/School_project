@@ -1,8 +1,7 @@
 import type { T } from "@/lib/types";
 
 export interface HeroSlide {
-  /** Set on slides managed in the dashboard; the built-in slides are told apart by their image. */
-  id?: string;
+  id: string;
   image: string;
   alt: string;
   tag: T;
@@ -13,70 +12,3 @@ export interface HeroSlide {
 }
 
 export const HERO_CTA_TEXT: T = { en: "Shop now", bn: "কিনুন" };
-
-export const HERO_SLIDES: HeroSlide[] = [
-  {
-    image: "brand/hero-banner.jpg",
-    alt: "Kull Mart hero banner: phones, earbuds, laptop, headphones and everyday accessories",
-    tag: { en: "NEW ARRIVALS · TECH & LIFESTYLE", bn: "নতুন সংগ্রহ · টেক ও লাইফস্টাইল" },
-    title: {
-      en: "Everyday essentials\ndelivered fast",
-      bn: "প্রয়োজনীয় পণ্য\nদ্রুত ডেলিভারিতে",
-    },
-  },
-  {
-    image: "brand/hero-banner-audio.jpg",
-    alt: "Speaker, headphones, earbuds, smartwatch and power bank on a marble display",
-    tag: { en: "GADGETS & AUDIO", bn: "গ্যাজেটস ও অডিও" },
-    title: {
-      en: "Sound that moves\nwith you",
-      bn: "আপনার সঙ্গী\nসেরা সাউন্ড",
-    },
-  },
-  {
-    image: "brand/hero-banner-fashion.jpg",
-    alt: "Handbag, loafers, sunglasses, gold cuff and folded tops on a marble display",
-    tag: { en: "WOMEN'S FASHION & ACCESSORIES", bn: "নারীদের ফ্যাশন ও অ্যাক্সেসরিজ" },
-    title: {
-      en: "Style for every\noccasion",
-      bn: "প্রতিটি উপলক্ষে\nআপনার স্টাইল",
-    },
-  },
-  {
-    image: "brand/hero-banner-lifestyle.jpg",
-    alt: "Flask, mini fan, tumbler, diffuser, sneakers and notebook on a marble display",
-    tag: { en: "HOME & LIFESTYLE", bn: "হোম ও লাইফস্টাইল" },
-    title: {
-      en: "Little things that\nmake life better",
-      bn: "ছোট ছোট জিনিসে\nজীবন আরও সুন্দর",
-    },
-  },
-  {
-    image: "brand/hero-banner-workspace.jpg",
-    alt: "Phone, laptop, headphones, smartwatch and folded tops on a marble display",
-    tag: { en: "TECH & FASHION", bn: "টেক ও ফ্যাশন" },
-    title: {
-      en: "All you love,\none store",
-      bn: "সব পছন্দ,\nএক দোকানে",
-    },
-  },
-];
-
-export const PROMO_LINES: T[] = [
-  {
-    en: "Cash on delivery available nationwide",
-    bn: "সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা",
-  },
-  {
-    en: "Wholesale & retail orders welcome",
-    bn: "পাইকারি ও খুচরা উভয় অর্ডার গ্রহণযোগ্য",
-  },
-  {
-    en: "Women's fashion, innerwear, kids & gadgets",
-    bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
-  },
-  {
-    en: "New arrivals added every week",
-    bn: "প্রতি সপ্তাহে নতুন পণ্য যুক্ত হয়",
-  },
-];

@@ -32,8 +32,8 @@ export interface ApiCategory {
   parent_id: string | null;
   /** A subcategory always shares its root ancestor's type. */
   category_type: "stock" | "preorder";
-  /** Listed products in this category. Absent on an API deployed before the field existed. */
-  product_count?: number;
+  /** Listed products in this category. */
+  product_count: number;
   /** Picture of the first listed product that has one. */
   image?: string | null;
 }
@@ -70,8 +70,8 @@ export interface ApiVariant {
   preorder_end_date: string | null;
   release_date: string | null;
   is_preorder_active: boolean;
-  /** Switched to pre-order but its window has not opened. Missing on an API deployed before the field existed. */
-  is_preorder_upcoming?: boolean;
+  /** Switched to pre-order but its window has not opened. */
+  is_preorder_upcoming: boolean;
   is_preorder_price_applied: boolean;
   /** Pre-order cap; null when the pre-order has no limit. */
   preorder_stock_limit: number | null;
@@ -84,8 +84,8 @@ export interface ApiVariant {
 export interface ApiProduct {
   id: string;
   category_id: string;
-  /** The category's shop. Missing on an API deployed before the field existed. */
-  kind?: "stock" | "preorder";
+  /** The category's shop. */
+  kind: "stock" | "preorder";
   name: string;
   slug: string;
   product_type: string;
@@ -231,7 +231,7 @@ export interface ApiHeroSlide {
 export interface ApiPromoLine {
   id: string;
   text: ApiLocalizedText;
-  placement?: "home" | "preorder" | "both";
+  placement: "home" | "preorder" | "both";
 }
 
 export interface ApiStorefrontContent {
@@ -243,6 +243,7 @@ export interface ApiPaymentMethod {
   key: string;
   label: string;
   description: string;
+  pay_to: string;
 }
 
 export interface ApiCheckoutItem {
@@ -354,6 +355,8 @@ export interface ApiOrder {
   shipping_total: string;
   discount_total: string;
   grand_total: string;
+  order_type: "stock" | "preorder";
+  deposit_due: string;
   coupon_code: string | null;
   lines: ApiOrderLine[];
   shipments: ApiShipment[];

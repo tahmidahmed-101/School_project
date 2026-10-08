@@ -340,7 +340,7 @@ def test_import_variants_repeated_sku_in_one_file_updates_rather_than_duplicates
 
 
 def test_create_variant_with_preorder_fields():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -361,7 +361,7 @@ def test_create_variant_with_preorder_fields():
 
 
 def test_create_variant_preorder_price_must_be_lower_than_normal_price():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     with pytest.raises(BusinessRuleViolationError) as exc:
@@ -379,7 +379,7 @@ def test_create_variant_preorder_price_must_be_lower_than_normal_price():
 
 
 def test_create_variant_preorder_dates_validation():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     # preorder_end_date before preorder_start_date should fail
@@ -398,7 +398,7 @@ def test_create_variant_preorder_dates_validation():
 
 
 def test_create_variant_release_date_before_preorder_end():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     with pytest.raises(BusinessRuleViolationError) as exc:
@@ -415,23 +415,29 @@ def test_create_variant_release_date_before_preorder_end():
     assert exc.value.code == "release_date_before_preorder_end"
 
 
-def test_preorder_not_active_when_dates_not_set():
-    product = ProductFactory()
+def test_preorder_needs_its_dates_and_a_preorder_category():
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_variant(
+            product=ProductFactory(category__category_type="preorder"),
+            price=Decimal("1000"),
+            is_preorder_enabled=True,
+        )
+    assert exc.value.code == "preorder_dates_required"
 
-    variant = create_variant(
-        product=product,
-        price=Decimal("1000"),
-        is_preorder_enabled=True,
-        preorder_price=Decimal("900"),
-        # No dates set
-    )
-
-    assert variant.is_preorder_active is False
-    assert variant.can_preorder is False
+    now = timezone.now()
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_variant(
+            product=ProductFactory(),
+            price=Decimal("1000"),
+            is_preorder_enabled=True,
+            preorder_start_date=now,
+            preorder_end_date=now + timedelta(days=7),
+        )
+    assert exc.value.code == "preorder_category_required"
 
 
 def test_preorder_not_active_when_dates_in_past():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -449,7 +455,7 @@ def test_preorder_not_active_when_dates_in_past():
 
 
 def test_preorder_not_active_when_dates_in_future():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -467,7 +473,7 @@ def test_preorder_not_active_when_dates_in_future():
 
 
 def test_preorder_active_when_within_date_range():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -485,7 +491,7 @@ def test_preorder_active_when_within_date_range():
 
 
 def test_effective_price_uses_preorder_price_when_active():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -503,7 +509,7 @@ def test_effective_price_uses_preorder_price_when_active():
 
 
 def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -522,7 +528,7 @@ def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
 
 
 def test_can_preorder_checks_stock_limit():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -553,7 +559,7 @@ def test_can_preorder_checks_stock_limit():
 
 
 def test_preorder_stock_limit_enforced_at_cart():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -582,7 +588,7 @@ def test_preorder_stock_limit_enforced_at_cart():
 
 
 def test_preorder_not_available_when_disabled():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -600,7 +606,7 @@ def test_preorder_not_available_when_disabled():
 
 
 def test_variant_sells_as_stock_once_its_preorder_window_has_ended():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
     variant = create_variant(
         product=product,
@@ -623,7 +629,7 @@ def test_variant_sells_as_stock_once_its_preorder_window_has_ended():
 
 
 def test_preorder_that_has_not_opened_is_rejected_at_cart():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
     variant = create_variant(
         product=product,
@@ -641,7 +647,7 @@ def test_preorder_that_has_not_opened_is_rejected_at_cart():
 
 
 def test_lower_of_discount_and_preorder_price_is_charged():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
     window = {
         "is_preorder_enabled": True,
@@ -673,7 +679,7 @@ def test_lower_of_discount_and_preorder_price_is_charged():
 
 
 def test_update_variant_preorder_fields():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(product=product, price=Decimal("1000"))
@@ -698,7 +704,7 @@ def test_update_variant_preorder_fields():
 
 
 def test_normal_product_order_still_works():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     variant = ProductVariantFactory(product=product, price=Decimal("1000"))
 
     # Add stock so checkout can reserve it
@@ -724,7 +730,7 @@ def test_normal_product_order_still_works():
 def test_preorder_checkout_works_with_zero_inventory_stock():
     from apps.orders.services.checkout import checkout
 
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -756,7 +762,7 @@ def test_preorder_active_without_preorder_price():
     """is_preorder_active — and the order line's is_preorder flag it drives —
     must not depend on preorder_price being set. A variant with no discounted
     pre-order price is still a pre-order while within its date window."""
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -782,7 +788,7 @@ def test_preorder_active_without_preorder_price():
 def test_preorder_checkout_succeeds_without_preorder_price():
     """A pre-order with no discounted price still checks out normally, and
     stays flagged as a pre-order line through checkout."""
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -819,7 +825,7 @@ def test_preorder_stock_limit_enforced_across_separate_orders():
     database) does not, so this test exercises the check's logic, not the
     lock's concurrency guarantee itself.
     """
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(

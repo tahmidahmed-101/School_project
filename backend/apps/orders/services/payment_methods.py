@@ -24,6 +24,19 @@ def set_payment_method_enabled(*, key: str, is_enabled: bool) -> dict:
         setting.is_enabled = is_enabled
         setting.save(update_fields=["is_enabled"])
 
+    return _state(key)
+
+
+def set_payment_method_pay_to(*, key: str, pay_to: str) -> dict:
+    if key not in PAYMENT_METHODS_BY_KEY:
+        raise BusinessRuleViolationError("Unknown payment method.", code="unknown_payment_method")
+    setting, _ = PaymentMethodSetting.objects.get_or_create(key=key)
+    setting.pay_to = pay_to.strip()
+    setting.save(update_fields=["pay_to"])
+    return _state(key)
+
+
+def _state(key: str) -> dict:
     state = get_payment_method_state(key)
     if state is None:
         raise RuntimeError(f"Payment method state missing for known key {key!r}.")

@@ -414,7 +414,7 @@ const OrderDetail = () => {
               </div>
             )}
 
-            {order.has_preorder && order.status !== "pending" && (
+            {order.order_type === "preorder" && order.status !== "pending" && (
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-xs font-medium text-muted-foreground">Pre-order stage</p>
                 <p className="mt-0.5 text-sm font-semibold text-foreground">

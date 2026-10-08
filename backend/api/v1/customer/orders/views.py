@@ -13,7 +13,7 @@ from apps.common.exceptions import DomainError
 from apps.common.generics import list_response
 from apps.common.params import get_uuid
 from apps.common.permissions import IsCustomer
-from apps.common.responses import error_from_exception, not_found
+from apps.common.responses import error_from_exception, error_response, not_found
 from apps.common.throttling import CouponRateThrottle
 from apps.logistics.selectors.rates import (
     address_zone_text,
@@ -388,6 +388,15 @@ class OrderCancelView(APIView):
         order = _own_order_or_404(request, order_id)
         if order is None:
             return not_found("order_not_found", "Order not found.")
+        if (
+            order.order_type == SalesOrder.OrderType.PREORDER
+            and order.status != SalesOrder.Status.PENDING
+        ):
+            return error_response(
+                "preorder_cancel_staff_only",
+                "Contact the shop to cancel a pre-order.",
+                status=409,
+            )
         try:
             cancel_order(order=order, actor=request.user)
         except DomainError as exc:

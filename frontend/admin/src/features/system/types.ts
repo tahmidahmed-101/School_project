@@ -27,6 +27,7 @@ export interface BusinessProfile {
   tiktok_url: string
   youtube_url: string
   linkedin_url: string
+  preorder_deposit_percent: string
   about_en: string
   about_bn: string
   updated_at: string
@@ -69,6 +70,7 @@ export interface PaymentMethodState {
   label: string
   description: string
   is_enabled: boolean
+  pay_to: string
   can_disable: boolean
   locked_reason: string
 }

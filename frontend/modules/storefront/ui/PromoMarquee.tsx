@@ -9,6 +9,8 @@ import { containerClass } from "@/design-system/ui/Container";
 export function PromoMarquee({ lines }: { lines: T[] }) {
   const { lang } = useLang();
 
+  if (lines.length === 0) return null;
+
   const track = (
     <div className="flex shrink-0 items-center" aria-hidden="true">
       {lines.map((item, i) => (

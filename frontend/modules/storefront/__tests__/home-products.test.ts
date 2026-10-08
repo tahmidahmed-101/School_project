@@ -16,13 +16,13 @@ const makeCatalogue = (length: number) =>
       id: `p${i}`,
       category: (["shirts", "denim", "footwear"] as const)[i % 3],
       featured: i % 7 === 0,
-      isPreOrder: i % 11 === 0,
+      kind: i % 11 === 0 ? "preorder" : "stock",
     }),
   );
 const catalogue = makeCatalogue(60);
 
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
-const stock = (list: typeof catalogue) => list.filter((p) => !p.isPreOrder);
+const stock = (list: typeof catalogue) => list.filter((p) => p.kind !== "preorder");
 
 describe("homeProducts shop split", () => {
   it("keeps a closed pre-order out of the stock home", () => {
@@ -44,7 +44,7 @@ describe("homeProducts", () => {
   const subset = homeProducts(catalogue);
 
   it("drops pre-order products and anything no shelf shows", () => {
-    expect(subset.every((p) => !p.isPreOrder)).toBe(true);
+    expect(subset.every((p) => p.kind !== "preorder")).toBe(true);
     expect(subset.length).toBeLessThan(stock(catalogue).length);
   });
 

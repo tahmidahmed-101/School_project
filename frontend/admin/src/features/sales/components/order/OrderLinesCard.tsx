@@ -114,6 +114,9 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           )}
           <ProductCell name={line.product_name || "—"} sku={line.variant_sku} wrapName />
           {line.is_preorder && <Badge variant="secondary">Pre-order</Badge>}
+          {line.awaiting_stock_quantity > 0 && (
+            <Badge variant="outline">{line.awaiting_stock_quantity} awaiting stock</Badge>
+          )}
         </div>
       ),
     },

@@ -13,6 +13,7 @@ from apps.business.selectors.policies import get_published_policy, returns_enabl
 from apps.business.selectors.storefront_content import hero_slides_list, promo_lines_list
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
+from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
 from apps.orders.selectors.payment_methods import payment_methods_list
 
 from .serializers import (
@@ -44,7 +45,11 @@ class PublicPaymentMethodListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
-        offered = [row for row in payment_methods_list() if row["is_enabled"]]
+        offered = [
+            row
+            for row in payment_methods_list()
+            if row["is_enabled"] and row["key"] in STOREFRONT_PAYMENT_METHODS
+        ]
         return Response(
             {
                 "data": PublicPaymentMethodSerializer(offered, many=True).data,

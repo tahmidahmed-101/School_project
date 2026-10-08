@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { CartItem, Product } from "@/lib/types";
+import { getMaxOrderQuantity } from "@/lib/product";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
@@ -47,6 +48,9 @@ function variantMatches(a?: Record<string, string>, b?: Record<string, string>):
   if (keysA.length !== keysB.length) return false;
   return keysA.every((k) => a?.[k] === b?.[k]);
 }
+
+/** One line never holds more than the product page lets a shopper pick (stock, or the pre-order limit). */
+const lineCap = (product: Product) => Math.max(1, Math.min(ORDER_QUANTITY_CAP, getMaxOrderQuantity(product)));
 
 /** Keeps the saved cart small and current: only what the drawer and checkout render, not the full SKU list. */
 function toCartProduct(product: Product): Product {
@@ -137,7 +141,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           updated[existingIdx] = {
             ...existing,
             product: line,
-            quantity: Math.min(ORDER_QUANTITY_CAP, existing.quantity + quantity),
+            quantity: Math.min(lineCap(line), existing.quantity + quantity),
           };
           return updated;
         }
@@ -145,7 +149,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           {
             product: line,
-            quantity: Math.min(ORDER_QUANTITY_CAP, quantity),
+            quantity: Math.min(lineCap(line), quantity),
             selectedVariant: Object.keys(selection).length ? selection : undefined,
             variantId: variant.id,
           },
@@ -178,7 +182,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems((prev) =>
         prev.map((item) =>
           item.product.id === productId && variantMatches(item.selectedVariant, selectedVariant)
-            ? { ...item, quantity: Math.min(item.product.stockCount || ORDER_QUANTITY_CAP, quantity) }
+            ? { ...item, quantity: Math.min(lineCap(item.product), quantity) }
             : item,
         ),
       );

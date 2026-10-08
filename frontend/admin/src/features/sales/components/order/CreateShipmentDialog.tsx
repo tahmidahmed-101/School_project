@@ -21,7 +21,7 @@ const shippable = (line: OrderLine) => line.shippable_quantity
 const initialCod = (order: Order) => order.balance_due
 // Pre-order goods may not have arrived, so those lines start at 0 and are typed in on purpose.
 const initialQuantities = (order: Order) =>
-  Object.fromEntries(order.lines.map((l) => [l.id, String(l.is_preorder ? 0 : l.shippable_quantity)]))
+  Object.fromEntries(order.lines.map((l) => [l.id, String(l.shippable_quantity)]))
 
 interface CreateShipmentDialogProps {
   order: Order
@@ -98,8 +98,8 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
       onOpenChange={onOpenChange}
       title="Create shipment"
       description={
-        order.has_preorder
-          ? "Ship some or all remaining units. Pre-order lines start at 0: enter a quantity only for goods that have arrived."
+        order.order_type === "preorder"
+          ? "Ship units that have arrived stock set aside. Use Allocate arrived stock on the Orders page after goods come in."
           : "Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
       }
       onSubmit={handleSubmit}

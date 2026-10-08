@@ -27,7 +27,7 @@ const products = [
     newArrival: true,
     inStock: false,
   }),
-  makeProduct({ id: "4", name: { en: "Earbuds", bn: "" }, price: 900, category: "gadgets", isPreOrder: true }),
+  makeProduct({ id: "4", name: { en: "Earbuds", bn: "" }, price: 900, category: "gadgets", isPreOrder: true, kind: "preorder" }),
 ];
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
 

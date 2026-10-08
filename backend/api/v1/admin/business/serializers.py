@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from rest_framework import serializers
@@ -44,6 +46,7 @@ class AdminBusinessProfileSerializer(serializers.Serializer):
     youtube_url = serializers.CharField(allow_blank=True)
     linkedin_url = serializers.CharField(allow_blank=True)
 
+    preorder_deposit_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
     about_en = serializers.CharField(allow_blank=True)
     about_bn = serializers.CharField(allow_blank=True)
 
@@ -84,6 +87,13 @@ class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
     youtube_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     linkedin_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
+    preorder_deposit_percent = serializers.DecimalField(
+        required=False,
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        max_value=Decimal("100"),
+    )
     about_en = serializers.CharField(required=False, allow_blank=True, max_length=5000)
     about_bn = serializers.CharField(required=False, allow_blank=True, max_length=5000)
 
@@ -169,12 +179,14 @@ class AdminPaymentMethodSerializer(serializers.Serializer):
     label = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     is_enabled = serializers.BooleanField(read_only=True)
+    pay_to = serializers.CharField(read_only=True)
     can_disable = serializers.BooleanField(read_only=True)
     locked_reason = serializers.CharField(read_only=True)
 
 
 class AdminPaymentMethodUpdateSerializer(serializers.Serializer):
-    is_enabled = serializers.BooleanField()
+    is_enabled = serializers.BooleanField(required=False)
+    pay_to = serializers.CharField(required=False, allow_blank=True, max_length=200)
 
 
 class AdminPolicyCategorySerializer(serializers.Serializer):

@@ -22,6 +22,10 @@ class SalesOrder(FullAuditModel):
     edits and `checkout` refuses to reserve stock a second time.
     """
 
+    class OrderType(models.TextChoices):
+        STOCK = "stock", "Stock"
+        PREORDER = "preorder", "Pre-order"
+
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         AWAITING_PAYMENT = "awaiting_payment", "Awaiting payment"
@@ -57,6 +61,10 @@ class SalesOrder(FullAuditModel):
     )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    # Set at checkout from the lines; an open cart is untyped and reads "stock".
+    order_type = models.CharField(
+        max_length=20, choices=OrderType.choices, default=OrderType.STOCK, db_index=True
     )
     notes = models.TextField(blank=True)
     # Order-level overrides. Blank means "use the customer account's value" —
@@ -139,6 +147,9 @@ class SalesOrderLine(TimeStampedModel):
     )
     # Pre-order tracking
     is_preorder = models.BooleanField(default=False)
+    # Units of a pre-order line that arrived stock has been set aside for.
+    # A pre-order line can ship only what is allocated.
+    allocated_quantity = models.PositiveIntegerField(default=0)
     # Fulfillment counters. Denormalized rather than aggregated per call so
     # `create_shipment` / `create_rma` can lock the line row (select_for_update)
     # and check the remaining balance in the same statement, closing the
@@ -163,7 +174,13 @@ class SalesOrderLine(TimeStampedModel):
 
     @property
     def shippable_quantity(self) -> int:
+        if self.is_preorder:
+            return self.allocated_quantity - self.shipped_quantity
         return self.quantity - self.shipped_quantity
+
+    @property
+    def awaiting_stock_quantity(self) -> int:
+        return self.quantity - self.allocated_quantity if self.is_preorder else 0
 
     @property
     def returnable_quantity(self) -> int:

@@ -11,7 +11,7 @@ from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.business.services.modules import require_feature
-from apps.catalog.models import Product, ProductImage, ProductVariant
+from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_sku_for, unique_slug_for
 
@@ -78,6 +78,37 @@ def create_product(
     return product
 
 
+PREORDER_RULE_FIELDS = frozenset(
+    {"is_preorder_enabled", "preorder_start_date", "preorder_end_date"}
+)
+
+
+def _check_preorder_rules(*, product: Product, enabled: bool, start_date, end_date) -> None:
+    """A pre-order variant needs its window and lives only in a pre-order
+    category, so the two shops never share a product."""
+    if not enabled:
+        return
+    if start_date is None or end_date is None:
+        raise BusinessRuleViolationError(
+            "A pre-order needs both a start and an end date.", code="preorder_dates_required"
+        )
+    if product.category.category_type != Category.CategoryType.PREORDER:
+        raise BusinessRuleViolationError(
+            "Pre-order can only be switched on for a product in a pre-order category.",
+            code="preorder_category_required",
+        )
+
+
+def _check_category_keeps_kind(product: Product, category: Category) -> None:
+    if category.category_type == product.category.category_type:
+        return
+    if product.variants.filter(deleted_at__isnull=True).exists():
+        raise BusinessRuleViolationError(
+            "A product cannot move between a stock category and a pre-order category.",
+            code="category_kind_mismatch",
+        )
+
+
 @transaction.atomic
 def update_product(*, product: Product, data: dict) -> Product:
     allowed_fields = {
@@ -94,6 +125,8 @@ def update_product(*, product: Product, data: dict) -> Product:
     }
     if "product_type" in data:
         _require_variations_for_type(data["product_type"])
+    if data.get("category") is not None:
+        _check_category_keeps_kind(product, data["category"])
     for field, value in data.items():
         if field in allowed_fields:
             setattr(product, field, value)
@@ -228,6 +261,12 @@ def create_variant(
     preorder_stock_limit: int | None = None,
     actor=None,
 ) -> ProductVariant:
+    _check_preorder_rules(
+        product=product,
+        enabled=is_preorder_enabled,
+        start_date=preorder_start_date,
+        end_date=preorder_end_date,
+    )
     # A new variation inherits the product's shared pricing instead of re-entering it.
     if price is None:
         sibling = representative_variant(product)
@@ -348,6 +387,13 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
     }
     for field in changed_fields:
         setattr(variant, field, data[field])
+    if PREORDER_RULE_FIELDS.intersection(changed_fields):
+        _check_preorder_rules(
+            product=variant.product,
+            enabled=variant.is_preorder_enabled,
+            start_date=variant.preorder_start_date,
+            end_date=variant.preorder_end_date,
+        )
     if changed_fields:
         try:
             variant.full_clean()

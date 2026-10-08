@@ -49,6 +49,11 @@ const schema = z.object({
   tiktok_url: optional(500),
   youtube_url: optional(500),
   linkedin_url: optional(500),
+  preorder_deposit_percent: z
+    .string()
+    .trim()
+    .regex(/^\d{1,3}(\.\d{1,2})?$/, "Enter a percentage from 0 to 100")
+    .refine((value) => Number(value) <= 100, "Enter a percentage from 0 to 100"),
   about_en: z.string().trim(),
   about_bn: z.string().trim(),
 })
@@ -76,6 +81,17 @@ const SECTIONS: { title: string; description: string; fields: FieldSpec[] }[] = 
       { name: "name", label: "Business name" },
       { name: "legal_name", label: "Legal name" },
       { name: "tagline", label: "Tagline" },
+    ],
+  },
+  {
+    title: "Pre-orders",
+    description: "How much of a pre-order must be paid before it is confirmed. The rest is collected later.",
+    fields: [
+      {
+        name: "preorder_deposit_percent",
+        label: "Deposit (% of order total)",
+        hint: "100 means the full amount in advance. 0 confirms a cash-on-delivery pre-order with nothing paid.",
+      },
     ],
   },
   {

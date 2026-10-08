@@ -161,6 +161,36 @@ that is taking pre-orders in the pre-order shop even when its category is a stoc
 | D9 | Both a discount price and a pre-order price set: which wins? | The lower one |
 | D10 | Sequential invoice number needed for tax? One invoice per order or per delivery? | TODO(ask) |
 
+### Owner's answers (2026-10-08)
+
+| # | Answer |
+|---|---|
+| D1 | Deposit at order time, rest later. Deposit rule (percent or fixed amount): TODO(ask). |
+| D2 | Block a mixed basket. |
+| D3 | Staff decide each case: the customer cannot cancel a pre-order alone; staff cancel and choose the refund. |
+| D4 | Bought in bulk, then allocated to waiting orders. |
+| D8 | Import shipping is inside the pre-order price; only normal local delivery is charged. |
+| D10 | One invoice per order, numbered by the order number. |
+| Methods | Storefront checkout shows cash on delivery, bKash and Nagad. Account numbers: TODO(ask). |
+| Fallbacks | No fallback or legacy paths kept: the dashboard and the API are the only source. |
+
+D5, D6, D7 and D9 run on the recommended defaults.
+
+### Built from these answers (2026-10-09)
+
+- Deposit: one dashboard setting, `preorder_deposit_percent` (Settings, Pre-orders). It starts at 100, which
+  means the whole amount up front, until the owner sets the real share. A pre-order is confirmed once the
+  deposit is received; the rest is captured later as a second payment on the same order.
+- Where to pay: each of bKash, Nagad, Rocket and bank transfer has a "number or account" field in
+  Settings, Payment Methods. It is empty until the owner fills it; the storefront shows it only when set.
+- Arrival: Orders, filter "Pre-order", shows the pre-order book (orders, money received, money owed, units
+  to buy per product) and the button "Allocate arrived stock". Stock goes to confirmed pre-orders, oldest
+  first. A pre-order line ships only what is allocated, and shipping moves stock like any other line.
+- Consignments of pre-order lines sent before this change moved no stock. They are marked
+  (`ShipmentLine.stock_posted = False`) so receiving one back does not add units that never left.
+- Not built: customer SMS on stage changes (needs a provider and a monthly cost approved), and the
+  accounting change that would hold a deposit as a liability until delivery (needs the bookkeeper).
+
 ## 5. Rules for every phase
 
 - One branch per phase; a failing test first for each bug; only the touched test files while coding; the

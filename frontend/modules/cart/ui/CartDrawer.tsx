@@ -57,10 +57,12 @@ export function CartDrawer() {
             <span className="text-sm font-bold text-fg">{money(subtotal)}</span>
           </div>
 
-          <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
-            <span>{ui("cartProceedToCheckout")}</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {!hasMixed && (
+            <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
+              <span>{ui("cartProceedToCheckout")}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </DrawerFooter>
       )}
     </Drawer>

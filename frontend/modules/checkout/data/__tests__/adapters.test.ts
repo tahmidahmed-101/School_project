@@ -30,7 +30,7 @@ const order: ApiOrder = {
 
 describe("toOrderResult", () => {
   it("converts the wire decimals to numbers and merges the customer's typed details", () => {
-    const result = toOrderResult(order, { name: "Rahim", address: "House 1", district: "Dhaka" });
+    const result = toOrderResult(order, { name: "Rahim", address: "House 1", district: "Dhaka" }, "01700000000");
     expect(result).toMatchObject({
       orderNumber: "KM-1001",
       customerName: "Rahim",
@@ -40,6 +40,7 @@ describe("toOrderResult", () => {
       shipping: 80,
       discount: 100,
       total: 1978,
+      payTo: "01700000000",
       couponCode: "WELCOME100",
       lines: [{ name: "Wallet", sku: "W-1", quantity: 2, unitPrice: 999, total: 1998, isPreOrder: false }],
     });

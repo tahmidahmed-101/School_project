@@ -14,6 +14,7 @@ from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.logistics.selectors.rates import (
     get_carrier_by_id,
 )
+from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.services.carts import (
     _check_preorder_stock_limit,
@@ -128,6 +129,10 @@ def guest_checkout(
     """`customer` is the authenticated requester, if any — the only way an
     order reaches a registered account from here. `cart` is a saved guest
     cart to check out instead of building an order from `items`."""
+    if payment_method not in STOREFRONT_PAYMENT_METHODS:
+        raise BusinessRuleViolationError(
+            "Choose cash on delivery, bKash or Nagad.", code="payment_method_not_offered"
+        )
     if customer is not None:
         user = customer
     else:

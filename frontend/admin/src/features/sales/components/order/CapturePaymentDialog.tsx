@@ -20,12 +20,12 @@ interface CapturePaymentDialogProps {
 }
 
 /**
- * Records a manually-attested payment for an order awaiting payment. The backend requires
- * the amount to equal the order's grand total, and a reference for gateway-less methods.
+ * Records a manually-attested payment: any amount up to the balance due, with a reference for
+ * gateway-less methods. A pre-order is confirmed once its deposit has been received.
  */
 export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePaymentDialogProps) {
   const dispatch = useAppDispatch()
-  const [amount, setAmount] = useState(order.grand_total)
+  const [amount, setAmount] = useState(order.balance_due)
   // An order placed on the storefront already names how the customer chose to pay.
   const owedMethod: PaymentMethod = order.payments.find((p) => p.status === "pending")?.method ?? "manual"
   const [method, setMethod] = useState<PaymentMethod>(owedMethod)
@@ -37,7 +37,7 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setAmount(order.grand_total)
+      setAmount(order.balance_due)
       setMethod(owedMethod)
       setReference("")
     }
@@ -86,7 +86,16 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
         min="0"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        description={<>Must equal the order total of {formatCurrency(order.grand_total)}.</>}
+        description={
+          order.order_type === "preorder" && order.status === "awaiting_payment" ? (
+            <>
+              Balance due {formatCurrency(order.balance_due)}. The order is confirmed once{" "}
+              {formatCurrency(order.deposit_due)} has been received.
+            </>
+          ) : (
+            <>Up to the balance due of {formatCurrency(order.balance_due)}.</>
+          )
+        }
       />
       <Field>
         <FieldLabel htmlFor="capture-method">Method</FieldLabel>

@@ -86,6 +86,18 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
             <span className="text-fg-subtle">{ui("checkoutGrandTotal")}</span>
             <span className="font-bold text-fg">{money(orderResult.total)}</span>
           </div>
+          {orderResult.isPreOrderOrder && orderResult.depositDue > 0 && (
+            <div className="flex justify-between border-b border-ink-200 pb-2">
+              <span className="text-fg-subtle">{ui("checkoutDepositDue")}</span>
+              <span className="font-bold text-fg">{money(orderResult.depositDue)}</span>
+            </div>
+          )}
+          {orderResult.payTo && (
+            <div className="flex justify-between gap-3 border-b border-ink-200 pb-2">
+              <span className="text-fg-subtle">{ui("checkoutPayTo")}</span>
+              <span className="font-bold text-fg">{orderResult.payTo}</span>
+            </div>
+          )}
           <div className="space-y-0.5 pt-1 text-fg-muted">
             <span className="block font-semibold text-fg">
               {orderResult.customerName} ({orderResult.phone})

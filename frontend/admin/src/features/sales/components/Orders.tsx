@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 import { ORDER_STATUS_OPTIONS, PREORDER_STAGE_OPTIONS, type Order } from "@/features/sales/types"
+import { PreorderBook } from "@/features/sales/components/PreorderBook"
 import { paymentMethodLabel } from "@/features/payments/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { downloadFile } from "@/lib/download"
@@ -35,10 +36,10 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Lowest total", value: "grand_total" },
 ]
 
-// Sent as `has_preorder` (selectors/sales_orders.py orders_list).
+// Sent as `order_type` (selectors/sales_orders.py orders_list).
 const ORDER_KIND_OPTIONS: Option[] = [
-  { value: "true", label: "With pre-order items" },
-  { value: "false", label: "Stock items only" },
+  { value: "preorder", label: "Pre-order" },
+  { value: "stock", label: "Stock" },
 ]
 
 const Orders = () => {
@@ -69,7 +70,7 @@ const Orders = () => {
     params: {
       status: statusFilter?.value,
       preorder_stage: stageFilter?.value,
-      has_preorder: kindFilter?.value,
+      order_type: kindFilter?.value,
       start: from ? toISODate(from) : undefined,
       end: to ? toISODate(to) : undefined,
       customer_id: customerId,
@@ -90,7 +91,7 @@ const Orders = () => {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span className="font-inter text-sm font-medium text-primary">{row.original.order_number}</span>
-          {row.original.has_preorder && <Badge variant="secondary">Pre-order</Badge>}
+          {row.original.order_type === "preorder" && <Badge variant="secondary">Pre-order</Badge>}
         </div>
       ),
     },
@@ -157,6 +158,8 @@ const Orders = () => {
           </>
         }
       />
+
+      {kindFilter?.value === "preorder" && <PreorderBook canManage={canManage} onAllocated={list.reload} />}
 
       <FilterToolbar
         searchPlaceholder="Search order # or email..."

@@ -157,12 +157,12 @@ export const updateModule = createAsyncThunk(
   }
 )
 
-/** PATCH /admin/settings/payment-methods/{key}/ {is_enabled}. */
+/** PATCH /admin/settings/payment-methods/{key}/ {is_enabled?, pay_to?}. */
 export const updatePaymentMethod = createAsyncThunk(
   "businessSettings/updatePaymentMethod",
-  async ({ key, is_enabled }: { key: string; is_enabled: boolean }, { rejectWithValue }) => {
+  async ({ key, ...patch }: { key: string; is_enabled?: boolean; pay_to?: string }, { rejectWithValue }) => {
     try {
-      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, { is_enabled })
+      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, patch)
       return unwrapEnvelope<PaymentMethodState>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))

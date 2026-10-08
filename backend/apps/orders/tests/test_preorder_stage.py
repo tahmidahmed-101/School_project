@@ -39,6 +39,8 @@ def _placed(*, preorder=True):
     order = _cart()
     checkout(order=order)
     order.lines.update(is_preorder=preorder)
+    if preorder:
+        SalesOrder.objects.filter(pk=order.pk).update(order_type=SalesOrder.OrderType.PREORDER)
     order.refresh_from_db()
     return order
 
@@ -100,7 +102,7 @@ def test_admin_sets_a_stage_and_filters_the_order_list_by_it(api_client):
 
     assert response.status_code == 200, response.data
     data = response.data["data"]
-    assert data["has_preorder"] is True
+    assert data["order_type"] == "preorder"
     assert data["preorder_stage"] == "received_in_china_warehouse"
     assert [(e["stage"], e["note"]) for e in data["preorder_stage_events"]] == [
         ("received_in_china_warehouse", "carton 3")

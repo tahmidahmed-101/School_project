@@ -96,11 +96,11 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
       const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
       if (cartToken) forgetGuestCart();
       setOrderResult(
-        toOrderResult(order, {
-          name: form.name.trim(),
-          address: form.address.trim(),
-          district: form.district,
-        }),
+        toOrderResult(
+          order,
+          { name: form.name.trim(), address: form.address.trim(), district: form.district },
+          paymentMethods.find((m) => m.key === paymentMethod)?.pay_to ?? "",
+        ),
       );
       clearCart();
       window.scrollTo({ top: 0 });

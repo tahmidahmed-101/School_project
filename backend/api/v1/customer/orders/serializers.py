@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
+from apps.orders.selectors.payments import order_deposit_due
 
 
 class SalesOrderLineSerializer(serializers.Serializer):
@@ -38,9 +39,14 @@ class SalesOrderSerializer(serializers.Serializer):
     shipping_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     discount_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    order_type = serializers.CharField(read_only=True)
+    deposit_due = serializers.SerializerMethodField()
     coupon_code = serializers.CharField(source="coupon.code", read_only=True, allow_null=True)
     lines = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
+
+    def get_deposit_due(self, obj) -> str:
+        return str(order_deposit_due(obj))
 
     def get_lines(self, obj) -> list[dict]:
         return SalesOrderLineSerializer(obj.lines.all(), many=True).data

@@ -20,12 +20,14 @@ def is_payment_method_enabled(key: str) -> bool:
 
 def payment_methods_list() -> list[dict]:
     enabled = _enabled_map()
+    pay_to = dict(PaymentMethodSetting.objects.values_list("key", "pay_to"))
     return [
         {
             "key": spec.key,
             "label": spec.label,
             "description": spec.description,
             "is_enabled": True if not spec.can_disable else enabled[spec.key],
+            "pay_to": pay_to.get(spec.key, ""),
             "can_disable": spec.can_disable,
             "locked_reason": spec.locked_reason,
         }

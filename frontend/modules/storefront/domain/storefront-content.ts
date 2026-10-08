@@ -1,7 +1,7 @@
 import type { ApiHeroSlide, ApiStorefrontContent } from "@/lib/api/types";
 import type { Product, T } from "@/lib/types";
 import { getDiscountPercent } from "@/lib/product";
-import { HERO_SLIDES, PROMO_LINES, type HeroSlide } from "./hero-content";
+import type { HeroSlide } from "./hero-content";
 
 export type HeroPage = "home" | "preorder";
 
@@ -41,20 +41,20 @@ export function toStorefrontContent(api: ApiStorefrontContent): StorefrontConten
         placement: slide.placement,
       })),
     promoLines: (api.promo_lines ?? [])
-      .map((line) => ({ text: localized(line.text), placement: line.placement ?? "both" }))
+      .map((line) => ({ text: localized(line.text), placement: line.placement }))
       .filter((line) => line.text.en !== ""),
   };
 }
 
-/** The dashboard's slides for a page, or the built-in ones when it has none (or the API could not be read). */
+/** The dashboard's slides for a page; none when it has none or the API could not be read. */
 export function heroSlidesFor(page: HeroPage, content: StorefrontContent | null): HeroSlide[] {
-  const managed = (content?.heroSlides ?? []).filter((slide) => slide.placement === page || slide.placement === "both");
-  return managed.length > 0 ? managed : HERO_SLIDES;
+  return (content?.heroSlides ?? []).filter((slide) => slide.placement === page || slide.placement === "both");
 }
 
 export function promoLinesFor(page: HeroPage, content: StorefrontContent | null): T[] {
-  const managed = (content?.promoLines ?? []).filter((line) => line.placement === page || line.placement === "both");
-  return managed.length > 0 ? managed.map((line) => line.text) : PROMO_LINES;
+  return (content?.promoLines ?? [])
+    .filter((line) => line.placement === page || line.placement === "both")
+    .map((line) => line.text);
 }
 
 /** Same test as the shop's "sale" collection, so the offers tile never leads to a list with no offers in it. */

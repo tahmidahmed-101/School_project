@@ -11,7 +11,11 @@ from apps.logistics.selectors.rates import address_zone_text, find_zone_by_addre
 from apps.logistics.services.rates import quote_shipping
 from apps.orders.models import SalesOrder, StockReservation
 from apps.orders.services.address_snapshot import build_address_snapshot
-from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
+from apps.orders.services.carts import (
+    MIXED_BASKET_MESSAGE,
+    _check_preorder_stock_limit,
+    compute_line_tax,
+)
 from apps.orders.services.coupons import _compute_discount, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
 from apps.risk.services import blocklist, ip_blocklist
@@ -108,6 +112,7 @@ def checkout(
     # usage limit before checkout actually runs — re-validate here too.
     revalidate_applied_coupon(order)
 
+    kinds: set[bool] = set()
     for line in lines:
         # Re-derive and persist is_preorder here, not just at cart-add time:
         # this is the decision point for whether a reservation gets created,
@@ -117,6 +122,7 @@ def checkout(
         if line.is_preorder != is_preorder:
             line.is_preorder = is_preorder
             line.save(update_fields=["is_preorder"])
+        kinds.add(is_preorder)
         # Skip stock reservation for pre-order items (they don't need real inventory yet)
         if is_preorder:
             continue
@@ -127,6 +133,12 @@ def checkout(
                 variant=component,
                 quantity=component_qty,
             )
+
+    if len(kinds) > 1:
+        raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")
+    order.order_type = (
+        SalesOrder.OrderType.PREORDER if True in kinds else SalesOrder.OrderType.STOCK
+    )
 
     if shipping_address is not None:
         order.shipping_address = shipping_address
@@ -146,6 +158,7 @@ def checkout(
     order.status = SalesOrder.Status.AWAITING_PAYMENT
     order.save(
         update_fields=[
+            "order_type",
             "shipping_address",
             "shipping_address_snapshot",
             "shipping_total",

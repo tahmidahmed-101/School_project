@@ -21,7 +21,7 @@ export function HomeSections({
   hasOffers,
 }: {
   vouchers: Voucher[];
-  /** Dashboard-managed hero and promo content; null falls back to the built-in content. */
+  /** Dashboard-managed hero and promo content; null when the API could not be read. */
   content: StorefrontContent | null;
   hasOffers: boolean;
 }) {

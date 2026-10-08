@@ -41,7 +41,10 @@ from apps.orders.selectors.payment_methods import (
     get_payment_method_state,
     payment_methods_list,
 )
-from apps.orders.services.payment_methods import set_payment_method_enabled
+from apps.orders.services.payment_methods import (
+    set_payment_method_enabled,
+    set_payment_method_pay_to,
+)
 
 from .serializers import (
     AdminBusinessProfileSerializer,
@@ -175,9 +178,12 @@ class AdminPaymentMethodDetailView(APIView):
         serializer = AdminPaymentMethodUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            state = set_payment_method_enabled(
-                key=key, is_enabled=serializer.validated_data["is_enabled"]
-            )
+            data = serializer.validated_data
+            state = get_payment_method_state(key)
+            if "is_enabled" in data:
+                state = set_payment_method_enabled(key=key, is_enabled=data["is_enabled"])
+            if "pay_to" in data:
+                state = set_payment_method_pay_to(key=key, pay_to=data["pay_to"])
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": AdminPaymentMethodSerializer(state).data, "message": "Success"})

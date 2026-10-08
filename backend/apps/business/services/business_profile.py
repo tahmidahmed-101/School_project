@@ -30,6 +30,7 @@ UPDATABLE_FIELDS = (
     "tiktok_url",
     "youtube_url",
     "linkedin_url",
+    "preorder_deposit_percent",
     "about_en",
     "about_bn",
 )
