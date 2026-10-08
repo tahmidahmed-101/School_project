@@ -114,5 +114,5 @@
 - [x] M5 Home, reports, settings split
 - [x] Wire `features/preorder` menu and routes; full typecheck; targeted backend tests; local smoke
 - [ ] Owner decisions: pre-order purchasing screen; staff-created pre-orders (needs deposit step on server); keep featured / highlights / meta keywords on the pre-order product form; `both` slides and promo lines
-- [ ] Duplicate React key warning on `/products` (stock list), source not found yet
+- [x] Duplicate React key warning on `/products`: nested fragment in header actions, keys fixed in `PageHeader`
 - [ ] Production: run `fix_product_kind_mismatches` (dry run first) only with a backup and the owner's go-ahead
