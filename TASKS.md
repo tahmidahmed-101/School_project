@@ -105,3 +105,11 @@
 - [x] B Category decides the kind: no pre-order switch on product form or variant dialog
 - [x] C Stage filter only on pre-order orders; back links return to the right list
 - [ ] D Cut the 23 pre-order stages to the ones in use (needs owner's list)
+
+## Phase M: full stock / pre-order separation (change request, owner "create a plan and start execution with agents" 2026-10-09; plan `docs/stock-preorder-separation-plan.md`)
+- [ ] M1 Server rules, `kind` filter on every list, reporting split, `fix_product_kind_mismatches`
+- [ ] M2 Catalog: products, categories, variants, forms per kind
+- [ ] M3 Pre-order section: orders, payments, shipments, returns, arrivals
+- [ ] M4 Stock section shows stock only (inventory, sales, logistics)
+- [ ] M5 Home, reports, settings split
+- [ ] Wire `features/preorder` menu and routes; full typecheck; targeted backend tests; local smoke
