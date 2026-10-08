@@ -43,6 +43,9 @@ class BusinessProfile(TimeStampedModel):
     youtube_url = models.URLField(max_length=500, blank=True)
     linkedin_url = models.URLField(max_length=500, blank=True)
 
+    about_en = models.TextField(blank=True)
+    about_bn = models.TextField(blank=True)
+
     class Meta:
         verbose_name = "Business profile"
         verbose_name_plural = "Business profile"

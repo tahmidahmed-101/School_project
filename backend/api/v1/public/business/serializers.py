@@ -19,6 +19,10 @@ class PublicBusinessProfileSerializer(serializers.Serializer):
     opening_hours = serializers.CharField(allow_blank=True)
     address = serializers.CharField(source="formatted_address", allow_blank=True)
     social = serializers.SerializerMethodField()
+    about = serializers.SerializerMethodField()
+
+    def get_about(self, obj) -> dict[str, str]:
+        return {"en": obj.about_en, "bn": obj.about_bn}
 
     def get_social(self, obj) -> dict[str, str]:
         return {
@@ -87,3 +91,37 @@ class PublicReturnPolicySerializer(PublicStorePolicySerializer):
                 "non_returnable_categories": obj.non_returnable_categories.all(),
             }
         ).data
+
+
+class PublicHeroSlideSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    image = serializers.SerializerMethodField()
+    alt = serializers.CharField(source="alt_text", read_only=True)
+    tag = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    link_url = serializers.CharField(read_only=True)
+    placement = serializers.CharField(read_only=True)
+
+    def get_image(self, obj) -> str:
+        request = self.context.get("request")
+        url = obj.image.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_tag(self, obj) -> dict[str, str]:
+        return {"en": obj.tag_en, "bn": obj.tag_bn}
+
+    def get_title(self, obj) -> dict[str, str]:
+        return {"en": obj.title_en, "bn": obj.title_bn}
+
+
+class PublicPromoLineSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    text = serializers.SerializerMethodField()
+
+    def get_text(self, obj) -> dict[str, str]:
+        return {"en": obj.text_en, "bn": obj.text_bn}
+
+
+class PublicStorefrontContentSerializer(serializers.Serializer):
+    hero_slides = PublicHeroSlideSerializer(many=True, read_only=True)
+    promo_lines = PublicPromoLineSerializer(many=True, read_only=True)
