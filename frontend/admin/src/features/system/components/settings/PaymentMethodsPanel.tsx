@@ -9,7 +9,8 @@ import { fetchPaymentMethods, updatePaymentMethod } from "@/features/system/slic
 import { getApiErrorMessage } from "@/lib/api/client"
 import { SectionState } from "./SectionState"
 
-const PAY_TO_METHODS = new Set(["bkash", "nagad", "rocket", "bank_transfer"])
+// The methods the storefront checkout offers that are paid to a shop number.
+const PAY_TO_METHODS = new Set(["bkash", "nagad"])
 
 export function PaymentMethodsPanel({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()

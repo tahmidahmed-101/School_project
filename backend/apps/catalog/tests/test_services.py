@@ -704,7 +704,7 @@ def test_update_variant_preorder_fields():
 
 
 def test_normal_product_order_still_works():
-    product = ProductFactory(category__category_type="preorder")
+    product = ProductFactory()
     variant = ProductVariantFactory(product=product, price=Decimal("1000"))
 
     # Add stock so checkout can reserve it

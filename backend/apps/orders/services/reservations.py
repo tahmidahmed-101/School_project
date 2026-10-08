@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from django.db import transaction
+from django.db.models import F
+from django.db.models.functions import Greatest
 from django.utils import timezone
 
+from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import release_reservation
-from apps.orders.models import StockReservation
+from apps.orders.models import SalesOrderLine, StockReservation
 
 
 @transaction.atomic
@@ -18,7 +21,7 @@ def release_stock_reservation(
     released. No ledger entry: stock never physically moved (blueprint §5)."""
     locked = (
         StockReservation.objects.select_for_update()
-        .select_related("variant")
+        .select_related("variant", "order_line__variant")
         .get(pk=reservation.pk)
     )
     if locked.status != StockReservation.Status.ACTIVE:
@@ -29,18 +32,40 @@ def release_stock_reservation(
     release_reservation(variant=locked.variant, quantity=locked.quantity)
     locked.status = StockReservation.Status.RELEASED
     locked.save(update_fields=["status", "updated_at"])
+    _return_preorder_units_to_queue(locked)
 
     reservation.status = locked.status
     return reservation
+
+
+def _return_preorder_units_to_queue(reservation: StockReservation) -> None:
+    """A pre-order line whose hold is released is no longer allocated those
+    units, so it waits for the next allocation instead of looking shippable."""
+    line = reservation.order_line
+    if not line.is_preorder:
+        return
+    # A bundle holds one row per component; count its units once, on the first.
+    component, per_unit = expand_variant(line.variant, 1)[0]
+    if component.id != reservation.variant_id:
+        return
+    SalesOrderLine.objects.filter(pk=line.pk).update(
+        allocated_quantity=Greatest(
+            F("shipped_quantity"), F("allocated_quantity") - reservation.quantity // per_unit
+        )
+    )
 
 
 def release_expired_reservations(*, now=None, actor=None) -> int:
     """Release every active reservation past its `expires_at`. Each one commits
     on its own so a single bad row can't strand the rest of the sweep."""
     now = now or timezone.now()
-    expired = StockReservation.objects.filter(
-        status=StockReservation.Status.ACTIVE, expires_at__lte=now
-    ).order_by("created_at")
+    # Stock allocated to a pre-order is held for a paying customer until it
+    # ships or staff release it; it does not time out like a checkout hold.
+    expired = (
+        StockReservation.objects.filter(status=StockReservation.Status.ACTIVE, expires_at__lte=now)
+        .exclude(order_line__is_preorder=True)
+        .order_by("created_at")
+    )
 
     released = 0
     for reservation in expired:

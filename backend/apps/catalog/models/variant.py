@@ -98,10 +98,13 @@ class ProductVariant(FullAuditModel):
 
     @property
     def is_preorder_upcoming(self) -> bool:
-        """Switched to pre-order but not open yet. Once the window has ended
-        the variant sells as an ordinary stock item again."""
+        """Not open for pre-order yet. Once the window has ended the variant
+        sells as an ordinary stock item again."""
         if not self.is_preorder_enabled:
-            return False
+            # In the pre-order shop a variant with no pre-order set up is not
+            # on sale yet; it must never be bought there as a stock item.
+            category = self.product.category
+            return category.category_type == category.CategoryType.PREORDER
         if self.preorder_start_date is None or self.preorder_end_date is None:
             return True
         return timezone.now() < self.preorder_start_date

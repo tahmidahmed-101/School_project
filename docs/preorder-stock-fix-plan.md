@@ -188,6 +188,11 @@ D5, D6, D7 and D9 run on the recommended defaults.
   first. A pre-order line ships only what is allocated, and shipping moves stock like any other line.
 - Consignments of pre-order lines sent before this change moved no stock. They are marked
   (`ShipmentLine.stock_posted = False`) so receiving one back does not add units that never left.
+- A product in a pre-order category whose variant has no pre-order set up reads "pre-order not open yet"
+  and cannot be bought; it is never sold there as a stock item.
+- Stock allocated to a pre-order does not time out. If staff release such a hold, the units go back to the
+  allocation queue.
+- Checkout has no built-in payment method: if the list cannot be loaded, the error page shows.
 - Not built: customer SMS on stage changes (needs a provider and a monthly cost approved), and the
   accounting change that would hold a deposit as a liability until delivery (needs the bookkeeper).
 

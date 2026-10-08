@@ -5,9 +5,11 @@ only from stock that has arrived and been set aside for it.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
 from apps.accounts.constants import UserRole
 from apps.accounts.tests.helpers import create_user
@@ -17,7 +19,7 @@ from apps.inventory.constants import MovementType
 from apps.inventory.models import StockItem
 from apps.inventory.services.stock import record_movement
 from apps.orders.constants import PaymentMethodKey
-from apps.orders.models import Payment, SalesOrder
+from apps.orders.models import Payment, SalesOrder, StockReservation
 from apps.orders.selectors.payments import order_balance_due, order_deposit_due
 from apps.orders.selectors.preorder_demand import preorder_book_summary, preorder_demand
 from apps.orders.services.carts import add_line, get_or_create_cart
@@ -25,6 +27,10 @@ from apps.orders.services.checkout import checkout
 from apps.orders.services.orders import cancel_order
 from apps.orders.services.payments import capture_payment, record_payment_due
 from apps.orders.services.preorder_allocation import allocate_preorder_stock
+from apps.orders.services.reservations import (
+    release_expired_reservations,
+    release_stock_reservation,
+)
 from apps.orders.services.shipments import create_shipment
 
 from .test_api import _stocked_variant
@@ -235,3 +241,45 @@ def test_a_customer_cannot_cancel_a_placed_preorder_alone(api_client):
 
     assert response.status_code == 409
     assert response.data["error"]["code"] == "preorder_cancel_staff_only"
+
+
+def test_a_preorder_shop_product_with_no_preorder_set_up_cannot_be_bought_as_stock():
+    variant = _stocked_variant()
+    category = variant.product.category
+    category.category_type = category.CategoryType.PREORDER
+    category.save(update_fields=["category_type"])
+    cart = get_or_create_cart(create_user(email="unopened@example.com"))
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        add_line(order=cart, variant=variant, quantity=1)
+
+    assert variant.is_preorder_upcoming is True
+    assert exc.value.code == "preorder_not_active"
+
+
+def test_releasing_an_allocation_sends_the_units_back_to_the_queue():
+    variant = _preorder_variant()
+    order = _confirmed_preorder("released@example.com", variant, quantity=2)
+    _receive(variant, 2)
+    allocate_preorder_stock()
+    line = order.lines.get()
+
+    release_stock_reservation(reservation=StockReservation.objects.get(order_line=line))
+
+    line.refresh_from_db()
+    assert line.allocated_quantity == 0
+    assert line.shippable_quantity == 0
+    assert [row["quantity"] for row in allocate_preorder_stock()] == [2]
+
+
+def test_allocated_preorder_stock_does_not_time_out():
+    variant = _preorder_variant()
+    order = _confirmed_preorder("no-timeout@example.com", variant, quantity=1)
+    _receive(variant, 1)
+    allocate_preorder_stock()
+    StockReservation.objects.filter(order_line__order=order).update(
+        expires_at=timezone.now() - timedelta(hours=1)
+    )
+
+    assert release_expired_reservations() == 0
+    assert order.lines.get().allocated_quantity == 1

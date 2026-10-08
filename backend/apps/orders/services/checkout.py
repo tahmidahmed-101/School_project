@@ -92,7 +92,7 @@ def checkout(
         raise BusinessRuleViolationError(
             "Only a pending order can be checked out.", code="not_pending"
         )
-    lines = list(order.lines.select_related("variant"))
+    lines = list(order.lines.select_related("variant__product__category"))
     if not lines:
         raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
 

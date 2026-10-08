@@ -250,7 +250,7 @@ def _order_from_items(
     # one tax-rate lookup for the whole order, rather than one of each per item.
     variants_by_id = {
         str(variant.id): variant
-        for variant in get_variants_by_ids(list(combined_items)).select_related("product")
+        for variant in get_variants_by_ids(list(combined_items)).select_related("product__category")
     }
     tax_percent = default_tax_percent()
 

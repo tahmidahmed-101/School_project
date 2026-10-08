@@ -16,7 +16,7 @@ def _active_variants_prefetch() -> Prefetch:
     return Prefetch(
         "variants",
         queryset=ProductVariant.objects.filter(deleted_at__isnull=True)
-        .select_related("product")
+        .select_related("product__category")
         .prefetch_related(
             "images",
             "product__images",
