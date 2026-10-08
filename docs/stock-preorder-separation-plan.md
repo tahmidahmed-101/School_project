@@ -83,7 +83,7 @@ Forms:
   pre-order price, limit. No discount price, wholesale price, barcode, reorder point, stock count.
 - Category form: no type dropdown; the page it is opened from sets the kind.
 - Hero slides and promo lines: the stock Settings page edits placement `home`, the pre-order Settings page
-  edits placement `preorder`; `both` is shown on each as "also on the other shop" until edited.
+  edits placement `preorder`; `both` is no longer accepted.
 
 ## Phases
 
@@ -98,9 +98,21 @@ Forms:
 - Purchasing is split (owner: "no shared anything"): a purchase order holds one kind (`purchase_kind_mismatch`);
   purchase orders, goods receipts, vendor bills and vendor payments take `kind` and carry `kind` on each row.
   Pre-order pages live under `/preorder_purchasing/*`. A bill with no purchase order counts as stock.
-- Still one list for both halves: suppliers, brands, customers, warehouses, carriers / zones / rates,
-  payment methods, staff, and the ledger reports below.
-- Profit and loss, balance sheet and cash flow are not split: journal lines carry no kind.
+- Phase N (owner: "fix the rest and deep dive"): brands and suppliers carry a `kind` (name unique per kind;
+  `brand_kind_mismatch`, `supplier_kind_mismatch`); journal entries carry a `kind` and profit and loss, balance
+  sheet and cash flow take `kind` (expenses, cash, tax and equity stay company-wide and are named in the answer);
+  customers, fraud cases, analytics and the home page are one page per half; slides and promo lines are `home` or
+  `preorder`, never both.
+- Kind always comes from the category. A pre-order item outside its ordering window cannot be bought
+  (`preorder_closed`); it is never sold as a stock item. Low stock, coupons, bundles, barcode, discount and
+  wholesale are stock only; inventory writes refuse the other kind (`stock_kind_mismatch`).
+- Storefront: one kind per cart, wishlist in two sections, search in two groups, order history in two tabs,
+  pre-order tracking shows pre-order stages only, no coupon on a pre-order checkout.
+- Company-wide on purpose: staff and roles, audit log, tax rates, chart of accounts, expenses, business profile,
+  integrations, media, policy texts, customer accounts. Delivery zones / rates / carriers, payment methods and
+  warehouses are still one set: see "Delivery, payment and warehouse set-up" below for what a split needs.
+- Data commands, all dry run by default: `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`,
+  `split_both_placements`, `backfill_journal_kind`.
 - Staff-created orders are stock only (`order_kind_mismatch`); a staff-made pre-order needs a deposit step first.
 - `kind` also on `inventory/stock-status/`, `reporting/low-stock/`, `accounting/reports/inventory-valuation/`,
   the ledger export; variants export takes `category_type`; variants import refuses pre-order rows.
@@ -144,4 +156,4 @@ Warehouses today:
 
 ## Out of scope
 
-Separate tables, a "move to shop stock" action, trimming the stage list, storefront changes.
+Separate tables, a "move to shop stock" action, trimming the stage list.

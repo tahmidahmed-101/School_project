@@ -119,11 +119,14 @@
 - [ ] Production: run `fix_product_kind_mismatches` (dry run first) only with a backup and the owner's go-ahead
 
 ## Phase N: nothing shared between the halves (owner "no shared anything", "fix the rest and deep dive" 2026-10-09)
-- [ ] N1 Suppliers and brands carry a kind; lists and pickers per half
-- [ ] N2 Ledger reports: sales and cost of goods per kind; what cannot be split, stated with reason
-- [ ] N3 Home stock only + pre-order overview page; no `both` slides / promo lines; customers per half; delivery and payment set-up per kind where the checkout already differs
+- [x] N1 Suppliers and brands carry a kind; lists and pickers per half
+- [x] N2 Ledger reports: sales and cost of goods per kind; what cannot be split, stated with reason
+- [x] N3 Home stock only + pre-order overview page; no `both` slides / promo lines; customers per half; delivery and payment set-up per kind where the checkout already differs
 - [x] N4 Deep audit (44 findings; fixes tracked as N5-N7) of every dashboard page and admin endpoint
-- [ ] N5 Server leftovers from the audit: kind from category not the pre-order flag, pending carts out of stock orders, coupon preview, inventory writes, low stock, exports, serializers, fraud cases, invoice wording
-- [ ] N6 Dashboard leftovers: wrong-half detail pages, breadcrumbs, back links, quick-create, list flashes, stock wording on pre-order screens, export names, fraud cases per half
-- [ ] N7 Storefront: cart, wishlist, tracking, order history, pre-order landing, checkout coupon, header search, product page, shop filters, llms/sitemap
-- [ ] Merge, routes, typecheck, full backend suite once, browser pass
+- [x] N5 Server leftovers from the audit: kind from category not the pre-order flag, pending carts out of stock orders, coupon preview, inventory writes, low stock, exports, serializers, fraud cases, invoice wording
+- [x] N6 Dashboard leftovers: wrong-half detail pages, breadcrumbs, back links, quick-create, list flashes, stock wording on pre-order screens, export names, fraud cases per half
+- [x] N7 Storefront: cart, wishlist, tracking, order history, pre-order landing, checkout coupon, header search, product page, shop filters, llms/sitemap
+- [x] Merge, routes, typecheck, full backend suite once (2305 passed), browser pass
+- [ ] Owner calls after phase N: delivery rates per kind, payment methods per kind, separate pre-order warehouse, expenses per kind, storefront header badges (cart / wishlist count both kinds), "On sale" filter in the pre-order shop, "Discount" row on a pre-order order, staff quick-create on pre-order pages
+- [ ] Production, only with backup and owner go-ahead, dry run first: `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`, `split_both_placements`, `backfill_journal_kind`
+- [ ] Bookkeeper: deposit credited to Accounts Receivable (no deposits-held account), Refund Payable never credited, vendor bill dated on due date, `stock_intake` posts no journal entry
