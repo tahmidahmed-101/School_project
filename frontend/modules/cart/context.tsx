@@ -198,25 +198,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [items]);
 
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        addItem,
-        updateQuantity,
-        removeItem,
-        clearCart,
-        isDrawerOpen,
-        openDrawer,
-        closeDrawer,
-        toggleDrawer,
-        totalItems,
-        subtotal,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({
+      items,
+      addItem,
+      updateQuantity,
+      removeItem,
+      clearCart,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
+      toggleDrawer,
+      totalItems,
+      subtotal,
+    }),
+    [
+      items,
+      addItem,
+      updateQuantity,
+      removeItem,
+      clearCart,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
+      toggleDrawer,
+      totalItems,
+      subtotal,
+    ],
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart(): CartContextType {

@@ -18,7 +18,7 @@
 - [ ] Admin edits reach the storefront only when the 60 s cache expires: /api/revalidate cannot purge it
 - [x] Upstream API responses cached inside the Worker (warm pages 0.85-1.2 s -> 0.07-0.13 s)
 - [ ] Pre-order and shop pages send slim product data; single-language strings not doubled
-- [ ] Cart / wishlist context values memoised; drawer state split out
+- [x] Cart / wishlist context values memoised (drawer state still in the same context)
 - [ ] Payment methods fetched on the server
 - [x] Bell low-stock count from a count endpoint (API)
 
@@ -45,13 +45,13 @@
 - [ ] Stale docs replaced
 
 ## Phase E: storefront consistency
-- [ ] `Card`, `Badge`, overlay base with dialog role and focus
+- [ ] `Card`, `Badge`, overlay focus handling (Drawer has dialog role)
 - [ ] Buttons through `Button`
 - [ ] Semantic tokens for surface, border, status
-- [ ] Shared grid class, auth card, contact buttons, accordion body
+- [ ] Auth card, accordion body (contact buttons done; grid class has one user left)
 - [ ] Policies from one source
-- [ ] Dead fonts, CSS and props removed
-- [ ] Image `sizes` corrected
+- [x] Dead fonts, CSS and props removed
+- [x] Image `sizes` corrected (product card)
 
 ## Phase F: storefront language on the server
 - [ ] Language resolved from a cookie; static content rendered as server components
