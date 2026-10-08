@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.business.models import PolicyKind
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.policies import get_published_policy, returns_enabled
+from apps.business.selectors.storefront_content import hero_slides_list, promo_lines_list
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
 from apps.orders.selectors.payment_methods import payment_methods_list
@@ -18,6 +19,7 @@ from .serializers import (
     PublicBusinessProfileSerializer,
     PublicPaymentMethodSerializer,
     PublicReturnPolicySerializer,
+    PublicStorefrontContentSerializer,
     PublicStorePolicySerializer,
 )
 
@@ -76,4 +78,21 @@ class PublicStorePolicyView(APIView):
             ).data
         else:
             data = PublicStorePolicySerializer(policy).data
+        return Response({"data": data, "message": "Success"})
+
+
+@extend_schema(tags=["Public Business"])
+class PublicStorefrontContentView(APIView):
+    """Active hero slides and promo strip lines, in display order."""
+
+    serializer_class = PublicStorefrontContentSerializer
+    permission_classes: ClassVar[list] = [AllowAny]
+    throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
+
+    def get(self, request) -> Response:
+        content = {
+            "hero_slides": hero_slides_list(active_only=True),
+            "promo_lines": promo_lines_list(active_only=True),
+        }
+        data = PublicStorefrontContentSerializer(content, context={"request": request}).data
         return Response({"data": data, "message": "Success"})
