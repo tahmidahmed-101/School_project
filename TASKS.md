@@ -122,5 +122,8 @@
 - [ ] N1 Suppliers and brands carry a kind; lists and pickers per half
 - [ ] N2 Ledger reports: sales and cost of goods per kind; what cannot be split, stated with reason
 - [ ] N3 Home stock only + pre-order overview page; no `both` slides / promo lines; customers per half; delivery and payment set-up per kind where the checkout already differs
-- [ ] N4 Deep audit of every dashboard page and admin endpoint; leftovers fixed or logged
+- [x] N4 Deep audit (44 findings; fixes tracked as N5-N7) of every dashboard page and admin endpoint
+- [ ] N5 Server leftovers from the audit: kind from category not the pre-order flag, pending carts out of stock orders, coupon preview, inventory writes, low stock, exports, serializers, fraud cases, invoice wording
+- [ ] N6 Dashboard leftovers: wrong-half detail pages, breadcrumbs, back links, quick-create, list flashes, stock wording on pre-order screens, export names, fraud cases per half
+- [ ] N7 Storefront: cart, wishlist, tracking, order history, pre-order landing, checkout coupon, header search, product page, shop filters, llms/sitemap
 - [ ] Merge, routes, typecheck, full backend suite once, browser pass
