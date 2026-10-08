@@ -50,6 +50,39 @@ describe("homeProducts", () => {
   });
 });
 
+describe("trending", () => {
+  const plain = (id: string) => makeProduct({ id });
+  const flagged = (id: string) => makeProduct({ id, trending: true });
+  const many = (count: number, make: (id: string) => ReturnType<typeof makeProduct>, prefix: string) =>
+    Array.from({ length: count }, (_, i) => make(prefix + i));
+
+  it("puts flagged products first, in catalogue order, then fills with the rest", () => {
+    const list = [plain("a"), flagged("b"), plain("c"), flagged("d"), ...many(12, plain, "x")];
+    const picks = ids(trending(list));
+    expect(picks).toHaveLength(TRENDING_SIZE);
+    expect(picks.slice(0, 4)).toEqual(["b", "d", "a", "c"]);
+  });
+
+  it("shows only flagged products once there are enough of them", () => {
+    const list = [plain("a"), ...many(TRENDING_SIZE + 2, flagged, "t")];
+    expect(ids(trending(list))).toEqual(ids(list.slice(1, TRENDING_SIZE + 1)));
+  });
+
+  it("keeps catalogue order when nothing is flagged", () => {
+    const list = stock(catalogue);
+    expect(ids(trending(list))).toEqual(ids(list.slice(0, TRENDING_SIZE)));
+  });
+
+  it("stays out of the best-seller shelf and survives the home subset", () => {
+    const list = stock(catalogue).map((p, i) => (i % 9 === 4 ? { ...p, trending: true } : p));
+    const shown = new Set(ids(trending(list)));
+    expect(bestSellers(list).some((p) => shown.has(p.id))).toBe(false);
+    const subset = homeProducts(list);
+    expect(ids(trending(subset))).toEqual(ids(trending(list)));
+    expect(ids(bestSellers(subset))).toEqual(ids(bestSellers(list)));
+  });
+});
+
 describe("bestSellers", () => {
   it("never repeats a trending product and fills two rows", () => {
     const list = stock(catalogue);

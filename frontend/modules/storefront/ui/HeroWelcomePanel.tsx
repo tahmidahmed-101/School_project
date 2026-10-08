@@ -35,8 +35,9 @@ const QUICK_LINKS = [
 ] as const;
 
 /** Welcome card + quick-link stack shown on the right of the hero on desktop. */
-export function HeroWelcomePanel() {
+export function HeroWelcomePanel({ hasOffers }: { hasOffers: boolean }) {
   const { ui } = useLang();
+  const links = hasOffers ? QUICK_LINKS : QUICK_LINKS.filter((link) => link.id !== "promotion");
 
   return (
     <div className="flex h-full flex-col gap-2.5 sm:gap-3">
@@ -65,7 +66,7 @@ export function HeroWelcomePanel() {
       </div>
 
       <div className="flex flex-1 flex-col gap-2">
-        {QUICK_LINKS.map(({ id, href, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
+        {links.map(({ id, href, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
           <Link
             key={id}
             href={href}

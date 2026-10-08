@@ -13,8 +13,18 @@ import { useLang } from "@/lib/i18n";
 import { BRAND_INFO } from "@/lib/brand";
 
 import { bestSellers, categoryShelf, trending } from "../domain/home-products";
+import { heroSlidesFor, promoLinesFor, type StorefrontContent } from "../domain/storefront-content";
 
-export function HomeSections({ vouchers }: { vouchers: Voucher[] }) {
+export function HomeSections({
+  vouchers,
+  content,
+  hasOffers,
+}: {
+  vouchers: Voucher[];
+  /** Dashboard-managed hero and promo content; null falls back to the built-in content. */
+  content: StorefrontContent | null;
+  hasOffers: boolean;
+}) {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
   const { stockProducts } = useProducts();
@@ -34,8 +44,12 @@ export function HomeSections({ vouchers }: { vouchers: Voucher[] }) {
 
   return (
     <div>
-      <Hero heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`} />
-      <PromoMarquee />
+      <Hero
+        heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`}
+        slides={heroSlidesFor("home", content)}
+        hasOffers={hasOffers}
+      />
+      <PromoMarquee lines={promoLinesFor(content)} />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 

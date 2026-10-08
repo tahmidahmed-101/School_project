@@ -7,6 +7,7 @@ import { VoucherSection, type Voucher } from "@/modules/marketing";
 import { CategoryShowcase, TrendingSection } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
+import { heroSlidesFor, promoLinesFor, type StorefrontContent } from "../domain/storefront-content";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { BRAND_INFO } from "@/lib/brand";
@@ -19,7 +20,15 @@ import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
 /** Same layout as the home page (Hero, browsable grid, newsletter), scoped to pre-order stock only. */
-export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
+export function PreOrderSections({
+  vouchers,
+  content,
+  hasOffers,
+}: {
+  vouchers: Voucher[];
+  content: StorefrontContent | null;
+  hasOffers: boolean;
+}) {
   const { ui } = useLang();
   const { categories } = useCatalog();
   const { preorderProducts } = useProducts();
@@ -47,8 +56,14 @@ export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
           <Breadcrumbs items={[{ label: ui("navPreOrder") }]} />
         </Container>
       </div>
-      <Hero heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`} shopLink="/shop?type=preorder" preorder />
-      <PromoMarquee />
+      <Hero
+        heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`}
+        slides={heroSlidesFor("preorder", content)}
+        hasOffers={hasOffers}
+        shopLink="/shop?type=preorder"
+        preorder
+      />
+      <PromoMarquee lines={promoLinesFor(content)} />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase preorder />
 
