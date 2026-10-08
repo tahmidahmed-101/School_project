@@ -1,9 +1,7 @@
-"use client";
-
 import { MessageCircle, Phone } from "lucide-react";
 import type { PolicyContent } from "../domain/policy-content";
-import { useBrand } from "@/modules/catalog";
-import { useLang } from "@/lib/i18n";
+import { getBrand } from "@/modules/business/server";
+import { getServerText } from "@/lib/i18n.server";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
@@ -13,9 +11,8 @@ interface PolicyViewProps {
   policy: PolicyContent;
 }
 
-export function PolicyView({ policy }: PolicyViewProps) {
-  const { t, ui } = useLang();
-  const BRAND_INFO = useBrand();
+export async function PolicyView({ policy }: PolicyViewProps) {
+  const [{ t, ui }, BRAND_INFO] = await Promise.all([getServerText(), getBrand()]);
 
   return (
     <div className="min-h-screen bg-canvas py-8 sm:py-12">

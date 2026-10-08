@@ -23,6 +23,7 @@ import { createPurchaseOrder } from "../slices/purchaseOrderSlice"
 import type { Supplier } from "../types"
 import { useCanManagePurchasing } from "../hooks/useProcurement"
 import { VariantPicker } from "@/components/common/VariantPicker"
+import { sumCostLines } from "@/lib/money"
 
 const lineSchema = z.object({
   variant: z
@@ -69,7 +70,11 @@ const PurchaseOrderCreate = () => {
   })
   const { fields, append, remove } = useFieldArray({ control, name: "lines" })
   const lines = useWatch({ control, name: "lines" })
-  const total = (lines ?? []).reduce((s, l) => s + Number(l.quantity_ordered || 0) * Number(l.unit_cost || 0), 0)
+  const costLine = (l: (typeof lines)[number] | undefined) => ({
+    unitCost: l?.unit_cost,
+    quantity: Number(l?.quantity_ordered || 0),
+  })
+  const total = sumCostLines((lines ?? []).map(costLine))
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -191,7 +196,7 @@ const PurchaseOrderCreate = () => {
                     <FieldError errors={[lineErrors?.unit_cost]} />
                   </div>
                   <span className="text-sm font-semibold md:text-right md:pt-2 tabular-nums">
-                    {formatCurrency(Number(line?.quantity_ordered || 0) * Number(line?.unit_cost || 0))}
+                    {formatCurrency(sumCostLines([costLine(line)]))}
                   </span>
                   <Button
                     type="button"
