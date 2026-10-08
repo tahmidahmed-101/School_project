@@ -3,7 +3,7 @@
 import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { getDiscountPercent } from "@/lib/product";
+import { getDiscountPercent, unavailableLabel } from "@/lib/product";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
@@ -62,7 +62,7 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
     return (
       <div className="flex items-center gap-1.5 font-semibold text-danger">
         <span className="h-2 w-2 rounded-full bg-danger" />
-        <span>{ui("outOfStock")}</span>
+        <span>{ui(unavailableLabel(product))}</span>
       </div>
     );
   }

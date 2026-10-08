@@ -255,7 +255,7 @@ def _order_from_items(
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
 
-        if variant.is_preorder_enabled and not variant.is_preorder_active:
+        if variant.is_preorder_upcoming:
             order.delete()
             raise BusinessRuleViolationError(
                 "This product is not available for pre-order at this time.",

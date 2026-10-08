@@ -8,7 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
-import { getMaxOrderQuantity } from "@/lib/product";
+import { getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
@@ -91,7 +91,7 @@ export function ProductActions({
       <div ref={ctaRef} className="mt-4 flex flex-col gap-3.5 sm:flex-row">
         {isOutOfStock ? (
           <Button {...CTA} variant="outline" disabled>
-            {ui("outOfStock")}
+            {ui(unavailableLabel(product))}
           </Button>
         ) : product.isPreOrder ? (
           isSoldOut ? (

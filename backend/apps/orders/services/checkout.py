@@ -92,13 +92,12 @@ def checkout(
     if not lines:
         raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
 
-    # Validate pre-order items are still within pre-order period at checkout
     for line in lines:
         variant = line.variant
-        if variant.is_preorder_enabled and not variant.is_preorder_active:
+        if variant.is_preorder_upcoming:
             raise BusinessRuleViolationError(
-                f"Pre-order period has ended for {variant.product.name} ({variant.sku}).",
-                code="preorder_expired"
+                f"{variant.product.name} ({variant.sku}) is not open for pre-order yet.",
+                code="preorder_not_active",
             )
         if variant.is_preorder_active and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, line.quantity)

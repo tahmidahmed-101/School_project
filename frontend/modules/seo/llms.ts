@@ -1,4 +1,5 @@
 import type { BrandInfo } from "@/lib/brand";
+import { isPreOrderShopProduct } from "@/lib/product";
 import type { Catalog } from "@/modules/catalog/server";
 import { SITE_DESCRIPTION, SITE_NAME } from "./metadata";
 import { absoluteUrl } from "@/lib/site-url";
@@ -9,7 +10,7 @@ export function buildLlmsTxt({ products: PRODUCTS, categories: CATEGORIES }: Cat
     (category) => `- ${category.name.en}: ${absoluteUrl(`/shop?category=${category.slug}`)}`,
   ).join("\n");
 
-  const preOrderCount = PRODUCTS.filter((p) => p.isPreOrder).length;
+  const preOrderCount = PRODUCTS.filter(isPreOrderShopProduct).length;
 
   const sections = [
     `# ${SITE_NAME}`,

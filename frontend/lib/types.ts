@@ -18,6 +18,9 @@ export interface ProductVariant {
 }
 
 /** One purchasable SKU from the API (colour / size combination). Checkout needs its `id`. */
+/** "upcoming" and "closed" are pre-orders that cannot be placed right now. */
+export type PreorderStatus = "available" | "closing-soon" | "sold-out" | "upcoming" | "closed";
+
 export interface SkuVariant {
   id: string;
   sku: string;
@@ -34,7 +37,7 @@ export interface SkuVariant {
   /** Pre-order cap; undefined when the pre-order has no limit. */
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
-  preorderStatus?: "available" | "closing-soon" | "sold-out";
+  preorderStatus?: PreorderStatus;
 }
 
 export interface ProductSpec {
@@ -77,6 +80,8 @@ export interface Product {
   highlights?: T[];
   /** SEO keywords from the product detail endpoint. */
   metaKeywords?: string;
+  /** Which shop the product belongs to, from its category. */
+  kind?: "stock" | "preorder";
   // Pre-order attributes
   isPreOrder?: boolean;
   preorderEndDate?: string;
@@ -86,7 +91,7 @@ export interface Product {
   preorderCloses?: T;
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
-  preorderStatus?: "available" | "closing-soon" | "sold-out";
+  preorderStatus?: PreorderStatus;
 }
 
 export interface CategoryInfo {

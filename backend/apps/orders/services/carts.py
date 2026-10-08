@@ -181,7 +181,7 @@ def add_line(
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
     # Validate pre-order availability
-    if variant.is_preorder_enabled and not variant.is_preorder_active:
+    if variant.is_preorder_upcoming:
         raise BusinessRuleViolationError(
             "This product is not available for pre-order at this time.", code="preorder_not_active"
         )

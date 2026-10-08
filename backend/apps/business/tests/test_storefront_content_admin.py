@@ -167,15 +167,19 @@ def test_promo_line_crud(admin_client):
         "id": str(line.id),
         "text_en": "Free delivery",
         "text_bn": "ফ্রি ডেলিভারি",
+        "placement": "both",
         "sort_order": 0,
         "is_active": True,
     }
 
     patched = admin_client.patch(
-        f"{LINES}{line.id}/", {"sort_order": 4, "is_active": False}, format="json"
+        f"{LINES}{line.id}/",
+        {"sort_order": 4, "is_active": False, "placement": "preorder"},
+        format="json",
     )
     assert patched.status_code == 200
     assert patched.data["data"]["sort_order"] == 4
+    assert patched.data["data"]["placement"] == "preorder"
     assert patched.data["data"]["text_en"] == "Free delivery"
 
     listed = admin_client.get(LINES)

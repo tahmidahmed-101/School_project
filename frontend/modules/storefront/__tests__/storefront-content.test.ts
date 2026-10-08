@@ -85,15 +85,26 @@ describe("promoLinesFor", () => {
         { id: "3", text: { en: "", bn: "" } },
       ],
     });
-    expect(promoLinesFor(managed)).toEqual([
+    expect(promoLinesFor("home", managed)).toEqual([
       { en: "First", bn: "প্রথম" },
       { en: "Second", bn: "Second" },
     ]);
   });
 
   it("uses the built-in lines when there are none or the API failed", () => {
-    expect(promoLinesFor(content({}))).toBe(PROMO_LINES);
-    expect(promoLinesFor(null)).toBe(PROMO_LINES);
+    expect(promoLinesFor("home", content({}))).toBe(PROMO_LINES);
+    expect(promoLinesFor("preorder", null)).toBe(PROMO_LINES);
+  });
+
+  it("keeps a line on the page it was placed on", () => {
+    const managed = content({
+      promo_lines: [
+        { id: "1", text: { en: "Stock only", bn: "" }, placement: "home" },
+        { id: "2", text: { en: "Everywhere", bn: "" }, placement: "both" },
+      ],
+    });
+    expect(promoLinesFor("preorder", managed).map((line) => line.en)).toEqual(["Everywhere"]);
+    expect(promoLinesFor("home", managed).map((line) => line.en)).toEqual(["Stock only", "Everywhere"]);
   });
 
   it("makes no free-delivery claim in the built-in lines", () => {

@@ -83,7 +83,11 @@ def test_rows_are_bilingual_and_the_image_url_is_absolute(api_client):
         }
     ]
     assert data["promo_lines"] == [
-        {"id": str(line.id), "text": {"en": "Free delivery", "bn": "ফ্রি ডেলিভারি"}}
+        {
+            "id": str(line.id),
+            "text": {"en": "Free delivery", "bn": "ফ্রি ডেলিভারি"},
+            "placement": "both",
+        }
     ]
 
 

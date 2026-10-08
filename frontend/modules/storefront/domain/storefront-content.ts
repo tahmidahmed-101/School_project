@@ -12,7 +12,7 @@ export interface ManagedHeroSlide extends HeroSlide {
 /** Hero slides and promo lines published in the dashboard. */
 export interface StorefrontContent {
   heroSlides: ManagedHeroSlide[];
-  promoLines: T[];
+  promoLines: { text: T; placement: ApiHeroSlide["placement"] }[];
 }
 
 function localized(value: Partial<T> | null | undefined): T {
@@ -40,7 +40,9 @@ export function toStorefrontContent(api: ApiStorefrontContent): StorefrontConten
         linkUrl: safeLink(slide.link_url),
         placement: slide.placement,
       })),
-    promoLines: (api.promo_lines ?? []).map((line) => localized(line.text)).filter((text) => text.en !== ""),
+    promoLines: (api.promo_lines ?? [])
+      .map((line) => ({ text: localized(line.text), placement: line.placement ?? "both" }))
+      .filter((line) => line.text.en !== ""),
   };
 }
 
@@ -50,8 +52,9 @@ export function heroSlidesFor(page: HeroPage, content: StorefrontContent | null)
   return managed.length > 0 ? managed : HERO_SLIDES;
 }
 
-export function promoLinesFor(content: StorefrontContent | null): T[] {
-  return content && content.promoLines.length > 0 ? content.promoLines : PROMO_LINES;
+export function promoLinesFor(page: HeroPage, content: StorefrontContent | null): T[] {
+  const managed = (content?.promoLines ?? []).filter((line) => line.placement === page || line.placement === "both");
+  return managed.length > 0 ? managed.map((line) => line.text) : PROMO_LINES;
 }
 
 /** Same test as the shop's "sale" collection, so the offers tile never leads to a list with no offers in it. */

@@ -117,6 +117,7 @@ class PublicHeroSlideSerializer(serializers.Serializer):
 class PublicPromoLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     text = serializers.SerializerMethodField()
+    placement = serializers.CharField(read_only=True)
 
     def get_text(self, obj) -> dict[str, str]:
         return {"en": obj.text_en, "bn": obj.text_bn}

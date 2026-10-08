@@ -63,7 +63,7 @@ export function PreOrderSections({
         shopLink="/shop?type=preorder"
         preorder
       />
-      <PromoMarquee lines={promoLinesFor(content)} />
+      <PromoMarquee lines={promoLinesFor("preorder", content)} />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase preorder />
 

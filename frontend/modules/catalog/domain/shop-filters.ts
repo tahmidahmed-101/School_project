@@ -1,5 +1,5 @@
 import type { Product } from "@/lib/types";
-import { getDiscountPercent, matchesQuery } from "@/lib/product";
+import { getDiscountPercent, isPreOrderShopProduct, matchesQuery } from "@/lib/product";
 
 export interface FilterState {
   category: string;
@@ -78,8 +78,8 @@ function matchesFilters(product: Product, filters: FilterState): boolean {
     return false;
   }
 
-  if (filters.stockType === "normal" && product.isPreOrder) return false;
-  if (filters.stockType === "preorder" && !product.isPreOrder) return false;
+  if (filters.stockType === "normal" && isPreOrderShopProduct(product)) return false;
+  if (filters.stockType === "preorder" && !isPreOrderShopProduct(product)) return false;
 
   if (filters.collection === "trending" && !product.trending) return false;
   if (filters.collection === "sale" && getDiscountPercent(product) === null) return false;

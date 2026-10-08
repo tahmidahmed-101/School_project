@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { BRAND_INFO, type BrandInfo } from "@/lib/brand";
+import { isPreOrderShopProduct } from "@/lib/product";
 import type { CategoryInfo, Product } from "@/lib/types";
 
 /**
@@ -61,8 +62,8 @@ export function ProductsProvider({ products, children }: { products: Product[]; 
   const value = useMemo<ProductsContextType>(
     () => ({
       products,
-      stockProducts: products.filter((p) => !p.isPreOrder),
-      preorderProducts: products.filter((p) => p.isPreOrder),
+      stockProducts: products.filter((p) => !isPreOrderShopProduct(p)),
+      preorderProducts: products.filter(isPreOrderShopProduct),
     }),
     [products],
   );

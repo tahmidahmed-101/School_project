@@ -107,6 +107,7 @@ export interface PromoLine {
   id: string
   text_en: string
   text_bn: string
+  placement: HeroSlidePlacement
   sort_order: number
   is_active: boolean
 }

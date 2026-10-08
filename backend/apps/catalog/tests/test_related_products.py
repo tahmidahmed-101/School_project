@@ -51,6 +51,20 @@ def test_related_ranks_same_category_and_brand_first(api_client):
     ]
 
 
+def test_related_never_crosses_between_the_stock_and_preorder_shops(api_client):
+    brand = Brand.objects.create(name="Acme", slug="acme")
+    stock = CategoryFactory(category_type="stock")
+    preorder = CategoryFactory(category_type="preorder")
+    current = _product(category=preorder, brand=brand)
+    same_shop = _product(category=preorder, name="Same shop")
+    _product(category=stock, brand=brand, featured=True, name="Other shop")
+
+    response = api_client.get(_url(current))
+
+    assert _ids(response) == [str(same_shop.id)]
+    assert response.data["data"][0]["kind"] == "preorder"
+
+
 def test_related_excludes_self_and_unsellable_products(api_client):
     category = CategoryFactory()
     current = _product(category=category)

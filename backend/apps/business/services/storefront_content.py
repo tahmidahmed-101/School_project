@@ -15,7 +15,7 @@ HERO_SLIDE_FIELDS = (
     "sort_order",
     "is_active",
 )
-PROMO_LINE_FIELDS = ("text_en", "text_bn", "sort_order", "is_active")
+PROMO_LINE_FIELDS = ("text_en", "text_bn", "placement", "sort_order", "is_active")
 
 
 def _apply(instance, fields: tuple[str, ...], data: dict) -> list[str]:

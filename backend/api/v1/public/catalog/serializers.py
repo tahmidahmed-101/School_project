@@ -99,6 +99,7 @@ class PublicProductVariantSerializer(serializers.Serializer):
     preorder_end_date = serializers.DateTimeField(allow_null=True)
     release_date = serializers.DateTimeField(allow_null=True)
     is_preorder_active = serializers.SerializerMethodField()
+    is_preorder_upcoming = serializers.BooleanField(read_only=True)
     is_preorder_price_applied = serializers.SerializerMethodField()
     preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
     preordered_quantity = serializers.SerializerMethodField()
@@ -113,14 +114,8 @@ class PublicProductVariantSerializer(serializers.Serializer):
         return list(obj.bundle_components.all())
 
     def get_compare_at_price(self, obj) -> str | None:
-        """Original price before discount (same as list price when discount applies)."""
-        if obj.discount_price is not None and obj.discount_price < obj.price:
-            return str(obj.price)
-        if (
-            obj.is_preorder_active
-            and obj.preorder_price is not None
-            and obj.preorder_price < obj.price
-        ):
+        """List price, shown struck through when the customer pays less."""
+        if obj.effective_price < obj.price:
             return str(obj.price)
         return None
 
@@ -239,6 +234,7 @@ class PublicBundleSerializer(serializers.Serializer):
 class PublicProductListSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     category_id = serializers.UUIDField(read_only=True)
+    kind = serializers.CharField(source="category.category_type", read_only=True)
     name = serializers.CharField()
     slug = serializers.CharField()
     product_type = serializers.CharField()

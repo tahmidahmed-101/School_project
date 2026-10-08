@@ -284,6 +284,7 @@ class AdminPromoLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     text_en = serializers.CharField(read_only=True)
     text_bn = serializers.CharField(read_only=True)
+    placement = serializers.CharField(read_only=True)
     sort_order = serializers.IntegerField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
 
@@ -291,5 +292,6 @@ class AdminPromoLineSerializer(serializers.Serializer):
 class AdminPromoLineWriteSerializer(serializers.Serializer):
     text_en = serializers.CharField(max_length=160)
     text_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    placement = serializers.ChoiceField(choices=HeroPlacement.choices, required=False)
     sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
     is_active = _OmittableBooleanField(required=False)

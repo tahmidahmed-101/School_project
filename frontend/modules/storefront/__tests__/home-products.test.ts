@@ -24,6 +24,13 @@ const catalogue = makeCatalogue(60);
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
 const stock = (list: typeof catalogue) => list.filter((p) => !p.isPreOrder);
 
+describe("homeProducts shop split", () => {
+  it("keeps a closed pre-order out of the stock home", () => {
+    const closed = makeProduct({ id: "closed", category: "shirts", kind: "preorder", isPreOrder: false, inStock: false });
+    expect(ids(homeProducts([...catalogue.slice(1, 6), closed]))).not.toContain("closed");
+  });
+});
+
 describe("shelfSize", () => {
   it("fills whole rows of five up to the cap", () => {
     expect(shelfSize(25, 10)).toBe(10);

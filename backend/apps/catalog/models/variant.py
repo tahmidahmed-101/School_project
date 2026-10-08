@@ -97,20 +97,26 @@ class ProductVariant(FullAuditModel):
         return True
 
     @property
+    def is_preorder_upcoming(self) -> bool:
+        """Switched to pre-order but not open yet. Once the window has ended
+        the variant sells as an ordinary stock item again."""
+        if not self.is_preorder_enabled:
+            return False
+        if self.preorder_start_date is None or self.preorder_end_date is None:
+            return True
+        return timezone.now() < self.preorder_start_date
+
+    @property
     def effective_price(self) -> Decimal:
-        """What the customer actually pays. A discount at or above list price is
-        ignored rather than honoured, so a typo can't raise the charged amount."""
-        # If pre-order is active, use preorder_price (if set and lower than price)
-        if (
-            self.is_preorder_active
-            and self.preorder_price is not None
-            and self.preorder_price < self.price
-        ):
-            return self.preorder_price
-        # Otherwise fall back to normal discount logic
-        if self.discount_price is not None and self.discount_price < self.price:
-            return self.discount_price
-        return self.price
+        """What the customer actually pays: the lowest of list price, discount
+        price and, while pre-order is open, pre-order price. A discount at or
+        above list price is ignored, so a typo can't raise the charged amount."""
+        candidates = [self.price]
+        if self.discount_price is not None:
+            candidates.append(self.discount_price)
+        if self.is_preorder_active and self.preorder_price is not None:
+            candidates.append(self.preorder_price)
+        return min(candidates)
 
     @property
     def display_price(self) -> Decimal:
@@ -123,6 +129,7 @@ class ProductVariant(FullAuditModel):
             self.is_preorder_active
             and self.preorder_price is not None
             and self.preorder_price < self.price
+            and self.preorder_price == self.effective_price
         )
 
     def clean(self) -> None:

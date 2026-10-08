@@ -23,6 +23,18 @@ export function isPreOrderSoldOut(product: Product): boolean {
   );
 }
 
+/** Belongs to the pre-order shop: its category is a pre-order one, or it is taking pre-orders right now. */
+export function isPreOrderShopProduct(product: Product): boolean {
+  return product.kind === "preorder" || Boolean(product.isPreOrder);
+}
+
+/** Dictionary key for why a product cannot be bought: a pre-order that is not open reads differently from no stock. */
+export function unavailableLabel(product: Product): "outOfStock" | "preOrderNotOpen" | "preOrderClosed" {
+  if (product.preorderStatus === "upcoming") return "preOrderNotOpen";
+  if (product.preorderStatus === "closed") return "preOrderClosed";
+  return "outOfStock";
+}
+
 /** Largest quantity a shopper can add for one order line. */
 export function getMaxOrderQuantity(product: Product): number {
   if (!product.isPreOrder) return product.stockCount;

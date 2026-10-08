@@ -282,7 +282,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
             "This item is already on the order. Change its quantity instead.",
             code="line_exists",
         )
-    if variant.is_preorder_enabled and not variant.is_preorder_active:
+    if variant.is_preorder_upcoming:
         raise BusinessRuleViolationError(
             "This product is not available for pre-order at this time.",
             code="preorder_not_active",

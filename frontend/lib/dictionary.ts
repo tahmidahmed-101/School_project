@@ -252,6 +252,8 @@ export const DICT = {
   preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "Pre-order sold out", bn: "প্রি-অর্ডার স্টক শেষ" },
+  preOrderNotOpen: { en: "Pre-order not open yet", bn: "প্রি-অর্ডার এখনো শুরু হয়নি" },
+  preOrderClosed: { en: "Pre-order closed", bn: "প্রি-অর্ডার বন্ধ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
   preOrderBadge: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   preOrderOpen: { en: "Pre-order open", bn: "প্রি-অর্ডার চলছে" },

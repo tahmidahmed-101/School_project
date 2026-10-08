@@ -599,28 +599,77 @@ def test_preorder_not_available_when_disabled():
     assert variant.can_preorder is False
 
 
-def test_preorder_expired_rejected_at_checkout():
+def test_variant_sells_as_stock_once_its_preorder_window_has_ended():
     product = ProductFactory()
     now = timezone.now()
-
     variant = create_variant(
         product=product,
         price=Decimal("1000"),
         is_preorder_enabled=True,
         preorder_price=Decimal("900"),
         preorder_start_date=now - timedelta(days=60),
-        preorder_end_date=now - timedelta(days=30),  # Expired
+        preorder_end_date=now - timedelta(days=30),
         release_date=now - timedelta(days=15),
     )
+    cart = get_or_create_cart(create_user(email="test@example.com", role=UserRole.CUSTOMER))
 
-    customer = create_user(email="test@example.com", role=UserRole.CUSTOMER)
-    cart = get_or_create_cart(customer)
+    line = add_line(order=cart, variant=variant, quantity=1)
 
-    # Add line should fail because pre-order is expired
+    assert line.is_preorder is False
+    assert line.unit_price == Decimal("1000")
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        checkout(order=cart)
+    assert exc.value.code == "insufficient_stock"
+
+
+def test_preorder_that_has_not_opened_is_rejected_at_cart():
+    product = ProductFactory()
+    now = timezone.now()
+    variant = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        is_preorder_enabled=True,
+        preorder_start_date=now + timedelta(days=5),
+        preorder_end_date=now + timedelta(days=30),
+    )
+    cart = get_or_create_cart(create_user(email="early@example.com", role=UserRole.CUSTOMER))
+
     with pytest.raises(BusinessRuleViolationError) as exc:
         add_line(order=cart, variant=variant, quantity=1)
 
     assert exc.value.code == "preorder_not_active"
+
+
+def test_lower_of_discount_and_preorder_price_is_charged():
+    product = ProductFactory()
+    now = timezone.now()
+    window = {
+        "is_preorder_enabled": True,
+        "preorder_start_date": now - timedelta(days=1),
+        "preorder_end_date": now + timedelta(days=1),
+    }
+
+    discount_lower = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        discount_price=Decimal("800"),
+        preorder_price=Decimal("900"),
+        size="M",
+        **window,
+    )
+    preorder_lower = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        discount_price=Decimal("950"),
+        preorder_price=Decimal("900"),
+        size="L",
+        **window,
+    )
+
+    assert discount_lower.effective_price == Decimal("800")
+    assert discount_lower.is_preorder_price_applied is False
+    assert preorder_lower.effective_price == Decimal("900")
+    assert preorder_lower.is_preorder_price_applied is True
 
 
 def test_update_variant_preorder_fields():

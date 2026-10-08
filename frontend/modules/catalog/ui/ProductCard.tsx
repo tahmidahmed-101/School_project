@@ -10,7 +10,7 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, isPreOrderSoldOut } from "@/lib/product";
+import { getDiscountPercent, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 import { Button } from "@/design-system/ui/Button";
@@ -120,7 +120,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
           {isOutOfStock ? (
             <Button variant="muted" size="xs" fullWidth disabled>
-              {ui("outOfStock")}
+              {ui(unavailableLabel(product))}
             </Button>
           ) : product.isPreOrder ? (
             isSoldOut ? (

@@ -49,7 +49,7 @@ export function HomeSections({
         slides={heroSlidesFor("home", content)}
         hasOffers={hasOffers}
       />
-      <PromoMarquee lines={promoLinesFor(content)} />
+      <PromoMarquee lines={promoLinesFor("home", content)} />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 

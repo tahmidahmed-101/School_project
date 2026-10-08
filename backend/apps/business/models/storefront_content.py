@@ -47,6 +47,9 @@ class PromoLine(TimeStampedModel):
 
     text_en = models.CharField(max_length=160)
     text_bn = models.CharField(max_length=160, blank=True)
+    placement = models.CharField(
+        max_length=20, choices=HeroPlacement.choices, default=HeroPlacement.BOTH
+    )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 

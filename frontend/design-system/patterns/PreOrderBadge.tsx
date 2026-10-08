@@ -3,9 +3,10 @@
 import React from "react";
 import { Clock, AlertCircle } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import type { PreorderStatus } from "@/lib/types";
 
 interface PreOrderBadgeProps {
-  status?: "available" | "closing-soon" | "sold-out";
+  status?: PreorderStatus;
   size?: "sm" | "md" | "lg";
   className?: string;
   showIcon?: boolean;

@@ -80,3 +80,13 @@
 - [x] Checkout charges today's price for a saved cart
 - [x] Admin: pre-order badge on orders and lines, order type filter, pre-order lines start at 0 in the shipment dialog
 - [ ] Owner decisions D1-D10 before Phases 1-5 of the plan
+
+## Phase J: one kind per product, no leaks between shops (owner "continue" 2026-10-08; plan Phase 1, defaults D6 + D9)
+- [x] Lowest of list, discount and open pre-order price is charged and shown
+- [x] A variant whose pre-order window has ended sells from stock at the normal price; one not open yet is refused
+- [x] Related products stay in the product's own shop; public product API carries `kind` and `is_preorder_upcoming`
+- [x] Storefront shops split by category kind; "Pre-order not open yet" / "Pre-order closed" instead of "Out of stock"
+- [x] Promo lines placed on Home, Pre-order or Both (migration `business/0012`)
+- [x] `manage.py report_product_kind_mismatches` (report only)
+- [ ] Owner fixes the products the report lists, then backend validation is switched on
+- [ ] Not built: admin "one meaning of pre-order", pre-order fallback hero slides, cart quantity cap, search/wishlist check

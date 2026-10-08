@@ -79,6 +79,15 @@ differ from the table below:
 
 ### Phase 1: one kind per product, no leaks between the two shops (size M, no money logic)
 
+Partly built 2026-10-08 on branch `fix/preorder-phase-1`, with D6 and D9 taken at their recommended defaults.
+Built: lowest-price rule; ended window sells from stock; `kind` and `is_preorder_upcoming` on the public
+product API; related products stay in one shop; storefront shops split by kind with "not open yet" and
+"closed" labels; promo line placement; the report command (`manage.py report_product_kind_mismatches`).
+Not built: the save-time validation (waits for the owner to fix what the report lists), the admin's single
+definition of pre-order, pre-order fallback hero slides, the cart quantity cap. Search, wishlist and the
+"shop type sticks" claim were not re-verified. Until the data is fixed the storefront also keeps a product
+that is taking pre-orders in the pre-order shop even when its category is a stock one.
+
 - Backend validation: pre-order on requires start and end dates; all variants of a product share the kind;
   product kind matches category type; changing a category's type is refused while it holds products.
   Public product API gains a `kind` field and a `kind` filter; related products, counts and bundles respect it.

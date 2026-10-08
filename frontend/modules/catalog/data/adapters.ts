@@ -48,6 +48,9 @@ const CLOSING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
 
 function toSkuVariant(v: ApiVariant): SkuVariant {
   const isPreOrder = v.is_preorder_enabled && v.is_preorder_active;
+  const isUpcoming = v.is_preorder_enabled && !isPreOrder && Boolean(v.is_preorder_upcoming);
+  // Once its window has ended a pre-order SKU sells from warehouse stock like any other.
+  const inStock = isPreOrder || (!isUpcoming && v.in_stock);
   const price = toNumber(v.effective_price);
   const list = toNumber(v.price);
   const compareAt = v.compare_at_price ? toNumber(v.compare_at_price) : list > price ? list : undefined;
@@ -57,6 +60,10 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
     const end = v.preorder_end_date ? new Date(v.preorder_end_date).getTime() : NaN;
     if (v.preorder_remaining === 0) preorderStatus = "sold-out";
     else preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
+  } else if (isUpcoming) {
+    preorderStatus = "upcoming";
+  } else if (v.is_preorder_enabled && !inStock) {
+    preorderStatus = "closed";
   }
 
   return {
@@ -66,9 +73,7 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
     size: v.size,
     price,
     compareAtPrice: compareAt && compareAt > price ? compareAt : undefined,
-    // Pre-order SKUs skip warehouse stock, so `in_stock` is irrelevant while their window is open. A pre-order SKU
-    // whose window is closed or not yet open cannot be bought (the backend rejects it).
-    inStock: v.is_preorder_enabled ? v.is_preorder_active : v.in_stock,
+    inStock,
     isPreOrder,
     preorderEndDate: isPreOrder ? (v.preorder_end_date ?? undefined) : undefined,
     expectedDelivery: isPreOrder ? formatDate(v.release_date) : undefined,
@@ -164,6 +169,7 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     price: preferred?.price ?? 0,
     compareAtPrice: preferred?.compareAtPrice,
     category: category?.slug ?? "",
+    kind: api.kind ?? category?.category_type,
     categoryName: plain(category?.name ?? ""),
     image: gallery[0]!,
     gallery,

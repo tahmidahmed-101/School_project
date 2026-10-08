@@ -203,9 +203,10 @@ MAX_RELATED_PRODUCTS = 24
 def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -> list[Product]:
     """Storefront "you may also like" for one product, ranked in a single query:
     same category and brand, then same category, then same brand, then the
-    merchandised (featured/trending) catalog as a filler. Built on
-    `products_list` so it inherits the sellable filter and the prefetches the
-    public list serializer depends on."""
+    merchandised (featured/trending) catalog as a filler. Every suggestion stays
+    in the product's own shop (stock or pre-order). Built on `products_list` so
+    it inherits the sellable filter and the prefetches the public list
+    serializer depends on."""
     same_category = Q(category_id=product.category_id)
     same_brand = Q(brand_id=product.brand_id) if product.brand_id else Q(pk__in=[])
     merchandised = Q(featured=True) | Q(trending=True)
@@ -213,7 +214,9 @@ def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -
         When(same_brand, then=Value(1)), default=Value(0)
     )
     return list(
-        products_list(is_active=True, sellable_only=True)
+        products_list(
+            is_active=True, sellable_only=True, category_type=product.category.category_type
+        )
         .exclude(pk=product.pk)
         .filter(same_category | same_brand | merchandised)
         .annotate(relevance=score)

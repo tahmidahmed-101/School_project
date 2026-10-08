@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.kullmart.com/api/v1/public" } }));
 
-const { normalizeImageUrl, toCategoryInfo } = await import("../data/adapters");
+const { normalizeImageUrl, toCategoryInfo, toProduct } = await import("../data/adapters");
 
 describe("normalizeImageUrl", () => {
   it("puts media paths on the API origin", () => {
@@ -39,5 +39,41 @@ describe("toCategoryInfo", () => {
 
   it("counts nothing when an older API sends no count and no products are given", () => {
     expect(toCategoryInfo(category).itemCount).toBe(0);
+  });
+});
+
+describe("toProduct pre-order state", () => {
+  const variant = (fields: Record<string, unknown>) => ({
+    id: "v1",
+    sku: "SKU-1",
+    price: "1000.00",
+    effective_price: "1000.00",
+    compare_at_price: null,
+    in_stock: false,
+    color: "",
+    size: "",
+    is_preorder_enabled: true,
+    is_preorder_active: false,
+    is_preorder_upcoming: false,
+    preorder_start_date: null,
+    preorder_end_date: null,
+    release_date: null,
+    preorder_stock_limit: null,
+    preordered_quantity: 0,
+    preorder_remaining: null,
+    ...fields,
+  });
+  const product = (fields: Record<string, unknown>, kind?: string) =>
+    toProduct({ id: "p1", category_id: "c1", kind, name: "Boot", slug: "boot", variants: [variant(fields)] } as never, []);
+
+  it("marks a pre-order that has not opened as upcoming and not buyable", () => {
+    const shown = product({ is_preorder_upcoming: true, in_stock: true }, "preorder");
+    expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "upcoming" });
+  });
+
+  it("sells an ended pre-order from stock, and calls it closed when there is none", () => {
+    expect(product({ in_stock: true })).toMatchObject({ isPreOrder: false, inStock: true });
+    expect(product({ in_stock: true }).preorderStatus).toBeUndefined();
+    expect(product({ in_stock: false })).toMatchObject({ inStock: false, preorderStatus: "closed" });
   });
 });
