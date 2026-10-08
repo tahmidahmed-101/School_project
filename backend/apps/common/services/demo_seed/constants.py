@@ -308,7 +308,12 @@ HERO_SLIDES: list[tuple[str, tuple[int, int, int], str, str, str, str, str]] = [
 # Placement, then the line in English and Bangla.
 PROMO_LINES: list[tuple[str, str, str]] = [
     (
-        "both",
+        "home",
+        "Demo store: cash on delivery, bKash and Nagad accepted",
+        "ডেমো স্টোর: ক্যাশ অন ডেলিভারি, বিকাশ আর নগদে পেমেন্ট করা যায়",
+    ),
+    (
+        "preorder",
         "Demo store: cash on delivery, bKash and Nagad accepted",
         "ডেমো স্টোর: ক্যাশ অন ডেলিভারি, বিকাশ আর নগদে পেমেন্ট করা যায়",
     ),

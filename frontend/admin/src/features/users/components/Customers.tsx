@@ -9,8 +9,10 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge, DateCell, TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { bulkDeactivateUsers, fetchAll, postData, restoreUser, activateUser } from "@/features/users/slices/customerSlice"
+import { customerDetailPath } from "@/features/users/paths"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 import { UserAvatar } from "./UserAvatar"
@@ -46,7 +48,10 @@ const statusOptions: Option[] = [
 ]
 
 const Customers = () => {
-  useDocumentTitle("Customers")
+  const kind = useKind()
+  const isPreorder = kind === "preorder"
+  const title = isPreorder ? "Pre-order customers" : "Customers"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -59,9 +64,8 @@ const Customers = () => {
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: customerState,
-    params: { role: "customer", is_active: statusFilter?.value },
+    params: { role: "customer", kind, is_active: statusFilter?.value },
   })
-
 
   const columns: ColumnDef<AdminUser>[] = [
     {
@@ -101,7 +105,7 @@ const Customers = () => {
       cell: ({ row }) => (
         <TableActions
           itemName={displayNameOf(row.original)}
-          viewUrl={`/customer_detail/${row.original.id}`}
+          viewUrl={customerDetailPath(kind, row.original.id)}
         />
       ),
     },
@@ -110,30 +114,34 @@ const Customers = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Customers"
+        title={title}
+        description={isPreorder ? "People who have placed a pre-order." : undefined}
         actions={
-          <>
-            <RestoreDeletedButton<AdminUser>
-              noun="customers"
-              endpoint="/admin/users/"
-              params={{ role: "customer" }}
-              restore={(item) => dispatch(restoreUser(item.id)).unwrap()}
-              label={(item) => displayNameOf(item)}
-              sub={(item) => item.email}
-              onRestored={list.reload}
-            />
-            <CsvImportButton
-              entityName="customers"
-              fields={CUSTOMER_IMPORT_FIELDS}
-              createRow={(payload) =>
-                dispatch(postData({ payload: { ...payload, role: "customer" } as Partial<AdminUser> })).unwrap()
-              }
-              onComplete={list.reload}
-            />
-            <Button size="action" onClick={() => setAddOpen(true)}>
-              <PlusIcon className="size-5" /> Add Customer
-            </Button>
-          </>
+          // A new customer has no pre-order yet, so adding and importing live on the Customers page.
+          !isPreorder && (
+            <>
+              <RestoreDeletedButton<AdminUser>
+                noun="customers"
+                endpoint="/admin/users/"
+                params={{ role: "customer", kind }}
+                restore={(item) => dispatch(restoreUser(item.id)).unwrap()}
+                label={(item) => displayNameOf(item)}
+                sub={(item) => item.email}
+                onRestored={list.reload}
+              />
+              <CsvImportButton
+                entityName="customers"
+                fields={CUSTOMER_IMPORT_FIELDS}
+                createRow={(payload) =>
+                  dispatch(postData({ payload: { ...payload, role: "customer" } as Partial<AdminUser> })).unwrap()
+                }
+                onComplete={list.reload}
+              />
+              <Button size="action" onClick={() => setAddOpen(true)}>
+                <PlusIcon className="size-5" /> Add Customer
+              </Button>
+            </>
+          )
         }
       />
 
@@ -166,17 +174,19 @@ const Customers = () => {
         data={customers}
         {...list.tableProps}
         onRowClick={(customer) => {
-          if (!customer.deleted_at) navigate(`/customer_detail/${customer.id}`)
+          if (!customer.deleted_at) navigate(customerDetailPath(kind, customer.id))
         }}
         emptyTitle="No customers found"
-        emptyDescription="No customer accounts match these filters."
+        emptyDescription={
+          isPreorder ? "No one with a pre-order matches these filters." : "No customer accounts match these filters."
+        }
         minWidth="900px"
         columnWidths={["300px", "160px", "130px", "120px", "80px"]}
       />
       <CustomerFormDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        onSaved={(created) => navigate(`/customer_detail/${created.id}`)}
+        onSaved={(created) => navigate(customerDetailPath(kind, created.id))}
       />
     </div>
   )

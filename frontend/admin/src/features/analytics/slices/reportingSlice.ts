@@ -4,9 +4,7 @@ import { unwrapEnvelope } from "@/lib/api/envelope"
 import { previousWindow, rangeKey } from "../dateRange"
 import type {
   DashboardData,
-  DateRangeParams,
   LowStockItem,
-  PreorderSummary,
   ReportQuery,
   SalesTrendPoint,
   StockTurnover,
@@ -38,7 +36,6 @@ interface ReportingState {
   salesTrend: Resource<SalesTrendPoint[]>
   stockTurnover: Resource<TurnoverComparison>
   lowStock: Resource<LowStockItem[]>
-  preorderSummary: Resource<{ summary: PreorderSummary | null }>
 }
 
 const empty = <T>(): Resource<T> => ({
@@ -54,7 +51,6 @@ const initialState: ReportingState = {
   salesTrend: empty(),
   stockTurnover: empty(),
   lowStock: empty(),
-  preorderSummary: empty(),
 }
 
 export const fetchDashboard = createAsyncThunk(
@@ -63,19 +59,6 @@ export const fetchDashboard = createAsyncThunk(
     try {
       const res = await api.get("/admin/reporting/dashboard/", { params: query, signal })
       return unwrapEnvelope<DashboardData>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
-)
-
-/** The dashboard's `preorder` block comes only on a request without `kind`; nothing else of that answer is kept. */
-export const fetchPreorderSummary = createAsyncThunk(
-  "reporting/fetchPreorderSummary",
-  async (range: DateRangeParams, { rejectWithValue, signal }) => {
-    try {
-      const res = await api.get("/admin/reporting/dashboard/", { params: range, signal })
-      return { summary: unwrapEnvelope<DashboardData>(res.data).preorder ?? null }
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
@@ -187,12 +170,6 @@ const reportingSlice = createSlice({
       .addCase(fetchLowStock.pending, (s, a) => onPending(s.lowStock, a.meta.requestId))
       .addCase(fetchLowStock.fulfilled, (s, a) => onFulfilled(s.lowStock, a.meta.requestId, a.payload, ""))
       .addCase(fetchLowStock.rejected, (s, a) => onRejected(s.lowStock, a))
-
-      .addCase(fetchPreorderSummary.pending, (s, a) => onPending(s.preorderSummary, a.meta.requestId))
-      .addCase(fetchPreorderSummary.fulfilled, (s, a) =>
-        onFulfilled(s.preorderSummary, a.meta.requestId, a.payload, rangeKey(a.meta.arg))
-      )
-      .addCase(fetchPreorderSummary.rejected, (s, a) => onRejected(s.preorderSummary, a))
   },
 })
 

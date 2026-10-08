@@ -86,7 +86,7 @@ def test_rows_are_bilingual_and_the_image_url_is_absolute(api_client):
         {
             "id": str(line.id),
             "text": {"en": "Free delivery", "bn": "ফ্রি ডেলিভারি"},
-            "placement": "both",
+            "placement": "home",
         }
     ]
 

@@ -70,11 +70,30 @@ def test_hero_slide_is_created_from_a_multipart_upload(admin_client):
     assert slide.image.name.startswith("hero/")
 
 
-def test_hero_slide_defaults_to_both_placements(admin_client):
-    response = admin_client.post(SLIDES, {"image": png()}, format="multipart")
+@pytest.mark.parametrize("payload", [{}, {"placement": "both"}])
+def test_hero_slide_must_name_one_shop(admin_client, payload):
+    response = admin_client.post(SLIDES, {"image": png(), **payload}, format="multipart")
 
-    assert response.status_code == 201
-    assert response.data["data"]["placement"] == "both"
+    assert response.status_code == 400
+    assert "placement" in response.data["error"]["fields"]
+    assert not HeroSlide.objects.exists()
+
+
+def test_an_old_both_row_can_be_edited_but_never_set_back_to_both(admin_client):
+    slide = HeroSlide.objects.create(image=png(), placement="both")
+    line = PromoLine.objects.create(text_en="Free delivery", placement="both")
+
+    untouched = admin_client.patch(f"{LINES}{line.id}/", {"is_active": False}, format="json")
+    assert untouched.status_code == 200
+    assert untouched.data["data"]["placement"] == "both"
+
+    for url in (f"{SLIDES}{slide.id}/", f"{LINES}{line.id}/"):
+        refused = admin_client.patch(url, {"placement": "both"}, format="json")
+        assert refused.status_code == 400
+        assert "placement" in refused.data["error"]["fields"]
+
+    moved = admin_client.patch(f"{SLIDES}{slide.id}/", {"placement": "preorder"}, format="json")
+    assert moved.data["data"]["placement"] == "preorder"
 
 
 def test_hero_slide_needs_an_image_on_create(admin_client):
@@ -93,7 +112,9 @@ def test_hero_slide_rejects_an_unknown_placement_and_a_scripted_link(admin_clien
     assert "placement" in bad_placement.data["error"]["fields"]
 
     bad_link = admin_client.post(
-        SLIDES, {"image": png(), "link_url": "javascript:alert(1)"}, format="multipart"
+        SLIDES,
+        {"image": png(), "placement": "home", "link_url": "javascript:alert(1)"},
+        format="multipart",
     )
     assert bad_link.status_code == 400
     assert "link_url" in bad_link.data["error"]["fields"]
@@ -159,7 +180,9 @@ def test_unknown_ids_answer_404(admin_client):
 
 def test_promo_line_crud(admin_client):
     created = admin_client.post(
-        LINES, {"text_en": "Free delivery", "text_bn": "ফ্রি ডেলিভারি"}, format="json"
+        LINES,
+        {"text_en": "Free delivery", "text_bn": "ফ্রি ডেলিভারি", "placement": "home"},
+        format="json",
     )
     assert created.status_code == 201
     line = PromoLine.objects.get()
@@ -167,7 +190,7 @@ def test_promo_line_crud(admin_client):
         "id": str(line.id),
         "text_en": "Free delivery",
         "text_bn": "ফ্রি ডেলিভারি",
-        "placement": "both",
+        "placement": "home",
         "sort_order": 0,
         "is_active": True,
     }
@@ -194,7 +217,13 @@ def test_promo_line_needs_english_text_but_not_bangla(admin_client):
     assert admin_client.post(LINES, {"text_bn": "শুধু বাংলা"}, format="json").status_code == 400
     assert admin_client.post(LINES, {"text_en": ""}, format="json").status_code == 400
 
-    english_only = admin_client.post(LINES, {"text_en": "English only"}, format="json")
+    no_shop = admin_client.post(LINES, {"text_en": "No shop named"}, format="json")
+    assert no_shop.status_code == 400
+    assert "placement" in no_shop.data["error"]["fields"]
+
+    english_only = admin_client.post(
+        LINES, {"text_en": "English only", "placement": "preorder"}, format="json"
+    )
     assert english_only.status_code == 201
     assert english_only.data["data"]["text_bn"] == ""
 

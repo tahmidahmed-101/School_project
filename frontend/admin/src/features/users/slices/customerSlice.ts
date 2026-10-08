@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
 import { api, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope, unwrapItem } from "@/lib/api/envelope"
+import type { Kind } from "@/hooks/use-kind"
 import type { AdminAddress, AdminUser } from "../types"
 
 // /admin/users/ (admin-only). List filters: role, is_active, search, include_deleted.
@@ -48,6 +49,19 @@ export const resetUserPassword = createAsyncThunk(
     try {
       await api.post(`/admin/users/${id}/reset-password/`, { new_password })
       return id
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+/** GET /admin/users/{id}/?kind= — the customer's order figures on one half. Held in local state. */
+export const fetchOrderSummary = createAsyncThunk(
+  "customers/fetchOrderSummary",
+  async ({ id, kind }: { id: string; kind: Kind }, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get(`/admin/users/${id}/`, { params: { kind }, signal })
+      return unwrapItem<AdminUser>(res.data).order_summary ?? null
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }

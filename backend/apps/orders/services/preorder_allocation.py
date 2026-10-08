@@ -21,6 +21,7 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
     deposit has not come in. Each allocated unit is a normal reservation, which
     is what lets the line ship and what cancelling the order releases.
     """
+    # TODO(ask): arrived pre-order goods share the default warehouse with shop stock. Keep?
     warehouse = get_or_create_default_warehouse()
     lines = list(
         SalesOrderLine.objects.select_for_update()

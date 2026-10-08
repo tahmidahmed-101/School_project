@@ -159,6 +159,7 @@ def checkout(
                 "Delivery is not available yet — no shipping zones are configured.",
                 code="no_shipping_zone",
             )
+        # TODO(ask): pre-orders pay the same zone and weight rate as stock orders. Is that intended?
         order.shipping_total = quote_shipping(
             zone=zone, weight=order_weight(order), carrier=carrier
         )

@@ -105,6 +105,43 @@ Forms:
 - `kind` also on `inventory/stock-status/`, `reporting/low-stock/`, `accounting/reports/inventory-valuation/`,
   the ledger export; variants export takes `category_type`; variants import refuses pre-order rows.
 
+## Delivery, payment and warehouse set-up: what the code does per kind (2026-10-09)
+
+Nothing below was changed. Each row with a `TODO(ask)` is one setting driving both halves; no second setting was made.
+
+| Area | Stock | Pre-order | Where |
+| --- | --- | --- | --- |
+| Delivery charge | Zone matched on the address text, rate by weight and carrier | The same; no kind check | `backend/apps/orders/services/checkout.py:156-166`, `backend/apps/logistics/services/rates.py:18-58` |
+| Zones, rates, carriers | One set | The same set; the models have no kind field | `backend/apps/logistics/models/shipping_zone.py`, `shipping_rate.py`, `carrier.py` |
+| Payment methods offered | Enabled methods that the storefront supports (cash on delivery, bKash, Nagad) | The same list | `backend/api/v1/public/business/views.py:48-53`, `backend/apps/orders/constants.py:20-24` |
+| Amount due at checkout | Whole order total | `preorder_deposit_percent` of the total | `backend/apps/orders/selectors/payments.py:29-35` |
+| Cash on delivery | Order is confirmed at once | Stays "awaiting payment" until the deposit is recorded, when the deposit is above zero | `backend/apps/orders/services/payments.py:77-84` |
+| Coupon | Applied | Dropped | `backend/apps/orders/services/checkout.py:62-64` |
+| Stock at checkout | Reserved from the default warehouse | Nothing reserved; set aside later by "allocate" | `backend/apps/orders/services/checkout.py:136-140`, `backend/apps/orders/services/preorder_allocation.py:17-74` |
+
+- The only rule that differs by kind and has a setting is the deposit percent. It already has its page: `/preorder_settings`.
+- `TODO(ask)`: should a pre-order pay the local delivery charge by the same zone and weight table as a stock order?
+  A per-kind version needs a kind on `ShippingRate` (unique per zone, carrier and kind), `kind` on the rates list,
+  and `quote_shipping` taking the order's kind.
+- `TODO(ask)`: should the payment methods be switched on and off per half (for example no cash on delivery on
+  pre-orders)? A per-kind version needs one on/off per method per kind on `PaymentMethodSetting`, the public
+  `/payment-methods/` list taking the basket's kind, and the guest checkout check using it.
+- `TODO(ask)`: should arrived pre-order goods sit in their own warehouse?
+
+Warehouses today:
+
+- A warehouse has no kind (`backend/apps/inventory/models/warehouse.py:10-17`). Stock is one row per variant per
+  warehouse (`stock_item.py:46-53`), and a variant is one kind through its category, so the two halves never share
+  a row but do share a warehouse.
+- Goods receipts pass no warehouse, so every receipt of either kind lands in the default warehouse
+  (`backend/apps/procurement/services/goods_receipt.py:61-69`, `backend/apps/inventory/services/stock.py:19-27`).
+- Checkout, staff orders and shipments reserve and ship from the default warehouse only (no `warehouse=` passed:
+  `checkout.py:140`, `orders.py:268,342`, `shipments.py:120-121,316,481`).
+- Pre-order allocation reads and reserves only the default warehouse (`preorder_allocation.py:25,41-45,53`). Stock
+  moved to another warehouse is not seen by allocation or by checkout.
+- A separate pre-order warehouse would need: a kind (or a "pre-order default") on `Warehouse`, goods receipts choosing
+  the warehouse by the purchase order's kind, and allocation and shipping using it.
+
 ## Out of scope
 
 Separate tables, a "move to shop stock" action, trimming the stage list, storefront changes.

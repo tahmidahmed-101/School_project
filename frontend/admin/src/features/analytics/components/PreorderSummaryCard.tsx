@@ -10,33 +10,27 @@ export function PreorderSummaryCard({ summary, className }: { summary: PreorderS
   const canOpenOrders = useCan("orders.view")
 
   const tiles = [
-    summary.open_orders !== undefined && {
-      label: "Open pre-orders",
-      value: formatCount(summary.open_orders),
-      hint: "Not yet delivered",
-    },
-    summary.deposits_held !== undefined && {
+    { label: "Open pre-orders", value: formatCount(summary.open_orders), hint: "Not yet delivered" },
+    {
       label: "Deposits held",
       value: formatCurrency(summary.deposits_held),
       hint: "Paid in advance for goods not yet delivered. Not sales.",
     },
-    summary.balances_outstanding !== undefined && {
+    {
       label: "Balances to collect",
       value: formatCurrency(summary.balances_outstanding),
       hint: "Still owed on open pre-orders",
     },
-  ].filter((tile) => tile !== false)
-
-  if (tiles.length === 0) return null
+  ]
 
   return (
     <Card className={cn("gap-0 py-0", className)}>
       <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border px-5 py-4 [.border-b]:pb-4">
         <div className="min-w-0">
           <CardTitle level={2} className="text-base font-semibold">
-            Pre-orders
+            Open pre-orders
           </CardTitle>
-          <CardDescription className="mt-0.5 text-xs">Kept apart from stock sales.</CardDescription>
+          <CardDescription className="mt-0.5 text-xs">As of now, whatever dates are picked above.</CardDescription>
         </div>
         {canOpenOrders && (
           <Link to="/preorders" className="shrink-0 text-sm font-medium text-primary hover:underline">

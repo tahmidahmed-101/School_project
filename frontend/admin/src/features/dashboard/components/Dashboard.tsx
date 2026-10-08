@@ -5,9 +5,10 @@ import { getNavGroups } from "@/app/modules"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
+import { kindOfPath } from "@/hooks/use-kind"
 import { isForbidden } from "@/lib/api/client"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
-import { REPORT_PERMISSIONS, useDashboardReport, usePreorderSummary } from "@/features/analytics/hooks"
+import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hooks"
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
 import { KpiCards } from "@/features/analytics/components/KpiCards"
 import { RevenueComparisonChart } from "@/features/analytics/components/RevenueComparisonChart"
@@ -15,7 +16,6 @@ import { CategoryBreakdown } from "@/features/analytics/components/CategoryBreak
 import { TopProductsTable } from "@/features/analytics/components/TopProductsTable"
 import { LowStockAlerts } from "@/features/analytics/components/LowStockAlerts"
 import { FulfillmentStatus } from "@/features/analytics/components/FulfillmentStatus"
-import { PreorderSummaryCard } from "@/features/analytics/components/PreorderSummaryCard"
 import { RecentOrders } from "@/features/analytics/components/RecentOrders"
 import { ReportsUnavailable } from "@/features/analytics/components/ReportsUnavailable"
 
@@ -26,7 +26,6 @@ const Dashboard = () => {
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
   const report = useDashboardReport(range, "stock", canView)
-  const preorder = usePreorderSummary(range, canView)
   const blocked = !canView || isForbidden(report.error)
 
   // Where to send a user who can't see metrics: the first few pages they *can* open.
@@ -34,7 +33,7 @@ const Dashboard = () => {
     () =>
       getNavGroups(permissions)
         .flatMap((g) => g.sections.flatMap((s) => s.items))
-        .filter((item) => item.url !== "/" && item.url !== "/analytics")
+        .filter((item) => kindOfPath(item.url) === "stock" && item.url !== "/" && item.url !== "/analytics")
         .slice(0, 4)
         .map((item) => ({ to: item.url, label: item.title })),
     [permissions]
@@ -47,7 +46,6 @@ const Dashboard = () => {
     <div className="section-container flex flex-col gap-5">
       <PageHeader
         title="Overview"
-        description={blocked ? undefined : "Stock figures. Pre-orders are counted apart, in their own card."}
         actions={
           !blocked && (
             <DateRangeControl
@@ -67,15 +65,13 @@ const Dashboard = () => {
         <>
           <KpiCards kpis={d?.kpis} {...state} />
 
-          {preorder.data?.summary && <PreorderSummaryCard summary={preorder.data.summary} />}
-
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <RevenueComparisonChart points={d?.revenue} {...state} className="xl:col-span-2" />
             <CategoryBreakdown kind="stock" categories={d?.categories} {...state} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <TopProductsTable products={d?.top_products} {...state} className="xl:col-span-2" />
+            <TopProductsTable kind="stock" products={d?.top_products} {...state} className="xl:col-span-2" />
             {/* Top products sets the row's height. Low stock is taken out of the flow on wide
                 screens so it matches that height and scrolls its list, instead of stretching
                 the row to fit every low-stock variant. */}
@@ -90,7 +86,7 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <RecentOrders orders={d?.orders} {...state} className="xl:col-span-2" />
+            <RecentOrders kind="stock" orders={d?.orders} {...state} className="xl:col-span-2" />
             <FulfillmentStatus metrics={d?.fulfillment} {...state} />
           </div>
 

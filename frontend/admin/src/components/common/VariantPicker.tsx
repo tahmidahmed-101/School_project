@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDebouncedSearch } from "@/hooks/use-debounced-search"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { api } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency } from "@/lib/format"
@@ -68,6 +69,15 @@ const toPicked = (v: VariantHit): PickedVariant => ({
   stock: v.stock,
 })
 
+/** The half the listed items belong to: the caller's `category_type` filter, else the page's half. */
+function useListedKind(filters: Record<string, unknown> | undefined): Kind {
+  const pageKind = useKind()
+  const asked = filters?.category_type
+  return asked === "stock" || asked === "preorder" ? asked : pageKind
+}
+
+const onHandLabel = (kind: Kind, count: number) => (kind === "preorder" ? `${count} arrived` : `${count} in stock`)
+
 async function fetchVariants(params: Record<string, unknown>, signal: AbortSignal) {
   const res = await api.get("/admin/catalog/variants/", { params: { page: 1, page_size: 20, ...params }, signal })
   return unwrapList<VariantHit>(res.data, 1, 20).items
@@ -90,6 +100,7 @@ function InlineVariantPicker({
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
+  const kind = useListedKind(filters)
   const filtersKey = JSON.stringify(filters ?? {})
   const { results, loading } = useDebouncedSearch({
     query: query.trim(),
@@ -191,7 +202,7 @@ function InlineVariantPicker({
                     </div>
                     <div className="shrink-0 text-right text-xs text-muted-foreground">
                       <div>{formatCurrency(v.price)}</div>
-                      <div>{v.stock} in stock</div>
+                      <div>{onHandLabel(kind, v.stock)}</div>
                     </div>
                   </button>
                 </li>
@@ -205,6 +216,7 @@ function InlineVariantPicker({
 }
 
 function ComboboxVariantPicker({ value, onChange, filters, invalid, id }: ComboboxProps) {
+  const kind = useListedKind(filters)
   const filtersKey = JSON.stringify(filters ?? {})
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -272,7 +284,7 @@ function ComboboxVariantPicker({ value, onChange, filters, invalid, id }: Combob
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{variantLabel(v)}</p>
                   <p className="text-xs text-muted-foreground font-mono">
-                    {v.sku} · {v.stock} in stock
+                    {v.sku} · {onHandLabel(kind, v.stock)}
                   </p>
                 </div>
               </button>

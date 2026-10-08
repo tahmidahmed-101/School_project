@@ -86,6 +86,7 @@ export interface IntegrationStatus {
 
 // ---- storefront content (/admin/settings/hero-slides/, /admin/settings/promo-lines/) ----
 
+/** `both` is read-only: rows saved before the split keep it until `split_both_placements` has run. */
 export type HeroSlidePlacement = "home" | "preorder" | "both"
 
 /** The placement one settings page edits: `home` on stock Settings, `preorder` on Pre-order Settings. */

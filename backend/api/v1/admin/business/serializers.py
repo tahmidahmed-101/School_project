@@ -7,7 +7,8 @@ from django.core.validators import URLValidator
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from apps.business.models import HeroPlacement, PolicyKind
+from apps.business.models import PolicyKind
+from apps.business.models.storefront_content import WRITABLE_PLACEMENTS
 from apps.business.policy_content import missing_policy_fields
 from apps.common.serializers import user_label
 
@@ -273,7 +274,8 @@ class AdminHeroSlideSerializer(serializers.Serializer):
 
 
 class AdminHeroSlideWriteSerializer(serializers.Serializer):
-    """Used with `partial=True` on PATCH, so `image` is only mandatory on create."""
+    """Used with `partial=True` on PATCH, so `image` and `placement` are only
+    mandatory on create. A row belongs to one shop: `both` is refused."""
 
     image = serializers.ImageField()
     alt_text = serializers.CharField(required=False, allow_blank=True, max_length=200)
@@ -282,7 +284,7 @@ class AdminHeroSlideWriteSerializer(serializers.Serializer):
     title_en = serializers.CharField(required=False, allow_blank=True, max_length=160)
     title_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
     link_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    placement = serializers.ChoiceField(choices=HeroPlacement.choices, required=False)
+    placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS)
     sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
     is_active = _OmittableBooleanField(required=False)
 
@@ -304,6 +306,6 @@ class AdminPromoLineSerializer(serializers.Serializer):
 class AdminPromoLineWriteSerializer(serializers.Serializer):
     text_en = serializers.CharField(max_length=160)
     text_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
-    placement = serializers.ChoiceField(choices=HeroPlacement.choices, required=False)
+    placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS)
     sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
     is_active = _OmittableBooleanField(required=False)

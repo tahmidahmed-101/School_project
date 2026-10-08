@@ -95,7 +95,7 @@ def test_dashboard_for_one_kind_shows_only_that_kind(admin_client, sales, kind, 
 
     data = _get(admin_client, "dashboard/", kind=kind)
 
-    assert "preorder" not in data
+    assert ("preorder" in data) == (kind == PREORDER)
     assert _kpi(data, "Orders") == 1
     assert _kpi(data, "Revenue") == float(order.grand_total)
     assert _kpi(data, "Low Stock") == 1
