@@ -10,7 +10,8 @@ import { WithActiveCategory } from "@/modules/catalog";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 const SHOP_PATH = "/shop";
-const READY_STOCK_PATH = "/shop?type=normal";
+// Ready stock is the home page, so its nav link doubles as the Home link.
+const READY_STOCK_PATH = "/";
 
 const POLICY_LINKS = [
   { href: "/return-policy", key: "footerReturnPolicy" },
@@ -69,7 +70,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         href={READY_STOCK_PATH}
                         onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                          pathname === SHOP_PATH && !activeCategory
+                          pathname === READY_STOCK_PATH || (pathname === SHOP_PATH && !activeCategory)
                             ? "bg-white/10 text-gold-300"
                             : "text-white/80 hover:bg-white/10 hover:text-white"
                         }`}

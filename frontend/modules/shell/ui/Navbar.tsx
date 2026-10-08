@@ -19,7 +19,8 @@ import { containerClass } from "@/design-system/ui/Container";
 import { CountBadge } from "@/design-system/ui/CountBadge";
 
 const SHOP_PATH = "/shop";
-const READY_STOCK_PATH = "/shop?type=normal";
+// Ready stock is the home page, so its nav link doubles as the Home link.
+const READY_STOCK_PATH = "/";
 
 interface NavLink {
   label: UiKey;
@@ -29,7 +30,11 @@ interface NavLink {
 
 function buildNavLinks(pathname: string, activeCategory: string | null): NavLink[] {
   return [
-    { label: "navReadyStock", href: READY_STOCK_PATH, isActive: pathname === SHOP_PATH && !activeCategory },
+    {
+      label: "navReadyStock",
+      href: READY_STOCK_PATH,
+      isActive: pathname === READY_STOCK_PATH || (pathname === SHOP_PATH && !activeCategory),
+    },
     { label: "navPreOrder", href: "/pre-order", isActive: pathname.startsWith("/pre-order") },
   ];
 }

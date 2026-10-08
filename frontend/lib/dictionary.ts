@@ -137,11 +137,11 @@ export const DICT = {
   filterAny: { en: "Any", bn: "যেকোনো" },
   itemsFound: { en: "products found", bn: "টি পণ্য পাওয়া গেছে" },
   noProductsFound: { en: "No products matched your filters.", bn: "কোনো পণ্য খুঁজে পাওয়া যায়নি।" },
-  resetFilters: { en: "Reset all filters", bn: "ফিল্টার রিসেট করুন" },
+  resetFilters: { en: "Reset", bn: "রিসেট" },
 
   // Product Card & Detail
   addToCart: { en: "Add to cart", bn: "কার্টে নিন" },
-  buyNow: { en: "Buy now", bn: "এখনই অর্ডার করুন" },
+  buyNow: { en: "Buy now", bn: "অর্ডার করুন" },
   productCode: { en: "Code", bn: "কোড" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },

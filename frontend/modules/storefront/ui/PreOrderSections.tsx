@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
 import { VoucherSection, type Voucher } from "@/modules/marketing";
-import { TrendingSection } from "@/modules/catalog";
+import { CategoryShowcase, TrendingSection } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
 import { useCatalog, useProducts } from "@/modules/catalog";
@@ -50,6 +50,7 @@ export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
       <Hero heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`} shopLink="/shop?type=preorder" preorder />
       <PromoMarquee />
       <VoucherSection vouchers={vouchers} />
+      <CategoryShowcase preorder />
 
       {preorderProducts.length === 0 ? (
         <section className="border-b border-ink-200 bg-canvas py-8 sm:py-14">

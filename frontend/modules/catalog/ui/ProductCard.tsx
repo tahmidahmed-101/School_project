@@ -151,10 +151,11 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               </button>
               <Button
                 size="xs"
-                className="flex-1"
+                // Tighter than the xs default, and no icon on the narrowest phones: the Bangla label must stay inside the card.
+                className="min-w-0 flex-1 gap-1! px-2! sm:gap-2! sm:px-3!"
                 onClick={buyNow}
                 aria-label={`${ui("buyNow")} - ${t(product.name)}`}
-                leadingIcon={<Zap className="h-3.5 w-3.5 shrink-0 fill-current" />}
+                leadingIcon={<Zap className="h-3.5 w-3.5 shrink-0 fill-current max-[359px]:hidden" />}
               >
                 {ui("buyNow")}
               </Button>

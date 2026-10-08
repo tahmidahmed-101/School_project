@@ -1,20 +1,13 @@
 "use client";
 
-import { Check, Layers, Sparkles } from "lucide-react";
+import { Layers, Sparkles } from "lucide-react";
 import { useCatalog, useProducts } from "../context";
 import { useLang } from "@/lib/i18n";
-import { PRICE_STEP, priceBounds, type FilterChange, type FilterState, type StockType } from "../domain/shop-filters";
+import { PRICE_STEP, priceBounds, type FilterChange, type FilterState } from "../domain/shop-filters";
 import type { T } from "@/lib/types";
 import { FilterSelect } from "./FilterSelect";
 
 const ALL_ITEMS: T = { en: "All items", bn: "সব আইটেম" };
-
-const STOCK_TITLE: T = { en: "Availability", bn: "প্রাপ্যতা" };
-
-const STOCK_OPTIONS: { id: StockType; label: T }[] = [
-  { id: "normal", label: { en: "Stock items", bn: "স্টক আইটেম" } },
-  { id: "preorder", label: { en: "Pre-order items", bn: "প্রি-অর্ডার আইটেম" } },
-];
 
 const COLLECTIONS: { id: string; label: T }[] = [
   { id: "all", label: { en: "All drops", bn: "সব পণ্য" } },
@@ -35,8 +28,8 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   const { products } = useProducts();
   const { min: minPrice, max: maxPrice } = priceBounds(products);
 
-  // The category list scopes to whichever stock/pre-order tree is selected; a category from the other
-  // tree can't match any product for that stockType anyway (see matchesFilters in lib/shop-filters).
+  // Stock or pre-order is decided by the link that led here (`?type=`), not by the visitor: the shop
+  // stays inside one catalogue, and so does its category list.
   const visibleCategories = categories.filter(
     (c) => c.type === (filters.stockType === "preorder" ? "preorder" : "stock"),
   );
@@ -48,42 +41,6 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
   return (
     <div className="space-y-6 text-xs text-fg">
-      <div role="radiogroup" aria-label={t(STOCK_TITLE)} className="space-y-2">
-        <h5 className="text-2xs font-bold tracking-wider text-gold-800">{t(STOCK_TITLE)}</h5>
-        {STOCK_OPTIONS.map((opt) => {
-          const checked = filters.stockType === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              onClick={() => {
-                onFilterChange("stockType", opt.id);
-                // Drop a category selection that doesn't exist in the tree we're switching to.
-                const nextType = opt.id === "preorder" ? "preorder" : "stock";
-                const stillValid =
-                  filters.category === "all" ||
-                  categories.some((c) => c.id === filters.category && c.type === nextType);
-                if (!stillValid) onFilterChange("category", "all");
-              }}
-              className="flex w-full cursor-pointer select-none items-center gap-2.5 text-left"
-            >
-              <span
-                className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                  checked ? "border-gold-500 bg-accent text-white" : "border-ink-300 bg-canvas"
-                }`}
-              >
-                {checked && <Check className="h-3 w-3" strokeWidth={3} />}
-              </span>
-              <span className={`text-xs font-semibold ${checked ? "text-gold-800" : "text-ink-800"}`}>
-                {t(opt.label)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       <div className="relative">
         <div className="mb-2 flex items-center justify-between">
           <h5 className="text-2xs font-bold tracking-wider text-gold-800">{ui("filterCategories")}</h5>
