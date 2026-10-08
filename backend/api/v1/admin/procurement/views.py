@@ -126,7 +126,9 @@ class AdminSupplierListCreateView(
     default_ordering = "name"
 
     def get_queryset(self):
-        return suppliers_list(include_deleted=self.include_deleted())
+        return suppliers_list(
+            include_deleted=self.include_deleted(), kind=get_kind(self.request.query_params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)

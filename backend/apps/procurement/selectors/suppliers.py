@@ -8,9 +8,11 @@ from apps.procurement.models import Supplier
 
 
 def suppliers_list(
-    *, search: str | None = None, include_deleted: bool = False
+    *, search: str | None = None, include_deleted: bool = False, kind: str | None = None
 ) -> QuerySet[Supplier]:
     queryset = Supplier.objects.all()
+    if kind:
+        queryset = queryset.filter(kind=kind)
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     if search:

@@ -319,10 +319,11 @@ PROMO_LINES: list[tuple[str, str, str]] = [
     ),
 ]
 
-DEMO_BRANDS: list[tuple[str, str]] = [
-    ("Izara", "House label for shirting and panjabi."),
-    ("Padma Loom", "Knit and jersey basics."),
-    ("Northline", "Denim and trousers."),
+DEMO_BRANDS: list[tuple[str, str, str]] = [
+    ("Izara", "House label for shirting and panjabi.", "stock"),
+    ("Padma Loom", "Knit and jersey basics.", "stock"),
+    ("Northline", "Denim and trousers.", "stock"),
+    ("Farline Imports", "Imported goods brought in on pre-order.", "preorder"),
 ]
 
 PREORDER_CATEGORY = ("Pre-order Imports", "Ordered from the supplier after you book.")

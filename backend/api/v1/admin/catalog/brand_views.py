@@ -24,7 +24,7 @@ from apps.common.generics import (
     IncludeDeletedMixin,
     RestoreAPIView,
 )
-from apps.common.params import get_bool
+from apps.common.params import get_bool, get_kind
 from apps.common.responses import error_from_exception, not_found
 
 from .permissions import (
@@ -50,6 +50,7 @@ class AdminBrandListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gene
     def get_queryset(self):
         return brands_list(
             is_active=get_bool(self.request.query_params, "is_active"),
+            kind=get_kind(self.request.query_params),
             include_deleted=self.include_deleted(),
         )
 

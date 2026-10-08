@@ -60,7 +60,7 @@ const PurchaseOrderCreate = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCanManagePurchasing()
-  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/")
+  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind })
   const activeSuppliers = useMemo(() => suppliers.filter((s) => s.is_active), [suppliers])
 
   const {

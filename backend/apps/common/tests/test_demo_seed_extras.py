@@ -59,6 +59,13 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
     out = StringIO()
     call_command("fix_product_kind_mismatches", stdout=out)
     assert "0 variant(s) would change" in out.getvalue(), out.getvalue()
+    out = StringIO()
+    call_command("split_shared_suppliers_and_brands", stdout=out)
+    assert "0 row(s) would change" in out.getvalue(), out.getvalue()
+    assert set(Brand.objects.filter(products__isnull=False).values_list("kind", flat=True)) == {
+        "stock",
+        "preorder",
+    }
 
 
 def test_a_second_run_adds_nothing_and_a_wipe_removes_the_extras():

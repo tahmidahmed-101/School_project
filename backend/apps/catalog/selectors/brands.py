@@ -11,8 +11,11 @@ def brands_list(
     *,
     include_deleted: bool = False,
     is_active: bool | None = None,
+    kind: str | None = None,
 ) -> QuerySet[Brand]:
     queryset = Brand.objects.all()
+    if kind:
+        queryset = queryset.filter(kind=kind)
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     if is_active is not None:

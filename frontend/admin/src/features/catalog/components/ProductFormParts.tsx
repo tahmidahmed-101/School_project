@@ -28,11 +28,11 @@ import { ProductImagesSection } from "./ProductImagesSection"
 import { StagedImagesCard } from "./StagedImagesCard"
 
 /** Brands for the searchable picker. A failed load just leaves the list empty: brand is optional. */
-function useBrandOptions() {
+function useBrandOptions(kind: Kind) {
   const [options, setOptions] = useState<Option[]>([])
   useEffect(() => {
     let cancelled = false
-    fetchAllBrands()
+    fetchAllBrands(kind)
       .then((brands) => {
         if (!cancelled) setOptions(brands.map((b) => ({ label: b.name, value: b.id })))
       })
@@ -40,7 +40,7 @@ function useBrandOptions() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [kind])
   return options
 }
 
@@ -100,7 +100,7 @@ export function BasicsCard({
     register,
     formState: { errors },
   } = useFormContext<BaseValues>()
-  const brandOptions = useBrandOptions()
+  const brandOptions = useBrandOptions(kind)
   return (
     <Card>
       <CardHeader>

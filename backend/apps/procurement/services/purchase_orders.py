@@ -5,10 +5,20 @@ from django.db import transaction
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
 from apps.procurement.models import PurchaseOrder, PurchaseOrderLine
-from apps.procurement.selectors.kind import LINE_KIND
+from apps.procurement.selectors.kind import LINE_KIND, purchase_order_kind
 
 
-def _check_one_kind(purchase_order: PurchaseOrder | None, variants, *, skip_line=None) -> None:
+def _check_supplier_kind(supplier, kind: str) -> None:
+    if supplier.kind != kind:
+        raise BusinessRuleViolationError(
+            "Pick a supplier from the same side as the items: stock or pre-order.",
+            code="supplier_kind_mismatch",
+        )
+
+
+def _check_one_kind(
+    purchase_order: PurchaseOrder | None, variants, *, supplier, skip_line=None
+) -> None:
     kinds = {variant.product.category.category_type for variant in variants}
     if purchase_order is not None:
         lines = purchase_order.lines.all()
@@ -20,6 +30,9 @@ def _check_one_kind(purchase_order: PurchaseOrder | None, variants, *, skip_line
             "A purchase order holds stock items or pre-order items, not both.",
             code="purchase_kind_mismatch",
         )
+    for kind in kinds:
+        if purchase_order is None or kind != purchase_order_kind(purchase_order):
+            _check_supplier_kind(supplier, kind)
 
 
 @transaction.atomic
@@ -31,7 +44,7 @@ def create_purchase_order(
             "A purchase order needs at least one line.", code="no_lines"
         )
 
-    _check_one_kind(None, [line["variant"] for line in lines])
+    _check_one_kind(None, [line["variant"] for line in lines], supplier=supplier)
 
     po_number = generate_document_number("PO")
     while PurchaseOrder.objects.filter(po_number=po_number).exists():
@@ -96,6 +109,8 @@ def update_purchase_order(*, purchase_order: PurchaseOrder, data: dict) -> Purch
             raise BusinessRuleViolationError(
                 "Only a draft purchase order header can be edited.", code="not_draft"
             )
+        if "supplier" in update_fields and data["supplier"] != purchase_order.supplier:
+            _check_supplier_kind(data["supplier"], purchase_order_kind(purchase_order))
         for field in update_fields:
             setattr(purchase_order, field, data[field])
     if update_fields:
@@ -108,7 +123,7 @@ def add_purchase_order_line(
     *, purchase_order: PurchaseOrder, variant, quantity_ordered: int, unit_cost
 ) -> PurchaseOrderLine:
     _ensure_draft(purchase_order)
-    _check_one_kind(purchase_order, [variant])
+    _check_one_kind(purchase_order, [variant], supplier=purchase_order.supplier)
     return PurchaseOrderLine.objects.create(
         purchase_order=purchase_order,
         variant=variant,
@@ -123,7 +138,9 @@ def update_purchase_order_line(
 ) -> PurchaseOrderLine:
     _ensure_draft(purchase_order)
     if "variant" in data:
-        _check_one_kind(purchase_order, [data["variant"]], skip_line=line)
+        _check_one_kind(
+            purchase_order, [data["variant"]], supplier=purchase_order.supplier, skip_line=line
+        )
     allowed_fields = {"variant", "quantity_ordered", "unit_cost"}
     update_fields = [field for field in data if field in allowed_fields]
     for field in update_fields:
