@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Phone, MessageSquare, Sparkles } from "lucide-react";
-import { useBrand } from "@/modules/catalog";
+import { CheckCircle2, Sparkles } from "lucide-react";
+import { ContactButtons } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import type { OrderResult } from "@/lib/types";
-import { buttonClass } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PAGE_TITLE_CLASS } from "@/design-system/ui/PageHeader";
 
@@ -15,7 +14,6 @@ interface OrderSuccessProps {
 
 export function OrderSuccess({ orderResult }: OrderSuccessProps) {
   const { ui, money, n } = useLang();
-  const BRAND_INFO = useBrand();
 
   const hasPreOrder = orderResult.lines.some((line) => line.isPreOrder);
 
@@ -98,21 +96,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
         </div>
 
         <div className="space-y-3 pt-2">
-          <a
-            href={`https://wa.me/${BRAND_INFO.whatsapp}?text=${whatsappText}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonClass({ variant: "secondary", fullWidth: true })}
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span>{ui("orderWhatsappConfirm")}</span>
-          </a>
-          <a href={`tel:${BRAND_INFO.phoneTel}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
-            <Phone className="h-4 w-4 text-gold-500" />
-            <span>
-              {ui("orderCallStore")} ({BRAND_INFO.phone})
-            </span>
-          </a>
+          <ContactButtons whatsappText={whatsappText} />
           <Link href="/" className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900">
             {ui("orderContinueShopping")}
           </Link>

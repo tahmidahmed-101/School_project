@@ -68,7 +68,7 @@ html[lang="bn"] .ts-font-scope {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.ts-root :is(h1, h2, h3, h4, h5, h6, .ts-display, .font-display) {
+.ts-root :is(h1, h2, h3, h4, h5, h6, .ts-display) {
   font-family:
     var(--font-ts-jost),
     "Jost",
@@ -78,11 +78,6 @@ html[lang="bn"] .ts-font-scope {
     "Segoe UI",
     Roboto,
     sans-serif !important;
-  letter-spacing: normal;
-}
-
-.ts-display {
-  font-family: var(--font-ts-jost), "Jost", var(--ts-bengali), sans-serif !important;
   letter-spacing: normal;
 }
 
@@ -103,13 +98,11 @@ html[lang="bn"] .ts-font-scope {
 }
 
 /* Hide scrollbar utility */
-.no-scrollbar::-webkit-scrollbar,
 .scrollbar-none::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
-.no-scrollbar,
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;

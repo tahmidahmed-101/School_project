@@ -1,26 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import {
-  CheckCircle2,
-  ClipboardList,
-  MapPin,
-  MessageSquare,
-  Package,
-  PackageCheck,
-  Phone,
-  Search,
-  Truck,
-  XCircle,
-} from "lucide-react";
-import { useBrand } from "@/modules/catalog";
+import { CheckCircle2, ClipboardList, MapPin, Package, PackageCheck, Search, Truck, XCircle } from "lucide-react";
+import { ContactButtons } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { ApiError } from "@/lib/api/client";
 import { trackOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
-import { Button, buttonClass } from "@/design-system/ui/Button";
+import { Button } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
@@ -40,7 +29,6 @@ const STAGES = [
 
 export function TrackOrderView() {
   const { ui, n } = useLang();
-  const BRAND_INFO = useBrand();
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -206,21 +194,7 @@ export function TrackOrderView() {
 
             <div className="space-y-3 border-t border-ink-200 pt-4">
               <p className="text-xs font-bold text-fg">{ui("trackOrderHelpTitle")}</p>
-              <a
-                href={`https://wa.me/${BRAND_INFO.whatsapp}?text=${whatsappText}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClass({ variant: "secondary", fullWidth: true })}
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>{ui("orderWhatsappConfirm")}</span>
-              </a>
-              <a href={`tel:${BRAND_INFO.phoneTel}`} className={buttonClass({ variant: "outline", fullWidth: true })}>
-                <Phone className="h-4 w-4 text-gold-500" />
-                <span>
-                  {ui("orderCallStore")} ({BRAND_INFO.phone})
-                </span>
-              </a>
+              <ContactButtons whatsappText={whatsappText} />
             </div>
           </div>
         )}

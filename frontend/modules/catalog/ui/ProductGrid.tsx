@@ -12,16 +12,12 @@ interface ProductGridProps {
   title?: string;
   viewAllLink?: string;
   viewAllText?: string;
-  columns?: 2 | 3 | 4;
 }
 
-export function ProductGrid({ products, title, viewAllLink, viewAllText, columns = 4 }: ProductGridProps) {
+export function ProductGrid({ products, title, viewAllLink, viewAllText }: ProductGridProps) {
   const { ui } = useLang();
 
-  const gridColsClass =
-    columns === 3
-      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-3"
-      : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+  const gridColsClass = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
   return (
     // content-visibility: a home page has a dozen of these shelves, and laying them all out up front was the

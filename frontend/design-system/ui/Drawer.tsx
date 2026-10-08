@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import Image from "next/image";
 import { ArrowLeft, Trash2, X } from "lucide-react";
 import { useOverlay } from "@/lib/useOverlay";
@@ -26,6 +26,7 @@ interface DrawerProps {
 export function Drawer({ open, onClose, label, closeLabel, icon, title, actions, children }: DrawerProps) {
   useOverlay(open, onClose);
   const { mounted, shown } = usePresence(open, 300);
+  const titleId = useId();
 
   return (
     <>
@@ -40,13 +41,18 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
 
           <div className="pointer-events-none fixed inset-y-0 right-0 flex w-full max-w-full justify-end">
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
               className={`pointer-events-auto z-10 flex w-full flex-col justify-between border-l border-ink-200 bg-card p-5 shadow-2xl transition-transform duration-300 sm:max-w-md sm:p-6 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-ink-200 pb-3">
                   <div className="flex items-center gap-2">
                     {icon}
-                    <h3 className="text-base font-bold text-fg">{title}</h3>
+                    <h3 id={titleId} className="text-base font-bold text-fg">
+                      {title}
+                    </h3>
                   </div>
                   <div className="flex items-center gap-2">
                     {actions}

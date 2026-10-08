@@ -39,7 +39,7 @@ export function VoucherSection({ vouchers }: { vouchers: Voucher[] }) {
                   <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 sm:w-20 lg:w-16">
                     <Ticket className="h-6 w-6" />
                     {/* Decorative stamp in a 64px column; 10px is the largest size that fits "KULL MART". */}
-                    <span aria-hidden="true" className="whitespace-nowrap text-[10px] font-extrabold tracking-wide">
+                    <span aria-hidden="true" className="whitespace-nowrap text-2xs font-extrabold tracking-wide">
                       {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
                     </span>
                   </div>
