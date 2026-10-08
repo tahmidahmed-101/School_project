@@ -17,7 +17,7 @@
 - [ ] Unknown product slug answers 200 with a skeleton instead of 404
 - [ ] Admin edits reach the storefront only when the 60 s cache expires: the Worker cache is per data centre, a real purge needs a shared store (new service, owner approval)
 - [x] Upstream API responses cached inside the Worker (warm pages 0.85-1.2 s -> 0.07-0.13 s)
-- [x] Listing pages send slim product data (`forListing`); single-language strings still doubled by `plain()`
+- [x] Listing pages send slim product data (`forListing`); single-language strings sent once
 - [x] Cart / wishlist context values memoised (drawer state still in the same context)
 - [x] Payment methods fetched on the server
 - [x] Bell low-stock count from a count endpoint (API)
@@ -31,7 +31,7 @@
 - [x] Reference lists cached, pages fetched in parallel
 - [x] Reference-list cache max age (5 min)
 - [x] Money arithmetic through one module (4 of 5 sites)
-- [x] Purchase-order totals come from the API as exact decimals (create form running total is still an on-screen estimate)
+- [x] Purchase-order totals come from the API as exact decimals (create form uses `sumCostLines`, same rounding)
 - [x] Currency label from business profile, not "(BDT)"
 - [x] Bell low-stock source asks for the endpoint's own permission (reports or accounting view)
 
@@ -55,4 +55,5 @@
 
 ## Phase F: storefront language on the server
 - [x] Language resolved from a cookie: first HTML and `<html lang>` are in the shopper's language
-- [ ] Static content rendered as server components (98 client files; separate, larger refactor)
+- [x] Footer and policy pages are server components (`getServerText`); language toggle refreshes them. Other components need hooks or state and stay client
+- [x] Home page HTML size checked: 597 kB raw, 34 kB on the wire (brotli, live). 60 product cards by design; no change needed

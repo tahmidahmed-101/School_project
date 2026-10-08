@@ -12,6 +12,7 @@ import { AuthProvider } from "@/modules/auth";
 import { CartProvider } from "@/modules/cart";
 import { WishlistProvider } from "@/modules/wishlist";
 import { ClientShell } from "@/modules/shell";
+import { Footer } from "@/modules/shell/server";
 import { JsonLd } from "@/modules/seo";
 import { AnalyticsScripts } from "@/modules/marketing";
 import {
@@ -101,7 +102,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>
-                    <ClientShell>{children}</ClientShell>
+                    <ClientShell footer={<Footer />}>{children}</ClientShell>
                   </WishlistProvider>
                 </CartProvider>
               </AuthProvider>

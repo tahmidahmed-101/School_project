@@ -1,18 +1,19 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { FacebookIcon, WhatsAppIcon } from "@/design-system/icons/BrandIcons";
-import { useBrand, useCatalog } from "@/modules/catalog";
-import { useLang } from "@/lib/i18n";
+import { getBrand } from "@/modules/business/server";
+import { getShellCatalog } from "@/modules/catalog/server";
+import { getServerText } from "@/lib/i18n.server";
 import { photo } from "@/lib/photo";
 import { containerClass } from "@/design-system/ui/Container";
 
-export function Footer() {
-  const { t, ui, lang } = useLang();
-  const BRAND_INFO = useBrand();
-  const { categories: allCategories } = useCatalog();
+export async function Footer() {
+  const [{ t, ui, lang }, BRAND_INFO, { categories: allCategories }] = await Promise.all([
+    getServerText(),
+    getBrand(),
+    getShellCatalog(),
+  ]);
   // Pre-order has its own nav link and category rail; the footer covers the regular stock catalogue.
   const categories = allCategories.filter((category) => category.type === "stock");
 

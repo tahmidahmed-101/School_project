@@ -10,7 +10,8 @@ import type { ApiCategory, ApiProduct, ApiVariant } from "@/lib/api/types";
  */
 
 /** Text with no Bengali counterpart from the API: shown in every language until the backend provides one. */
-const plain = (value: string): T => ({ en: value, bn: value });
+// The API sends one language. Every reader falls back to `en` when `bn` is empty, so the text travels once.
+const plain = (value: string): T => ({ en: value, bn: "" });
 
 /** Shown when a product has no photo, so the card layout never breaks. */
 const PLACEHOLDER_IMAGE = "brand/logo-mark.png";

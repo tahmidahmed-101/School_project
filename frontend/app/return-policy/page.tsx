@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { PolicyView } from "@/modules/policies";
 import { RETURN_POLICY } from "@/modules/policies";
-import { getPolicyContent } from "@/modules/policies/server";
+import { getPolicyContent, PolicyView } from "@/modules/policies/server";
 import { pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
