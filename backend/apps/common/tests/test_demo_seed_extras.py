@@ -11,7 +11,7 @@ from apps.business.models import HeroSlide, PromoLine
 from apps.catalog.models import Brand, BundleItem, ProductQuestion, WishlistItem
 from apps.common.services.demo_seed.constants import DEMO_DOMAIN, DEMO_PASSWORD
 from apps.common.services.demo_seed.wipe import wipe_demo_data
-from apps.logistics.models import ShippingZone
+from apps.logistics.models import ShippingRate, ShippingZone
 from apps.orders.models import SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
 
@@ -24,7 +24,9 @@ def _media_in_tmp(settings, tmp_path):
 
 
 def _seed(fresh: bool = False) -> None:
-    ShippingZone.objects.get_or_create(name="Everywhere", defaults={"country_codes": []})
+    ShippingZone.objects.get_or_create(
+        name="Everywhere", kind="stock", defaults={"country_codes": []}
+    )
     call_command("seed_demo", orders=6, days=10, customers=4, fresh=fresh, verbosity=0)
 
 
@@ -62,6 +64,11 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
     out = StringIO()
     call_command("split_shared_suppliers_and_brands", stdout=out)
     assert "0 row(s) would change" in out.getvalue(), out.getvalue()
+    out = StringIO()
+    call_command("split_shared_delivery_and_payment_setup", stdout=out)
+    assert "0 row(s) would change" in out.getvalue(), out.getvalue()
+    assert is_payment_method_enabled("cod", kind="preorder")
+    assert set(ShippingRate.objects.values_list("kind", flat=True)) == {"stock", "preorder"}
     assert set(Brand.objects.filter(products__isnull=False).values_list("kind", flat=True)) == {
         "stock",
         "preorder",

@@ -24,6 +24,7 @@ from apps.logistics.selectors.rates import (
 )
 from apps.logistics.services.rates import shipping_options, try_quote_shipping
 from apps.orders.models import SalesOrder, SalesOrderLine
+from apps.orders.selectors.basket_kind import kind_for_order
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
     get_cart,
@@ -228,14 +229,15 @@ class CheckoutView(APIView):
         return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
 
 
-def _resolve_zone(request, address_id, raw_text, zone_id=None):
-    """Returns (ShippingZone, error_response). `None, None` means neither an
+def _resolve_zone(request, address_id, raw_text, zone_id=None, *, kind):
+    """Returns (ShippingZone, error_response), looking only at zones of the
+    cart's own kind. `None, None` means neither an
     address, address text, nor zone id was given — callers decide how to report
     that. An explicit zone_id wins outright: the customer picked it, so no
     address-text guessing is needed or wanted. The address is looked up through
     the user's own queryset so someone else's address is a 404, never a 403."""
     if zone_id:
-        zone = get_zone_by_id(zone_id)
+        zone = get_zone_by_id(zone_id, kind=kind)
         if zone is None:
             return None, not_found("zone_not_found", "Delivery zone not found.")
         return zone, None
@@ -247,7 +249,7 @@ def _resolve_zone(request, address_id, raw_text, zone_id=None):
         text = address_zone_text(address)
     if not text:
         return None, None
-    zone = find_zone_by_address_text(text)
+    zone = find_zone_by_address_text(text, kind=kind)
     if zone is None:
         return None, error_from_exception(
             DomainError("Delivery is not available for this address yet.", code="zone_not_found")
@@ -265,8 +267,17 @@ class CartShippingQuoteView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        cart = get_or_create_cart(request.user)
+        try:
+            kind = kind_for_order(cart)
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone(
-            request, data.get("address_id"), data.get("address_text"), data.get("zone_id")
+            request,
+            data.get("address_id"),
+            data.get("address_text"),
+            data.get("zone_id"),
+            kind=kind,
         )
         if error is not None:
             return error
@@ -284,9 +295,8 @@ class CartShippingQuoteView(APIView):
             if carrier is None:
                 return not_found("carrier_not_found", "Carrier not found.")
 
-        cart = get_or_create_cart(request.user)
         weight = order_weight(cart)
-        quote = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
+        quote = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
         return Response(
             {
                 "data": {
@@ -307,11 +317,17 @@ class CartShippingOptionListView(APIView):
 
     def get(self, request) -> Response:
         params = request.query_params
+        cart = get_or_create_cart(request.user)
+        try:
+            kind = kind_for_order(cart)
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone(
             request,
             get_uuid(params, "address_id"),
             params.get("address_text"),
             get_uuid(params, "zone_id"),
+            kind=kind,
         )
         if error is not None:
             return error
@@ -323,11 +339,10 @@ class CartShippingOptionListView(APIView):
                 )
             )
 
-        cart = get_or_create_cart(request.user)
         weight = order_weight(cart)
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(zone=zone, weight=weight)
+            for option in shipping_options(zone=zone, weight=weight, kind=kind)
         ]
         return Response(
             {
@@ -351,7 +366,11 @@ class CartShippingZoneListView(APIView):
     permission_classes: ClassVar[list] = [IsCustomer]
 
     def get(self, request) -> Response:
-        zones = zones_list()
+        try:
+            kind = kind_for_order(get_or_create_cart(request.user))
+        except DomainError as exc:
+            return error_from_exception(exc)
+        zones = zones_list(kind=kind)
         return Response(
             {"data": ShippingZoneOptionSerializer(zones, many=True).data, "message": "Success"}
         )

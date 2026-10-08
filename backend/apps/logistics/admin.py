@@ -31,9 +31,21 @@ class CarrierAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
 class ShippingZoneAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     view_permission_code = StaffPermissionCode.SHIPMENTS_VIEW
     manage_permission_code = StaffPermissionCode.SHIPMENTS_UPDATE
-    list_display = ("name", "is_active")
+    list_display = ("name", "kind", "is_active")
+    list_filter = ("kind",)
     search_fields = ("name",)
     inlines: ClassVar[list] = [ShippingRateInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("kind",) if obj is not None else ()
+
+    def save_formset(self, request, form, formset, change) -> None:
+        for rate in formset.save(commit=False):
+            rate.kind = form.instance.kind
+            rate.save()
+        for removed in formset.deleted_objects:
+            removed.delete()
+        formset.save_m2m()
 
 
 @admin.register(ShippingRate)
@@ -42,11 +54,17 @@ class ShippingRateAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     manage_permission_code = StaffPermissionCode.SHIPMENTS_UPDATE
     list_display = (
         "zone",
+        "kind",
         "carrier",
         "base_weight",
         "base_charge",
         "increment_weight",
         "increment_charge",
     )
-    list_filter = ("zone", "carrier")
+    list_filter = ("kind", "zone", "carrier")
     autocomplete_fields = ("zone", "carrier")
+    readonly_fields = ("kind",)
+
+    def save_model(self, request, obj, form, change) -> None:
+        obj.kind = obj.zone.kind
+        super().save_model(request, obj, form, change)

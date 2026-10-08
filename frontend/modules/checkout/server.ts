@@ -1,2 +1,2 @@
 // Server-only public API of this module.
-export { getPaymentMethods } from "./data/payment-methods";
+export { getPaymentMethods, getPaymentMethodsByKind } from "./data/payment-methods";

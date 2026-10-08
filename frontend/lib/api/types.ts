@@ -248,6 +248,7 @@ export interface ApiStorefrontContent {
 
 export interface ApiPaymentMethod {
   key: string;
+  kind: "stock" | "preorder";
   label: string;
   description: string;
   pay_to: string;

@@ -1,5 +1,7 @@
 // Mirrors api/v1/admin/business/serializers.py (kull-mart), mounted at /admin/settings/.
 
+import type { Kind } from "@/hooks/use-kind"
+
 /** AdminBusinessProfileSerializer */
 export interface BusinessProfile {
   name: string
@@ -67,6 +69,7 @@ export type ModuleUpdatePayload = { is_enabled: boolean } | { config: Record<str
 /** AdminPaymentMethodSerializer */
 export interface PaymentMethodState {
   key: string
+  kind: Kind
   label: string
   description: string
   is_enabled: boolean

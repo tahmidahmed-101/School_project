@@ -30,13 +30,13 @@ COD_COLLECTABLE_STATUSES = frozenset(
 )
 
 
-def _require_enabled_method(method: str):
+def _require_enabled_method(method: str, *, kind: str):
     spec = PAYMENT_METHODS_BY_KEY.get(method)
     if spec is None:
         raise BusinessRuleViolationError(
             f"{method} is not a payment method.", code="unknown_payment_method"
         )
-    if not is_payment_method_enabled(method):
+    if not is_payment_method_enabled(method, kind=kind):
         raise BusinessRuleViolationError(
             f"{spec.label} is switched off.", code="payment_method_disabled"
         )
@@ -66,7 +66,7 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
         )
     if not order.lines.exists():
         raise BusinessRuleViolationError("Cannot place an empty order.", code="empty_order")
-    _require_enabled_method(method)
+    _require_enabled_method(method, kind=order.order_type)
 
     payment = Payment.objects.create(
         order=order,
@@ -149,7 +149,7 @@ def capture_payment(
             f"Enter an amount up to the balance due ({balance}).", code="amount_mismatch"
         )
     method = method or PaymentMethodKey.MANUAL
-    spec = _require_enabled_method(method)
+    spec = _require_enabled_method(method, kind=order.order_type)
     if spec.requires_reference and not reference:
         raise BusinessRuleViolationError(
             f"{spec.label} has no live gateway integration — a payment reference "

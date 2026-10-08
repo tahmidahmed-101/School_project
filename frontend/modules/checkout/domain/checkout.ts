@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/client";
-import type { ApiCheckoutRequest } from "@/lib/api/types";
-import { productKind } from "@/lib/product";
+import type { ApiCheckoutRequest, ApiPaymentMethod } from "@/lib/api/types";
+import { productKind, type ProductKind } from "@/lib/product";
 import type { CartItem, OrderForm } from "@/lib/types";
 
 /** Coupons are for stock orders only: the backend refuses one on any basket holding a pre-order line. */
@@ -8,6 +8,14 @@ export const COUPON_STOCK_ONLY_CODE = "coupon_stock_only";
 
 export function acceptsCoupon(items: CartItem[]): boolean {
   return items.length > 0 && items.every((item) => productKind(item.product) === "stock");
+}
+
+export type PaymentMethodsByKind = Record<ProductKind, ApiPaymentMethod[]>;
+
+/** The basket's own half decides the list; a basket that is not purely pre-order is offered the stock methods. */
+export function paymentMethodsFor(items: CartItem[], byKind: PaymentMethodsByKind): ApiPaymentMethod[] {
+  const allPreorder = items.length > 0 && items.every((item) => productKind(item.product) === "preorder");
+  return allPreorder ? byKind.preorder : byKind.stock;
 }
 
 export const EMPTY_ORDER_FORM: OrderForm = {

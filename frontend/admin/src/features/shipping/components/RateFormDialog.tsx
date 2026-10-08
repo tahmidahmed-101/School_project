@@ -12,6 +12,7 @@ import { useAppDispatch } from "@/app/hooks"
 import { createZoneRate } from "@/features/shipping/slices/zoneSlice"
 import { updateRate } from "@/features/shipping/slices/rateSlice"
 import type { Carrier, ShippingRate, ShippingZone } from "@/features/shipping/types"
+import type { Kind } from "@/hooks/use-kind"
 import { reportFormError } from "@/lib/forms"
 import { getDefaultCurrency } from "@/lib/format"
 
@@ -38,13 +39,24 @@ interface RateFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** Rate being edited (zone/carrier then fixed), or null to add one. */
   rate: ShippingRate | null
+  /** The half of the dashboard the page belongs to; a new rate is created in it. */
+  kind: Kind
   zones: ShippingZone[]
   carriers: Carrier[]
   defaultZoneId?: string
   onSaved: () => void
 }
 
-export function RateFormDialog({ open, onOpenChange, rate, zones, carriers, defaultZoneId, onSaved }: RateFormDialogProps) {
+export function RateFormDialog({
+  open,
+  onOpenChange,
+  rate,
+  kind,
+  zones,
+  carriers,
+  defaultZoneId,
+  onSaved,
+}: RateFormDialogProps) {
   const dispatch = useAppDispatch()
   const {
     control,
@@ -90,7 +102,7 @@ export function RateFormDialog({ open, onOpenChange, rate, zones, carriers, defa
         toast.success("Rate updated")
       } else {
         await dispatch(
-          createZoneRate({ zoneId: values.zone_id, payload: { ...numbers, carrier_id: values.carrier_id } })
+          createZoneRate({ zoneId: values.zone_id, payload: { ...numbers, carrier_id: values.carrier_id, kind } })
         ).unwrap()
         toast.success("Rate added")
       }

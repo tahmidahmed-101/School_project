@@ -126,8 +126,8 @@ class StockReservationAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
 class PaymentMethodSettingAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     view_permission_code = StaffPermissionCode.ORDERS_VIEW
     manage_permission_code = None  # the operator owns this switch, in the dashboard
-    list_display = ("key", "is_enabled", "updated_at")
-    list_filter = ("is_enabled",)
+    list_display = ("key", "kind", "is_enabled", "updated_at")
+    list_filter = ("kind", "is_enabled")
 
     def has_add_permission(self, request) -> bool:
         return False

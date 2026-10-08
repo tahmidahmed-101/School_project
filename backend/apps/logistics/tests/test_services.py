@@ -30,10 +30,12 @@ def test_calculate_shipping_rate_charges_base_within_the_base_weight():
         increment_charge=Decimal("15"),
     )
 
-    assert calculate_shipping_rate(zone=zone, carrier=carrier, weight=Decimal("0.5")) == Decimal(
-        "60"
-    )
-    assert calculate_shipping_rate(zone=zone, carrier=carrier, weight=Decimal("1")) == Decimal("60")
+    assert calculate_shipping_rate(
+        kind="stock", zone=zone, carrier=carrier, weight=Decimal("0.5")
+    ) == Decimal("60")
+    assert calculate_shipping_rate(
+        kind="stock", zone=zone, carrier=carrier, weight=Decimal("1")
+    ) == Decimal("60")
 
 
 def test_calculate_shipping_rate_charges_per_increment_above_base_weight():
@@ -49,12 +51,12 @@ def test_calculate_shipping_rate_charges_per_increment_above_base_weight():
     )
 
     # 1.2kg over base rounds up to a full increment, same as 2kg over.
-    assert calculate_shipping_rate(zone=zone, carrier=carrier, weight=Decimal("2.2")) == Decimal(
-        "60"
-    ) + 2 * Decimal("15")
-    assert calculate_shipping_rate(zone=zone, carrier=carrier, weight=Decimal("3")) == Decimal(
-        "60"
-    ) + 2 * Decimal("15")
+    assert calculate_shipping_rate(
+        kind="stock", zone=zone, carrier=carrier, weight=Decimal("2.2")
+    ) == Decimal("60") + 2 * Decimal("15")
+    assert calculate_shipping_rate(
+        kind="stock", zone=zone, carrier=carrier, weight=Decimal("3")
+    ) == Decimal("60") + 2 * Decimal("15")
 
 
 def test_calculate_shipping_rate_raises_when_no_rate_configured():
@@ -62,7 +64,7 @@ def test_calculate_shipping_rate_raises_when_no_rate_configured():
     carrier = CarrierFactory()
 
     with pytest.raises(BusinessRuleViolationError):
-        calculate_shipping_rate(zone=zone, carrier=carrier, weight=Decimal("3"))
+        calculate_shipping_rate(kind="stock", zone=zone, carrier=carrier, weight=Decimal("3"))
 
 
 def test_create_rate_rejects_a_non_positive_increment_weight():

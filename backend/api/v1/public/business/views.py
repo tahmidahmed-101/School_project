@@ -11,6 +11,7 @@ from apps.business.models import PolicyKind
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.policies import get_published_policy, returns_enabled
 from apps.business.selectors.storefront_content import hero_slides_list, promo_lines_list
+from apps.common.params import KIND_STOCK, get_kind
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
 from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
@@ -45,10 +46,10 @@ class PublicPaymentMethodListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
-        # TODO(ask): one on/off per method for both halves. Should pre-orders offer a different set?
+        kind = get_kind(request.query_params) or KIND_STOCK
         offered = [
             row
-            for row in payment_methods_list()
+            for row in payment_methods_list(kind=kind)
             if row["is_enabled"] and row["key"] in STOREFRONT_PAYMENT_METHODS
         ]
         return Response(

@@ -2,15 +2,19 @@ import "server-only";
 import { apiRequest } from "@/lib/api/client";
 import type { ApiPaymentMethod } from "@/lib/api/types";
 import { CACHE_LIFE } from "@/lib/cache";
+import type { ProductKind } from "@/lib/product";
+import type { PaymentMethodsByKind } from "../domain/checkout";
 
-/**
- * GET /payment-methods/ — enabled methods; the chosen `key` is sent as `payment_method` to POST /checkout/.
- * No built-in method: if the list cannot be loaded or is empty, checkout shows the error page.
- */
-export async function getPaymentMethods(): Promise<ApiPaymentMethod[]> {
-  const methods = await apiRequest<ApiPaymentMethod[]>("/payment-methods/", {
+/** GET /payment-methods/?kind= — the methods switched on for one half of the shop. */
+export function getPaymentMethods(kind: ProductKind): Promise<ApiPaymentMethod[]> {
+  return apiRequest<ApiPaymentMethod[]>("/payment-methods/", {
+    query: { kind },
     revalidate: CACHE_LIFE.paymentMethods,
   });
-  if (methods.length === 0) throw new Error("No payment method is enabled for the storefront.");
-  return methods;
+}
+
+/** Both lists: the basket lives in the browser, so the page cannot know its kind while it renders on the server. */
+export async function getPaymentMethodsByKind(): Promise<PaymentMethodsByKind> {
+  const [stock, preorder] = await Promise.all([getPaymentMethods("stock"), getPaymentMethods("preorder")]);
+  return { stock, preorder };
 }

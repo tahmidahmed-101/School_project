@@ -42,6 +42,7 @@ from apps.catalog.services.questions import ask_question, moderate_question
 from apps.catalog.services.reviews import create_review
 from apps.catalog.services.wishlist import add_to_wishlist
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KINDS
 from apps.common.services.demo_seed.constants import (
     BUNDLE_NAME,
     BUNDLE_SKU,
@@ -143,11 +144,12 @@ class DemoExtras:
             profile.save(update_fields=["preorder_deposit_percent"])
         if PaymentMethodSetting.objects.exists():
             return
-        for key in DEMO_STOREFRONT_METHODS:
-            set_payment_method_enabled(key=key, is_enabled=True)
-            if key in DEMO_PAY_TO:
-                set_payment_method_pay_to(key=key, pay_to=DEMO_PAY_TO[key])
-            self.bump("payment_methods")
+        for kind in KINDS:
+            for key in DEMO_STOREFRONT_METHODS:
+                set_payment_method_enabled(key=key, is_enabled=True, kind=kind)
+                if key in DEMO_PAY_TO:
+                    set_payment_method_pay_to(key=key, pay_to=DEMO_PAY_TO[key], kind=kind)
+                self.bump("payment_methods")
 
     def seed_home_content(self) -> None:
         if not HeroSlide.objects.exists():
