@@ -3,7 +3,13 @@
 import { Layers, Sparkles } from "lucide-react";
 import { useCatalog, useProducts } from "../context";
 import { useLang } from "@/lib/i18n";
-import { PRICE_STEP, priceBounds, type FilterChange, type FilterState } from "../domain/shop-filters";
+import {
+  PRICE_STEP,
+  appliesCollection,
+  priceBounds,
+  type FilterChange,
+  type FilterState,
+} from "../domain/shop-filters";
 import type { T } from "@/lib/types";
 import { FilterSelect } from "./FilterSelect";
 
@@ -33,7 +39,9 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
   // stays inside one catalogue, and so does its category list.
   const visibleCategories = categories.filter((c) => c.type === (isPreorderShop ? "preorder" : "stock"));
   const selectedCategory = categories.find((c) => c.id === filters.category);
-  const selectedCollection = COLLECTIONS.find((c) => c.id === filters.collection) ?? COLLECTIONS[0]!;
+  const collections = isPreorderShop ? COLLECTIONS.filter((c) => c.id !== "sale") : COLLECTIONS;
+  const activeCollection = appliesCollection(filters, filters.collection) ? filters.collection : "all";
+  const selectedCollection = collections.find((c) => c.id === activeCollection) ?? COLLECTIONS[0]!;
 
   const sliderValue = Math.min(filters.maxPrice, maxPrice);
   const pricePercentage = Math.min(100, Math.max(0, ((sliderValue - minPrice) / (maxPrice - minPrice)) * 100));
@@ -70,8 +78,8 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
       <FilterSelect
         icon={<Sparkles className="h-4 w-4 shrink-0 text-gold-700" />}
         triggerLabel={t(selectedCollection.label)}
-        options={COLLECTIONS.map((c) => ({ id: c.id, label: t(c.label) }))}
-        value={filters.collection}
+        options={collections.map((c) => ({ id: c.id, label: t(c.label) }))}
+        value={activeCollection}
         onChange={(id) => onFilterChange("collection", id)}
       />
 

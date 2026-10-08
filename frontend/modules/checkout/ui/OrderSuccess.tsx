@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { ContactButtons } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
+import { shopHome } from "@/lib/product";
 import type { OrderResult } from "@/lib/types";
 import { Container } from "@/design-system/ui/Container";
 import { PAGE_TITLE_CLASS } from "@/design-system/ui/PageHeader";
@@ -110,7 +111,10 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
 
         <div className="space-y-3 pt-2">
           <ContactButtons whatsappText={whatsappText} />
-          <Link href="/" className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900">
+          <Link
+            href={orderResult.isPreOrderOrder ? shopHome("preorder") : "/"}
+            className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900"
+          >
             {ui("orderContinueShopping")}
           </Link>
         </div>

@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
 from apps.orders.selectors.payments import (
+    DEPOSIT_PERCENT_CONTEXT_KEY,
     order_balance_due,
     order_deposit_due,
     order_paid_total,
@@ -50,7 +51,8 @@ class SalesOrderSerializer(serializers.Serializer):
     shipments = serializers.SerializerMethodField()
 
     def get_deposit_due(self, obj) -> str:
-        return str(order_deposit_due(obj))
+        percent = self.context.get(DEPOSIT_PERCENT_CONTEXT_KEY)
+        return str(order_deposit_due(obj, deposit_percent=percent))
 
     def get_lines(self, obj) -> list[dict]:
         return SalesOrderLineSerializer(obj.lines.all(), many=True).data

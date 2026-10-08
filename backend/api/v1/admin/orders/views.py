@@ -40,7 +40,11 @@ from apps.orders.models import (
     SalesOrder,
     StockReservation,
 )
-from apps.orders.selectors.payments import get_payment_by_id, payments_list
+from apps.orders.selectors.payments import (
+    deposit_percent_context,
+    get_payment_by_id,
+    payments_list,
+)
 from apps.orders.selectors.preorder_demand import preorder_book_summary, preorder_demand
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
@@ -169,6 +173,9 @@ class OrderQuerysetMixin:
 @extend_schema(tags=["Orders"])
 class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListAPIView):
     serializer_class = AdminSalesOrderSerializer
+
+    def get_serializer_context(self, items: list) -> dict:
+        return deposit_percent_context(items)
 
     def get(self, request) -> Response:
         return self.list_response(request)

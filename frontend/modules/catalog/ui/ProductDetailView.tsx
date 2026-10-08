@@ -5,6 +5,7 @@ import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { isPreOrderSoldOut, productKind, shopHome } from "@/lib/product";
 import { applyVariant, defaultVariant, resolveVariant, selectionFor } from "@/lib/variants";
+import { useReportPageProductKind } from "../context";
 import { ProductCardGrid } from "./ProductCardGrid";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
@@ -47,6 +48,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
   const isSoldOut = isPreOrderSoldOut(shown);
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
   const kind = productKind(product);
+  useReportPageProductKind(kind);
 
   return (
     <div className="w-full bg-canvas pb-24 pt-8 sm:pt-12 lg:pb-12">

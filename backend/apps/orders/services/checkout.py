@@ -18,8 +18,8 @@ from apps.orders.services.carts import (
     ensure_purchasable,
 )
 from apps.orders.services.coupons import (
+    COUPON_STOCK_ONLY_MESSAGE,
     _compute_discount,
-    drop_coupon_from_preorder,
     revalidate_applied_coupon,
 )
 from apps.orders.services.orders import lock_order
@@ -60,8 +60,8 @@ def _reprice_lines(order: SalesOrder, lines) -> None:
 
 
 def _settle_coupon(order: SalesOrder, lines) -> None:
-    if any(_is_preorder_line(line) for line in lines):
-        drop_coupon_from_preorder(order)
+    if order.coupon_id is not None and any(_is_preorder_line(line) for line in lines):
+        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
     # A cart can sit long enough for its applied coupon to expire or hit its
     # usage limit before checkout actually runs — re-validate here too.
     revalidate_applied_coupon(order)

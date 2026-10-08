@@ -6,6 +6,8 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
+from apps.business.models import BusinessProfile
+from apps.business.selectors.business_profile import get_business_profile
 from apps.orders.factories import PaymentFactory, SalesOrderFactory, SalesOrderLineFactory
 from apps.orders.models import SalesOrder
 
@@ -62,6 +64,21 @@ def test_history_reads_payments_in_one_query(api_client, customer_user):
         api_client.get(HISTORY, {"order_type": "preorder"})
 
     assert sum('FROM "orders_payment"' in query["sql"] for query in queries) == 1
+
+
+def test_history_reads_the_deposit_percent_once(api_client, customer_user):
+    api_client.force_authenticate(user=customer_user)
+    profile = get_business_profile()
+    profile.preorder_deposit_percent = Decimal("30.00")
+    profile.save(update_fields=["preorder_deposit_percent"])
+    for _ in range(3):
+        _order(customer_user, SalesOrder.OrderType.PREORDER)
+
+    with CaptureQueriesContext(connection) as queries:
+        rows = api_client.get(HISTORY, {"order_type": "preorder"}).data["data"]["results"]
+
+    assert sum(BusinessProfile._meta.db_table in query["sql"] for query in queries) == 1
+    assert [row["deposit_due"] for row in rows] == ["300.00"] * 3
 
 
 def test_tracking_tells_a_preorder_apart_and_shows_what_is_paid(api_client, customer_user):

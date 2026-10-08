@@ -57,6 +57,22 @@ describe("filterAndSortProducts", () => {
     expect(ids(filterAndSortProducts(products, { ...DEFAULT_FILTERS, category: "BAGS" })).sort()).toEqual(["1", "2"]);
   });
 
+  it("ignores the sale collection in the pre-order shop, like in-stock only", () => {
+    const preorderOnSale = makeProduct({
+      id: "5",
+      price: 700,
+      compareAtPrice: 900,
+      isPreOrder: true,
+      kind: "preorder",
+    });
+    const preorderSale = { ...DEFAULT_FILTERS, stockType: "preorder" as const, collection: "sale" };
+
+    expect(ids(filterAndSortProducts([...products, preorderOnSale], preorderSale)).sort()).toEqual(["4", "5"]);
+    expect(countActiveFilters(preorderSale)).toBe(0);
+    expect(countActiveFilters({ ...DEFAULT_FILTERS, collection: "sale" })).toBe(1);
+    expect(countActiveFilters({ ...preorderSale, collection: "new" })).toBe(1);
+  });
+
   it("filters by collection", () => {
     expect(ids(filterAndSortProducts(products, { ...DEFAULT_FILTERS, collection: "trending" }))).toEqual(["2"]);
     expect(ids(filterAndSortProducts(products, { ...DEFAULT_FILTERS, collection: "sale" }))).toEqual(["2"]);

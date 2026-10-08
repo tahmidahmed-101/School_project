@@ -16,6 +16,7 @@ from apps.orders.models import (
     StockReservation,
 )
 from apps.orders.selectors.payments import (
+    DEPOSIT_PERCENT_CONTEXT_KEY,
     order_balance_due,
     order_deposit_due,
     order_paid_total,
@@ -166,7 +167,8 @@ class AdminSalesOrderSerializer(serializers.Serializer):
         return str(order_balance_due(obj))
 
     def get_deposit_due(self, obj) -> str | None:
-        return str(order_deposit_due(obj))
+        percent = self.context.get(DEPOSIT_PERCENT_CONTEXT_KEY)
+        return str(order_deposit_due(obj, deposit_percent=percent))
 
     def get_allowed_statuses(self, obj) -> list[str]:
         return allowed_status_overrides(obj)

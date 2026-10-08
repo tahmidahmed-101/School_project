@@ -7,10 +7,12 @@ import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/modules/auth";
 import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from "@/modules/cart";
 import { ApiError } from "@/lib/api/client";
+import { shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import { toOrderResult } from "../data/adapters";
 import {
+  COUPON_STOCK_ONLY_CODE,
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
   acceptsCoupon,
@@ -116,6 +118,8 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
           setErrorMsg(ui(errorKey(error)));
         } else if (error.code === "mixed_basket") {
           setErrorMsg(ui("cartMixedNotice"));
+        } else if (error.code === COUPON_STOCK_ONLY_CODE) {
+          setErrorMsg(ui("checkoutCouponStockOnly"));
         } else if (NO_SHIPPING_CODES.has(error.code)) {
           setErrorMsg(ui("errNoShipping"));
         } else if (error.status === 400 || error.status === 409) {
@@ -147,9 +151,14 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
           </div>
           <p className="text-base font-bold text-fg">{ui("cartEmptyTitle")}</p>
           <p className="text-xs text-fg-muted">{ui("cartEmptySubtitle")}</p>
-          <Link href="/shop" className={buttonClass()}>
-            {ui("cartStartShopping")}
-          </Link>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href={shopHome("stock")} className={buttonClass()}>
+              {ui("navReadyStock")}
+            </Link>
+            <Link href={shopHome("preorder")} className={buttonClass()}>
+              {ui("navPreOrder")}
+            </Link>
+          </div>
         </div>
       </div>
     );

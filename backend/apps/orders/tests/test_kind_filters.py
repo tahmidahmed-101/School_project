@@ -196,16 +196,16 @@ def test_adding_a_preorder_line_takes_the_coupon_off_the_basket():
     assert coupon.times_used == 0
 
 
-def test_preorder_checkout_drops_a_coupon_left_on_the_order():
+def test_preorder_checkout_refuses_a_coupon_left_on_the_order():
     cart = _cart(_preorder_variant())
     coupon = _attach_coupon(cart)
 
-    order = checkout(order=cart)
+    with pytest.raises(BusinessRuleViolationError) as excinfo:
+        checkout(order=cart)
 
-    order.refresh_from_db()
+    assert excinfo.value.code == "coupon_stock_only"
+    cart.refresh_from_db()
     coupon.refresh_from_db()
-    assert order.order_type == PREORDER
-    assert order.coupon_id is None
-    assert order.discount_total == Decimal("0")
-    assert order.grand_total == order.subtotal + order.tax_total + order.shipping_total
-    assert coupon.times_used == 0
+    assert cart.status == SalesOrder.Status.PENDING
+    assert cart.coupon_id == coupon.id
+    assert coupon.times_used == 1

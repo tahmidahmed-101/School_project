@@ -4,11 +4,14 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.accounts.constants import UserRole
 from apps.accounts.factories import CustomerUserFactory
 from apps.accounts.tests.helpers import create_user
+from apps.business.models import BusinessProfile
 from apps.business.selectors.business_profile import get_business_profile
 from apps.catalog.factories import ProductVariantFactory
 from apps.catalog.models import Category
@@ -158,6 +161,29 @@ def test_coupon_preview_refuses_a_basket_holding_a_preorder(api_client):
     assert response.data["error"]["code"] == "coupon_stock_only"
 
 
+def test_guest_checkout_refuses_a_coupon_on_a_preorder_basket(api_client):
+    coupon = CouponFactory()
+
+    response = api_client.post(
+        "/api/v1/public/checkout/",
+        {
+            "phone": "01712345678",
+            "first_name": "Guest",
+            "payment_method": "cod",
+            "coupon_code": coupon.code,
+            "shipping_address": {"line1": "House 1", "city": "Dhaka"},
+            "items": [{"variant_id": str(_preorder_variant().id), "quantity": 1}],
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400, response.data
+    assert response.data["error"]["code"] == "coupon_stock_only"
+    assert not SalesOrder.objects.exists()
+    coupon.refresh_from_db()
+    assert coupon.times_used == 0
+
+
 def test_coupon_preview_still_accepts_a_stock_basket(api_client):
     coupon = CouponFactory()
     payload = {
@@ -218,6 +244,24 @@ def test_a_preorder_order_row_carries_no_coupon(admin_client):
 
     assert data["coupon_code"] is None
     assert data["deposit_due"] is not None
+
+
+def test_the_preorder_order_list_reads_the_deposit_percent_once(admin_client):
+    profile = get_business_profile()
+    profile.preorder_deposit_percent = Decimal("30.00")
+    profile.save(update_fields=["preorder_deposit_percent"])
+    for _ in range(3):
+        SalesOrderFactory(
+            status=SalesOrder.Status.CONFIRMED,
+            order_type=PREORDER,
+            grand_total=Decimal("1000.00"),
+        )
+
+    with CaptureQueriesContext(connection) as queries:
+        rows = admin_client.get(BASE, {"order_type": "preorder"}).data["data"]["results"]
+
+    assert sum(BusinessProfile._meta.db_table in query["sql"] for query in queries) == 1
+    assert [row["deposit_due"] for row in rows] == ["300.00"] * 3
 
 
 def test_a_stock_order_row_carries_no_stage_or_deposit(admin_client):

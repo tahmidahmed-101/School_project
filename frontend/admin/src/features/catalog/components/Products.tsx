@@ -66,8 +66,8 @@ const stockColumn: ColumnDef<Product> = {
   accessorKey: "total_stock",
   header: "STOCK",
   cell: ({ row }) => (
-    <span className={row.original.total_stock <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
-      {row.original.total_stock}
+    <span className={(row.original.total_stock ?? 0) <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+      {row.original.total_stock ?? 0}
     </span>
   ),
 }

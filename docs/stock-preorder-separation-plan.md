@@ -128,7 +128,7 @@ Nothing below was changed. Each row with a `TODO(ask)` is one setting driving bo
 | Payment methods offered | Enabled methods that the storefront supports (cash on delivery, bKash, Nagad) | The same list | `backend/api/v1/public/business/views.py:48-53`, `backend/apps/orders/constants.py:20-24` |
 | Amount due at checkout | Whole order total | `preorder_deposit_percent` of the total | `backend/apps/orders/selectors/payments.py:29-35` |
 | Cash on delivery | Order is confirmed at once | Stays "awaiting payment" until the deposit is recorded, when the deposit is above zero | `backend/apps/orders/services/payments.py:77-84` |
-| Coupon | Applied | Dropped | `backend/apps/orders/services/checkout.py:62-64` |
+| Coupon | Applied | Refused (`coupon_stock_only`) | `backend/apps/orders/services/checkout.py:62-64`, `guest_checkout.py:164-180` |
 | Stock at checkout | Reserved from the default warehouse | Nothing reserved; set aside later by "allocate" | `backend/apps/orders/services/checkout.py:136-140`, `backend/apps/orders/services/preorder_allocation.py:17-74` |
 
 - The only rule that differs by kind and has a setting is the deposit percent. It already has its page: `/preorder_settings`.
