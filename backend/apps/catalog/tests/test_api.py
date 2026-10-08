@@ -956,7 +956,16 @@ def test_admin_brand_has_only_the_form_fields(api_client):
 
     assert created.status_code == 201, created.data
     brand = created.data["data"]
-    assert set(brand) == {"id", "name", "slug", "description", "is_active", "image", "deleted_at"}
+    assert set(brand) == {
+        "id",
+        "name",
+        "slug",
+        "kind",
+        "description",
+        "is_active",
+        "image",
+        "deleted_at",
+    }
     assert brand["slug"] == "aarong"
     detail = api_client.get(f"/api/v1/admin/catalog/brands/{brand['id']}/")
     assert set(detail.data["data"]) == set(brand)

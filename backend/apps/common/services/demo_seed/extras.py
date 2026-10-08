@@ -99,9 +99,9 @@ class DemoExtras:
         self.seed_team()
         self.seed_shop_settings()
         self.seed_home_content()
-        self.seed_brands()
         self.seed_bundle()
         self.seed_preorders()
+        self.seed_brands()
         self.seed_feedback()
         self.seed_expense_categories()
         self.seed_fraud_cases()
@@ -185,18 +185,22 @@ class DemoExtras:
     # ---- catalogue ---------------------------------------------------------
 
     def seed_brands(self) -> None:
-        brands = []
-        for name, description in DEMO_BRANDS:
+        brands: dict[str, list[Brand]] = {}
+        for name, description, kind in DEMO_BRANDS:
             slug = f"{SLUG_PREFIX}{slugify(name)}"
             brand = Brand.objects.filter(slug=slug).first()
             if brand is None:
-                brand = create_brand(name=name, description=description, actor=self.admin)
+                brand = create_brand(
+                    name=name, description=description, kind=kind, actor=self.admin
+                )
                 Brand.objects.filter(pk=brand.pk).update(slug=slug)
                 self.bump("brands")
-            brands.append(brand)
+            brands.setdefault(brand.kind, []).append(brand)
         unbranded = Product.objects.filter(slug__startswith=SLUG_PREFIX, brand__isnull=True)
-        for index, product_id in enumerate(unbranded.values_list("id", flat=True)):
-            Product.objects.filter(pk=product_id).update(brand=brands[index % len(brands)])
+        rows = unbranded.values_list("id", "category__category_type")
+        for index, (product_id, kind) in enumerate(rows):
+            choices = brands[kind]
+            Product.objects.filter(pk=product_id).update(brand=choices[index % len(choices)])
 
     def seed_bundle(self) -> None:
         if ProductVariant.objects.filter(sku=BUNDLE_SKU).exists():

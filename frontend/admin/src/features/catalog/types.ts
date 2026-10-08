@@ -163,6 +163,7 @@ export interface Brand {
   id: string
   name: string
   slug: string
+  kind: CategoryType
   description: string
   is_active: boolean
   image: string | null
@@ -171,6 +172,7 @@ export interface Brand {
 
 export interface BrandPayload {
   name?: string
+  kind?: CategoryType
   description?: string
   is_active?: boolean
 }

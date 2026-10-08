@@ -20,6 +20,7 @@ import { ImagePicker } from "@/components/common/ImagePicker"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { useCan } from "@/hooks/use-can"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -36,11 +37,13 @@ const statusOptions: Option[] = [
 ]
 
 const Brands = () => {
-  useDocumentTitle("Brands")
+  const kind = useKind()
+  const title = kind === "preorder" ? "Pre-order brands" : "Brands"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const brandState = useAppSelector((s) => s.brands)
-  const brands = brandState.data
+  const brands = useMemo(() => brandState.data.filter((b) => b.kind === kind), [brandState.data, kind])
 
   const [status, setStatus] = useState<Option | null>(null)
   const [editing, setEditing] = useState<Brand | null>(null)
@@ -49,7 +52,7 @@ const Brands = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: brandState,
-    params: { is_active: status?.value },
+    params: { is_active: status?.value, kind },
   })
 
   const importFields = useMemo<ImportField[]>(
@@ -109,13 +112,14 @@ const Brands = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Brands"
+        title={title}
         actions={
           canManage && (
             <>
               <RestoreDeletedButton<Brand>
                 noun="brands"
                 endpoint="/admin/catalog/brands/"
+                params={{ kind }}
                 restore={(item) => restoreBrand(item.id)}
                 label={(item) => item.name}
                 onRestored={list.reload}
@@ -123,7 +127,7 @@ const Brands = () => {
               <CsvImportButton
                 entityName="brands"
                 fields={importFields}
-                createRow={(payload) => createBrand(payload as BrandPayload)}
+                createRow={(payload) => createBrand({ ...(payload as BrandPayload), kind })}
                 onComplete={list.reload}
               />
               <Button
@@ -175,7 +179,9 @@ const Brands = () => {
         {...list.tableProps}
         emptyIcon={BadgeCheck}
         emptyTitle="No brands"
-        emptyDescription="Add a brand and link it to the categories it sells in."
+        emptyDescription={
+          kind === "preorder" ? "Add a brand for your pre-order products." : "Add a brand for your products."
+        }
         minWidth="760px"
         columnWidths={["auto", "130px", "80px"]}
         unlabelledColumns={["actions"]}
@@ -186,6 +192,7 @@ const Brands = () => {
           open={formOpen}
           onOpenChange={setFormOpen}
           brand={editing}
+          kind={kind}
           onSaved={list.reload}
         />
       )}
@@ -204,11 +211,14 @@ function BrandFormDialog({
   open,
   onOpenChange,
   brand,
+  kind,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   brand: Brand | null
+  /** The half of the dashboard the page belongs to; a new brand is created in it. */
+  kind: Kind
   onSaved: () => void
 }) {
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -249,7 +259,7 @@ function BrandFormDialog({
         payload.is_active = values.is_active
         saved = await updateBrand(brand.id, payload)
       } else {
-        saved = await createBrand(payload)
+        saved = await createBrand({ ...payload, kind })
       }
       if (imageFile) {
         try {
@@ -272,7 +282,9 @@ function BrandFormDialog({
       open={open}
       onOpenChange={close}
       title={brand ? `Edit ${brand.name}` : "Add brand"}
-      description="Link the brand to the categories it appears in."
+      description={
+        kind === "preorder" ? "Shown on pre-order products only." : "Shown on stock products only."
+      }
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={brand ? "Save brand" : "Create brand"}

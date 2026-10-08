@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.catalog.models import Category, Product
 from apps.catalog.selectors.images import variant_image_url
+from apps.common.params import KINDS
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     reorder_points_for_variants,
@@ -445,6 +446,7 @@ class BrandSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
     slug = serializers.CharField(read_only=True)
+    kind = serializers.CharField(read_only=True)
     description = serializers.CharField(allow_blank=True)
     is_active = serializers.BooleanField()
     image = serializers.SerializerMethodField()
@@ -457,10 +459,12 @@ class BrandSerializer(serializers.Serializer):
 class BrandCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class BrandUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
     image = serializers.ImageField(required=False)

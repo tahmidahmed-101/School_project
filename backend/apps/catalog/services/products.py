@@ -38,6 +38,14 @@ def _require_variations_for_type(product_type: str) -> None:
         require_feature(ModuleKey.CATALOG, "product_variations")
 
 
+def _check_brand_kind(brand, category: Category) -> None:
+    if brand is not None and brand.kind != category.category_type:
+        raise BusinessRuleViolationError(
+            "Pick a brand from the same side as the product: stock or pre-order.",
+            code="brand_kind_mismatch",
+        )
+
+
 @transaction.atomic
 def create_product(
     *,
@@ -56,6 +64,7 @@ def create_product(
     actor=None,
 ) -> Product:
     _require_variations_for_type(product_type)
+    _check_brand_kind(brand, category)
     product = Product(
         category=category,
         brand=brand,
@@ -129,6 +138,10 @@ def update_product(*, product: Product, data: dict) -> Product:
         _require_variations_for_type(data["product_type"])
     if data.get("category") is not None:
         _check_category_keeps_kind(product, data["category"])
+    brand = data.get("brand", product.brand)
+    category = data.get("category") or product.category
+    if brand != product.brand or category != product.category:
+        _check_brand_kind(brand, category)
     for field, value in data.items():
         if field in allowed_fields:
             setattr(product, field, value)

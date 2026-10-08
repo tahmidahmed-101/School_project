@@ -155,8 +155,8 @@ export const restoreCategory = (id: string) =>
   apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`).then(categoriesChanged))
 
 // ---- brands ----
-/** Every active brand (for pickers). */
-export const fetchAllBrands = () => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true })
+/** Every active brand of one kind (for pickers). */
+export const fetchAllBrands = (kind: Kind) => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true, kind })
 /** One brand by id, active or not. */
 export const fetchBrand = (id: string) => apiCall<Brand>(() => api.get(`${C}/brands/${id}/`))
 export const createBrand = (payload: BrandPayload) => apiCall<Brand>(() => api.post(`${C}/brands/`, payload))

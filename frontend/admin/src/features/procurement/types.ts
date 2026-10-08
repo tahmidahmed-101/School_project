@@ -5,6 +5,7 @@ import type { Kind } from "@/hooks/use-kind"
 export interface Supplier {
   id: string
   name: string
+  kind: Kind
   contact_email: string
   phone: string
   payment_terms: string
@@ -15,6 +16,7 @@ export interface Supplier {
 /** SupplierCreateSerializer / SupplierUpdateSerializer */
 export interface SupplierPayload {
   name?: string
+  kind?: Kind
   contact_email?: string
   phone?: string
   payment_terms?: string

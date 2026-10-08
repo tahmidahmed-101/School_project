@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.images import variant_image_url
+from apps.common.params import KINDS
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, VendorBill
 from apps.procurement.selectors.kind import purchase_order_kind
 
@@ -15,6 +16,7 @@ ZERO = Decimal("0")
 class SupplierSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
+    kind = serializers.CharField(read_only=True)
     contact_email = serializers.EmailField(allow_blank=True)
     phone = serializers.CharField(allow_blank=True)
     payment_terms = serializers.CharField(allow_blank=True)
@@ -27,10 +29,12 @@ class SupplierCreateSerializer(serializers.Serializer):
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     payment_terms = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class SupplierUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     payment_terms = serializers.CharField(required=False, allow_blank=True)

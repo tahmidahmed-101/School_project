@@ -79,7 +79,8 @@ function HeaderEditDialog({
   po: PurchaseOrder
 }) {
   const dispatch = useAppDispatch()
-  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", undefined, { enabled: open })
+  const kind = useKind()
+  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind }, { enabled: open })
   const [supplierId, setSupplierId] = useState(po.supplier_id)
   const [orderDate, setOrderDate] = useState(po.order_date)
   const [notes, setNotes] = useState(po.notes)
