@@ -12,7 +12,6 @@ export const DICT = {
   browseAllCategories: { en: "Browse all", bn: "সব ক্যাটাগরি দেখুন" },
   navWishlist: { en: "Wishlist", bn: "উইশলিস্ট" },
   navProfile: { en: "Profile", bn: "প্রোফাইল" },
-  tabShop: { en: "Shop", bn: "শপ" },
   tabTrack: { en: "Track", bn: "ট্র্যাক" },
   messageUs: { en: "Message us", bn: "মেসেজ করুন" },
   loginTitle: { en: "Log in", bn: "লগ ইন" },
@@ -246,7 +245,7 @@ export const DICT = {
   policyReadFull: { en: "Read the full return policy", bn: "সম্পূর্ণ রিটার্ন নীতি পড়ুন" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
-  navReadyStock: { en: "Ready stock", bn: "রেডি স্টক" },
+  navReadyStock: { en: "Stock Items", bn: "স্টক আইটেম" },
   preOrderEmpty: { en: "No pre-order products right now.", bn: "এখন কোনো প্রি-অর্ডার পণ্য নেই।" },
   preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },

@@ -80,19 +80,6 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                       </Link>
 
                       <Link
-                        href="/track-order"
-                        onClick={onClose}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                          pathname === "/track-order"
-                            ? "bg-white/10 text-gold-300"
-                            : "text-white/80 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        <Truck className="h-4 w-4 shrink-0" />
-                        <span>{ui("navTrackOrder")}</span>
-                      </Link>
-
-                      <Link
                         href="/pre-order"
                         onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
@@ -103,6 +90,19 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                       >
                         <Sparkles className="h-4 w-4 shrink-0" />
                         <span>{ui("navPreOrder")}</span>
+                      </Link>
+
+                      <Link
+                        href="/track-order"
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          pathname === "/track-order"
+                            ? "bg-white/10 text-gold-300"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Truck className="h-4 w-4 shrink-0" />
+                        <span>{ui("navTrackOrder")}</span>
                       </Link>
 
                       <div className="px-3 pb-1 pt-4 text-2xs font-bold uppercase tracking-wider text-white/40">

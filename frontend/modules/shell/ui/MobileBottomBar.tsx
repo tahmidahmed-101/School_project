@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SLIDE_EASE } from "@/design-system/patterns/usePresence";
 import { CountBadge } from "@/design-system/ui/CountBadge";
-import { Home, Store, Truck, Heart, User } from "lucide-react";
+import { Home, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { UserAvatar, firstName, useAuth } from "@/modules/auth";
 import { useWishlist } from "@/modules/wishlist";
@@ -16,16 +16,14 @@ function MobileBottomBarInner() {
   const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
   const { user } = useAuth();
 
-  // Active tab index (-1 = none, e.g. on the pre-order page which has its own nav entry):
-  // 0 = Home, 1 = Shop, 2 = Track Order, 3 = Wishlist, 4 = Profile
+  // Active tab index (-1 = none: the shop, product and pre-order pages have no tab of their own):
+  // 0 = Home, 1 = Track Order, 2 = Wishlist, 3 = Profile
   const activeIndex = useMemo(() => {
-    if (isWishlistOpen) return 3;
-    if (pathname.startsWith("/login")) return 4;
-    if (pathname.startsWith("/track-order")) return 2;
+    if (isWishlistOpen) return 2;
+    if (pathname.startsWith("/login")) return 3;
+    if (pathname.startsWith("/track-order")) return 1;
     if (pathname.startsWith("/pre-order")) return -1;
-    if (pathname.startsWith("/shop") || pathname.startsWith("/product")) {
-      return 1;
-    }
+    if (pathname.startsWith("/shop") || pathname.startsWith("/product")) return -1;
     return 0; // Default to Home
   }, [pathname, isWishlistOpen]);
 
@@ -38,14 +36,6 @@ function MobileBottomBarInner() {
       label: ui("navHome"),
       href: "/",
       icon: Home,
-      badge: 0,
-      onClick: undefined,
-    },
-    {
-      id: "shop",
-      label: ui("tabShop"),
-      href: "/shop",
-      icon: Store,
       badge: 0,
       onClick: undefined,
     },
@@ -81,10 +71,10 @@ function MobileBottomBarInner() {
       <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-bar pb-[env(safe-area-inset-bottom,0px)]">
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
-          {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
+          {/* Smooth moving spotlight beam & top glowing indicator (4 tabs -> w-1/4) */}
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden transition-[transform,opacity] duration-300 ${SLIDE_EASE}`}
+            className={`pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/4 flex-col items-center justify-start overflow-hidden transition-[transform,opacity] duration-300 ${SLIDE_EASE}`}
             style={{ transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex === -1 ? 0 : 1 }}
           >
             {/* Top glowing bar flush with top border */}
