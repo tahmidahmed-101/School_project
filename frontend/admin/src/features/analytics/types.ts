@@ -117,15 +117,15 @@ export interface DashboardData {
   segments: CustomerSegment[]
   fulfillment: FulfillmentMetric[]
   ticker: TickerItem[]
-  /** Sent only when the request carries no `kind`. */
+  /** The open pre-order book; not sent when the request is for `kind=stock`. */
   preorder?: PreorderSummary
 }
 
-/** Field names assumed from the separation plan; the backend block is not final, so each is optional. */
+/** PreorderBookSerializer */
 export interface PreorderSummary {
-  open_orders?: number
-  deposits_held?: string
-  balances_outstanding?: string
+  open_orders: number
+  deposits_held: string
+  balances_outstanding: string
 }
 
 export interface SalesTrendPoint {

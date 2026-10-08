@@ -6,6 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import type { StatusTone } from "@/components/common/status-tones"
 import { useCan } from "@/hooks/use-can"
+import type { Kind } from "@/hooks/use-kind"
 import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
 import type { DashboardOrder } from "../types"
 import { ReportWidget } from "./ReportWidget"
@@ -19,7 +20,25 @@ const STATUS_TONE: Record<string, StatusTone> = {
   Refunded: "secondary",
 }
 
+const COPY = {
+  stock: {
+    title: "Recent stock orders",
+    description: "Latest stock orders placed in this period",
+    list: "/orders",
+    emptyTitle: "No stock orders in this period",
+    emptyDescription: "New orders will show up here.",
+  },
+  preorder: {
+    title: "Recent pre-orders",
+    description: "Latest pre-orders placed in this period",
+    list: "/preorders",
+    emptyTitle: "No pre-orders in this period",
+    emptyDescription: "New pre-orders will show up here.",
+  },
+} satisfies Record<Kind, Record<string, string>>
+
 interface Props {
+  kind: Kind
   orders: DashboardOrder[] | undefined
   isLoading: boolean
   error: unknown
@@ -27,8 +46,9 @@ interface Props {
   className?: string
 }
 
-export function RecentOrders({ orders, isLoading, error, onRetry, className }: Props) {
+export function RecentOrders({ kind, orders, isLoading, error, onRetry, className }: Props) {
   const canOpenOrders = useCan("orders.view")
+  const copy = COPY[kind]
 
   const columns: ColumnDef<DashboardOrder>[] = [
     {
@@ -94,16 +114,16 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
 
   return (
     <ReportWidget
-      title="Recent stock orders"
-      description="Latest stock orders placed in this period"
-      link={canOpenOrders ? { to: "/orders", label: "View all" } : undefined}
+      title={copy.title}
+      description={copy.description}
+      link={canOpenOrders ? { to: copy.list, label: "View all" } : undefined}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
       isEmpty={!orders?.length}
       emptyIcon={ShoppingBag}
-      emptyTitle="No stock orders in this period"
-      emptyDescription="New orders will show up here."
+      emptyTitle={copy.emptyTitle}
+      emptyDescription={copy.emptyDescription}
       skeleton={
         <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }, (_, i) => (

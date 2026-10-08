@@ -18,8 +18,7 @@ import { deletePromoLine, fetchPromoLines, savePromoLine } from "@/features/syst
 import type { PromoLine, ShopPlacement } from "@/features/system/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
-import { onShop, SHARED_EDIT_NOTE } from "./placement"
-import { SharedCell } from "./SharedCell"
+import { onShop } from "./placement"
 
 const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
   home: {
@@ -70,11 +69,6 @@ export function PromoLinesCard({ canManage, placement }: { canManage: boolean; p
       cell: ({ row }) => (
         <ProductCell name={row.original.text_en} sub={<span lang="bn">{row.original.text_bn}</span>} />
       ),
-    },
-    {
-      id: "shared",
-      header: "SHARED",
-      cell: ({ row }) => <SharedCell placement={row.original.placement} />,
     },
     {
       accessorKey: "sort_order",
@@ -146,8 +140,8 @@ export function PromoLinesCard({ canManage, placement }: { canManage: boolean; p
           emptyIcon={Megaphone}
           emptyTitle="No promo lines"
           emptyDescription="The built-in lines are showing."
-          minWidth="700px"
-          columnWidths={["auto", "190px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
+          minWidth="520px"
+          columnWidths={["auto", "90px", "90px", ...(canManage ? ["80px"] : [])]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -212,7 +206,10 @@ function PromoLineFormDialog({
   const onSubmit = async (values: FormValues) => {
     try {
       await dispatch(
-        savePromoLine({ id: line?.id, values: { ...values, placement, sort_order: Number(values.sort_order) } })
+        savePromoLine({
+          id: line?.id,
+          values: { ...values, ...(line ? {} : { placement }), sort_order: Number(values.sort_order) },
+        })
       ).unwrap()
       toast.success(`Promo line ${line ? "updated" : "added"}`)
       onOpenChange(false)
@@ -226,7 +223,6 @@ function PromoLineFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={line ? "Edit promo line" : "Add promo line"}
-      description={line?.placement === "both" ? SHARED_EDIT_NOTE : undefined}
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={line ? "Save line" : "Add line"}

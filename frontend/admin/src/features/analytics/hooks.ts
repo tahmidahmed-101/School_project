@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import type { Kind } from "@/hooks/use-kind"
-import { rangeKey } from "./dateRange"
 import {
   fetchDashboard,
   fetchLowStock,
-  fetchPreorderSummary,
   fetchSalesTrend,
   fetchStockTurnover,
   reportKey,
@@ -78,15 +76,6 @@ export function useStockTurnoverReport(range: DateRangeParams, kind: Kind, enabl
   const key = reportKey(query)
   const res = useAppSelector((state) => state.reporting.stockTurnover)
   const retry = useRequest(enabled, key, () => dispatch(fetchStockTurnover(query)))
-  return view(res, key, retry)
-}
-
-/** `data.summary` stays null until the backend sends the dashboard's `preorder` block. */
-export function usePreorderSummary(range: DateRangeParams, enabled = true) {
-  const dispatch = useAppDispatch()
-  const key = rangeKey(range)
-  const res = useAppSelector((state) => state.reporting.preorderSummary)
-  const retry = useRequest(enabled, key, () => dispatch(fetchPreorderSummary(range)))
   return view(res, key, retry)
 }
 

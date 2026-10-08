@@ -31,7 +31,7 @@ from apps.accounts.services.users import (
 )
 from apps.common.exceptions import DomainError
 from apps.common.generics import BulkActionMixin, list_response
-from apps.common.params import get_bool, get_choice, get_search
+from apps.common.params import get_bool, get_choice, get_kind, get_search
 from apps.common.permissions import IsAdmin
 from apps.common.responses import error_from_exception, not_found
 
@@ -133,6 +133,11 @@ class AdminUserListCreateView(UsersPermissionMixin, APIView):
         # With include_deleted, narrows to the deleted accounts (the restore list).
         if get_bool(params, "deleted_only", default=False):
             queryset = queryset.filter(deleted_at__isnull=False)
+        kind = get_kind(params)
+        if kind:
+            from apps.orders.selectors.sales_orders import customers_of_kind
+
+            queryset = customers_of_kind(queryset, kind)
         return list_response(request, queryset, _AdminUserListSerializer, view=self)
 
     @extend_schema(
@@ -265,7 +270,7 @@ class AdminUserDetailView(UsersPermissionMixin, APIView):
         data = _admin_user_data(user)
         from apps.orders.selectors.sales_orders import customer_order_summary
 
-        data["order_summary"] = customer_order_summary(user)
+        data["order_summary"] = customer_order_summary(user, kind=get_kind(request.query_params))
         return Response({"data": data, "message": "Success"})
 
     @extend_schema(

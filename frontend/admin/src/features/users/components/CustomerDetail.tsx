@@ -16,16 +16,25 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
   activateUser,
   deactivateUser,
+  fetchOrderSummary,
   fetchSingle,
   fetchUserAddresses,
   softDeleteUser,
 } from "@/features/users/slices/customerSlice"
-import { displayNameOf, type AdminAddress, type AdminUser, type CustomerOrderRow } from "@/features/users/types"
+import { customerListPath } from "@/features/users/paths"
+import {
+  displayNameOf,
+  type AdminAddress,
+  type AdminUser,
+  type CustomerOrderRow,
+  type OrderSummary,
+} from "@/features/users/types"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { AddressFormDialog, CustomerFormDialog, SetRoleDialog } from "./CustomerDialogs"
 import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { UserAvatar } from "./UserAvatar"
@@ -33,6 +42,27 @@ import { UserAvatar } from "./UserAvatar"
 const RECENT_ORDERS = 10
 
 type Loadable<T> = { forId: string; status: "succeeded" | "failed"; rows: T[]; total: number }
+
+const COPY = {
+  stock: {
+    orders: "Stock orders",
+    spent: "Stock order value",
+    open: "Open stock orders",
+    recent: "Recent stock orders",
+    orderList: "/orders",
+    emptyTitle: "No stock orders yet",
+    emptyDescription: "This customer has not placed a stock order.",
+  },
+  preorder: {
+    orders: "Pre-orders",
+    spent: "Pre-order value",
+    open: "Open pre-orders",
+    recent: "Recent pre-orders",
+    orderList: "/preorders",
+    emptyTitle: "No pre-orders yet",
+    emptyDescription: "This customer has not placed a pre-order.",
+  },
+} satisfies Record<Kind, Record<string, string>>
 
 const StatCard = ({ label, value, icon: Icon, tone }: { label: string; value: string | number; icon: typeof Wallet; tone: string }) => (
   <Card>
@@ -52,6 +82,9 @@ const StatCard = ({ label, value, icon: Icon, tone }: { label: string; value: st
 
 const CustomerDetail = () => {
   const { id = "" } = useParams<{ id: string }>()
+  const kind = useKind()
+  const copy = COPY[kind]
+  const listPath = customerListPath(kind)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData, singleStatus, singleError, isMutating } = useAppSelector((state) => state.customers)
@@ -60,6 +93,8 @@ const CustomerDetail = () => {
 
   const [addresses, setAddresses] = useState<Loadable<AdminAddress> | null>(null)
   const [orders, setOrders] = useState<Loadable<CustomerOrderRow> | null>(null)
+  const [summaryState, setSummaryState] = useState<{ key: string; summary: OrderSummary | null } | null>(null)
+  const viewKey = `${kind}:${id}`
   const [dialog, setDialog] = useState<"edit" | "role" | "address" | null>(null)
 
   const loadCustomer = useCallback(() => dispatch(fetchSingle(id)), [dispatch, id])
@@ -76,25 +111,25 @@ const CustomerDetail = () => {
     return request
   }, [dispatch, id])
 
-  // Orders belong to the sales domain; read the customer's latest page straight from
-  // /admin/orders/?customer_id= so this page never disturbs state.orders.
+  // Orders belong to the sales domain; read the customer's latest page of this half straight from
+  // /admin/orders/?customer_id=&order_type= so this page never disturbs state.orders.
   const loadOrders = useCallback(() => {
     const controller = new AbortController()
     api
       .get("/admin/orders/", {
-        params: { customer_id: id, page: 1, page_size: RECENT_ORDERS },
+        params: { customer_id: id, order_type: kind, page: 1, page_size: RECENT_ORDERS },
         signal: controller.signal,
       })
       .then((res) => {
         const { items, meta } = unwrapList<CustomerOrderRow>(res.data, 1, RECENT_ORDERS)
-        setOrders({ forId: id, status: "succeeded", rows: items, total: meta.count })
+        setOrders({ forId: viewKey, status: "succeeded", rows: items, total: meta.count })
       })
       .catch(() => {
         if (controller.signal.aborted) return
-        setOrders({ forId: id, status: "failed", rows: [], total: 0 })
+        setOrders({ forId: viewKey, status: "failed", rows: [], total: 0 })
       })
     return controller
-  }, [id])
+  }, [id, kind, viewKey])
 
   useEffect(() => {
     const request = loadCustomer()
@@ -110,6 +145,15 @@ const CustomerDetail = () => {
     const controller = loadOrders()
     return () => controller.abort()
   }, [loadOrders])
+
+  useEffect(() => {
+    const request = dispatch(fetchOrderSummary({ id, kind }))
+    request
+      .unwrap()
+      .then((summary) => setSummaryState({ key: viewKey, summary }))
+      .catch(() => undefined)
+    return () => request.abort()
+  }, [dispatch, id, kind, viewKey])
 
   const runAction = async (thunk: typeof activateUser, success: string) => {
     try {
@@ -128,8 +172,8 @@ const CustomerDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Customer"
-        backTo="/customers"
-        backLabel="Back to Customers"
+        backTo={listPath}
+        backLabel="Back to customers"
         error={singleError}
         onRetry={loadCustomer}
       />
@@ -137,9 +181,9 @@ const CustomerDetail = () => {
   }
 
   const name = displayNameOf(customer)
-  const summary = customer.order_summary
+  const summary = summaryState?.key === viewKey ? summaryState.summary : null
   const addressRows = addresses?.forId === id ? addresses : null
-  const orderRows = orders?.forId === id ? orders : null
+  const orderRows = orders?.forId === viewKey ? orders : null
 
   const orderColumns: ColumnDef<CustomerOrderRow>[] = [
     {
@@ -157,7 +201,7 @@ const CustomerDetail = () => {
       <PageHeader
         title={name}
         description={`Customer since ${formatDate(customer.date_joined)}`}
-        back={{ to: "/customers", label: "Back to customers" }}
+        back={{ to: listPath, label: "Back to customers" }}
         actions={
           <>
             <Button variant="outline" size="action" onClick={() => setDialog("edit")}>
@@ -189,7 +233,7 @@ const CustomerDetail = () => {
             <DeleteModal
               title={`Delete ${name}?`}
               onConfirm={async () => {
-                if (await runAction(softDeleteUser, "Customer deleted")) navigate("/customers")
+                if (await runAction(softDeleteUser, "Customer deleted")) navigate(listPath)
               }}
               trigger={
                 <Button variant="destructive" size="action" disabled={isMutating}>
@@ -203,9 +247,9 @@ const CustomerDetail = () => {
 
       {summary && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Total Orders" value={summary.total_orders} icon={ShoppingBag} tone="bg-blue-500/10 text-blue-500" />
-          <StatCard label="Total Spent" value={formatCurrency(summary.total_spent)} icon={Wallet} tone="bg-green-500/10 text-green-600" />
-          <StatCard label="Open Orders" value={summary.pending_orders} icon={Clock} tone="bg-amber-500/10 text-amber-600" />
+          <StatCard label={copy.orders} value={summary.total_orders} icon={ShoppingBag} tone="bg-blue-500/10 text-blue-500" />
+          <StatCard label={copy.spent} value={formatCurrency(summary.total_spent)} icon={Wallet} tone="bg-green-500/10 text-green-600" />
+          <StatCard label={copy.open} value={summary.pending_orders} icon={Clock} tone="bg-amber-500/10 text-amber-600" />
           <StatCard label="Cancelled" value={summary.cancelled_orders} icon={XCircle} tone="bg-red-500/10 text-red-500" />
         </div>
       )}
@@ -312,11 +356,11 @@ const CustomerDetail = () => {
       <Card className="overflow-hidden border-none shadow-sm dark:border-solid">
         <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
           <CardTitle level={2} className="flex items-center gap-2 text-lg">
-            <ShoppingBag className="h-5 w-5 text-primary" /> Recent Orders
+            <ShoppingBag className="h-5 w-5 text-primary" /> {copy.recent}
           </CardTitle>
           {orderRows?.status === "succeeded" && orderRows.total > orderRows.rows.length && (
             <Button variant="link" asChild>
-              <Link to={`/orders?customer_id=${customer.id}`}><ListOrdered className="size-4" /> View all {orderRows.total}</Link>
+              <Link to={`${copy.orderList}?customer_id=${customer.id}`}><ListOrdered className="size-4" /> View all {orderRows.total}</Link>
             </Button>
           )}
         </CardHeader>
@@ -333,8 +377,8 @@ const CustomerDetail = () => {
               loadOrders()
             }}
             onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
-            emptyTitle="No orders yet"
-            emptyDescription="This customer has not placed an order."
+            emptyTitle={copy.emptyTitle}
+            emptyDescription={copy.emptyDescription}
             minWidth="0px"
           />
         </CardContent>

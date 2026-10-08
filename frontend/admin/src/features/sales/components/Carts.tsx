@@ -25,6 +25,7 @@ import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useKind } from "@/hooks/use-kind"
+import { customerDetailPath } from "@/features/users/paths"
 import { useListPage } from "@/hooks/use-list-page"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -53,6 +54,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
   const cart = useLastValue(selected)
   // The customer page is admin-only (see users/module.ts).
   const canViewCustomer = useCan(ADMIN_ONLY)
+  const kind = useKind()
 
   return (
     <Dialog open={!!selected} onOpenChange={(open) => !open && onClose()}>
@@ -108,7 +110,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
           <DialogFooter>
             {canViewCustomer && cart.customer_id && (
               <Button variant="outline" asChild>
-                <Link to={`/customer_detail/${cart.customer_id}`}>
+                <Link to={customerDetailPath(kind, cart.customer_id)}>
                   <User className="size-4" /> View customer
                 </Link>
               </Button>

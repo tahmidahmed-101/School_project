@@ -1,19 +1,46 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 from uuid import UUID
 
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
 
 from apps.common.utils.codes import hash_code
 from apps.common.utils.dates import day_after, day_start
+from apps.common.utils.money import ZERO, quantize
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.shipments import with_delivered_quantity
 
 
-def customer_order_summary(customer) -> dict:
-    result = SalesOrder.objects.filter(customer=customer, deleted_at__isnull=True).aggregate(
+def _placed_orders() -> QuerySet[SalesOrder]:
+    """Checked-out orders. A pending order is a cart, which has no kind yet."""
+    return SalesOrder.objects.filter(deleted_at__isnull=True).exclude(
+        status=SalesOrder.Status.PENDING
+    )
+
+
+def customers_of_kind(users: QuerySet, kind: str) -> QuerySet:
+    """One half's view of the customer list. A customer is one person, so the
+    same account is in both halves once they have ordered from both. Someone
+    who has not ordered yet is listed on the stock half only."""
+    placed = _placed_orders().filter(customer=OuterRef("pk"))
+    has_preorder = Exists(placed.filter(order_type=SalesOrder.OrderType.PREORDER))
+    if kind == SalesOrder.OrderType.PREORDER:
+        return users.filter(has_preorder)
+    return users.filter(
+        Exists(placed.filter(order_type=SalesOrder.OrderType.STOCK)) | ~has_preorder
+    )
+
+
+def customer_order_summary(customer, *, kind: str | None = None) -> dict:
+    """With `kind`, the figures of that half only; `total_spent` is then the
+    customer's lifetime value on that half."""
+    orders = (
+        _placed_orders().filter(order_type=kind)
+        if kind
+        else SalesOrder.objects.filter(deleted_at__isnull=True)
+    )
+    result = orders.filter(customer=customer).aggregate(
         total_orders=Count("id"),
         completed_orders=Count(
             "id",
@@ -41,7 +68,7 @@ def customer_order_summary(customer) -> dict:
         "completed_orders": result["completed_orders"] or 0,
         "cancelled_orders": result["cancelled_orders"] or 0,
         "pending_orders": result["pending_orders"] or 0,
-        "total_spent": str(result["total_spent"] or Decimal("0.00")),
+        "total_spent": str(quantize(result["total_spent"] or ZERO)),
     }
 
 

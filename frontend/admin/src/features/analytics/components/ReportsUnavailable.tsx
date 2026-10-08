@@ -13,7 +13,7 @@ export function ReportsUnavailable({ links = [] }: { links?: { to: string; label
       <div>
         <h2 className="text-base font-semibold">Store metrics aren't available on your account</h2>
         <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          Sales, revenue and stock reports need the <span className="font-medium text-foreground">Reports</span>{" "}
+          These reports need the <span className="font-medium text-foreground">Reports</span>{" "}
           permission. Ask an administrator if you need access.
         </p>
       </div>

@@ -21,7 +21,7 @@ export interface AdminUser {
   last_login: string | null
   permissions: string[]
   deleted_at: string | null
-  /** Only on GET /admin/users/{id}/ (customer_order_summary). */
+  /** Only on GET /admin/users/{id}/ (customer_order_summary); with ?kind= it covers that half only. */
   order_summary?: OrderSummary
 }
 
@@ -69,7 +69,7 @@ export interface StaffCreatePayload {
   permissions?: string[]
 }
 
-/** The subset of AdminSalesOrderSerializer the customer page shows (GET /admin/orders/?customer_id=). */
+/** The subset of AdminSalesOrderSerializer the customer page shows (GET /admin/orders/?customer_id=&order_type=). */
 export interface CustomerOrderRow {
   id: string
   order_number: string

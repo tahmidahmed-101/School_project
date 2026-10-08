@@ -45,6 +45,7 @@ class PublicPaymentMethodListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
+        # TODO(ask): one on/off per method for both halves. Should pre-orders offer a different set?
         offered = [
             row
             for row in payment_methods_list()

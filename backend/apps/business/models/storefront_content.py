@@ -15,7 +15,11 @@ def _hero_image_path(instance: HeroSlide, filename: str) -> str:
 class HeroPlacement(models.TextChoices):
     HOME = "home", "Home"
     PREORDER = "preorder", "Pre-order"
+    # Old rows only, until `split_both_placements` has run. Never written again.
     BOTH = "both", "Both"
+
+
+WRITABLE_PLACEMENTS = (HeroPlacement.HOME.value, HeroPlacement.PREORDER.value)
 
 
 class HeroSlide(TimeStampedModel):
@@ -30,7 +34,7 @@ class HeroSlide(TimeStampedModel):
     title_bn = models.CharField(max_length=160, blank=True)
     link_url = models.CharField(max_length=500, blank=True)
     placement = models.CharField(
-        max_length=20, choices=HeroPlacement.choices, default=HeroPlacement.BOTH
+        max_length=20, choices=HeroPlacement.choices, default=HeroPlacement.HOME
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -48,7 +52,7 @@ class PromoLine(TimeStampedModel):
     text_en = models.CharField(max_length=160)
     text_bn = models.CharField(max_length=160, blank=True)
     placement = models.CharField(
-        max_length=20, choices=HeroPlacement.choices, default=HeroPlacement.BOTH
+        max_length=20, choices=HeroPlacement.choices, default=HeroPlacement.HOME
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)

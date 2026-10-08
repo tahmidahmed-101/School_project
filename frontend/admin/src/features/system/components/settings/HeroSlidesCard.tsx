@@ -19,8 +19,7 @@ import { deleteHeroSlide, fetchHeroSlides, saveHeroSlide } from "@/features/syst
 import type { HeroSlide, ShopPlacement } from "@/features/system/types"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
-import { onShop, SHARED_EDIT_NOTE } from "./placement"
-import { SharedCell } from "./SharedCell"
+import { onShop } from "./placement"
 
 const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
   home: {
@@ -75,11 +74,6 @@ export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; p
           <ProductCell name={slideName(row.original)} sub={row.original.link_url} />
         </div>
       ),
-    },
-    {
-      id: "shared",
-      header: "SHARED",
-      cell: ({ row }) => <SharedCell placement={row.original.placement} />,
     },
     {
       accessorKey: "sort_order",
@@ -151,8 +145,8 @@ export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; p
           emptyIcon={Images}
           emptyTitle="No hero slides"
           emptyDescription={placement === "home" ? "The storefront is showing its built-in slides." : undefined}
-          minWidth="700px"
-          columnWidths={["auto", "190px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
+          minWidth="520px"
+          columnWidths={["auto", "90px", "90px", ...(canManage ? ["80px"] : [])]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -250,7 +244,7 @@ function HeroSlideFormDialog({
       await dispatch(
         saveHeroSlide({
           id: slide?.id,
-          values: { ...values, placement, sort_order: Number(values.sort_order) },
+          values: { ...values, ...(slide ? {} : { placement }), sort_order: Number(values.sort_order) },
           image: imageFile,
         })
       ).unwrap()
@@ -268,9 +262,7 @@ function HeroSlideFormDialog({
       open={open}
       onOpenChange={close}
       title={slide ? "Edit slide" : "Add slide"}
-      description={`Tag and title are shown over the image, in the language the shopper is browsing in.${
-        slide?.placement === "both" ? ` ${SHARED_EDIT_NOTE}` : ""
-      }`}
+      description="Tag and title are shown over the image, in the language the shopper is browsing in."
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={slide ? "Save slide" : "Add slide"}

@@ -17,8 +17,9 @@ import { api } from "@/lib/api/client";
 /**
  * The backend has no staff notification feed, so the bell reports work that is waiting, counted
  * live from the lists staff already have: orders to ship or collect payment for, return requests,
- * unanswered product questions, open price reports and low stock. Each source is only asked for
- * when the signed-in user may open the page it links to.
+ * unanswered product questions, open price reports and low stock. Every alert counts one half
+ * (stock or pre-order) and opens that half's page. Each source is only asked for when the
+ * signed-in user may open the page it links to.
  */
 interface Source {
   key: string;
@@ -39,56 +40,59 @@ const listCount = (url: string, params: Record<string, string>) => async () => {
   return Number(res.data?.data?.count ?? 0);
 };
 
+const ORDER_PERMISSION = ["orders.view", "orders.manage"];
+const CATALOG_PERMISSION = ["catalog.view", "catalog.manage"];
+
 const SOURCES: Source[] = [
   {
     key: "orders-to-ship",
     icon: Truck,
-    one: "1 order is ready to ship",
-    many: (n) => `${n} orders are ready to ship`,
+    one: "1 stock order is ready to ship",
+    many: (n) => `${n} stock orders are ready to ship`,
     hint: "Confirmed and waiting for a shipment.",
     to: "/orders",
-    permission: ["orders.view", "orders.manage"],
-    count: listCount("/admin/orders/", { status: "confirmed" }),
+    permission: ORDER_PERMISSION,
+    count: listCount("/admin/orders/", { status: "confirmed", order_type: "stock" }),
   },
   {
     key: "orders-awaiting-payment",
     icon: CreditCard,
-    one: "1 order is awaiting payment",
-    many: (n) => `${n} orders are awaiting payment`,
+    one: "1 stock order is awaiting payment",
+    many: (n) => `${n} stock orders are awaiting payment`,
     hint: "Placed, but the payment has not been captured.",
     to: "/orders",
-    permission: ["orders.view", "orders.manage"],
-    count: listCount("/admin/orders/", { status: "awaiting_payment" }),
+    permission: ORDER_PERMISSION,
+    count: listCount("/admin/orders/", { status: "awaiting_payment", order_type: "stock" }),
   },
   {
     key: "returns",
     icon: RotateCcw,
-    one: "1 return request to review",
-    many: (n) => `${n} return requests to review`,
-    hint: "Customers asked to send items back.",
+    one: "1 stock return request to review",
+    many: (n) => `${n} stock return requests to review`,
+    hint: "Customers asked to send stock items back.",
     to: "/returns",
-    permission: ["orders.view", "orders.manage"],
-    count: listCount("/admin/orders/returns/", { status: "requested" }),
+    permission: ["returns.manage"],
+    count: listCount("/admin/orders/returns/", { status: "requested", kind: "stock" }),
   },
   {
     key: "questions",
     icon: CircleHelp,
-    one: "1 product question to answer",
-    many: (n) => `${n} product questions to answer`,
+    one: "1 question on a stock product to answer",
+    many: (n) => `${n} questions on stock products to answer`,
     hint: "Not shown on the storefront until answered.",
     to: "/questions",
-    permission: ["catalog.view", "catalog.manage"],
-    count: listCount("/admin/catalog/questions/", { status: "pending" }),
+    permission: CATALOG_PERMISSION,
+    count: listCount("/admin/catalog/questions/", { status: "pending", kind: "stock" }),
   },
   {
     key: "price-reports",
     icon: Tag,
-    one: "1 price report to review",
-    many: (n) => `${n} price reports to review`,
+    one: "1 price report on a stock product to review",
+    many: (n) => `${n} price reports on stock products to review`,
     hint: "Customers reported a price that looks wrong.",
     to: "/price_reports",
-    permission: ["catalog.view", "catalog.manage"],
-    count: listCount("/admin/catalog/price-reports/", { status: "open" }),
+    permission: CATALOG_PERMISSION,
+    count: listCount("/admin/catalog/price-reports/", { status: "open", kind: "stock" }),
   },
   {
     key: "low-stock",
@@ -104,6 +108,56 @@ const SOURCES: Source[] = [
       // An API deployed before count_only existed ignores it and sends the rows.
       return Array.isArray(data) ? data.length : Number(data?.count) || 0;
     },
+  },
+  {
+    key: "preorders-confirmed",
+    icon: Truck,
+    one: "1 pre-order is confirmed and not shipped",
+    many: (n) => `${n} pre-orders are confirmed and not shipped`,
+    hint: "Waiting for the goods to arrive or to be sent out.",
+    to: "/preorders",
+    permission: ORDER_PERMISSION,
+    count: listCount("/admin/orders/", { status: "confirmed", order_type: "preorder" }),
+  },
+  {
+    key: "preorders-awaiting-payment",
+    icon: CreditCard,
+    one: "1 pre-order is awaiting payment",
+    many: (n) => `${n} pre-orders are awaiting payment`,
+    hint: "Placed, but no payment has been recorded yet.",
+    to: "/preorders",
+    permission: ORDER_PERMISSION,
+    count: listCount("/admin/orders/", { status: "awaiting_payment", order_type: "preorder" }),
+  },
+  {
+    key: "preorder-returns",
+    icon: RotateCcw,
+    one: "1 pre-order return request to review",
+    many: (n) => `${n} pre-order return requests to review`,
+    hint: "Customers asked to send pre-order items back.",
+    to: "/preorder_returns",
+    permission: ["returns.manage"],
+    count: listCount("/admin/orders/returns/", { status: "requested", kind: "preorder" }),
+  },
+  {
+    key: "preorder-questions",
+    icon: CircleHelp,
+    one: "1 question on a pre-order product to answer",
+    many: (n) => `${n} questions on pre-order products to answer`,
+    hint: "Not shown on the storefront until answered.",
+    to: "/preorder_questions",
+    permission: CATALOG_PERMISSION,
+    count: listCount("/admin/catalog/questions/", { status: "pending", kind: "preorder" }),
+  },
+  {
+    key: "preorder-price-reports",
+    icon: Tag,
+    one: "1 price report on a pre-order product to review",
+    many: (n) => `${n} price reports on pre-order products to review`,
+    hint: "Customers reported a price that looks wrong.",
+    to: "/preorder_price_reports",
+    permission: CATALOG_PERMISSION,
+    count: listCount("/admin/catalog/price-reports/", { status: "open", kind: "preorder" }),
   },
 ];
 
