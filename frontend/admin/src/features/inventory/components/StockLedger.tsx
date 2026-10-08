@@ -23,6 +23,7 @@ import { movementTypeLabel, movementTypeOptions, type StockLedgerEntry } from ".
 import { useWarehouses } from "../lib/useWarehouses"
 
 const PAGE_SIZE = 25
+const STOCK_VARIANTS = { category_type: "stock" }
 const ORDERING_OPTIONS: Option[] = [
   { label: "Newest first", value: "-created_at" },
   { label: "Oldest first", value: "created_at" },
@@ -51,6 +52,7 @@ const StockLedger = () => {
     state: ledgerState,
     pageSize: PAGE_SIZE,
     params: {
+      kind: "stock",
       variant_id: variantId,
       warehouse_id: warehouse?.value,
       movement_type: movement?.value,
@@ -146,7 +148,14 @@ const StockLedger = () => {
           {
             wide: true,
             active: Boolean(variant),
-            component: <VariantPicker value={variant} onChange={setVariant} placeholder="Filter by variant…" />,
+            component: (
+              <VariantPicker
+                value={variant}
+                onChange={setVariant}
+                placeholder="Filter by variant…"
+                filters={STOCK_VARIANTS}
+              />
+            ),
           },
           {
             component: (

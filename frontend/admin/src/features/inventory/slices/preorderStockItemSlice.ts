@@ -1,0 +1,12 @@
+import { createSliceFactory } from "@/lib/sliceFactory"
+import type { StockItem } from "../types"
+
+const { reducer, fetchAll } = createSliceFactory<StockItem>({
+  name: "inventoryPreorderStockItems",
+  endpoint: "/admin/inventory/stock-items/",
+  initialSingleData: null,
+})
+
+export { fetchAll }
+
+export default reducer

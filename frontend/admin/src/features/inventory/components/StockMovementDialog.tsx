@@ -12,6 +12,7 @@ import { reportFormError } from "@/lib/forms"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
+import type { Kind } from "@/hooks/use-kind"
 
 import { postAdjustment, postIntake, postWriteOff } from "../api"
 import type { Warehouse } from "../types"
@@ -20,7 +21,9 @@ export type MovementMode = "intake" | "adjust" | "write_off"
 
 const DEFAULT_WAREHOUSE = "default"
 
-const COPY: Record<MovementMode, { title: string; description: string; submit: string }> = {
+type Copy = { title: string; description: string; submit: string }
+
+const COPY: Record<MovementMode, Copy> = {
   intake: {
     title: "Receive stock",
     description: "Posts a purchase receipt (purchase_in) and updates the average cost.",
@@ -34,6 +37,24 @@ const COPY: Record<MovementMode, { title: string; description: string; submit: s
   write_off: {
     title: "Write off stock",
     description: "Removes damaged, lost or expired units from on-hand stock.",
+    submit: "Write off",
+  },
+}
+
+const PREORDER_COPY: Record<MovementMode, Copy> = {
+  intake: {
+    title: "Receive goods",
+    description: "Records units that have arrived from the supplier and updates the average cost.",
+    submit: "Receive",
+  },
+  adjust: {
+    title: "Correct arrived quantity",
+    description: "Fixes a wrong count. Use a negative number to reduce it.",
+    submit: "Save correction",
+  },
+  write_off: {
+    title: "Write off units",
+    description: "Removes damaged or lost units from what has arrived.",
     submit: "Write off",
   },
 }
@@ -57,12 +78,22 @@ interface Props {
   /** Pre-selected variant / warehouse (e.g. launched from a stock row). */
   variant?: PickedVariant | null
   warehouseId?: string | null
+  /** Which half opened the dialog: sets the wording and which variants can be picked. */
+  kind?: Kind
   onDone: () => void
 }
 
-export function StockMovementDialog({ mode, onOpenChange, warehouses, variant, warehouseId, onDone }: Props) {
+export function StockMovementDialog({
+  mode,
+  onOpenChange,
+  warehouses,
+  variant,
+  warehouseId,
+  kind = "stock",
+  onDone,
+}: Props) {
   const open = mode !== null
-  const copy = COPY[mode ?? "intake"]
+  const copy = (kind === "preorder" ? PREORDER_COPY : COPY)[mode ?? "intake"]
   const {
     control,
     register,
@@ -142,7 +173,12 @@ export function StockMovementDialog({ mode, onOpenChange, warehouses, variant, w
             control={control}
             name="variant"
             render={({ field }) => (
-              <VariantPicker id="movement-variant" value={field.value ?? null} onChange={field.onChange} />
+              <VariantPicker
+                id="movement-variant"
+                value={field.value ?? null}
+                onChange={field.onChange}
+                filters={{ category_type: kind }}
+              />
             )}
           />
           <FieldError errors={[errors.variant]} />
