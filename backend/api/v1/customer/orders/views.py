@@ -14,7 +14,6 @@ from apps.common.generics import list_response
 from apps.common.params import get_uuid
 from apps.common.permissions import IsCustomer
 from apps.common.responses import error_from_exception, not_found
-from apps.common.serializers import CapturePaymentSerializer
 from apps.common.throttling import CouponRateThrottle
 from apps.logistics.selectors.rates import (
     address_zone_text,
@@ -28,7 +27,6 @@ from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
     get_cart,
-    get_checked_out_order,
     get_order_by_id,
     orders_for_customer,
 )
@@ -42,7 +40,6 @@ from apps.orders.services.carts import (
 from apps.orders.services.checkout import checkout, order_weight
 from apps.orders.services.coupons import apply_coupon, remove_coupon
 from apps.orders.services.orders import cancel_order
-from apps.orders.services.payments import capture_payment
 from apps.orders.services.returns import create_rma
 from apps.risk.request_ip import client_ip
 
@@ -358,29 +355,6 @@ class CartShippingZoneListView(APIView):
         return Response(
             {"data": ShippingZoneOptionSerializer(zones, many=True).data, "message": "Success"}
         )
-
-
-@extend_schema(tags=["Orders"])
-class PaymentCaptureView(APIView):
-    serializer_class = CapturePaymentSerializer
-    permission_classes: ClassVar[list] = [IsCustomer]
-
-    def post(self, request) -> Response:
-        order = get_checked_out_order(request.user)
-        if order is None:
-            return error_from_exception(
-                DomainError(
-                    "No checked-out order is awaiting payment.", code="no_order_awaiting_payment"
-                )
-            )
-        serializer = CapturePaymentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            capture_payment(order=order, **serializer.validated_data)
-        except DomainError as exc:
-            return error_from_exception(exc)
-        order.refresh_from_db()
-        return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])

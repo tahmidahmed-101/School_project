@@ -47,6 +47,17 @@ Size: S = a day or less of focused work, M = a few days, L = a week or more. The
 
 ### Phase 0: stop the bleeding (size M, backend + admin, no owner decision except D0)
 
+Built 2026-10-08 on branch `fix/preorder-phase-0`, with D0 taken as "from deploy date only". Three things
+differ from the table below:
+
+- 0.1 covers every storefront method, not only COD. A storefront order stores a pending payment row with
+  the chosen method. COD is confirmed at once; any other method waits in "awaiting payment" until staff
+  capture it with a reference.
+- 0.6 keeps "closed" available from confirmed and shipped, and "delivered" from confirmed when delivered
+  consignments already cover every line, because staff use both today.
+- 0.8 does not stop the checkout. A saved cart is charged at today's price, which is the price the
+  storefront shows, the same as a checkout sent as an item list.
+
 | Item | Change | Files |
 |---|---|---|
 | 0.1 | COD checkout confirms the order **without** creating a payment. Payment is recorded when cash is received (existing admin "record payment" action, allowed on a confirmed COD order). | `services/guest_checkout.py`, `services/payments.py`, `accounting/services/postings.py` (no posting at COD order time) |

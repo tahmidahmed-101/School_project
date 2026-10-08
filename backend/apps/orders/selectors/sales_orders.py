@@ -79,6 +79,7 @@ def orders_list(
     customer=None,
     status: str | None = None,
     preorder_stage: str | None = None,
+    has_preorder: bool | None = None,
     search: str | None = None,
     start: date | None = None,
     end: date | None = None,
@@ -90,6 +91,11 @@ def orders_list(
         queryset = queryset.filter(status=status)
     if preorder_stage:
         queryset = queryset.filter(preorder_stage=preorder_stage)
+    if has_preorder is not None:
+        preorder_lines = SalesOrderLine.objects.filter(order=OuterRef("pk"), is_preorder=True)
+        queryset = queryset.filter(
+            Exists(preorder_lines) if has_preorder else ~Exists(preorder_lines)
+        )
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:
@@ -138,21 +144,6 @@ def customer_carts_list() -> QuerySet[SalesOrder]:
         .select_related("customer")
         # Lines carry product name and SKU snapshots, so no variant join.
         .prefetch_related(Prefetch("lines", queryset=SalesOrderLine.objects.order_by("created_at")))
-    )
-
-
-def get_checked_out_order(customer) -> SalesOrder | None:
-    """The customer's checked-out-but-unpaid order. Distinct from `get_cart`:
-    once `checkout` runs, the order leaves `pending` and is no longer a cart,
-    so payment capture has to look it up by this status instead."""
-    return (
-        SalesOrder.objects.filter(
-            customer=customer,
-            status=SalesOrder.Status.AWAITING_PAYMENT,
-            deleted_at__isnull=True,
-        )
-        .order_by("-created_at")
-        .first()
     )
 
 

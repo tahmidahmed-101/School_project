@@ -120,7 +120,8 @@ def test_awaiting_payment_order_cannot_be_marked_delivered():
 
 def test_order_overridden_to_shipped_without_shipments_cannot_be_marked_delivered():
     order, _ = _confirmed(2)
-    set_order_status(order=order, new_status=SalesOrder.Status.SHIPPED)
+    # The override no longer allows this jump; older orders can still be in it.
+    SalesOrder.objects.filter(pk=order.pk).update(status=SalesOrder.Status.SHIPPED)
 
     _refuse_delivered(order)
 
@@ -229,7 +230,7 @@ def test_override_is_accepted_once_delivered_consignments_cover_every_line():
     order an operator previously overrode to `confirmed` after shipping."""
     order, _ = _confirmed(1, 2)
     shipment = _ship_all(order)
-    set_order_status(order=order, new_status=SalesOrder.Status.CONFIRMED)
+    SalesOrder.objects.filter(pk=order.pk).update(status=SalesOrder.Status.CONFIRMED)
     update_shipment_status(shipment=shipment, status=Shipment.Status.DELIVERED)
     assert _status(order) == SalesOrder.Status.CONFIRMED  # lifecycle only advances `shipped`
 

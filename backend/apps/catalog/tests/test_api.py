@@ -119,7 +119,9 @@ def test_public_product_detail_exposes_preorder_capacity(api_client):
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=10,
     )
-    SalesOrderLineFactory(variant=variant, quantity=4, is_preorder=True)
+    SalesOrderLineFactory(
+        variant=variant, quantity=4, is_preorder=True, order__status="confirmed"
+    )
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -146,7 +148,9 @@ def test_public_product_detail_preorder_remaining_is_null_when_unlimited(api_cli
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=None,
     )
-    SalesOrderLineFactory(variant=variant, quantity=3, is_preorder=True)
+    SalesOrderLineFactory(
+        variant=variant, quantity=3, is_preorder=True, order__status="confirmed"
+    )
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 

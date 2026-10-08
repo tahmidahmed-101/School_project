@@ -35,6 +35,12 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Lowest total", value: "grand_total" },
 ]
 
+// Sent as `has_preorder` (selectors/sales_orders.py orders_list).
+const ORDER_KIND_OPTIONS: Option[] = [
+  { value: "true", label: "With pre-order items" },
+  { value: "false", label: "Stock items only" },
+]
+
 const Orders = () => {
   useDocumentTitle("Orders")
 
@@ -49,6 +55,7 @@ const Orders = () => {
 
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
   const [stageFilter, setStageFilter] = useState<Option | null>(null)
+  const [kindFilter, setKindFilter] = useState<Option | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
 
@@ -62,6 +69,7 @@ const Orders = () => {
     params: {
       status: statusFilter?.value,
       preorder_stage: stageFilter?.value,
+      has_preorder: kindFilter?.value,
       start: from ? toISODate(from) : undefined,
       end: to ? toISODate(to) : undefined,
       customer_id: customerId,
@@ -80,7 +88,10 @@ const Orders = () => {
       accessorKey: "order_number",
       header: "ORDER #",
       cell: ({ row }) => (
-        <span className="font-inter text-sm font-medium text-primary">{row.original.order_number}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-inter text-sm font-medium text-primary">{row.original.order_number}</span>
+          {row.original.has_preorder && <Badge variant="secondary">Pre-order</Badge>}
+        </div>
       ),
     },
     {
@@ -160,6 +171,16 @@ const Orders = () => {
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
+              />
+            ),
+          },
+          {
+            component: (
+              <Combobox
+                options={ORDER_KIND_OPTIONS}
+                placeholder="Order type"
+                value={kindFilter}
+                onValueChange={setKindFilter}
               />
             ),
           },

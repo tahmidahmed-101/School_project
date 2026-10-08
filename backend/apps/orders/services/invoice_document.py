@@ -31,14 +31,15 @@ def _address_lines(address: dict[str, str]) -> list[str]:
 
 
 def _settlement(order: SalesOrder) -> tuple[Decimal, Decimal, str]:
-    captured = ZERO
+    received = ZERO
     refunded = ZERO
     for payment in order.payments.all():
-        if payment.status == Payment.Status.CAPTURED:
-            captured += payment.amount
+        # A fully refunded payment was still received first.
+        if payment.status in (Payment.Status.CAPTURED, Payment.Status.REFUNDED):
+            received += payment.amount
         refunded += payment.refunded_amount
 
-    net = captured - refunded
+    net = received - refunded
     if refunded and net <= ZERO:
         label = "refunded"
     elif net >= order.grand_total and order.grand_total > ZERO:

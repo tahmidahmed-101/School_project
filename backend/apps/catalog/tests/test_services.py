@@ -544,8 +544,9 @@ def test_can_preorder_checks_stock_limit():
     variant.refresh_from_db()
     assert variant.can_preorder is True
 
-    # Second order reaches limit
+    # An open cart holds no slot; the limit is reached once the order is placed.
     add_line(order=cart, variant=variant, quantity=2)
+    checkout(order=cart)
 
     variant.refresh_from_db()
     assert variant.can_preorder is False
@@ -785,6 +786,7 @@ def test_preorder_stock_limit_enforced_across_separate_orders():
     first_customer = create_user(email="preorder-race-1@example.com", role=UserRole.CUSTOMER)
     first_cart = get_or_create_cart(first_customer)
     add_line(order=first_cart, variant=variant, quantity=3)
+    checkout(order=first_cart)
 
     second_customer = create_user(email="preorder-race-2@example.com", role=UserRole.CUSTOMER)
     second_cart = get_or_create_cart(second_customer)

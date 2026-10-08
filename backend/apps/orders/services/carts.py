@@ -102,18 +102,22 @@ def set_cart_contact_phone(*, cart: SalesOrder, phone: str, name: str = "") -> S
     return cart
 
 
+# Only a placed order takes a pre-order slot. An open cart does not, or
+# abandoned carts would lock real buyers out of a limited run.
+PREORDER_SLOT_STATUSES = (
+    SalesOrder.Status.AWAITING_PAYMENT,
+    SalesOrder.Status.CONFIRMED,
+    SalesOrder.Status.SHIPPED,
+    SalesOrder.Status.DELIVERED,
+)
+
+
 def get_preordered_quantity(variant) -> int:
     return (
         SalesOrderLine.objects.filter(
             variant=variant,
             is_preorder=True,
-            order__status__in=[
-                SalesOrder.Status.PENDING,
-                SalesOrder.Status.AWAITING_PAYMENT,
-                SalesOrder.Status.CONFIRMED,
-                SalesOrder.Status.SHIPPED,
-                SalesOrder.Status.DELIVERED,
-            ],
+            order__status__in=PREORDER_SLOT_STATUSES,
         ).aggregate(total=Sum("quantity"))["total"]
         or 0
     )
@@ -128,13 +132,7 @@ def get_preordered_quantities(variants) -> dict:
         for item in SalesOrderLine.objects.filter(
             variant_id__in=variant_ids,
             is_preorder=True,
-            order__status__in=[
-                SalesOrder.Status.PENDING,
-                SalesOrder.Status.AWAITING_PAYMENT,
-                SalesOrder.Status.CONFIRMED,
-                SalesOrder.Status.SHIPPED,
-                SalesOrder.Status.DELIVERED,
-            ],
+            order__status__in=PREORDER_SLOT_STATUSES,
         )
         .values("variant_id")
         .annotate(total=Sum("quantity"))
@@ -142,8 +140,10 @@ def get_preordered_quantities(variants) -> dict:
 
 
 def _check_preorder_stock_limit(
-    variant, requested_quantity: int, current_line_quantity: int = 0
+    variant, requested_quantity: int, placed_line_quantity: int = 0
 ) -> None:
+    """`placed_line_quantity` is what the line being changed already holds on
+    a placed order, so it is not counted against itself. Zero for a cart."""
     if variant.preorder_stock_limit is None:
         return
     # Lock the variant row so two concurrent checkouts of the same variant
@@ -154,8 +154,7 @@ def _check_preorder_stock_limit(
 
     ProductVariant.objects.select_for_update().get(pk=variant.pk)
     preordered = get_preordered_quantity(variant)
-    # Subtract current line quantity since we're replacing/adding to it
-    available = variant.preorder_stock_limit - (preordered - current_line_quantity)
+    available = max(variant.preorder_stock_limit - (preordered - placed_line_quantity), 0)
     if requested_quantity > available:
         raise BusinessRuleViolationError(
             f"Pre-order stock limit reached. Only {available} units available for pre-order.",
@@ -207,7 +206,7 @@ def add_line(
     if not created:
         # Check pre-order stock limit when increasing quantity
         if variant.is_preorder_active and variant.preorder_stock_limit is not None:
-            _check_preorder_stock_limit(variant, line.quantity + quantity, line.quantity)
+            _check_preorder_stock_limit(variant, line.quantity + quantity)
         line.quantity += quantity
         line.tax_amount = compute_line_tax(unit_price=line.unit_price, quantity=line.quantity)
         line.save(update_fields=["quantity", "tax_amount"])
@@ -225,7 +224,7 @@ def update_line(*, line: SalesOrderLine, quantity: int) -> SalesOrderLine:
     variant = line.variant
     # Validate pre-order stock limit when updating quantity
     if variant.is_preorder_active and variant.preorder_stock_limit is not None:
-        _check_preorder_stock_limit(variant, quantity, line.quantity)
+        _check_preorder_stock_limit(variant, quantity)
 
     line.quantity = quantity
     line.tax_amount = compute_line_tax(unit_price=line.unit_price, quantity=quantity)

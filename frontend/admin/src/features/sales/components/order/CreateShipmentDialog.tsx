@@ -17,10 +17,11 @@ import { LineQuantityTable } from "./LineQuantityTable"
 const AUTO = "__auto__"
 const shippable = (line: OrderLine) => line.shippable_quantity
 
-// Cash still to collect: nothing when a captured payment already covers the order.
-const initialCod = (order: Order) => (order.payments.some((p) => p.status === "captured") ? "0" : order.grand_total)
+// Cash still to collect is whatever has not been received yet.
+const initialCod = (order: Order) => order.balance_due
+// Pre-order goods may not have arrived, so those lines start at 0 and are typed in on purpose.
 const initialQuantities = (order: Order) =>
-  Object.fromEntries(order.lines.map((l) => [l.id, String(l.shippable_quantity)]))
+  Object.fromEntries(order.lines.map((l) => [l.id, String(l.is_preorder ? 0 : l.shippable_quantity)]))
 
 interface CreateShipmentDialogProps {
   order: Order
@@ -96,7 +97,11 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
       open={open}
       onOpenChange={onOpenChange}
       title="Create shipment"
-      description="Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
+      description={
+        order.has_preorder
+          ? "Ship some or all remaining units. Pre-order lines start at 0: enter a quantity only for goods that have arrived."
+          : "Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
+      }
       onSubmit={handleSubmit}
       submitting={submitting}
       submitLabel="Create shipment"

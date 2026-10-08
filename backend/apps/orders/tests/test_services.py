@@ -477,6 +477,8 @@ def test_set_order_status_refuses_to_reopen_a_cancelled_order():
 
 def test_set_order_status_moves_forward_directly():
     order, _ = _checked_out_order(quantity=5, stock=20)
+    # Closing skips nothing only once the order is paid for; unpaid orders are cancelled.
+    SalesOrder.objects.filter(pk=order.pk).update(status=SalesOrder.Status.CONFIRMED)
 
     set_order_status(order=order, new_status=SalesOrder.Status.CLOSED)
 

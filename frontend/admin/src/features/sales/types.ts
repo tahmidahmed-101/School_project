@@ -83,6 +83,7 @@ export interface OrderLine {
   unit_price: string
   discount_amount: string
   tax_amount: string
+  is_preorder: boolean
 }
 
 /** The order's ship-to snapshot (`line2` is exposed as `delivery_note`). */
@@ -120,6 +121,11 @@ export interface Order {
   shipping_total: string
   discount_total: string
   grand_total: string
+  /** Money received and not refunded; uncollected cash on delivery is not in it. */
+  paid_total: string
+  balance_due: string
+  /** Statuses the manual override accepts from here (services/orders.py STATUS_OVERRIDES). */
+  allowed_statuses: OrderStatus[]
   coupon_code: string | null
   created_at: string
   lines: OrderLine[]

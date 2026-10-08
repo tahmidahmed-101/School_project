@@ -68,3 +68,15 @@
 - [x] Storefront home: hero slides and promo strip read the API (static fallback), false "free delivery over ৳2,000" line removed, Trending shelf uses the `trending` flag, Promotion tile hidden with no discounts
 - [x] Storefront wiring: store name, legal name, opening hours, about from the profile; policy effective date; shipping-policy page; policy links only when published; all socials in structured data; coupon expiry; carrier on track-order
 - [x] Merge the four branches, run checks once, local browser pass
+
+## Phase I: stock vs pre-order, safety fixes (owner "start" 2026-10-08; plan in `docs/preorder-stock-fix-plan.md`, Phase 0)
+- [x] Storefront orders are never recorded as paid: COD is confirmed with the cash still owed, other methods wait for staff to verify
+- [x] Staff capture COD cash later (confirmed, shipped or delivered order); shipment dialog asks the courier for the balance still owed
+- [x] Invoice paid figure counts money received minus refunds
+- [x] Customer self-payment endpoint removed
+- [x] Cancel takes the order lock and refuses once a consignment is out
+- [x] Manual status override limited to an explicit table
+- [x] Pre-order limit counts placed orders only; staff quantity edits checked against it
+- [x] Checkout charges today's price for a saved cart
+- [x] Admin: pre-order badge on orders and lines, order type filter, pre-order lines start at 0 in the shipment dialog
+- [ ] Owner decisions D1-D10 before Phases 1-5 of the plan

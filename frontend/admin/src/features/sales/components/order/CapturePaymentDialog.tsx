@@ -26,7 +26,9 @@ interface CapturePaymentDialogProps {
 export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePaymentDialogProps) {
   const dispatch = useAppDispatch()
   const [amount, setAmount] = useState(order.grand_total)
-  const [method, setMethod] = useState<PaymentMethod>("manual")
+  // An order placed on the storefront already names how the customer chose to pay.
+  const owedMethod: PaymentMethod = order.payments.find((p) => p.status === "pending")?.method ?? "manual"
+  const [method, setMethod] = useState<PaymentMethod>(owedMethod)
   const [reference, setReference] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
@@ -36,7 +38,7 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
     setWasOpen(open)
     if (open) {
       setAmount(order.grand_total)
-      setMethod("manual")
+      setMethod(owedMethod)
       setReference("")
     }
   }
@@ -66,7 +68,11 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
       open={open}
       onOpenChange={onOpenChange}
       title="Capture payment"
-      description={`Record money received for ${order.order_number}. The order moves to confirmed once captured.`}
+      description={
+        order.status === "awaiting_payment"
+          ? `Record money received for ${order.order_number}. The order moves to confirmed once captured.`
+          : `Record money received for ${order.order_number}.`
+      }
       onSubmit={handleSubmit}
       submitting={submitting}
       submitLabel="Capture"

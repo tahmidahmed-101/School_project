@@ -281,7 +281,12 @@ const OrderDetail = () => {
 
   const isCancelled = order.status === "cancelled"
   const canCancel = canManage && PRE_SHIPMENT_STATUSES.includes(order.status)
-  const canCapture = canManage && order.status === "awaiting_payment"
+  // Cash on delivery is confirmed unpaid, so it stays capturable until the money is recorded.
+  const canCapture =
+    canManage &&
+    !isCancelled &&
+    (order.status === "awaiting_payment" || order.payments.some((p) => p.status === "pending"))
+  const statusOptions = ORDER_STATUS_OPTIONS.filter((o) => order.allowed_statuses.includes(o.value))
   const canCreateShipment =
     canShip && order.status === "confirmed" && order.lines.some((l) => l.shippable_quantity > 0)
   const canCreateReturn =
@@ -379,7 +384,7 @@ const OrderDetail = () => {
             {/* Where the order is on its way from placed to delivered. */}
             <OrderProgress status={order.status} />
 
-            {canManage && !isCancelled && (
+            {canManage && statusOptions.length > 0 && (
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">Change status manually</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -388,7 +393,7 @@ const OrderDetail = () => {
                       <SelectValue placeholder="Choose a status..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {ORDER_STATUS_OPTIONS.filter((o) => o.value !== order.status).map((o) => (
+                      {statusOptions.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
                         </SelectItem>

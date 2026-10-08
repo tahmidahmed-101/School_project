@@ -11,8 +11,8 @@ from apps.logistics.selectors.rates import address_zone_text, find_zone_by_addre
 from apps.logistics.services.rates import quote_shipping
 from apps.orders.models import SalesOrder, StockReservation
 from apps.orders.services.address_snapshot import build_address_snapshot
-from apps.orders.services.carts import _check_preorder_stock_limit
-from apps.orders.services.coupons import revalidate_applied_coupon
+from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
+from apps.orders.services.coupons import _compute_discount, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
 from apps.risk.services import blocklist, ip_blocklist
 
@@ -30,6 +30,25 @@ def order_weight(order: SalesOrder) -> Decimal:
 def _is_preorder_line(line) -> bool:
     variant = line.variant
     return variant.is_preorder_enabled and variant.is_preorder_active
+
+
+def _reprice_lines(order: SalesOrder, lines) -> None:
+    """A cart can outlive a price change or the end of an offer. The order is
+    charged at today's price, which is the one the storefront is showing."""
+    repriced = False
+    for line in lines:
+        unit_price = line.variant.effective_price
+        if line.unit_price != unit_price:
+            line.unit_price = unit_price
+            line.tax_amount = compute_line_tax(unit_price=unit_price, quantity=line.quantity)
+            line.save(update_fields=["unit_price", "tax_amount"])
+            repriced = True
+    if not repriced:
+        return
+    order.recalculate_totals()
+    if order.coupon is not None:
+        order.discount_total = _compute_discount(order.coupon, order.subtotal)
+        order.save(update_fields=["discount_total", "updated_at"])
 
 
 @transaction.atomic
@@ -82,8 +101,9 @@ def checkout(
                 code="preorder_expired"
             )
         if variant.is_preorder_active and variant.preorder_stock_limit is not None:
-            # Check stock limit at checkout (line.quantity is already in preordered count)
-            _check_preorder_stock_limit(variant, line.quantity, line.quantity)
+            _check_preorder_stock_limit(variant, line.quantity)
+
+    _reprice_lines(order, lines)
 
     # A cart can sit long enough for its applied coupon to expire or hit its
     # usage limit before checkout actually runs — re-validate here too.

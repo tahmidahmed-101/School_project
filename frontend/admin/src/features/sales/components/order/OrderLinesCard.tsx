@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
 import { Package, Plus } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
@@ -112,6 +113,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
             <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
           )}
           <ProductCell name={line.product_name || "—"} sku={line.variant_sku} wrapName />
+          {line.is_preorder && <Badge variant="secondary">Pre-order</Badge>}
         </div>
       ),
     },

@@ -4,6 +4,7 @@ import logging
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.accounting.services.money import quantize_money
 from apps.accounting.services.postings import post_customer_payment, post_customer_refund
@@ -15,6 +16,59 @@ from apps.orders.selectors.payment_methods import is_payment_method_enabled
 from apps.orders.services.orders import lock_order
 
 logger = logging.getLogger(__name__)
+
+# A cash-on-delivery order is confirmed before any money moves, so its
+# payment is captured later, at whatever stage the cash actually arrives.
+COD_COLLECTABLE_STATUSES = frozenset(
+    {
+        SalesOrder.Status.CONFIRMED,
+        SalesOrder.Status.SHIPPED,
+        SalesOrder.Status.DELIVERED,
+    }
+)
+
+
+def _require_enabled_method(method: str):
+    spec = PAYMENT_METHODS_BY_KEY.get(method)
+    if spec is None:
+        raise BusinessRuleViolationError(
+            f"{method} is not a payment method.", code="unknown_payment_method"
+        )
+    if not is_payment_method_enabled(method):
+        raise BusinessRuleViolationError(
+            f"{spec.label} is switched off.", code="payment_method_disabled"
+        )
+    return spec
+
+
+@transaction.atomic
+def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
+    """Record how a checked-out order will be paid without claiming the money
+    has arrived: a pending payment row and no ledger entry. Cash on delivery
+    is confirmed now, since the courier collects it; any other method waits in
+    "awaiting payment" until staff verify it. `capture_payment` turns the row
+    into a captured payment either way."""
+    lock_order(order)
+    if order.status != SalesOrder.Status.AWAITING_PAYMENT:
+        raise BusinessRuleViolationError(
+            "Only a checked-out order awaiting payment can take a payment method.",
+            code="invalid_order_status",
+        )
+    if not order.lines.exists():
+        raise BusinessRuleViolationError("Cannot place an empty order.", code="empty_order")
+    _require_enabled_method(method)
+
+    payment = Payment.objects.create(
+        order=order,
+        amount=order.grand_total,
+        method=method,
+        status=Payment.Status.PENDING,
+    )
+    if method == PaymentMethodKey.COD:
+        order.status = SalesOrder.Status.CONFIRMED
+        order.save(update_fields=["status"])
+        _assess_order_risk(order)
+    return payment
 
 
 @transaction.atomic
@@ -57,7 +111,15 @@ def capture_payment(
                 code="duplicate_gateway_reference",
             )
 
-    if order.status != SalesOrder.Status.AWAITING_PAYMENT:
+    awaiting = order.status == SalesOrder.Status.AWAITING_PAYMENT
+    owed = None
+    if awaiting or order.status in COD_COLLECTABLE_STATUSES:
+        owed = (
+            Payment.objects.select_for_update()
+            .filter(order=order, status=Payment.Status.PENDING)
+            .first()
+        )
+    if not awaiting and owed is None:
         raise BusinessRuleViolationError(
             "Payment can only be captured for a checked-out order awaiting payment.",
             code="invalid_order_status",
@@ -71,15 +133,7 @@ def capture_payment(
             "Payment amount does not match the order total.", code="amount_mismatch"
         )
     method = method or PaymentMethodKey.MANUAL
-    spec = PAYMENT_METHODS_BY_KEY.get(method)
-    if spec is None:
-        raise BusinessRuleViolationError(
-            f"{method} is not a payment method.", code="unknown_payment_method"
-        )
-    if not is_payment_method_enabled(method):
-        raise BusinessRuleViolationError(
-            f"{spec.label} is switched off.", code="payment_method_disabled"
-        )
+    spec = _require_enabled_method(method)
     if spec.requires_reference and not reference:
         raise BusinessRuleViolationError(
             f"{spec.label} has no live gateway integration — a payment reference "
@@ -91,22 +145,34 @@ def capture_payment(
         # Own savepoint: catching IntegrityError inside the outer atomic
         # block would otherwise leave it unusable for the raise below.
         with transaction.atomic():
-            payment = Payment.objects.create(
-                order=order,
-                amount=amount,
-                method=method,
-                status=Payment.Status.CAPTURED,
-                gateway_reference=reference,
-            )
+            if owed is not None:
+                owed.amount = amount
+                owed.method = method
+                owed.gateway_reference = reference
+                owed.status = Payment.Status.CAPTURED
+                owed.save(
+                    update_fields=["amount", "method", "gateway_reference", "status", "updated_at"]
+                )
+                payment = owed
+            else:
+                payment = Payment.objects.create(
+                    order=order,
+                    amount=amount,
+                    method=method,
+                    status=Payment.Status.CAPTURED,
+                    gateway_reference=reference,
+                )
     except IntegrityError:
         raise BusinessRuleViolationError(
             "This payment reference has already been used for another payment.",
             code="duplicate_gateway_reference",
         ) from None
-    post_customer_payment(payment)
-    order.status = SalesOrder.Status.CONFIRMED
-    order.save(update_fields=["status"])
-    _assess_order_risk(order)
+    # A pending row dates from the order; the money arrived today.
+    post_customer_payment(payment, entry_date=timezone.localdate() if owed else None)
+    if awaiting:
+        order.status = SalesOrder.Status.CONFIRMED
+        order.save(update_fields=["status"])
+        _assess_order_risk(order)
     return payment
 
 

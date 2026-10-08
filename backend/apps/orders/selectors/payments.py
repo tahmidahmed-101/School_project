@@ -1,12 +1,27 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from uuid import UUID
 
 from django.db.models import QuerySet
 
 from apps.common.utils.dates import day_after, day_start
 from apps.orders.models import Payment
+
+
+def order_paid_total(order) -> Decimal:
+    """Money actually received for the order and not handed back. Reads
+    `order.payments.all()` so a prefetched order costs no query."""
+    paid = Decimal("0.00")
+    for payment in order.payments.all():
+        if payment.status in (Payment.Status.CAPTURED, Payment.Status.REFUNDED):
+            paid += payment.amount - payment.refunded_amount
+    return paid
+
+
+def order_balance_due(order) -> Decimal:
+    return max(order.grand_total - order_paid_total(order), Decimal("0.00"))
 
 
 def payments_list(

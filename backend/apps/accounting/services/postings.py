@@ -311,9 +311,9 @@ def post_sales_return(rma) -> list[JournalEntry]:
     return entries
 
 
-def post_customer_payment(payment) -> JournalEntry:
+def post_customer_payment(payment, *, entry_date=None) -> JournalEntry:
     return post_journal_entry(
-        entry_date=payment.created_at.date(),
+        entry_date=entry_date or payment.created_at.date(),
         reference_type="customer_payment",
         reference_id=payment.id,
         description=f"Payment for {payment.order.order_number}",

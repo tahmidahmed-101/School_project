@@ -181,9 +181,10 @@ def guest_checkout(
 
     order = checkout(order=order, shipping_address=address, carrier=carrier, ip_address=ip_address)
 
-    from apps.orders.services.payments import capture_payment
+    from apps.orders.services.payments import record_payment_due
 
-    capture_payment(order=order, amount=order.grand_total, method=payment_method)
+    # A storefront order never counts as paid: nobody has verified any money.
+    record_payment_due(order=order, method=payment_method)
     order.refresh_from_db()
     return order
 
@@ -192,8 +193,8 @@ def _claim_guest_cart(
     cart: SalesOrder, *, owner: User, email: str, phone: str, notes: str
 ) -> SalesOrder:
     """Give a saved guest cart its owner and contact details. Locked first,
-    so two checkouts of one cart can't both claim it; the lines and their
-    prices stay exactly as the guest's cart services left them."""
+    so two checkouts of one cart can't both claim it; the lines stay as the
+    guest's cart services left them and `checkout` re-prices them."""
     lock_order(cart)
     if cart.status != SalesOrder.Status.PENDING or cart.customer_id is not None:
         raise BusinessRuleViolationError(

@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ProductCell } from "@/components/common/cells"
 import { DataTable } from "@/components/common/data-table"
@@ -19,7 +20,12 @@ export function LineQuantityTable({ lines, maxFor, maxLabel, values, onChange }:
     {
       id: "product",
       header: "Product",
-      cell: ({ row }) => <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />
+          {row.original.is_preorder && <Badge variant="secondary">Pre-order</Badge>}
+        </div>
+      ),
     },
     {
       id: "max",

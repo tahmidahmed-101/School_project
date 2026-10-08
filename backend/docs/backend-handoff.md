@@ -276,7 +276,7 @@ matching `StaffPermission` code.
 - `GET cart/`, `GET/POST cart/lines/`, `PATCH/DELETE cart/lines/<line_id>/`
 - `PATCH cart/contact/` — save the phone typed at checkout on the open cart (see §15)
 - `POST cart/coupon/`, `POST cart/shipping-quote/`, `GET cart/shipping-options/`, `GET cart/shipping-zones/`
-- `POST cart/checkout/`, `POST cart/payment/`
+- `POST cart/checkout/` (payment is captured by staff from the admin API)
 - `GET ""` (order history), `GET <id>/`, `POST <id>/cancel/`
 - `GET/POST <id>/returns/`, `GET returns/<rma_id>/`
 

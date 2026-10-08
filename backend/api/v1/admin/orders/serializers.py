@@ -15,8 +15,10 @@ from apps.orders.models import (
     Shipment,
     StockReservation,
 )
+from apps.orders.selectors.payments import order_balance_due, order_paid_total
 from apps.orders.selectors.shipments import attach_delivered_quantities
 from apps.orders.services.address_snapshot import snapshot_or_live
+from apps.orders.services.orders import allowed_status_overrides
 
 
 class AdminSalesOrderLineSerializer(serializers.Serializer):
@@ -36,6 +38,7 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    is_preorder = serializers.BooleanField(read_only=True)
 
     def get_variant_sku(self, obj) -> str:
         if obj.variant_sku:
@@ -85,6 +88,9 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     shipping_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     discount_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    paid_total = serializers.SerializerMethodField()
+    balance_due = serializers.SerializerMethodField()
+    allowed_statuses = serializers.SerializerMethodField()
     coupon_code = serializers.CharField(source="coupon.code", read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
     lines = serializers.SerializerMethodField()
@@ -134,6 +140,15 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     def get_lines(self, obj) -> list[dict]:
         lines = attach_delivered_quantities(list(obj.lines.all()))
         return AdminSalesOrderLineSerializer(lines, many=True).data
+
+    def get_paid_total(self, obj) -> str:
+        return str(order_paid_total(obj))
+
+    def get_balance_due(self, obj) -> str:
+        return str(order_balance_due(obj))
+
+    def get_allowed_statuses(self, obj) -> list[str]:
+        return allowed_status_overrides(obj)
 
     def get_has_preorder(self, obj) -> bool:
         return any(line.is_preorder for line in obj.lines.all())

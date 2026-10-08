@@ -24,6 +24,7 @@ from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import CapturePaymentSerializer
 from apps.common.utils.export import CsvRenderer, csv_response
 from apps.logistics.selectors.rates import get_carrier_by_id
+from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
     PreorderStage,
@@ -64,7 +65,11 @@ from apps.orders.services.orders import (
     update_order,
     update_order_line,
 )
-from apps.orders.services.payments import capture_payment, refund_payment
+from apps.orders.services.payments import (
+    capture_payment,
+    record_payment_due,
+    refund_payment,
+)
 from apps.orders.services.preorder import set_preorder_stage
 from apps.orders.services.reservations import release_stock_reservation
 from apps.orders.services.returns import (
@@ -145,6 +150,7 @@ class OrderQuerysetMixin:
             customer=customer,
             status=get_choice(params, "status", SalesOrder.Status.values),
             preorder_stage=get_choice(params, "preorder_stage", PreorderStage.values),
+            has_preorder=get_bool(params, "has_preorder"),
             start=start,
             end=end,
         )
@@ -218,12 +224,12 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
                 for variant, quantity in resolved_lines:
                     add_line(order=order, variant=variant, quantity=quantity)
                 order = checkout(order=order, shipping_address=shipping_address, carrier=carrier)
-                if data.get("capture_payment", True):
-                    capture_payment(
-                        order=order,
-                        amount=order.grand_total,
-                        method=data.get("payment_method") or "manual",
-                    )
+                method = data.get("payment_method") or PaymentMethodKey.MANUAL
+                if method == PaymentMethodKey.COD:
+                    # The courier has not collected anything yet.
+                    record_payment_due(order=order, method=method)
+                elif data.get("capture_payment", True):
+                    capture_payment(order=order, amount=order.grand_total, method=method)
         except DomainError as exc:
             return error_from_exception(exc)
 
