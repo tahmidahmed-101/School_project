@@ -6,7 +6,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency, humanize } from "@/lib/format"
 import { getNavGroups, hasPermission } from "@/app/modules"
 import { customerDetailPath } from "@/features/users/paths"
-import type { Kind } from "@/hooks/use-kind"
+import { withKind, type Kind } from "@/hooks/use-kind"
 
 export interface SearchDestination {
   id: string
@@ -137,7 +137,7 @@ export function useRecordSearch(
             title: `${copy.order} ${o.order_number}`,
             subtitle: `${who} • ${humanize(o.status)} • ${formatCurrency(o.grand_total)}`,
             section: copy.orders,
-            url: `/order_detail/${o.id}`,
+            url: withKind(`/order_detail/${o.id}`, o.order_type === "preorder" ? "preorder" : "stock"),
             icon: ShoppingCart,
             keywords: [],
           })
@@ -151,7 +151,7 @@ export function useRecordSearch(
               title: p.name,
               subtitle: `${p.price != null ? formatCurrency(p.price) : "No price"} • ${p.is_active ? "Active" : "Inactive"}`,
               section: SECTIONS[KINDS[i]].products,
-              url: `/product_detail/${p.id}`,
+              url: withKind(`/product_detail/${p.id}`, KINDS[i]),
               icon: Boxes,
               keywords: [],
             })

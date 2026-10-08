@@ -35,6 +35,8 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_purchasing/receipts", lazy: page(() => import("../procurement/components/GoodsReceipts")) },
     { path: "preorder_purchasing/bills", lazy: page(() => import("../procurement/components/VendorBills")) },
     { path: "preorder_purchasing/payments", lazy: page(() => import("../procurement/components/VendorPayments")) },
+    { path: "preorder_fraud_cases", lazy: page(() => import("../risk/components/FraudCases")) },
+    { path: "preorder_fraud_cases/:id", lazy: page(() => import("../risk/components/FraudCaseDetail")) },
     { path: "preorder_settings", lazy: page(() => import("../system/components/PreorderSettings")) },
   ],
   nav: [
@@ -84,6 +86,7 @@ export const preorderModule: FeatureModule = {
         { title: "Questions", url: "/preorder_questions", permission: ["catalog.view", "catalog.manage"] },
         { title: "Price reports", url: "/preorder_price_reports", permission: ["catalog.view", "catalog.manage"] },
         { title: "Customers", url: "/preorder_customers", permission: ADMIN_ONLY },
+        { title: "Fraud cases", url: "/preorder_fraud_cases", permission: "risk.view" },
         { title: "Analytics", url: "/preorder_analytics", permission: "reports.view" },
         { title: "Settings", url: "/preorder_settings", permission: "settings.view" },
       ],

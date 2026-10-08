@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import type { StatusTone } from "@/components/common/status-tones"
 import { useCan } from "@/hooks/use-can"
-import type { Kind } from "@/hooks/use-kind"
+import { withKind, type Kind } from "@/hooks/use-kind"
 import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
 import type { DashboardOrder } from "../types"
 import { ReportWidget } from "./ReportWidget"
@@ -59,7 +59,7 @@ export function RecentOrders({ kind, orders, isLoading, error, onRetry, classNam
         return (
           <div className="min-w-0">
             {canOpenOrders ? (
-              <Link to={`/order_detail/${o.order_id}`} className="font-medium text-primary hover:underline">
+              <Link to={withKind(`/order_detail/${o.order_id}`, kind)} className="font-medium text-primary hover:underline">
                 {o.id}
               </Link>
             ) : (

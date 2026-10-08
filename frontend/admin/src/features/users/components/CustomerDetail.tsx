@@ -34,7 +34,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
+import { useKind, withKind, type Kind } from "@/hooks/use-kind"
 import { AddressFormDialog, CustomerFormDialog, SetRoleDialog } from "./CustomerDialogs"
 import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { UserAvatar } from "./UserAvatar"
@@ -376,7 +376,7 @@ const CustomerDetail = () => {
               setOrders(null)
               loadOrders()
             }}
-            onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
+            onRowClick={(order) => navigate(withKind(`/order_detail/${order.id}`, kind))}
             emptyTitle={copy.emptyTitle}
             emptyDescription={copy.emptyDescription}
             minWidth="0px"

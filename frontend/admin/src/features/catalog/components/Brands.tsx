@@ -36,7 +36,7 @@ const statusOptions: Option[] = [
   { label: "Inactive", value: "false" },
 ]
 
-const Brands = () => {
+const BrandsList = () => {
   const kind = useKind()
   const title = kind === "preorder" ? "Pre-order brands" : "Brands"
   useDocumentTitle(title)
@@ -304,5 +304,7 @@ function BrandFormDialog({
     </FormDialog>
   )
 }
+
+const Brands = () => <BrandsList key={useKind()} />
 
 export default Brands

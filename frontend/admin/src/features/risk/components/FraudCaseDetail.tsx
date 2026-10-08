@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, resolveFraudCase } from "@/features/risk/slices/fraudCaseSlice"
 import { selectFraudCases } from "@/features/risk/selectors"
 import type { FraudCase } from "@/features/risk/types"
+import { customerDetailPath } from "@/features/users/paths"
 import { ADMIN_ONLY } from "@/features/system/permissions"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -121,7 +122,7 @@ const FraudCaseDetail = () => {
               <DetailRow label="Customer">
                 {fraudCase.customer_id ? (
                   canViewCustomers ? (
-                    <Link className="text-primary hover:underline" to={`/customer_detail/${fraudCase.customer_id}`}>
+                    <Link className="text-primary hover:underline" to={customerDetailPath(kind, fraudCase.customer_id)}>
                       View customer
                     </Link>
                   ) : (

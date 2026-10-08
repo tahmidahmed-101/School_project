@@ -24,7 +24,7 @@ import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 import { deleteData, fetchAll, patchData, postData, restoreSupplier } from "../slices/supplierSlice"
 import type { Supplier, SupplierPayload } from "../types"
 import { useCanManagePurchasing, useProcurementSelector } from "../hooks/useProcurement"
-import { purchasingTitle, useKindRows } from "../lib/kind"
+import { purchasingTitle } from "../lib/kind"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -135,7 +135,7 @@ const IMPORT_FIELDS: ImportField[] = [
   { key: "payment_terms", label: "Payment terms", aliases: ["Terms"], example: "Net 30" },
 ]
 
-const Suppliers = () => {
+const SuppliersList = () => {
   const kind = useKind()
   const title = purchasingTitle(kind, "Suppliers")
   useDocumentTitle(title)
@@ -163,7 +163,6 @@ const Suppliers = () => {
     onDeleted: () => toast.success("Supplier deleted"),
   })
 
-  const rows = useKindRows(state.data, kind)
 
   const columns: ColumnDef<Supplier>[] = [
     {
@@ -241,7 +240,7 @@ const Suppliers = () => {
       <DataTable
         columns={columns}
         bulk={bulk}
-        data={rows}
+        data={state.data}
         {...list.tableProps}
         onRowClick={canManage ? (s) => !s.deleted_at && openForm(s) : undefined}
         emptyIcon={Truck}
@@ -256,5 +255,7 @@ const Suppliers = () => {
     </div>
   )
 }
+
+const Suppliers = () => <SuppliersList key={useKind()} />
 
 export default Suppliers
