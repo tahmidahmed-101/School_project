@@ -64,8 +64,16 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
               {cart.reached_checkout && <ReachedCheckoutBadge />}
             </DialogTitle>
             <DialogDescription>
-              {[cart.customer_email, cart.customer_phone].filter(Boolean).join(" · ") ||
-                (cart.is_guest_cart ? "An anonymous visitor who hasn't reached checkout yet." : "No contact details")}
+              {cart.customer_email || cart.customer_phone ? (
+                <>
+                  {cart.customer_email && <span className="block">{cart.customer_email}</span>}
+                  {cart.customer_phone && <span className="block">{cart.customer_phone}</span>}
+                </>
+              ) : cart.is_guest_cart ? (
+                "An anonymous visitor who hasn't reached checkout yet."
+              ) : (
+                "No contact details"
+              )}
             </DialogDescription>
           </DialogHeader>
 
