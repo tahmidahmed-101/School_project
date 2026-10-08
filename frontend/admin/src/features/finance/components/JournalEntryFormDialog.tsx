@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 import { createJournalEntry } from "../slices/journalEntrySlice"
 import type { Account } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
+import { BELONGS_TO_OPTIONS, kindFromBelongsTo } from "../utils"
 
 const schema = z
   .object({
@@ -52,12 +53,6 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 const emptyLine = { account_id: "", debit: "", credit: "" }
-
-const BELONGS_TO_OPTIONS: { label: string; value: FormValues["belongs_to"] }[] = [
-  { label: "Whole business", value: "company" },
-  { label: "Stock", value: "stock" },
-  { label: "Pre-order", value: "preorder" },
-]
 
 export function JournalEntryFormDialog({
   open,
@@ -114,7 +109,7 @@ export function JournalEntryFormDialog({
         createJournalEntry({
           entry_date: values.entry_date,
           description: values.description.trim(),
-          kind: values.belongs_to === "company" ? "" : values.belongs_to,
+          kind: kindFromBelongsTo(values.belongs_to),
           lines: values.lines.map((l) => ({
             account_id: l.account_id,
             debit: l.debit || "0",

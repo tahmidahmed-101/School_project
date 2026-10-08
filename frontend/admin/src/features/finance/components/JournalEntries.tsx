@@ -4,7 +4,6 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { BookOpen, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
@@ -24,7 +23,8 @@ import { fetchAll } from "../slices/journalEntrySlice"
 import type { JournalEntry } from "../types"
 import { useAccounts } from "../hooks/useFinanceHelpers"
 import { JournalEntryFormDialog } from "./JournalEntryFormDialog"
-import { entryTotal } from "../utils"
+import { BelongsToSwitch } from "./BelongsToSwitch"
+import { entryTotal, type BelongsTo } from "../utils"
 
 const ORDERING_OPTIONS: Option[] = [
   { label: "Newest first", value: "-entry_date" },
@@ -46,17 +46,9 @@ const KIND_REFERENCE_TYPES = [
   "stock_writeoff",
 ]
 
-type JournalView = "stock" | "preorder" | "company"
-
-const VIEWS: { value: JournalView; label: string }[] = [
-  { value: "stock", label: "Stock" },
-  { value: "preorder", label: "Pre-order" },
-  { value: "company", label: "Company" },
-]
-
-const REFERENCE_TYPES: Record<JournalView, string[]> = {
-  stock: KIND_REFERENCE_TYPES,
-  preorder: KIND_REFERENCE_TYPES,
+const REFERENCE_TYPES: Record<BelongsTo, string[]> = {
+  stock: [...KIND_REFERENCE_TYPES, "expense"],
+  preorder: [...KIND_REFERENCE_TYPES, "expense"],
   company: ["expense"],
 }
 
@@ -68,7 +60,7 @@ const JournalEntries = () => {
   const canPost = useCan("accounting.post")
   const { accounts } = useAccounts()
 
-  const [view, setView] = useState<JournalView>("stock")
+  const [view, setView] = useState<BelongsTo>("stock")
   const [referenceType, setReferenceType] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -143,25 +135,18 @@ const JournalEntries = () => {
         }
       />
 
-      <Tabs
+      <BelongsToSwitch
+        label="Show entries for"
         value={view}
-        onValueChange={(next) => {
-          setView(next as JournalView)
+        onChange={(next) => {
+          setView(next)
           setReferenceType(null)
         }}
-      >
-        <TabsList aria-label="Show entries for">
-          {VIEWS.map((v) => (
-            <TabsTrigger key={v.value} value={v.value} className="px-3">
-              {v.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      />
       <p className="text-sm text-muted-foreground">
         {view === "company"
-          ? "Entries for the whole business: expenses, owner money and anything not marked stock or pre-order."
-          : `Entries posted for ${view === "preorder" ? "pre-order" : "stock"} orders, purchases and goods.`}
+          ? "Entries for the whole business: rent, salaries, owner money and anything not marked stock or pre-order."
+          : `Entries posted for ${view === "preorder" ? "pre-order" : "stock"} orders, purchases, goods and expenses.`}
       </p>
 
       <FilterToolbar

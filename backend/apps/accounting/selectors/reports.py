@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import DecimalField, F, Sum
 
@@ -48,22 +48,39 @@ def _sales_and_cost(*, start: date, end: date, kind: str) -> tuple[Decimal, Deci
     return revenue, cogs
 
 
+def _gross_margin_percent(*, revenue: Decimal, gross_profit: Decimal) -> Decimal | None:
+    if not revenue:
+        return None
+    return (gross_profit * 100 / revenue).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+
 def profit_and_loss(*, start: date, end: date, kind: str | None = None) -> dict:
-    """With `kind`: sales, cost of goods and the costs posted against that half.
-    Company-wide expenses are not allocated to a half, so they and net income
-    are left out and named in `company_wide_left_out`."""
+    """With `kind`: sales, cost of goods, and the write-offs and running costs
+    marked for that half. Whole-business expenses are not allocated to a half, so
+    the bottom line stops before them; they and net income are named in
+    `company_wide_left_out`."""
     if kind:
         revenue, cogs = _sales_and_cost(start=start, end=end, kind=kind)
         kind_expenses = _net_debit(
             account_types=[Account.Type.EXPENSE], start=start, end=end, kind=kind
         )
+        written_off = _net_debit(
+            account_codes=[ACCOUNT_CODES["inventory_shrinkage"]], start=start, end=end, kind=kind
+        )
+        gross_profit = revenue - cogs
+        operating_expenses = kind_expenses - cogs - written_off
         return {
             "kind": kind,
             "revenue": revenue,
             "cost_of_goods_sold": cogs,
-            "gross_profit": revenue - cogs,
-            "other_costs": kind_expenses - cogs,
-            "company_wide_left_out": ["operating_expenses", "net_income"],
+            "gross_profit": gross_profit,
+            "gross_margin_percent": _gross_margin_percent(
+                revenue=revenue, gross_profit=gross_profit
+            ),
+            "goods_written_off": written_off,
+            "operating_expenses": operating_expenses,
+            "profit_before_company_costs": gross_profit - written_off - operating_expenses,
+            "company_wide_left_out": ["company_wide_expenses", "net_income"],
         }
     revenue = -_net_debit(account_types=[Account.Type.REVENUE], start=start, end=end)
     cogs = _net_debit(account_codes=[ACCOUNT_CODES["cogs"]], start=start, end=end)
@@ -76,6 +93,7 @@ def profit_and_loss(*, start: date, end: date, kind: str | None = None) -> dict:
         "revenue": revenue,
         "cost_of_goods_sold": cogs,
         "gross_profit": gross_profit,
+        "gross_margin_percent": _gross_margin_percent(revenue=revenue, gross_profit=gross_profit),
         "operating_expenses": operating_expenses,
         "net_income": net_income,
         "unassigned_revenue": unassigned_revenue,
@@ -118,19 +136,24 @@ def balance_sheet(*, as_of: date, kind: str | None = None) -> dict:
     contributed_equity = -_net_debit(account_types=[Account.Type.EQUITY], end=as_of)
     accumulated_earnings = retained_earnings(as_of=as_of)
     inventory_asset = _net_debit(account_codes=[ACCOUNT_CODES["inventory_asset"]], end=as_of)
+    equity = contributed_equity + accumulated_earnings
     return {
         "assets": assets,
         "liabilities": liabilities,
         "contributed_equity": contributed_equity,
         "retained_earnings": accumulated_earnings,
-        "equity": contributed_equity + accumulated_earnings,
+        "equity": equity,
         "inventory_asset": inventory_asset,
+        "other_assets": assets - inventory_asset,
+        "liabilities_and_equity": liabilities + equity,
+        "out_of_balance": assets - liabilities - equity,
     }
 
 
 def cash_flow(*, start: date, end: date, kind: str | None = None) -> dict:
     """With `kind`: the bank movements of that half's customer and supplier
-    documents. Expenses, capital and anything else with no kind stay company-wide."""
+    documents and of the expenses marked for it. Whole-business expenses, capital
+    and anything else with no kind stay company-wide."""
     bank = [ACCOUNT_CODES["bank"]]
     if kind:
 
@@ -146,15 +169,21 @@ def cash_flow(*, start: date, end: date, kind: str | None = None) -> dict:
         receipts = moved(["customer_payment"])
         refunds = -moved(["customer_refund"])
         supplier_payments = -moved(["vendor_payment"])
+        expenses_paid = -moved(["expense"])
         net = moved()
         return {
             "kind": kind,
             "customer_receipts": receipts,
             "customer_refunds": refunds,
             "supplier_payments": supplier_payments,
-            "other": net - receipts + refunds + supplier_payments,
+            "expenses_paid": expenses_paid,
+            "other": net - receipts + refunds + supplier_payments + expenses_paid,
             "net_change_in_cash": net,
-            "company_wide_left_out": ["expenses_paid", "owner_money", "untagged_entries"],
+            "company_wide_left_out": [
+                "company_wide_expenses_paid",
+                "owner_money",
+                "untagged_entries",
+            ],
         }
     # Simplified: net change in the Bank account only (no separate
     # investing/financing tracking — nothing upstream produces those events).

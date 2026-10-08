@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { Kind } from "@/hooks/use-kind"
 import { KindSwitch } from "@/features/analytics/components/KindSwitch"
+import { BelongsToSwitch } from "./BelongsToSwitch"
 import type {
   BalanceSheetReport,
   CashFlowReport,
@@ -218,20 +219,6 @@ type View = Kind | "company"
 const VIEW_LABELS: Record<View, string> = { stock: "Stock", preorder: "Pre-order", company: "Company" }
 const VIEW_NOUN: Record<Kind, string> = { stock: "stock", preorder: "pre-order" }
 
-function ViewSwitch({ value, onChange }: { value: View; onChange: (view: View) => void }) {
-  return (
-    <Tabs value={value} onValueChange={(next) => onChange(next as View)}>
-      <TabsList aria-label="Show figures for">
-        {(Object.keys(VIEW_LABELS) as View[]).map((view) => (
-          <TabsTrigger key={view} value={view} className="px-3">
-            {VIEW_LABELS[view]}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
-  )
-}
-
 const withView = (params: Record<string, string>, view: View) => (view === "company" ? params : { ...params, kind: view })
 
 function Note({ children }: { children: ReactNode }) {
@@ -240,7 +227,7 @@ function Note({ children }: { children: ReactNode }) {
 
 function KindProfitAndLoss({ kind, params }: { kind: Kind; params: Record<string, string> }) {
   const { data, error, isLoading, reload } = useReport<KindProfitAndLossReport>("profit-and-loss/", params)
-  const margin = data && Number(data.revenue) ? (data.gross_profit / data.revenue) * 100 : null
+  const margin = data?.gross_margin_percent ?? null
   return (
     <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
       {data && (
@@ -254,18 +241,25 @@ function KindProfitAndLoss({ kind, params }: { kind: Kind; params: Record<string
             variant="subtotal"
             hint={margin !== null ? `Gross margin ${margin.toFixed(1)}%` : undefined}
           />
+          <SectionHeading>{VIEW_LABELS[kind]} costs</SectionHeading>
+          <StatementLine label="Goods written off or adjusted" value={-data.goods_written_off} indent />
           <StatementLine
-            label="Goods written off or adjusted"
-            value={-data.other_costs}
+            label={`${VIEW_LABELS[kind]} expenses`}
+            value={-data.operating_expenses}
             indent
-            hint={`Other costs recorded against ${VIEW_NOUN[kind]} goods`}
+            hint={`Expenses and entries marked ${VIEW_NOUN[kind]} only`}
+          />
+          <StatementLine
+            label={`${VIEW_LABELS[kind]} profit before whole-business costs`}
+            value={data.profit_before_company_costs}
+            variant="total"
           />
           {kind === "preorder" && (
             <Note>A deposit is money held, not a sale. Sales are counted when the goods are shipped.</Note>
           )}
           <Note>
-            Rent, salaries and other running costs belong to the whole business and are not split between stock and
-            pre-order. They, and net income, are in the Company view.
+            This is not net income. Rent, salaries and other costs recorded for the whole business are not split
+            between stock and pre-order, so they are not taken off here. They, and net income, are in the Company view.
           </Note>
         </>
       )}
@@ -275,7 +269,7 @@ function KindProfitAndLoss({ kind, params }: { kind: Kind; params: Record<string
 
 function CompanyProfitAndLoss({ params }: { params: Record<string, string> }) {
   const { data, error, isLoading, reload } = useReport<ProfitAndLossReport>("profit-and-loss/", params)
-  const margin = data && Number(data.revenue) ? (data.gross_profit / data.revenue) * 100 : null
+  const margin = data?.gross_margin_percent ?? null
   const hasUnmarked = !!data && (Number(data.unassigned_revenue) !== 0 || Number(data.unassigned_cost_of_goods_sold) !== 0)
   return (
     <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
@@ -320,7 +314,7 @@ function ProfitAndLoss() {
       }
       controls={
         <>
-          <ViewSwitch value={view} onChange={setView} />
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
           <DateField id="pnl-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="pnl-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
@@ -367,8 +361,7 @@ function KindBalanceSheet({ kind, params }: { kind: Kind; params: Record<string,
 
 function CompanyBalanceSheet({ params }: { params: Record<string, string> }) {
   const { data, error, isLoading, reload } = useReport<BalanceSheetReport>("balance-sheet/", params)
-  const liabilitiesAndEquity = data ? data.liabilities + data.equity : 0
-  const balanced = data ? Math.abs(data.assets - liabilitiesAndEquity) < 0.005 : true
+  const balanced = !data || data.out_of_balance === 0
   return (
     <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
       {data && (
@@ -377,7 +370,7 @@ function CompanyBalanceSheet({ params }: { params: Record<string, string> }) {
           <StatementLine label="Inventory" value={data.inventory_asset} indent />
           <StatementLine
             label="Other assets"
-            value={data.assets - data.inventory_asset}
+            value={data.other_assets}
             indent
             hint="Bank, receivables and other asset accounts"
           />
@@ -391,7 +384,7 @@ function CompanyBalanceSheet({ params }: { params: Record<string, string> }) {
           <StatementLine label="Retained earnings" value={data.retained_earnings} indent hint="Accumulated net income to date" />
           <StatementLine label="Total equity" value={data.equity} variant="subtotal" />
 
-          <StatementLine label="Total liabilities & equity" value={liabilitiesAndEquity} variant="total" />
+          <StatementLine label="Total liabilities & equity" value={data.liabilities_and_equity} variant="total" />
           <p
             className={cn(
               "mt-3 inline-flex items-center gap-1.5 text-xs",
@@ -401,7 +394,7 @@ function CompanyBalanceSheet({ params }: { params: Record<string, string> }) {
             {balanced ? <CheckCircle2 className="size-3.5" /> : <AlertCircle className="size-3.5" />}
             {balanced
               ? "Assets equal liabilities plus equity."
-              : `Out of balance by ${formatCurrency(Math.abs(data.assets - liabilitiesAndEquity))}.`}
+              : `Out of balance by ${formatCurrency(Math.abs(data.out_of_balance))}.`}
           </p>
         </>
       )}
@@ -421,7 +414,7 @@ function BalanceSheet() {
       onDownload={params ? () => downloadCsv("balance-sheet/", params, `balance-sheet_${view}_${asOf}.csv`) : undefined}
       controls={
         <>
-          <ViewSwitch value={view} onChange={setView} />
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
           <DateField id="bs-asof" label="As of" value={asOf} onChange={setAsOf} />
         </>
       }
@@ -450,13 +443,18 @@ function KindCashFlow({ kind, params }: { kind: Kind; params: Record<string, str
           />
           <StatementLine label="Refunded to customers" value={-data.customer_refunds} />
           <StatementLine label="Paid to suppliers" value={-data.supplier_payments} />
+          <StatementLine
+            label={`${VIEW_LABELS[kind]} expenses paid`}
+            value={-data.expenses_paid}
+            hint={`Expenses marked ${VIEW_NOUN[kind]} only, paid from the Bank account`}
+          />
           {Number(data.other) !== 0 && (
             <StatementLine label="Other" value={data.other} hint={`Manual entries marked ${VIEW_NOUN[kind]}`} />
           )}
           <StatementLine label={`Net cash from ${VIEW_NOUN[kind]}`} value={data.net_change_in_cash} variant="total" />
           <Note>
-            Expenses paid, owner money and entries not marked stock or pre-order belong to the whole business. They are
-            in the Company view.
+            Whole-business expenses, owner money and entries not marked stock or pre-order are not split. They are in
+            the Company view.
           </Note>
         </>
       )}
@@ -474,7 +472,7 @@ function CompanyCashFlow({ params }: { params: Record<string, string> }) {
           <StatementLine
             label="Not tied to stock or pre-order"
             value={data.company_wide}
-            hint="Expenses paid, owner money and entries with no stock or pre-order mark"
+            hint="Whole-business expenses paid, owner money and entries with no stock or pre-order mark"
           />
           <StatementLine
             label="Net change in cash"
@@ -505,7 +503,7 @@ function CashFlow() {
       onDownload={params ? () => downloadCsv("cash-flow/", params, `cash-flow_${view}_${start}_${end}.csv`) : undefined}
       controls={
         <>
-          <ViewSwitch value={view} onChange={setView} />
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
           <DateField id="cf-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="cf-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
@@ -569,8 +567,8 @@ const FinancialReports = () => {
     <div className="section-container space-y-6">
       <PageHeading title="Financial Reports" />
       <p className="max-w-3xl text-sm text-muted-foreground">
-        Each report shows stock or pre-order on its own. Figures that belong to the whole business, such as cash,
-        expenses and net income, are in the Company view. A pre-order deposit is money held, not a sale: revenue is
+        Each report shows stock or pre-order on its own, with the expenses marked for that half. Figures that belong to
+        the whole business, such as cash, rent, salaries and net income, are in the Company view. A pre-order deposit is money held, not a sale: revenue is
         recorded when the goods are shipped.
       </p>
       <Tabs defaultValue="pnl" className="space-y-4">

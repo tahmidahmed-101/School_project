@@ -18,13 +18,14 @@ from apps.accounting.selectors.reports import (
     inventory_valuation,
     profit_and_loss,
 )
-from apps.accounting.services.expenses import create_expense
+from apps.accounting.services.expenses import create_expense, update_expense
 from apps.accounting.services.journal import post_journal_entry, reverse_journal_entry
 from apps.accounting.tests.helpers import seed_chart_of_accounts
 from apps.accounts.constants import UserRole
 from apps.accounts.tests.helpers import create_user
 from apps.business.selectors.business_profile import get_business_profile
 from apps.catalog.factories import ProductVariantFactory
+from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import write_off_stock
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.selectors.payments import order_deposit_due
@@ -123,13 +124,14 @@ def _preorder_deposit(percent: str = "30") -> dict:
     return {"variant": variant, "order": order, "deposit": deposit, "payment": payment}
 
 
-def _expense(amount: str = "75.00"):
+def _expense(amount: str = "75.00", *, kind: str = "", payee: str = "Landlord"):
     return create_expense(
         expense_date=date.today(),
-        payee="Landlord",
+        payee=payee,
         amount=Decimal(amount),
         expense_account=get_account_by_code(ACCOUNT_CODES["general_expense"]),
         payment_account=get_account_by_code(ACCOUNT_CODES["bank"]),
+        kind=kind,
     )
 
 
@@ -186,9 +188,11 @@ def test_profit_and_loss_per_kind_leaves_company_expenses_out(books):
     assert stock["revenue"] == books["stock"]["order"].grand_total
     assert stock["cost_of_goods_sold"] == Decimal("12.00")
     assert stock["gross_profit"] == stock["revenue"] - Decimal("12.00")
-    assert stock["other_costs"] == Decimal("4.00")
-    assert stock["company_wide_left_out"] == ["operating_expenses", "net_income"]
-    assert "operating_expenses" not in stock
+    assert stock["goods_written_off"] == Decimal("4.00")
+    assert stock["operating_expenses"] == Decimal("0")
+    assert stock["profit_before_company_costs"] == stock["gross_profit"] - Decimal("4.00")
+    assert stock["company_wide_left_out"] == ["company_wide_expenses", "net_income"]
+    assert "other_costs" not in stock
     assert "net_income" not in stock
 
     assert company["operating_expenses"] == Decimal("79.00")
@@ -301,7 +305,7 @@ def test_reports_api_takes_kind(admin_client, books):
     pnl = admin_client.get(f"{REPORTS}profit-and-loss/", {**window, "kind": STOCK})
     assert pnl.status_code == 200
     assert pnl.data["data"]["kind"] == STOCK
-    assert pnl.data["data"]["company_wide_left_out"] == ["operating_expenses", "net_income"]
+    assert pnl.data["data"]["company_wide_left_out"] == ["company_wide_expenses", "net_income"]
 
     sheet = admin_client.get(
         f"{REPORTS}balance-sheet/", {"as_of": _as_of().isoformat(), "kind": PREORDER}
@@ -375,3 +379,140 @@ def test_manual_journal_entry_can_be_given_a_kind(admin_client):
     assert tagged.data["data"]["kind"] == PREORDER
     assert plain.data["data"]["kind"] == ""
     assert wrong.status_code == 400
+
+
+EXPENSES = "/api/v1/admin/accounting/expenses/"
+
+
+def test_an_expense_marked_for_a_half_counts_in_that_half_only(books):
+    packaging = _expense("20.00", kind=STOCK, payee="Packaging")
+    _expense("30.00", kind=PREORDER, payee="Import agent")
+    assert packaging.journal_entry.kind == STOCK
+    assert _kinds("expense") == {"", STOCK, PREORDER}
+
+    stock = profit_and_loss(**_window(), kind=STOCK)
+    preorder = profit_and_loss(**_window(), kind=PREORDER)
+    company = profit_and_loss(**_window())
+
+    assert stock["goods_written_off"] == Decimal("4.00")
+    assert stock["operating_expenses"] == Decimal("20.00")
+    assert stock["profit_before_company_costs"] == stock["gross_profit"] - Decimal("24.00")
+    assert preorder["operating_expenses"] == Decimal("30.00")
+    assert preorder["profit_before_company_costs"] == Decimal("-30.00")
+    assert "net_income" not in stock
+    assert company["operating_expenses"] == Decimal("129.00")
+    assert company["net_income"] == (
+        stock["profit_before_company_costs"]
+        + preorder["profit_before_company_costs"]
+        - Decimal("75.00")
+    )
+
+    stock_cash = cash_flow(**_window(), kind=STOCK)
+    assert stock_cash["expenses_paid"] == Decimal("20.00")
+    assert stock_cash["other"] == Decimal("0")
+    assert cash_flow(**_window(), kind=PREORDER)["expenses_paid"] == Decimal("30.00")
+    assert cash_flow(**_window())["company_wide"] == Decimal("-75.00")
+
+
+def test_gross_margin_and_balance_sums_come_from_the_server(books):
+    stock = profit_and_loss(**_window(), kind=STOCK)
+    assert stock["gross_margin_percent"] == (
+        stock["gross_profit"] * 100 / stock["revenue"]
+    ).quantize(Decimal("0.1"))
+    assert profit_and_loss(**_window(), kind=PREORDER)["gross_margin_percent"] is None
+
+    sheet = balance_sheet(as_of=_as_of())
+    assert sheet["other_assets"] == sheet["assets"] - sheet["inventory_asset"]
+    assert sheet["liabilities_and_equity"] == sheet["liabilities"] + sheet["equity"]
+    assert sheet["out_of_balance"] == Decimal("0")
+
+
+def test_moving_an_expense_to_another_half_reverses_and_reposts(books):
+    expense = _expense("20.00", kind=STOCK, payee="Packaging")
+    first_entry = expense.journal_entry
+
+    update_expense(expense=expense, data={"kind": PREORDER})
+
+    expense.refresh_from_db()
+    assert expense.kind == PREORDER
+    assert expense.journal_entry_id != first_entry.id
+    assert expense.journal_entry.kind == PREORDER
+    reversal = first_entry.reversals.get()
+    assert reversal.kind == STOCK
+    assert reversal.entry_date == first_entry.entry_date
+    assert profit_and_loss(**_window(), kind=STOCK)["operating_expenses"] == Decimal("0")
+    assert profit_and_loss(**_window(), kind=PREORDER)["operating_expenses"] == Decimal("20.00")
+    assert cash_flow(**_window(), kind=STOCK)["expenses_paid"] == Decimal("0")
+
+    update_expense(expense=expense, data={"kind": PREORDER, "payee": "Boxes"})
+    assert JournalEntry.objects.filter(reference_id=expense.id).count() == 3
+
+
+def test_reversing_an_expense_entry_keeps_its_kind_and_locks_the_expense(books):
+    expense = _expense("20.00", kind=STOCK, payee="Packaging")
+
+    assert reverse_journal_entry(expense.journal_entry).kind == STOCK
+    assert profit_and_loss(**_window(), kind=STOCK)["operating_expenses"] == Decimal("0")
+
+    with pytest.raises(BusinessRuleViolationError) as raised:
+        update_expense(expense=expense, data={"kind": PREORDER})
+    assert raised.value.code == "expense_reversed"
+    expense.refresh_from_db()
+    assert expense.kind == STOCK
+
+
+def test_backfill_leaves_expense_entries_alone(books):
+    expense = _expense("20.00", kind=STOCK, payee="Packaging")
+    JournalEntry.objects.filter(id=expense.journal_entry_id).update(kind="")
+
+    out = StringIO()
+    call_command("backfill_journal_kind", "--apply", stdout=out)
+
+    expense.journal_entry.refresh_from_db()
+    assert expense.journal_entry.kind == ""
+    assert "expense:" not in out.getvalue()
+
+
+def test_expense_api_takes_and_filters_by_kind(admin_client):
+    seed_chart_of_accounts()
+    payload = {
+        "expense_date": date.today().isoformat(),
+        "payee": "Packaging",
+        "amount": "20.00",
+        "expense_account_id": str(get_account_by_code(ACCOUNT_CODES["general_expense"]).id),
+        "payment_account_id": str(get_account_by_code(ACCOUNT_CODES["bank"]).id),
+    }
+
+    tagged = admin_client.post(EXPENSES, {**payload, "kind": STOCK}, format="json")
+    plain = admin_client.post(EXPENSES, {**payload, "payee": "Landlord"}, format="json")
+    wrong = admin_client.post(EXPENSES, {**payload, "kind": "both"}, format="json")
+
+    assert tagged.status_code == 201, tagged.data
+    assert tagged.data["data"]["kind"] == STOCK
+    assert plain.data["data"]["kind"] == ""
+    assert wrong.status_code == 400
+    assert JournalEntry.objects.get(id=tagged.data["data"]["journal_entry_id"]).kind == STOCK
+
+    def payees(**params) -> set[str]:
+        response = admin_client.get(EXPENSES, params)
+        assert response.status_code == 200, response.data
+        return {row["payee"] for row in response.data["data"]["results"]}
+
+    assert payees() == {"Packaging", "Landlord"}
+    assert payees(kind=STOCK) == {"Packaging"}
+    assert payees(kind=PREORDER) == set()
+    assert payees(kind="company") == {"Landlord"}
+    assert admin_client.get(EXPENSES, {"kind": "both"}).status_code == 400
+
+    lines = admin_client.get(f"{EXPENSES}export/", {"kind": STOCK}).content.decode().splitlines()
+    assert lines[0].endswith(",reference_number,kind")
+    assert len(lines) == 2
+    assert lines[1].endswith(",stock")
+
+    detail = f"{EXPENSES}{tagged.data['data']['id']}/"
+    moved = admin_client.patch(detail, {"kind": ""}, format="json")
+    assert moved.status_code == 200, moved.data
+    assert moved.data["data"]["kind"] == ""
+    assert moved.data["data"]["journal_entry_id"] != tagged.data["data"]["journal_entry_id"]
+    assert payees(kind="company") == {"Packaging", "Landlord"}
+    assert admin_client.patch(detail, {"kind": "both"}, format="json").status_code == 400
