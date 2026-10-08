@@ -124,6 +124,7 @@ export function StockMovementDialog({
       return
     }
     const base = {
+      kind,
       variant_id: (values.variant as PickedVariant).id,
       warehouse_id: values.warehouse_id === DEFAULT_WAREHOUSE ? null : values.warehouse_id,
     }
@@ -150,7 +151,7 @@ export function StockMovementDialog({
         setError,
         fields: ["quantity", "unit_cost"],
         fieldMap: { quantity_delta: "quantity" },
-        fallback: "Stock movement failed",
+        fallback: kind === "preorder" ? "Couldn't save this" : "Stock movement failed",
       })
     }
   }

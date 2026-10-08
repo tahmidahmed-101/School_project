@@ -12,6 +12,7 @@ import { ActiveStatusBadge } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -73,6 +74,10 @@ const ProductDetail = () => {
   }, [brandId])
   const brandName = brandId && brand?.id === brandId ? brand.name : null
 
+  const hint = useKindHint()
+  const loadedKind = product && product.id === id && !categoriesLoading ? productKind(product, categories) : undefined
+  useRecordKind(loadedKind)
+
   // The page is laid out by the product's kind, which needs the categories as well as the product.
   const pageState =
     resolveDetailState(singleStatus, singleError, product?.id === id) ?? (categoriesLoading ? "loading" : null)
@@ -81,8 +86,8 @@ const ProductDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Product"
-        backTo="/products"
-        backLabel="Back to Products"
+        backTo={hint && productListPath(hint)}
+        backLabel={hint === "preorder" ? "Back to pre-order products" : "Back to products"}
         error={singleError}
         onRetry={refresh}
       />

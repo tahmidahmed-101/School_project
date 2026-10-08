@@ -14,6 +14,7 @@ import { fetchAll } from "@/features/risk/slices/fraudCaseSlice"
 import { selectFraudCases } from "@/features/risk/selectors"
 import type { FraudCase } from "@/features/risk/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { humanize } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -31,8 +32,12 @@ const ORDERING_OPTIONS: Option[] = [
   { value: "status", label: "By status" },
 ]
 
-const FraudCases = () => {
-  useDocumentTitle("Fraud Cases")
+const FraudCasesList = () => {
+  const kind = useKind()
+  const isPreorder = kind === "preorder"
+  const base = isPreorder ? "/preorder_fraud_cases" : "/fraud_cases"
+  const title = isPreorder ? "Pre-order fraud cases" : "Fraud Cases"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -45,7 +50,7 @@ const FraudCases = () => {
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: caseState,
-    params: { ordering: ordering?.value ?? ORDERING_OPTIONS[0].value, status: statusFilter?.value },
+    params: { kind, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value, status: statusFilter?.value },
   })
 
   const columns: ColumnDef<FraudCase>[] = [
@@ -80,7 +85,7 @@ const FraudCases = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Fraud Cases" />
+      <PageHeader title={title} />
 
       {/* ?search= matches case/order number, customer or order email, and phone. */}
       <FilterToolbar
@@ -106,7 +111,7 @@ const FraudCases = () => {
         columns={columns}
         data={cases}
         {...list.tableProps}
-        onRowClick={(c) => navigate(`/fraud_cases/${c.id}`)}
+        onRowClick={(c) => navigate(`${base}/${c.id}`)}
         emptyTitle="No fraud cases"
         emptyDescription={
           list.debouncedSearch || statusFilter
@@ -119,5 +124,7 @@ const FraudCases = () => {
     </div>
   )
 }
+
+const FraudCases = () => <FraudCasesList key={useKind()} />
 
 export default FraudCases

@@ -13,7 +13,7 @@ import { DateCell, MoneyCell } from "@/components/common/cells"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useKind } from "@/hooks/use-kind"
-import { purchasingBase, purchasingTitle, useKindRows } from "../lib/kind"
+import { purchasingBase, purchasingTitle } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 
@@ -36,7 +36,7 @@ const SORT_OPTIONS: Option[] = [
   { label: "Recently created", value: "-created_at" },
 ]
 
-const PurchaseOrders = () => {
+const PurchaseOrdersList = () => {
   const kind = useKind()
   const base = purchasingBase(kind)
   const title = purchasingTitle(kind, "Purchase Orders")
@@ -48,7 +48,6 @@ const PurchaseOrders = () => {
 
   const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
   const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ...filters.params, kind } })
-  const rows = useKindRows(state.data, kind)
 
   const columns: ColumnDef<PurchaseOrder>[] = [
     {
@@ -130,7 +129,7 @@ const PurchaseOrders = () => {
 
       <DataTable
         columns={columns}
-        data={rows}
+        data={state.data}
         {...list.tableProps}
         onRowClick={(po) => navigate(`${base}/orders/${po.id}`)}
         emptyIcon={ClipboardList}
@@ -143,5 +142,7 @@ const PurchaseOrders = () => {
     </div>
   )
 }
+
+const PurchaseOrders = () => <PurchaseOrdersList key={useKind()} />
 
 export default PurchaseOrders

@@ -22,7 +22,7 @@ import { DatePicker } from "@/components/common/DatePicker"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { formatCurrency, toISODate } from "@/lib/format"
 import { usePreorderReport } from "@/features/sales/hooks/usePreorderReport"
@@ -98,7 +98,7 @@ const PaymentsList = () => {
       accessorKey: "order_number",
       header: isPreorder ? "PRE-ORDER" : "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/order_detail/${row.original.order_id}`} className="font-medium">
+        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)} className="font-medium">
           {row.original.order_number}
         </LinkCell>
       ),
@@ -141,7 +141,7 @@ const PaymentsList = () => {
       cell: ({ row }) => (
         <TableActions
           itemName={`Payment for ${isPreorder ? "pre-order" : "order"} ${row.original.order_number}`}
-          viewUrl={`/payment_detail/${row.original.id}`}
+          viewUrl={withKind(`/payment_detail/${row.original.id}`, kind)}
         />
       ),
     },
@@ -196,9 +196,9 @@ const PaymentsList = () => {
 
       <DataTable
         columns={columns}
-        data={paymentsState.data.filter((row) => (row.order_type ?? kind) === kind)}
+        data={paymentsState.data}
         {...list.tableProps}
-        onRowClick={(payment) => navigate(`/payment_detail/${payment.id}`)}
+        onRowClick={(payment) => navigate(withKind(`/payment_detail/${payment.id}`, kind))}
         emptyTitle="No payments found"
         emptyDescription="Try adjusting the filters."
         minWidth="950px"

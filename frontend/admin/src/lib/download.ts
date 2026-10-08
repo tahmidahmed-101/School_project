@@ -34,12 +34,19 @@ function filenameFrom(disposition: string | undefined, fallback: string): string
 /**
  * GETs a file endpoint (CSV export, PDF invoice) through the authenticated client and saves it,
  * named by the response's Content-Disposition when present. Throws a normalised ApiError
- * (the JSON error body is parsed out of the blob first).
+ * (the JSON error body is parsed out of the blob first). `keepName` saves under `fallbackName`
+ * whatever the server calls the file: an export of one half carries that half in its name.
  */
-export async function downloadFile(url: string, fallbackName: string, params?: Record<string, unknown>) {
+export async function downloadFile(
+  url: string,
+  fallbackName: string,
+  params?: Record<string, unknown>,
+  keepName = false
+) {
   try {
     const res = await api.get(url, { params, responseType: "blob" })
-    saveBlob(res.data as Blob, filenameFrom(res.headers["content-disposition"] as string | undefined, fallbackName))
+    const disposition = keepName ? undefined : (res.headers["content-disposition"] as string | undefined)
+    saveBlob(res.data as Blob, filenameFrom(disposition, fallbackName))
   } catch (err) {
     throw extractApiError(await blobErrorToJson(err))
   }

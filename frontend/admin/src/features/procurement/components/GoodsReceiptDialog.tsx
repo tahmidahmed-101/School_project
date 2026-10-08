@@ -66,8 +66,10 @@ export function GoodsReceiptDialog({
             Receive Goods{po ? ` — ${po.po_number}` : ""}
           </DialogTitle>
           <DialogDescription>
-            Accepted quantities go into stock at the PO unit cost and post to the ledger. Rejected quantities are
-            logged on the receipt only.
+            {kind === "preorder"
+              ? "Accepted quantities count as arrived at the PO unit cost."
+              : "Accepted quantities go into stock at the PO unit cost and post to the ledger."}{" "}
+            Rejected quantities are logged on the receipt only.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,6 +123,8 @@ function ReceiptForm({
   onReceived: (grn: GoodsReceipt) => void
 }) {
   const dispatch = useAppDispatch()
+  const pageKind = useKind()
+  const isPreorder = (po?.kind ?? pageKind) === "preorder"
   const [receivedDate, setReceivedDate] = useState(todayLocalISODate)
   const [lineState, setLineState] = useState<Record<string, LineState>>(() => {
     const initial: Record<string, LineState> = {}
@@ -159,8 +163,12 @@ function ReceiptForm({
       ).unwrap()
       toast.success(
         grn.status === "qc_reject"
-          ? "Receipt recorded — rejected lines were not added to stock"
-          : "Goods received and added to stock"
+          ? isPreorder
+            ? "Receipt recorded — rejected lines were not counted as arrived"
+            : "Receipt recorded — rejected lines were not added to stock"
+          : isPreorder
+            ? "Goods received and counted as arrived"
+            : "Goods received and added to stock"
       )
       onReceived(grn)
     } catch (err) {

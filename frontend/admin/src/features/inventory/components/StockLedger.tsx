@@ -29,7 +29,7 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Oldest first", value: "created_at" },
 ]
 
-const StockLedger = () => {
+const StockLedgerList = () => {
   const kind = useKind()
   const title = kind === "preorder" ? "Pre-order goods movements" : "Stock Ledger"
   useDocumentTitle(title)
@@ -198,5 +198,7 @@ const StockLedger = () => {
     </div>
   )
 }
+
+const StockLedger = () => <StockLedgerList key={useKind()} />
 
 export default StockLedger

@@ -9,6 +9,7 @@ import { fetchReturn, gradeReturnLine, runReturnAction, type RmaAction } from "@
 import type { Rma, RmaCondition, RmaLine } from "@/features/returns/types"
 import { fetchOrderById } from "@/features/sales/slices/orderSlice"
 import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import type { Order, OrderLine } from "@/features/sales/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -58,21 +59,25 @@ const ReturnDetail = () => {
     return () => request.abort()
   }, [dispatch, orderId])
 
+  const hint = useKindHint()
+  const recordKind = rma?.order_type ?? order?.order_type
+  useRecordKind(rma ? recordKind : undefined)
+
   const pageState = resolveDetailState(singleStatus, singleError, !!rma)
   if (pageState || !rma) {
     return (
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Return"
-        backTo="/returns"
-        backLabel="Back to Returns"
+        backTo={hint && KIND_PATHS[hint].returns}
+        backLabel={hint === "preorder" ? "Back to pre-order returns" : "Back to returns"}
         error={singleError}
         onRetry={load}
       />
     )
   }
 
-  const kind = rma.order_type ?? order?.order_type ?? "stock"
+  const kind = recordKind ?? "stock"
   const orderLines = new Map<string, OrderLine>((order?.lines ?? []).map((l) => [l.id, l]))
 
   const act = async (action: RmaAction) => {

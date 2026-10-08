@@ -111,7 +111,7 @@ export function VendorBillFormDialog({
       title={
         <span className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          {bill ? `Edit ${bill.bill_number}` : "New Vendor Bill"}
+          {bill ? `Edit ${bill.bill_number}` : kind === "preorder" ? "New supplier bill" : "New Vendor Bill"}
         </span>
       }
       description={

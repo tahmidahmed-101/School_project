@@ -16,6 +16,7 @@ import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { ShipmentActions } from "./ShipmentActions"
 import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 
 const ShipmentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -26,6 +27,8 @@ const ShipmentDetail = () => {
   useDocumentTitle(shipment?.tracking_number ? `${shipment.tracking_number} — Shipment` : "Shipment Details")
 
   const load = useDetailLoad(fetchShipment, id)
+  const hint = useKindHint()
+  useRecordKind(shipment ? (shipment.order_type ?? "stock") : undefined)
 
   const pageState = resolveDetailState(singleStatus, singleError, !!shipment)
   if (pageState || !shipment) {
@@ -33,8 +36,8 @@ const ShipmentDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Shipment"
-        backTo="/shipments"
-        backLabel="Back to Shipments"
+        backTo={hint && KIND_PATHS[hint].shipments}
+        backLabel={hint === "preorder" ? "Back to pre-order shipments" : "Back to shipments"}
         error={singleError}
         onRetry={load}
       />

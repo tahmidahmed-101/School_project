@@ -10,7 +10,7 @@ import { DateCell, LinkCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -72,7 +72,7 @@ const Reviews = ({ kind }: { kind: Kind }) => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
+        <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
           {row.original.product_name}
         </LinkCell>
       ),
@@ -120,7 +120,7 @@ const Reviews = ({ kind }: { kind: Kind }) => {
             cell: ({ row }) => (
               <TableActions
                 itemName={`the review by ${row.original.customer_name}`}
-                viewUrl={`/product_detail/${row.original.product_id}`}
+                viewUrl={withKind(`/product_detail/${row.original.product_id}`, kind)}
                 onDelete={() => handleDelete(row.original)}
               />
             ),

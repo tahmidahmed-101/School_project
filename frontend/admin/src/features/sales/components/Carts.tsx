@@ -123,7 +123,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
   )
 }
 
-const Carts = () => {
+const CartsList = () => {
   const dispatch = useAppDispatch()
   const kind = useKind()
   const title = kind === "preorder" ? "Pre-order carts" : "Customer Carts"
@@ -239,5 +239,7 @@ const Carts = () => {
     </div>
   )
 }
+
+const Carts = () => <CartsList key={useKind()} />
 
 export default Carts

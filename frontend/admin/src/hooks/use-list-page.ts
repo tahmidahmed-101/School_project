@@ -17,6 +17,8 @@ export interface ListSliceState {
  *   change, the list returns to page 1 — callers never reset paging by hand.
  * - The search box is debounced and trimmed before it is sent.
  * - Each fetch is aborted when a newer one starts or the page unmounts.
+ * - Rows and totals a slice still holds from another page (the other half's list) stay hidden
+ *   until this page's own response lands; a page serving both halves remounts with `key={kind}`.
  * - `tableProps` spreads straight into <DataTable>.
  */
 export function useListPage({
@@ -66,6 +68,15 @@ export function useListPage({
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), [])
 
+  // The request goes out in the effect above, so its answer has landed once it was seen in flight and then stopped.
+  const fetchKey = `${page}|${pageSize}|${resetKey}`
+  const [seenKey, setSeenKey] = useState<string | null>(null)
+  if (state.isFetchingList && seenKey !== fetchKey) setSeenKey(fetchKey)
+  const waiting = seenKey !== fetchKey || state.isFetchingList
+  const [landed, setLanded] = useState(false)
+  if (!landed && !waiting && !state.error) setLanded(true)
+  const total = landed ? state.totalItems : 0
+
   return {
     page,
     setPage,
@@ -79,10 +90,11 @@ export function useListPage({
       manualPagination: true as const,
       pageSize,
       pageIndex: page - 1,
-      pageCount: Math.max(1, Math.ceil(state.totalItems / pageSize)),
-      totalCount: state.totalItems,
+      pageCount: Math.max(1, Math.ceil(total / pageSize)),
+      totalCount: total,
       onPageChange: (index: number) => setPage(index + 1),
-      isLoading: state.isFetchingList,
+      isLoading: waiting,
+      rowsReady: landed,
       error: state.error,
       onRetry: reload,
     },

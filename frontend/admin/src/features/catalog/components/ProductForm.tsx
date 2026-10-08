@@ -6,7 +6,7 @@ import { NoPermission } from "@/components/common/NoPermission"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import type { Kind } from "@/hooks/use-kind"
+import { useKindHint, useRecordKind, type Kind } from "@/hooks/use-kind"
 import { resolveDetailState } from "@/lib/detailState"
 
 import { fetchSingle } from "../slices/productSlice"
@@ -29,7 +29,9 @@ const ProductForm = () => {
 
   // A saved product keeps the kind of its category; a new one takes the kind of the list it was opened from.
   const listKind: Kind = useSearchParams()[0].get("kind") === "preorder" ? "preorder" : "stock"
+  const hint = useKindHint()
   const kind = product ? productKind(product, categories) : listKind
+  useRecordKind(isEditing ? (product && !categoriesLoading ? kind : undefined) : listKind)
   const categoryOptions = useMemo(() => options.filter((o) => o.category.category_type === kind), [options, kind])
 
   useDocumentTitle(isEditing ? (product?.name ? `Edit ${product.name}` : "Edit Product") : "Add Product")
@@ -42,8 +44,8 @@ const ProductForm = () => {
     return (
       <NoPermission
         message="You don't have permission to edit products."
-        backTo={productListPath(listKind)}
-        backLabel="Back to products"
+        backTo={productListPath(hint ?? "stock")}
+        backLabel={hint === "preorder" ? "Back to pre-order products" : "Back to products"}
       />
     )
   }
@@ -56,8 +58,8 @@ const ProductForm = () => {
       <DetailPageState
         state={pageState}
         entity="Product"
-        backTo={productListPath(listKind)}
-        backLabel="Back to products"
+        backTo={hint && productListPath(hint)}
+        backLabel={hint === "preorder" ? "Back to pre-order products" : "Back to products"}
         error={singleError}
         onRetry={() => id && dispatch(fetchSingle(id))}
       />

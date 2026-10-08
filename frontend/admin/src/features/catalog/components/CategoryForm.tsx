@@ -17,7 +17,7 @@ import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import type { Kind } from "@/hooks/use-kind"
+import { useKindHint, useRecordKind, type Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { reportFormError } from "@/lib/forms"
@@ -49,6 +49,8 @@ const CategoryForm = () => {
   // A saved category keeps its kind; a new one takes the kind of the list it was opened from.
   const listKind: Kind = useSearchParams()[0].get("kind") === "preorder" ? "preorder" : "stock"
   const kind: Kind = isEditing && existing && existing.id === id ? existing.category_type : listKind
+  const hint = useKindHint()
+  useRecordKind(isEditing && existing?.id !== id ? undefined : kind)
   const { categories, options } = useCategoryOptions(kind)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const noun = kind === "preorder" ? "pre-order category" : "category"
@@ -113,8 +115,8 @@ const CategoryForm = () => {
       <DetailPageState
         state={pageState}
         entity="Category"
-        backTo={listPath}
-        backLabel="Back to categories"
+        backTo={hint && listPath}
+        backLabel={hint === "preorder" ? "Back to pre-order categories" : "Back to categories"}
         error={singleError}
         onRetry={() => id && dispatch(fetchSingle(id))}
       />

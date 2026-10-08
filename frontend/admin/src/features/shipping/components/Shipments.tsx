@@ -11,7 +11,7 @@ import type { Shipment } from "@/features/shipping/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { ReturnOutcome } from "./ReturnOutcome"
 import { ShipmentActions } from "./ShipmentActions"
@@ -48,7 +48,7 @@ const ShipmentsList = () => {
       id: "order",
       header: isPreorder ? "PRE-ORDER" : "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/order_detail/${row.original.order_id}`}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
+        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
       ),
     },
     {
@@ -85,7 +85,7 @@ const ShipmentsList = () => {
       cell: ({ row }) => (
         <TableActions
           itemName={`Shipment ${row.original.tracking_number || ""}`.trim()}
-          viewUrl={`/shipment_detail/${row.original.id}`}
+          viewUrl={withKind(`/shipment_detail/${row.original.id}`, kind)}
         />
       ),
     },
@@ -103,9 +103,9 @@ const ShipmentsList = () => {
 
       <DataTable
         columns={columns}
-        data={shipmentState.data.filter((row) => (row.order_type ?? kind) === kind)}
+        data={shipmentState.data}
         {...list.tableProps}
-        onRowClick={(s) => navigate(`/shipment_detail/${s.id}`)}
+        onRowClick={(s) => navigate(withKind(`/shipment_detail/${s.id}`, kind))}
         emptyTitle="No shipments found"
         emptyDescription={
           isPreorder

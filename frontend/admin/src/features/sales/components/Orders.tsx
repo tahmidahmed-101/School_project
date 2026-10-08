@@ -24,7 +24,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { downloadFile } from "@/lib/download"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { toISODate } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -158,7 +158,7 @@ const OrdersList = () => {
       cell: ({ row }) => (
         <TableActions
           itemName={`${isPreorder ? "Pre-order" : "Order"} ${row.original.order_number}`}
-          viewUrl={`/order_detail/${row.original.id}`}
+          viewUrl={withKind(`/order_detail/${row.original.id}`, kind)}
         />
       ),
     },
@@ -172,7 +172,7 @@ const OrdersList = () => {
           <>
             <ExportButton
               onExport={() =>
-                downloadFile("/admin/orders/export/", isPreorder ? "pre-orders.csv" : "orders.csv", list.query)
+                downloadFile("/admin/orders/export/", isPreorder ? "pre-orders.csv" : "stock-orders.csv", list.query, true)
               }
             />
             {canManage && !isPreorder && (
@@ -236,9 +236,9 @@ const OrdersList = () => {
       <div>
         <DataTable
           columns={columns}
-          data={ordersState.data.filter((row) => row.order_type === kind)}
+          data={ordersState.data}
           {...list.tableProps}
-          onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
+          onRowClick={(order) => navigate(withKind(`/order_detail/${order.id}`, kind))}
           emptyTitle={isPreorder ? "No pre-orders found" : "No orders found"}
           emptyDescription="Try adjusting the search or filters."
           minWidth={isPreorder ? "1300px" : "1050px"}

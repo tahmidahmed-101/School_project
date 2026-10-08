@@ -13,7 +13,7 @@ import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { RMA_STATUS_OPTIONS, type Rma } from "@/features/returns/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 
@@ -45,7 +45,7 @@ const ReturnsList = () => {
       id: "order",
       header: isPreorder ? "PRE-ORDER" : "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/order_detail/${row.original.order_id}`}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
+        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
       ),
     },
     {
@@ -71,7 +71,7 @@ const ReturnsList = () => {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <TableActions itemName={`Return ${row.original.rma_number}`} viewUrl={`/return_detail/${row.original.id}`} />
+        <TableActions itemName={`Return ${row.original.rma_number}`} viewUrl={withKind(`/return_detail/${row.original.id}`, kind)} />
       ),
     },
   ]
@@ -100,9 +100,9 @@ const ReturnsList = () => {
 
       <DataTable
         columns={columns}
-        data={returnsState.data.filter((row) => (row.order_type ?? kind) === kind)}
+        data={returnsState.data}
         {...list.tableProps}
-        onRowClick={(rma) => navigate(`/return_detail/${rma.id}`)}
+        onRowClick={(rma) => navigate(withKind(`/return_detail/${rma.id}`, kind))}
         emptyTitle="No returns found"
         emptyDescription={
           isPreorder

@@ -20,7 +20,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
@@ -81,7 +81,7 @@ const PriceReports = ({ kind }: { kind: Kind }) => {
       header: "PRODUCT",
       cell: ({ row }) => (
         <div className="min-w-0" data-no-row-click="true">
-          <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
+          <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
             {row.original.product_name}
           </LinkCell>
           <p className="truncate font-mono text-xs text-muted-foreground">

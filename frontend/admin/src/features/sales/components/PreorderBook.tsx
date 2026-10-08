@@ -23,12 +23,12 @@ export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; o
       toast.success(
         units > 0
           ? `${units} unit(s) set aside for ${new Set(allocated.map((row) => row.order_id)).size} order(s)`
-          : "No arrived stock to hand out"
+          : "Nothing to set aside: no arrived units match a waiting order"
       )
       reload()
       onAllocated()
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't allocate arrived stock"))
+      toast.error(getApiErrorMessage(err, "Couldn't set arrived goods aside"))
     } finally {
       setAllocating(false)
     }
@@ -49,7 +49,7 @@ export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; o
         </div>
         {canManage && (
           <Button size="action" variant="outline" disabled={allocating} onClick={allocate}>
-            Allocate arrived stock
+            Set aside for orders
           </Button>
         )}
       </CardHeader>
@@ -60,7 +60,7 @@ export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; o
               <tr>
                 <th className="py-1 font-medium">Product</th>
                 <th className="py-1 text-right font-medium">Waiting</th>
-                <th className="py-1 text-right font-medium">On shelf</th>
+                <th className="py-1 text-right font-medium">Arrived, not set aside</th>
                 <th className="py-1 text-right font-medium">To buy</th>
               </tr>
             </thead>
