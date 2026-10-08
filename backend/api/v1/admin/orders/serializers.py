@@ -258,6 +258,11 @@ class AdminOrderLineUpdateSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
 
 
+class AdminOrderLineCreateSerializer(serializers.Serializer):
+    variant_id = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
 class ShipmentLineInputSerializer(serializers.Serializer):
     order_line_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)

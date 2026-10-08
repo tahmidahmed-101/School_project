@@ -81,6 +81,12 @@ export const capturePayment = orderAction(
     api.post(`${ENDPOINT}${id}/capture-payment/`, { amount, method, reference: reference ?? "" })
 )
 
+export const addOrderLine = orderAction(
+  "addOrderLine",
+  ({ orderId, variantId, quantity }: { orderId: string; variantId: string; quantity: number }) =>
+    api.post(`${ENDPOINT}${orderId}/lines/`, { variant_id: variantId, quantity })
+)
+
 export const updateOrderLine = orderAction(
   "updateOrderLine",
   ({ orderId, lineId, quantity }: { orderId: string; lineId: string; quantity: number }) =>
@@ -119,7 +125,7 @@ export const createReturn = createAsyncThunk(
   }
 )
 
-const orderReturningActions = [updateOrder, updateOrderStatus, updatePreorderStage, cancelOrder, capturePayment, updateOrderLine, removeOrderLine]
+const orderReturningActions = [updateOrder, updateOrderStatus, updatePreorderStage, cancelOrder, capturePayment, addOrderLine, updateOrderLine, removeOrderLine]
 
 export default withExtraCases(reducer, (builder) => {
   for (const action of orderReturningActions) {

@@ -56,6 +56,7 @@ from apps.orders.services.invoice_document import (
     invoice_filename,
 )
 from apps.orders.services.orders import (
+    add_order_line,
     cancel_order,
     delete_order,
     remove_order_line,
@@ -85,6 +86,7 @@ from .serializers import (
     SHIP_TO_API_FIELDS,
     AdminCustomerCartSerializer,
     AdminOrderCreateSerializer,
+    AdminOrderLineCreateSerializer,
     AdminOrderLineUpdateSerializer,
     AdminOrderStatusSerializer,
     AdminOrderUpdateSerializer,
@@ -357,6 +359,35 @@ class AdminOrderPreorderStageView(APIView):
                 "data": AdminSalesOrderSerializer(get_order_by_id(order_id)).data,
                 "message": "Success",
             }
+        )
+
+
+@extend_schema(tags=["Orders"])
+class AdminOrderLineCreateView(APIView):
+    serializer_class = AdminOrderLineCreateSerializer
+    permission_classes: ClassVar[list] = [OrdersManagePermission]
+
+    @extend_schema(request=AdminOrderLineCreateSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, order_id) -> Response:
+        order = get_order_by_id(order_id)
+        if order is None:
+            return not_found("order_not_found", "Order not found.")
+        serializer = AdminOrderLineCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        variant = get_variants_by_ids([data["variant_id"]]).first()
+        if variant is None:
+            return error_from_exception(DomainError("Variant not found.", code="variant_not_found"))
+        try:
+            add_order_line(
+                order=order, variant=variant, quantity=data["quantity"], actor=request.user
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        order = get_order_by_id(order_id)
+        return Response(
+            {"data": AdminSalesOrderSerializer(order).data, "message": "Success"},
+            status=status.HTTP_201_CREATED,
         )
 
 

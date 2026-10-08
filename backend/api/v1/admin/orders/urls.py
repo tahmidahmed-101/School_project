@@ -9,6 +9,7 @@ from .views import (
     AdminOrderDetailView,
     AdminOrderExportView,
     AdminOrderInvoicePdfView,
+    AdminOrderLineCreateView,
     AdminOrderLineDetailView,
     AdminOrderListView,
     AdminOrderPreorderStageView,
@@ -53,6 +54,11 @@ urlpatterns = [
         "<uuid:order_id>/status/",
         AdminOrderStatusView.as_view(),
         name="order-status",
+    ),
+    path(
+        "<uuid:order_id>/lines/",
+        AdminOrderLineCreateView.as_view(),
+        name="order-line-create",
     ),
     path(
         "<uuid:order_id>/lines/<uuid:line_id>/",

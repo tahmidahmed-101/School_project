@@ -9,7 +9,7 @@ from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import SalesOrder, SalesOrderLine, StockReservation
 from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
-from apps.orders.services.carts import compute_line_tax
+from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
 from apps.orders.services.notifications import notify_order
 from apps.orders.services.reservations import release_stock_reservation
 
@@ -218,6 +218,66 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
             variant=component,
             quantity=component_qty,
         )
+
+
+@transaction.atomic
+def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> SalesOrderLine:
+    """Add a variant to an order that has not shipped, at today's price.
+
+    A checked-out order holds stock per line, so the new line reserves its own
+    here, as checkout would have. A pending order reserves nothing until it is
+    checked out, and a pre-order line never does.
+    """
+    order = lock_order(order)
+    if order.status not in LINE_EDITABLE_STATUSES:
+        raise BusinessRuleViolationError(
+            "Lines can only be changed before the order ships.",
+            code="lines_frozen",
+        )
+    if quantity <= 0:
+        raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+    if order.lines.filter(variant=variant).exists():
+        raise BusinessRuleViolationError(
+            "This item is already on the order. Change its quantity instead.",
+            code="line_exists",
+        )
+    if variant.is_preorder_enabled and not variant.is_preorder_active:
+        raise BusinessRuleViolationError(
+            "This product is not available for pre-order at this time.",
+            code="preorder_not_active",
+        )
+    is_preorder = variant.is_preorder_active
+    if is_preorder and variant.preorder_stock_limit is not None:
+        _check_preorder_stock_limit(variant, quantity)
+
+    unit_price = variant.effective_price
+    line = SalesOrderLine.objects.create(
+        order=order,
+        variant=variant,
+        quantity=quantity,
+        unit_price=unit_price,
+        tax_amount=compute_line_tax(unit_price=unit_price, quantity=quantity),
+        product_name=variant.product.name,
+        variant_sku=variant.sku,
+        is_preorder=is_preorder,
+    )
+    if order.status != SalesOrder.Status.PENDING and not is_preorder:
+        for component, component_qty in expand_variant(variant, quantity):
+            reserve_stock(variant=component, quantity=component_qty)
+            StockReservation.objects.create(
+                order_line=line,
+                variant=component,
+                quantity=component_qty,
+            )
+    order.recalculate_totals()
+    log_action(
+        actor=actor,
+        action="order.line_added",
+        target_type="SalesOrderLine",
+        target_id=line.id,
+        metadata={"order_id": str(order.id), "variant_id": str(variant.id), "quantity": quantity},
+    )
+    return line
 
 
 @transaction.atomic

@@ -1166,6 +1166,53 @@ def test_admin_can_change_a_line_quantity(api_client):
     assert get_stock_item(variant=variant).quantity_reserved == 6
 
 
+def test_admin_can_add_a_line_to_a_checked_out_order(api_client):
+    order, _ = _admin_checked_out_order(api_client, "lineadd")
+    extra = _stocked_variant(quantity=10)
+    total_before = order.grand_total
+
+    response = api_client.post(
+        f"/api/v1/admin/orders/{order.id}/lines/",
+        {"variant_id": str(extra.id), "quantity": 2},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert len(response.data["data"]["lines"]) == 2
+    assert get_stock_item(variant=extra).quantity_reserved == 2
+    order.refresh_from_db()
+    assert order.grand_total > total_before
+
+
+def test_admin_cannot_add_a_variant_already_on_the_order(api_client):
+    order, variant = _admin_checked_out_order(api_client, "linedup")
+
+    response = api_client.post(
+        f"/api/v1/admin/orders/{order.id}/lines/",
+        {"variant_id": str(variant.id), "quantity": 1},
+        format="json",
+    )
+
+    assert response.status_code >= 400
+    assert response.data["error"]["code"] == "line_exists"
+    assert get_stock_item(variant=variant).quantity_reserved == 3
+
+
+def test_admin_cannot_add_a_line_without_enough_stock(api_client):
+    order, _ = _admin_checked_out_order(api_client, "linenostock")
+    scarce = _stocked_variant(quantity=1)
+
+    response = api_client.post(
+        f"/api/v1/admin/orders/{order.id}/lines/",
+        {"variant_id": str(scarce.id), "quantity": 5},
+        format="json",
+    )
+
+    assert response.status_code >= 400
+    assert order.lines.count() == 1
+    assert get_stock_item(variant=scarce).quantity_reserved == 0
+
+
 def test_admin_line_edit_on_another_order_is_404(api_client):
     order, _ = _admin_checked_out_order(api_client, "linemismatch")
     other = SalesOrderFactory()

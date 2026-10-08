@@ -1,19 +1,24 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
-import { Package } from "lucide-react"
+import { Package, Plus } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import { FormDialog } from "@/components/common/FormDialog"
 import { ProductCell } from "@/components/common/cells"
 import { TextField } from "@/components/common/form-fields"
 import { TableActions } from "@/components/common/TableActions"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 import { useAppDispatch } from "@/app/hooks"
-import { removeOrderLine, updateOrderLine } from "@/features/sales/slices/orderSlice"
+import { addOrderLine, removeOrderLine, updateOrderLine } from "@/features/sales/slices/orderSlice"
 import { PRE_SHIPMENT_STATUSES, type Order, type OrderLine } from "@/features/sales/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
+
+const isQuantity = (value: string) => Number.isInteger(Number(value)) && Number(value) >= 1
 
 interface OrderLinesCardProps {
   order: Order
@@ -25,6 +30,9 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
   const [editing, setEditing] = useState<OrderLine | null>(null)
   const [quantity, setQuantity] = useState("")
   const [busy, setBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [newVariant, setNewVariant] = useState<PickedVariant | null>(null)
+  const [newQuantity, setNewQuantity] = useState("1")
 
   // services/orders.py: lines are editable only before anything ships, and never once a
   // line has shipped in part; the last line can't be removed (cancel the order instead).
@@ -62,7 +70,30 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
     }
   }
 
-  const qtyValid = Number.isInteger(Number(quantity)) && Number(quantity) >= 1
+  const openAdd = () => {
+    setNewVariant(null)
+    setNewQuantity("1")
+    setAdding(true)
+  }
+
+  const addLine = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!newVariant || !isQuantity(newQuantity)) return
+    setBusy(true)
+    try {
+      await dispatch(
+        addOrderLine({ orderId: order.id, variantId: newVariant.id, quantity: Number(newQuantity) })
+      ).unwrap()
+      toast.success(`${newVariant.product_name} added to the order`)
+      setAdding(false)
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add item"))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const qtyValid = isQuantity(quantity)
 
   const columns: ColumnDef<OrderLine>[] = [
     {
@@ -131,7 +162,12 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           Order lines ({order.lines.length})
         </CardTitle>
         {linesEditable && (
-          <CardDescription>Quantities can be corrected until the order ships; stock holds follow.</CardDescription>
+          <CardAction>
+            <Button variant="outline" size="sm" onClick={openAdd}>
+              <Plus className="h-4 w-4" />
+              Add item
+            </Button>
+          </CardAction>
         )}
       </CardHeader>
       <CardContent className="p-0">
@@ -165,6 +201,41 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
         />
+      </FormDialog>
+
+      <FormDialog
+        open={adding}
+        onOpenChange={setAdding}
+        title="Add item"
+        description="Added at the item's current price."
+        onSubmit={addLine}
+        submitting={busy}
+        submitLabel="Add to order"
+        submitDisabled={!newVariant || !isQuantity(newQuantity)}
+      >
+        <div className="space-y-4">
+          <Field>
+            <FieldLabel htmlFor="new-line-variant">Item</FieldLabel>
+            <FieldContent>
+              <VariantPicker
+                id="new-line-variant"
+                value={newVariant}
+                onChange={setNewVariant}
+                filters={{ is_active: true }}
+                excludeIds={order.lines.map((line) => line.variant_id)}
+              />
+            </FieldContent>
+          </Field>
+          <TextField
+            label="Quantity"
+            id="new-line-quantity"
+            type="number"
+            min={1}
+            step={1}
+            value={newQuantity}
+            onChange={(e) => setNewQuantity(e.target.value)}
+          />
+        </div>
       </FormDialog>
     </Card>
   )
