@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
+import { cardClass } from "@/design-system/ui/Card";
 
 interface PolicyViewProps {
   policy: PolicyContent;
@@ -17,12 +18,12 @@ export function PolicyView({ policy }: PolicyViewProps) {
   const BRAND_INFO = useBrand();
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container>
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}
           title={t(policy.title)}
-          subtitle={t(policy.updated)}
+          subtitle={policy.updated && t(policy.updated)}
         />
 
         <p className="max-w-3xl text-sm leading-relaxed text-ink-700 sm:text-base lg:max-w-4xl lg:text-lg">
@@ -38,7 +39,7 @@ export function PolicyView({ policy }: PolicyViewProps) {
           ))}
         </div>
 
-        <div className="mt-10 max-w-3xl rounded-2xl border border-ink-200 bg-surface p-5 sm:p-6 lg:max-w-4xl lg:p-8">
+        <div className={cardClass("surface", "mt-10 max-w-3xl p-5 sm:p-6 lg:max-w-4xl lg:p-8")}>
           <h2 className="text-sm font-bold text-ink-950 sm:text-base lg:text-xl">{ui("footerContactUs")}</h2>
           <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-4">
             <a

@@ -39,7 +39,7 @@ export function ShopFilterSidebar({
       {/* Desktop sidebar */}
       <aside className="sticky top-[140px] z-20 hidden w-72 shrink-0 self-start lg:block">
         <ScrollReveal y={20} duration={0.7}>
-          <div className="shadow-xs max-h-[calc(100vh-165px)] space-y-6 overflow-y-auto rounded-2xl border border-ink-200/80 bg-white p-5 text-xs text-fg sm:p-6">
+          <div className="shadow-xs max-h-[calc(100vh-165px)] space-y-6 overflow-y-auto rounded-2xl border border-ink-200/80 bg-canvas p-5 text-xs text-fg sm:p-6">
             <div className="flex items-center justify-between border-b border-ink-200 pb-3.5">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gold-700" />
@@ -73,9 +73,9 @@ export function ShopFilterSidebar({
             />
 
             <div
-              className={`pointer-events-auto relative z-10 flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-w-md transition-transform duration-300 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
+              className={`pointer-events-auto relative z-10 flex h-full w-full flex-col overflow-hidden bg-canvas shadow-2xl sm:max-w-md transition-transform duration-300 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
             >
-              <div className="flex items-center justify-between border-b border-ink-200 bg-white p-5">
+              <div className="flex items-center justify-between border-b border-ink-200 bg-canvas p-5">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-gold-700" />
                   <h3 className="ts-display text-base font-bold tracking-wider text-fg">{ui("filterCatalog")}</h3>
@@ -90,7 +90,7 @@ export function ShopFilterSidebar({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto bg-white p-5">
+              <div className="flex-1 overflow-y-auto bg-canvas p-5">
                 <ShopFilterControls filters={filters} onFilterChange={onFilterChange} />
               </div>
 

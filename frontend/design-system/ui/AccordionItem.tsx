@@ -10,6 +10,9 @@ interface AccordionItemProps {
   children: ReactNode;
 }
 
+/** Padding and text style shared by the content of every row. */
+export const ACCORDION_BODY = "pb-3 pt-3 text-xs leading-relaxed text-fg-muted";
+
 /** One collapsible row. Each row keeps its own open state, so several can be open at once. */
 export function AccordionItem({ title, defaultOpen = false, children }: AccordionItemProps) {
   const [open, setOpen] = useState(defaultOpen);

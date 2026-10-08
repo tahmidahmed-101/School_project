@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import type { OrderResult } from "@/lib/types";
 import { Container } from "@/design-system/ui/Container";
 import { PAGE_TITLE_CLASS } from "@/design-system/ui/PageHeader";
+import { cardClass } from "@/design-system/ui/Card";
 
 interface OrderSuccessProps {
   orderResult: OrderResult;
@@ -22,7 +23,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
   );
 
   return (
-    <div className="min-h-screen bg-white py-12 sm:py-20">
+    <div className="min-h-screen bg-canvas py-12 sm:py-20">
       <Container width="compact" className="space-y-6 text-center">
         <div className="shadow-xs mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand-200 bg-brand-50 text-brand-600">
           <CheckCircle2 className="h-8 w-8" />
@@ -42,7 +43,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
           </div>
         )}
 
-        <div className="shadow-xs space-y-3 rounded-2xl border border-ink-200 bg-surface p-5 text-left text-xs">
+        <div className={cardClass("surface", "shadow-xs space-y-3 p-5 text-left text-xs")}>
           <div className="flex justify-between border-b border-ink-200 pb-2">
             <span className="text-fg-subtle">{ui("orderNumberLabel")}</span>
             <span className="font-mono text-sm font-bold text-gold-800">{orderResult.orderNumber}</span>

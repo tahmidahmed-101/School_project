@@ -26,7 +26,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
         className={`flex w-full cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-left transition-all ${
           isOpen
             ? "border-gold-500 bg-gold-50/60 ring-2 ring-gold-500/10"
-            : "border-ink-200 bg-white hover:border-gold-500"
+            : "border-ink-200 bg-canvas hover:border-gold-500"
         }`}
         aria-expanded={isOpen}
       >
@@ -52,7 +52,7 @@ export function FilterSelect({ icon, triggerLabel, options, value, onChange, def
                 className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-all ${
                   isSelected
                     ? "shadow-xs bg-accent font-bold text-ink-950"
-                    : "text-ink-700 hover:bg-white hover:text-ink-950"
+                    : "text-ink-700 hover:bg-canvas hover:text-ink-950"
                 }`}
               >
                 <span>{option.label}</span>

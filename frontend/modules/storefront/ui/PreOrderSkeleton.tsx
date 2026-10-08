@@ -20,7 +20,7 @@ function HeroSkeleton({ side, banner }: { side: string; banner: string }) {
 
 function ShelfSkeleton() {
   return (
-    <section className="bg-white py-8 sm:py-14">
+    <section className="bg-canvas py-8 sm:py-14">
       <Container>
         <Skeleton className="mb-6 h-7 w-48 sm:mb-8" />
         <ProductGridSkeleton />

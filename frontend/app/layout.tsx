@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./theme.css";
+import { cookies } from "next/headers";
 import { LangProvider } from "@/lib/i18n";
+import { LANG_COOKIE, toLang } from "@/lib/lang";
 import { CatalogProvider } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { getBrand } from "@/modules/business/server";
@@ -74,18 +76,18 @@ const takaFont = localFont({
   declarations: [{ prop: "unicode-range", value: "U+09F3" }],
 });
 
-// Categories and contact details come from the LaunchCart API. Pages are static but re-generated at most every
-// minute, so admin changes show up without a rebuild (and a backend outage at build time heals itself).
+// Categories and contact details come from the LaunchCart API (answers cached per lib/cache.ts).
 // Only categories and brand go into the shell; pages that list products load them themselves (see ProductsProvider).
 // Without a page cache a timed revalidate only told browsers to keep serving old HTML (stale-while-revalidate);
 // after a deploy that HTML asked for chunks that no longer exist. Dynamic pages are sent as no-store.
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [catalog, brand] = await Promise.all([getCatalog(), getBrand()]);
+  const [catalog, brand, cookieStore] = await Promise.all([getCatalog(), getBrand(), cookies()]);
+  const lang = toLang(cookieStore.get(LANG_COOKIE)?.value);
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={lang ?? "en"} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         <JsonLd data={organizationJsonLd(brand)} />
@@ -95,7 +97,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable} ${takaFont.variable}`}>
           <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
-            <LangProvider>
+            <LangProvider initialLang={lang}>
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>

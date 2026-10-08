@@ -23,6 +23,8 @@ export const CACHE_LIFE = {
   catalog: 60,
   /** Business profile (contact details). */
   business: 300,
+  /** Return and refund policies published in the dashboard. */
+  policies: 300,
   /** Enabled payment methods. */
   paymentMethods: 300,
   /** Coupons advertised in the voucher strip. */

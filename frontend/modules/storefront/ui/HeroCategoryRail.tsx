@@ -15,7 +15,7 @@ export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
   const visibleCategories = categories.filter((category) => category.type === type);
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-ink-100 bg-white p-2.5 shadow-sm sm:rounded-3xl sm:p-3">
+    <div className="flex h-full flex-col rounded-2xl border border-ink-100 bg-canvas p-2.5 shadow-sm sm:rounded-3xl sm:p-3">
       <h2 className="px-1.5 pb-1.5 text-2xs font-bold uppercase tracking-wider text-fg-subtle">
         {ui("heroCategoriesTitle")}
       </h2>

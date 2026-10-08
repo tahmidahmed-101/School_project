@@ -78,8 +78,8 @@ export function ProductActions({
           onClick={() => toggleItem(product)}
           className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
             isWishlisted
-              ? "shadow-xs border-red-500 bg-red-50 text-red-600"
-              : "border-ink-200 bg-white text-ink-700 hover:border-ink-900 hover:text-ink-950"
+              ? "shadow-xs border-red-500 bg-danger-surface text-danger"
+              : "border-ink-200 bg-canvas text-ink-700 hover:border-ink-900 hover:text-ink-950"
           }`}
           aria-label={ui("navWishlist")}
           aria-pressed={isWishlisted}

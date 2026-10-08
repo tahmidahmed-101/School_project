@@ -19,7 +19,7 @@ export function ProductListItem({ product }: { product: Product }) {
   const href = `/product/${product.slug}`;
 
   return (
-    <div className="group flex flex-col items-center gap-4 rounded-2xl border border-ink-200/80 bg-white p-4 transition-all hover:border-gold-400/80 hover:shadow-lg sm:flex-row">
+    <div className="group flex flex-col items-center gap-4 rounded-2xl border border-ink-200/80 bg-canvas p-4 transition-all hover:border-gold-400/80 hover:shadow-lg sm:flex-row">
       <Link
         href={href}
         className="relative block h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-ink-200 bg-surface-muted"

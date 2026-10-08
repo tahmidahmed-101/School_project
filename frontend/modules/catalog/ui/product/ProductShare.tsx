@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Check, Link2, Share2 } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { FacebookIcon, WhatsAppIcon } from "@/design-system/icons/BrandIcons";
+import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 const CHIP_CLASS =
-  "inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3.5 py-2 text-xs font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800";
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-ink-200 bg-canvas px-3.5 py-2 text-xs font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800";
 
 /** Share links for a product. Plain links to each network's share page: no SDKs, nothing loaded until clicked. */
 export function ProductShare({ slug, name }: { slug: string; name: string }) {
@@ -46,7 +47,7 @@ export function ProductShare({ slug, name }: { slug: string; name: string }) {
   };
 
   return (
-    <div className="space-y-3 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+    <div className={`space-y-3 ${ACCORDION_BODY}`}>
       <p>{ui("shareIntro")}</p>
       {url && (
         <div className="flex flex-wrap gap-2">

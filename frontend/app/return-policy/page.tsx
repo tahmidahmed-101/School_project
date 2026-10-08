@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PolicyView } from "@/modules/policies";
 import { RETURN_POLICY } from "@/modules/policies";
+import { getPolicyContent } from "@/modules/policies/server";
 import { pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -9,6 +10,6 @@ export const metadata: Metadata = pageMetadata({
   path: "/return-policy",
 });
 
-export default function KullMartReturnPolicyPage() {
-  return <PolicyView policy={RETURN_POLICY} />;
+export default async function KullMartReturnPolicyPage() {
+  return <PolicyView policy={await getPolicyContent("returns", RETURN_POLICY)} />;
 }

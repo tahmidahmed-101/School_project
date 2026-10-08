@@ -8,6 +8,7 @@ import { useCollectedCodes, useVoucherText } from "./useVouchers";
 import { CardReveal, ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
+import { cardClass } from "@/design-system/ui/Card";
 
 /**
  * "Collect voucher" strip shown below the promo marquee; toggled via SITE_SETTINGS.voucherSection.enabled.
@@ -35,7 +36,7 @@ export function VoucherSection({ vouchers }: { vouchers: Voucher[] }) {
                 delay={(idx % 4) * 0.08}
                 className="w-[250px] min-w-0 shrink-0 snap-start sm:w-auto sm:shrink"
               >
-                <div className="flex h-full items-stretch overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-sm">
+                <div className={cardClass("canvas", "flex h-full items-stretch overflow-hidden shadow-sm")}>
                   <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 sm:w-20 lg:w-16">
                     <Ticket className="h-6 w-6" />
                     {/* Decorative stamp in a 64px column; 10px is the largest size that fits "KULL MART". */}

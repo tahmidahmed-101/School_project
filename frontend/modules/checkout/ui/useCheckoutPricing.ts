@@ -2,29 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { listPaymentMethods } from "../data/queries";
 import { quoteShipping, validateCoupon } from "../data/mutations";
-import type { ApiPaymentMethod } from "@/lib/api/types";
 import type { CartItem, OrderForm } from "@/lib/types";
-
-const COD_FALLBACK: ApiPaymentMethod[] = [{ key: "cod", label: "Cash on delivery", description: "" }];
-
-/** Enabled payment methods from the store; falls back to cash on delivery if the list cannot be loaded. */
-export function usePaymentMethods(): ApiPaymentMethod[] {
-  const [methods, setMethods] = useState<ApiPaymentMethod[]>(COD_FALLBACK);
-  useEffect(() => {
-    let cancelled = false;
-    listPaymentMethods()
-      .then((list) => {
-        if (!cancelled && list.length > 0) setMethods(list);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return methods;
-}
 
 const toApiItems = (items: CartItem[]) =>
   items.map((item) => ({ variant_id: item.variantId, quantity: item.quantity }));

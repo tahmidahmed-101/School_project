@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import { policyFromApi } from "../domain/policy-content";
+
+describe("policyFromApi", () => {
+  it("keeps both languages and the section order", () => {
+    const content = policyFromApi({
+      kind: "returns",
+      title: { en: "Returns", bn: "রিটার্ন" },
+      intro: { en: "Intro", bn: "ভূমিকা" },
+      sections: [
+        { heading: { en: "First", bn: "প্রথম" }, body: { en: "A", bn: "ক" } },
+        { heading: { en: "Second", bn: "দ্বিতীয়" }, body: { en: "B", bn: "খ" } },
+      ],
+      effective_date: null,
+    });
+
+    expect(content.title).toEqual({ en: "Returns", bn: "রিটার্ন" });
+    expect(content.sections.map((section) => section.heading.en)).toEqual(["First", "Second"]);
+    expect(content.updated).toBeUndefined();
+  });
+
+  it("shows the other language where one is missing", () => {
+    const content = policyFromApi({
+      kind: "refund",
+      title: { en: "Refunds" },
+      intro: {},
+      sections: [{ heading: { bn: "শিরোনাম" }, body: { en: "Body" } }],
+      effective_date: null,
+    });
+
+    expect(content.title).toEqual({ en: "Refunds", bn: "Refunds" });
+    expect(content.intro).toEqual({ en: "", bn: "" });
+    expect(content.sections[0].heading).toEqual({ en: "শিরোনাম", bn: "শিরোনাম" });
+  });
+});

@@ -9,11 +9,9 @@ import { useAuth } from "../context";
 import { suggestEmailCorrection } from "../domain/email";
 import { safeNextPath, splitFullName } from "../domain/redirect";
 import { authErrorMessage } from "./authError";
-import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Button } from "@/design-system/ui/Button";
-import { Container } from "@/design-system/ui/Container";
-import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
+import { AuthCard } from "./AuthCard";
 
 export function RegisterView() {
   const { ui } = useLang();
@@ -90,81 +88,72 @@ export function RegisterView() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <Container width="narrow">
-        <PageHeader
-          breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: ui("registerTitle") }]} />}
-          title={ui("registerTitle")}
-          subtitle={ui("registerSubtitle")}
-        />
-
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
-        >
-          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
-          {emailFix && (
-            <div role="alert" className="space-y-2 rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs text-fg">
-              <p className="font-semibold">
-                {ui("registerEmailSuggestion")} <span className="break-all font-bold">{emailFix}</span>?
-              </p>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEmail(emailFix);
-                  setEmailFix(null);
-                }}
-              >
-                {ui("registerEmailUse")}
-              </Button>
-              <p className="text-fg-muted">{ui("registerEmailKeep")}</p>
-            </div>
-          )}
-
-          {fields.map((f) => (
-            <FormField key={f.id} htmlFor={f.id} label={ui(f.label)}>
-              {f.type === "password" ? (
-                <div className="relative">
-                  <input
-                    id={f.id}
-                    type={revealed[f.id] ? "text" : "password"}
-                    autoComplete={f.auto}
-                    value={f.value}
-                    onChange={(e) => f.set(e.target.value)}
-                    className={`${INPUT_CLASS} pr-11`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setRevealed((prev) => ({ ...prev, [f.id]: !prev[f.id] }))}
-                    aria-label={revealed[f.id] ? ui("loginHidePassword") : ui("loginShowPassword")}
-                    className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
-                  >
-                    {revealed[f.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              ) : (
-                <input
-                  id={f.id}
-                  type={f.type}
-                  autoComplete={f.auto}
-                  value={f.value}
-                  onChange={(e) => f.set(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              )}
-            </FormField>
-          ))}
-
-          <Button type="submit" size="lg" fullWidth loading={submitting}>
-            {ui("registerSubmit")}
-          </Button>
-        </form>
-
+    <AuthCard
+      title={ui("registerTitle")}
+      subtitle={ui("registerSubtitle")}
+      onSubmit={handleSubmit}
+      footer={
         <Link href="/login" className="mt-5 block text-center text-sm font-semibold text-brand-800 hover:underline">
           {ui("registerHaveAccount")}
         </Link>
-      </Container>
-    </div>
+      }
+    >
+      {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
+      {emailFix && (
+        <div role="alert" className="space-y-2 rounded-xl border border-gold-300 bg-gold-50 p-3 text-xs text-fg">
+          <p className="font-semibold">
+            {ui("registerEmailSuggestion")} <span className="break-all font-bold">{emailFix}</span>?
+          </p>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEmail(emailFix);
+              setEmailFix(null);
+            }}
+          >
+            {ui("registerEmailUse")}
+          </Button>
+          <p className="text-fg-muted">{ui("registerEmailKeep")}</p>
+        </div>
+      )}
+
+      {fields.map((f) => (
+        <FormField key={f.id} htmlFor={f.id} label={ui(f.label)}>
+          {f.type === "password" ? (
+            <div className="relative">
+              <input
+                id={f.id}
+                type={revealed[f.id] ? "text" : "password"}
+                autoComplete={f.auto}
+                value={f.value}
+                onChange={(e) => f.set(e.target.value)}
+                className={`${INPUT_CLASS} pr-11`}
+              />
+              <button
+                type="button"
+                onClick={() => setRevealed((prev) => ({ ...prev, [f.id]: !prev[f.id] }))}
+                aria-label={revealed[f.id] ? ui("loginHidePassword") : ui("loginShowPassword")}
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
+              >
+                {revealed[f.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          ) : (
+            <input
+              id={f.id}
+              type={f.type}
+              autoComplete={f.auto}
+              value={f.value}
+              onChange={(e) => f.set(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          )}
+        </FormField>
+      ))}
+
+      <Button type="submit" size="lg" fullWidth loading={submitting}>
+        {ui("registerSubmit")}
+      </Button>
+    </AuthCard>
   );
 }

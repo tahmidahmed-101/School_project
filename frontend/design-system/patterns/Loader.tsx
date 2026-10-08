@@ -42,7 +42,7 @@ export function Loader({ variant = "page", label, className = "" }: LoaderProps)
     <div
       role="status"
       aria-live="polite"
-      className={`flex w-full flex-col items-center justify-center gap-5 bg-white px-4 ${WRAPPER_CLASS[variant]} ${className}`}
+      className={`flex w-full flex-col items-center justify-center gap-5 bg-canvas px-4 ${WRAPPER_CLASS[variant]} ${className}`}
     >
       {/* Gold arc spinning around a pale track */}
       <div className="relative h-14 w-14">

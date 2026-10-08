@@ -18,7 +18,8 @@ import {
   validateOrderForm,
   type FormErrors,
 } from "../domain/checkout";
-import { useCoupon, usePaymentMethods, useShippingQuote } from "./useCheckoutPricing";
+import { useCoupon, useShippingQuote } from "./useCheckoutPricing";
+import type { ApiPaymentMethod } from "@/lib/api/types";
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -29,7 +30,7 @@ import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
-export function CheckoutView() {
+export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMethod[] }) {
   const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
@@ -41,7 +42,6 @@ export function CheckoutView() {
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
 
-  const paymentMethods = usePaymentMethods();
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
   const shipping = useShippingQuote(items, form);
@@ -123,7 +123,7 @@ export function CheckoutView() {
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white py-20">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-canvas py-20">
         <div className="max-w-sm space-y-4 px-4 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold-50 ring-1 ring-gold-200">
             <ShoppingCart className="h-9 w-9 text-gold-700" strokeWidth={1.75} aria-hidden="true" />
@@ -139,7 +139,7 @@ export function CheckoutView() {
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container>
         <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("checkoutTitle")} />
 

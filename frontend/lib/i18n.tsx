@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
 import type { Lang, T } from "@/lib/types";
+import { LANG_COOKIE, toLang } from "@/lib/lang";
 
 interface LangContextType {
   lang: Lang;
@@ -17,24 +18,31 @@ const LangContext = createContext<LangContextType | null>(null);
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
 
-export function LangProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+const writeLangCookie = (lang: Lang) => {
+  document.cookie = `${LANG_COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`;
+};
 
+export function LangProvider({ initialLang, children }: { initialLang: Lang | null; children: React.ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(initialLang ?? "en");
+
+  // Visitors who chose a language before the cookie existed still have it in localStorage: carry it over once.
   useEffect(() => {
-    const saved = window.localStorage.getItem("kullmart:lang");
-    if (saved === "bn" || saved === "en") {
-      setLangState(saved);
-    }
-  }, []);
+    if (initialLang) return;
+    const saved = toLang(window.localStorage.getItem("kullmart:lang"));
+    if (!saved) return;
+    setLangState(saved);
+    writeLangCookie(saved);
+  }, [initialLang]);
 
-  // The server always renders English (lang="en"); keep the document language in step with the toggle so screen
-  // readers pick the right voice and the browser offers the right hyphenation and font fallbacks.
+  // Keep the document language in step with the toggle so screen readers pick the right voice and the browser
+  // offers the right hyphenation and font fallbacks.
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
+    writeLangCookie(l);
     window.localStorage.setItem("kullmart:lang", l);
   }, []);
 

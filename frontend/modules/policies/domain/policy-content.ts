@@ -1,3 +1,4 @@
+import type { ApiStorePolicy } from "@/lib/api/types";
 import type { T } from "@/lib/types";
 
 interface PolicySection {
@@ -7,9 +8,25 @@ interface PolicySection {
 
 export interface PolicyContent {
   title: T;
-  updated: T;
+  updated?: T;
   intro: T;
   sections: PolicySection[];
+}
+
+type ApiText = { en?: string; bn?: string } | undefined;
+
+const bilingual = (value: ApiText): T => ({ en: value?.en || value?.bn || "", bn: value?.bn || value?.en || "" });
+
+/** A policy staff published in the dashboard, in the shape the policy page renders. */
+export function policyFromApi(policy: ApiStorePolicy): PolicyContent {
+  return {
+    title: bilingual(policy.title),
+    intro: bilingual(policy.intro),
+    sections: policy.sections.map((section) => ({
+      heading: bilingual(section.heading),
+      body: bilingual(section.body),
+    })),
+  };
 }
 
 export const RETURN_POLICY: PolicyContent = {

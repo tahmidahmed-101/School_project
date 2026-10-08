@@ -52,7 +52,7 @@ export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
       <VoucherSection vouchers={vouchers} />
 
       {preorderProducts.length === 0 ? (
-        <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
+        <section className="border-b border-ink-200 bg-canvas py-8 sm:py-14">
           <Container>
             <SectionHeading title={ui("navPreOrder")} />
             <EmptyState

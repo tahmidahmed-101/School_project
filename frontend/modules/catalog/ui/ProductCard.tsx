@@ -39,7 +39,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   };
 
   return (
-    <div className="group relative flex h-full flex-col justify-between rounded-xl border border-ink-200/90 bg-white p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/70 hover:shadow-lg hover:shadow-ink-200/60 sm:p-2.5">
+    <div className="group relative flex h-full flex-col justify-between rounded-xl border border-ink-200/90 bg-canvas p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/70 hover:shadow-lg hover:shadow-ink-200/60 sm:p-2.5">
       {/* Top Image Area */}
       <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-lg border border-ink-100 bg-surface sm:mb-2">
         <Link href={`/product/${product.slug}`} className="relative block h-full w-full">
@@ -71,7 +71,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             e.stopPropagation();
             toggleItem(product);
           }}
-          className="absolute right-1 top-1 z-10 flex h-7 w-7 cursor-pointer before:absolute before:-inset-1.5 before:content-[''] items-center justify-center rounded-full border border-ink-200/80 bg-white/90 text-ink-700 shadow-2xs backdrop-blur-sm transition-all hover:scale-110 hover:bg-white hover:text-red-500 sm:h-8 sm:w-8"
+          className="absolute right-1 top-1 z-10 flex h-7 w-7 cursor-pointer before:absolute before:-inset-1.5 before:content-[''] items-center justify-center rounded-full border border-ink-200/80 bg-white/90 text-ink-700 shadow-2xs backdrop-blur-sm transition-all hover:scale-110 hover:bg-canvas hover:text-red-500 sm:h-8 sm:w-8"
           aria-label={`${ui("navWishlist")} - ${t(product.name)}`}
           aria-pressed={isWishlisted}
         >
@@ -143,7 +143,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <button
                 type="button"
                 onClick={() => addItem(product)}
-                className="shadow-xs flex h-8 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-ink-200 bg-white text-ink-700 transition-all hover:scale-[1.05] hover:border-gold-400 hover:text-gold-700 active:scale-95"
+                className="shadow-xs flex h-8 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-ink-200 bg-canvas text-ink-700 transition-all hover:scale-[1.05] hover:border-gold-400 hover:text-gold-700 active:scale-95"
                 aria-label={`${ui("addToCart")} - ${t(product.name)}`}
                 title={ui("addToCart")}
               >

@@ -108,7 +108,7 @@ export function Dropdown({
 
       {mounted && (
         <div
-          className={`absolute top-full z-50 mt-1.5 overflow-y-auto rounded-xl border border-ink-200 bg-white p-1.5 shadow-xl transition duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${shown ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1.5 scale-[0.98] opacity-0"} ${MENU_ALIGN[menuAlign]} ${
+          className={`absolute top-full z-50 mt-1.5 overflow-y-auto rounded-xl border border-ink-200 bg-canvas p-1.5 shadow-xl transition duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${shown ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1.5 scale-[0.98] opacity-0"} ${MENU_ALIGN[menuAlign]} ${
             searchable ? "max-h-56" : "max-h-64"
           }`}
         >
