@@ -246,6 +246,7 @@ export const DICT = {
   policyReadFull: { en: "Read the full return policy", bn: "সম্পূর্ণ রিটার্ন নীতি পড়ুন" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
+  navReadyStock: { en: "Ready stock", bn: "রেডি স্টক" },
   preOrderEmpty: { en: "No pre-order products right now.", bn: "এখন কোনো প্রি-অর্ডার পণ্য নেই।" },
   preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },

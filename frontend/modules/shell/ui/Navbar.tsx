@@ -6,12 +6,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingCart, Heart, Globe, Phone, MapPin, Clock, Menu, Truck, User } from "lucide-react";
 import { useBrand } from "@/modules/catalog";
-import { useLang } from "@/lib/i18n";
+import { useLang, type UiKey } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { UserAvatar, useAuth } from "@/modules/auth";
 import { useWishlist } from "@/modules/wishlist";
 import { photo } from "@/lib/photo";
-import type { T } from "@/lib/types";
 import { NavbarSearch } from "@/modules/catalog";
 import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
@@ -20,23 +19,18 @@ import { containerClass } from "@/design-system/ui/Container";
 import { CountBadge } from "@/design-system/ui/CountBadge";
 
 const SHOP_PATH = "/shop";
+const READY_STOCK_PATH = "/shop?type=normal";
 
 interface NavLink {
-  label: T;
+  label: UiKey;
   href: string;
   isActive: boolean;
 }
 
 function buildNavLinks(pathname: string, activeCategory: string | null): NavLink[] {
-  const onShop = pathname === SHOP_PATH;
   return [
-    { label: { en: "Home", bn: "হোম" }, href: "/", isActive: pathname === "/" },
-    { label: { en: "Shop all", bn: "সব পণ্য" }, href: SHOP_PATH, isActive: onShop && !activeCategory },
-    {
-      label: { en: "Pre-order", bn: "প্রি-অর্ডার" },
-      href: "/pre-order",
-      isActive: pathname.startsWith("/pre-order"),
-    },
+    { label: "navReadyStock", href: READY_STOCK_PATH, isActive: pathname === SHOP_PATH && !activeCategory },
+    { label: "navPreOrder", href: "/pre-order", isActive: pathname.startsWith("/pre-order") },
   ];
 }
 
@@ -199,7 +193,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                         link.isActive ? "font-bold text-gold-300" : "text-white/80 hover:text-gold-300"
                       }`}
                     >
-                      <span>{t(link.label)}</span>
+                      <span>{ui(link.label)}</span>
                     </Link>
                   ))
                 }
