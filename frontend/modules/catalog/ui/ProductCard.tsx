@@ -49,7 +49,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             fill
             loading={priority ? "eager" : undefined}
             fetchPriority={priority ? "high" : undefined}
-            sizes="(max-width: 640px) 30vw, (max-width: 1024px) 20vw, 180px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 240px"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { usePersistedState } from "@/lib/usePersistedState";
 
@@ -69,25 +69,35 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const closeWishlist = useCallback(() => setIsWishlistOpen(false), []);
   const toggleWishlist = useCallback(() => setIsWishlistOpen((prev) => !prev), []);
 
-  return (
-    <WishlistContext.Provider
-      value={{
-        items,
-        addItem,
-        removeItem,
-        toggleItem,
-        isInWishlist,
-        clearWishlist,
-        isWishlistOpen,
-        openWishlist,
-        closeWishlist,
-        toggleWishlist,
-        totalWishlistItems: items.length,
-      }}
-    >
-      {children}
-    </WishlistContext.Provider>
+  const value = useMemo(
+    () => ({
+      items,
+      addItem,
+      removeItem,
+      toggleItem,
+      isInWishlist,
+      clearWishlist,
+      isWishlistOpen,
+      openWishlist,
+      closeWishlist,
+      toggleWishlist,
+      totalWishlistItems: items.length,
+    }),
+    [
+      items,
+      addItem,
+      removeItem,
+      toggleItem,
+      isInWishlist,
+      clearWishlist,
+      isWishlistOpen,
+      openWishlist,
+      closeWishlist,
+      toggleWishlist,
+    ],
   );
+
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }
 
 export function useWishlist(): WishlistContextType {
