@@ -18,6 +18,8 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_warehouses", lazy: page(() => import("../inventory/components/Warehouses")) },
     { path: "preorder_payments", lazy: page(() => import("../payments/components/Payments")) },
     { path: "preorder_shipments", lazy: page(() => import("../shipping/components/Shipments")) },
+    { path: "preorder_shipping_zones", lazy: page(() => import("../shipping/components/ShippingZones")) },
+    { path: "preorder_shipping_rates", lazy: page(() => import("../shipping/components/ShippingRates")) },
     { path: "preorder_returns", lazy: page(() => import("../returns/components/Returns")) },
     { path: "preorder_carts", lazy: page(() => import("../sales/components/Carts")) },
     { path: "preorder_movements", lazy: page(() => import("../inventory/components/StockLedger")) },
@@ -65,6 +67,8 @@ export const preorderModule: FeatureModule = {
         },
         { title: "Payments", url: "/preorder_payments", permission: ["orders.view", "orders.manage"] },
         { title: "Shipments", url: "/preorder_shipments", permission: ["shipments.view", "shipments.update"] },
+        { title: "Delivery zones", url: "/preorder_shipping_zones", permission: ["shipments.view", "shipments.update"] },
+        { title: "Shipping rates", url: "/preorder_shipping_rates", permission: ["shipments.view", "shipments.update"] },
         { title: "Returns", url: "/preorder_returns", permission: "returns.manage" },
         {
           title: "Suppliers",

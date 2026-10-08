@@ -11,12 +11,8 @@ from apps.business.models import HeroSlide, PromoLine
 from apps.catalog.models import Brand, BundleItem, ProductQuestion, WishlistItem
 from apps.common.services.demo_seed.constants import DEMO_DOMAIN, DEMO_PASSWORD
 from apps.common.services.demo_seed.wipe import wipe_demo_data
-<<<<<<< HEAD
 from apps.inventory.models import StockItem
-from apps.logistics.models import ShippingZone
-=======
 from apps.logistics.models import ShippingRate, ShippingZone
->>>>>>> worktree-agent-a9dc676fa2fc5236f
 from apps.orders.models import SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
 
@@ -73,19 +69,17 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
     call_command("split_shared_suppliers_and_brands", stdout=out)
     assert "0 row(s) would change" in out.getvalue(), out.getvalue()
     out = StringIO()
-<<<<<<< HEAD
     call_command("split_shared_warehouses", stdout=out)
     assert "0 row(s) would change" in out.getvalue(), out.getvalue()
     assert set(StockItem.objects.values_list(WAREHOUSE_KIND, VARIANT_KIND).distinct()) == {
         ("stock", "stock"),
         ("preorder", "preorder"),
     }
-=======
+    out = StringIO()
     call_command("split_shared_delivery_and_payment_setup", stdout=out)
     assert "0 row(s) would change" in out.getvalue(), out.getvalue()
     assert is_payment_method_enabled("cod", kind="preorder")
     assert set(ShippingRate.objects.values_list("kind", flat=True)) == {"stock", "preorder"}
->>>>>>> worktree-agent-a9dc676fa2fc5236f
     assert set(Brand.objects.filter(products__isnull=False).values_list("kind", flat=True)) == {
         "stock",
         "preorder",
