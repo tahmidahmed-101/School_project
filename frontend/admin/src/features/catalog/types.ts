@@ -10,11 +10,6 @@ export const productTypeOptions: { label: string; value: ProductType }[] = [
   { label: "Bundle", value: "bundle" },
 ]
 
-export const categoryTypeOptions: { label: string; value: CategoryType }[] = [
-  { label: "Stock", value: "stock" },
-  { label: "Pre-order", value: "preorder" },
-]
-
 /** ProductImageSerializer */
 export interface ProductImage {
   id: string

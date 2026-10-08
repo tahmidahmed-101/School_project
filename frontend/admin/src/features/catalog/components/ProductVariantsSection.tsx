@@ -11,20 +11,22 @@ import { TableActions } from "@/components/common/TableActions"
 import { MoneyCell } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField, TextField } from "@/components/common/form-fields"
+import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import { splitList } from "@/lib/importLookup"
 
 import { deleteVariant, generateVariants, listProductVariants, updateVariant } from "../api"
 import type { ProductVariant } from "../types"
-import { VariantOptionsCell, VariantStockCell } from "./VariantCells"
+import { VariantOptionsCell, VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
 
 const PAGE_SIZE = 25
 
 interface Props {
   productId: string
-  categoryId: string
+  /** The product's kind: a stock product shows stock columns, a pre-order one its ordering window. */
+  kind: Kind
   productType: string
   canManage: boolean
   canViewInventory: boolean
@@ -32,7 +34,8 @@ interface Props {
   onChanged: () => void
 }
 
-export function ProductVariantsSection({ productId, categoryId, productType, canManage, canViewInventory, onChanged }: Props) {
+export function ProductVariantsSection({ productId, kind, productType, canManage, canViewInventory, onChanged }: Props) {
+  const isStock = kind === "stock"
   const [variants, setVariants] = useState<ProductVariant[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -81,7 +84,7 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
       cell: ({ row }) => (
         <div className="min-w-0">
           <div className="truncate font-mono text-sm">{row.original.sku}</div>
-          {row.original.barcode && (
+          {isStock && row.original.barcode && (
             <div className="truncate text-xs text-muted-foreground">{row.original.barcode}</div>
           )}
         </div>
@@ -111,20 +114,21 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
       header: "COST",
       cell: ({ row }) => <MoneyCell value={row.original.cost_price} className="text-muted-foreground" />,
     },
-    {
-      accessorKey: "stock",
-      header: "AVAILABLE",
-      cell: ({ row }) => <VariantStockCell variant={row.original} showLow />,
-    },
+    isStock
+      ? {
+          accessorKey: "stock",
+          header: "AVAILABLE",
+          cell: ({ row }) => <VariantStockCell variant={row.original} showLow />,
+        }
+      : {
+          id: "ordering",
+          header: "ORDERING",
+          cell: ({ row }) => <VariantOrderingCell variant={row.original} />,
+        },
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-          {row.original.is_preorder_active && <StatusBadge status="pre-order" tone="info" />}
-        </div>
-      ),
+      cell: ({ row }) => <StatusBadge status={row.original.is_active ? "active" : "inactive"} />,
     },
     {
       id: "actions",
@@ -133,7 +137,7 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
         <TableActions
           itemName={row.original.sku}
           actions={
-            canViewInventory
+            isStock && canViewInventory
               ? [
                   {
                     label: "Stock ledger",
@@ -180,12 +184,14 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
           <CardDescription>
             {productType === "simple"
               ? "A simple product sells as a single SKU."
-              : "Each colour/size combination is its own SKU with its own stock."}
+              : isStock
+                ? "Each colour/size combination is its own SKU with its own stock."
+                : "Each colour/size combination is its own SKU."}
           </CardDescription>
         </div>
         {canManage && (
           <div className="flex w-full gap-2 sm:w-auto sm:shrink-0 [&>button]:flex-1 sm:[&>button]:flex-none">
-            {productType === "variant" && (
+            {isStock && productType === "variant" && (
               <Button variant="outline" size="sm" onClick={() => setGenerateOpen(true)}>
                 <Wand2 /> Generate
               </Button>
@@ -235,7 +241,7 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
           emptyTitle="No variants yet"
           emptyDescription="Add a variant (or set a price on the product) to make it sellable."
           minWidth="860px"
-          columnWidths={["180px", "130px", "150px", "110px", "110px", "150px", "80px"]}
+          columnWidths={["180px", "130px", "150px", "110px", isStock ? "110px" : "150px", "110px", "80px"]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -243,17 +249,20 @@ export function ProductVariantsSection({ productId, categoryId, productType, can
       <VariantFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
+        kind={kind}
         productId={productId}
-        categoryId={categoryId}
         variant={editing}
+        sibling={variants[0]}
         onSaved={afterChange}
       />
-      <GenerateVariantsDialog
-        open={generateOpen}
-        onOpenChange={setGenerateOpen}
-        productId={productId}
-        onDone={afterChange}
-      />
+      {isStock && (
+        <GenerateVariantsDialog
+          open={generateOpen}
+          onOpenChange={setGenerateOpen}
+          productId={productId}
+          onDone={afterChange}
+        />
+      )}
     </Card>
   )
 }

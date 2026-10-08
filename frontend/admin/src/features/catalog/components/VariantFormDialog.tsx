@@ -6,76 +6,110 @@ import { toast } from "sonner"
 
 import { DateField, TextField } from "@/components/common/form-fields"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
+import type { Kind } from "@/hooks/use-kind"
 import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/format"
 import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
-import { useCategoryOptions } from "../lib/useCategoryOptions"
 import type { ProductVariant, ProductVariantPayload } from "../types"
 
-const schema = z
-  .object({
-    sku: z.string().trim(),
-    barcode: z.string().trim(),
-    color: z.string().trim(),
-    size: z.string().trim(),
-    price: moneySchema,
-    cost_price: moneySchema,
-    discount_price: moneySchema,
-    weight: z
-      .string()
-      .trim()
-      .refine((v) => v === "" || /^\d+(\.\d{1,3})?$/.test(v), "Up to 3 decimals (kg)"),
-    wholesale_price: moneySchema,
-    show_wholesale_price: z.boolean(),
-    is_active: z.boolean(),
-    is_preorder_enabled: z.boolean(),
-    preorder_price: moneySchema,
-    preorder_start_date: z.string(),
-    preorder_end_date: z.string(),
-    release_date: z.string(),
-    preorder_stock_limit: z.string().refine((v) => v === "" || /^\d+$/.test(v), "Whole number"),
-  })
-  .refine((v) => !v.discount_price || !v.price || Number(v.discount_price) < Number(v.price), {
-    path: ["discount_price"],
-    message: "Must be lower than the price",
-  })
+const fields = z.object({
+  sku: z.string().trim(),
+  color: z.string().trim(),
+  size: z.string().trim(),
+  price: moneySchema,
+  cost_price: moneySchema,
+  weight: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d+(\.\d{1,3})?$/.test(v), "Up to 3 decimals (kg)"),
+  is_active: z.boolean(),
+  // Stock variants only.
+  barcode: z.string().trim(),
+  discount_price: moneySchema,
+  wholesale_price: moneySchema,
+  show_wholesale_price: z.boolean(),
+  // Pre-order variants only.
+  preorder_price: moneySchema,
+  preorder_start_date: z.string(),
+  preorder_end_date: z.string(),
+  release_date: z.string(),
+  preorder_stock_limit: z.string().refine((v) => v === "" || /^\d+$/.test(v), "Whole number"),
+})
+type FormValues = z.infer<typeof fields>
 
-type FormValues = z.infer<typeof schema>
+const stockSchema = fields.refine(
+  (v) => !v.discount_price || !v.price || Number(v.discount_price) < Number(v.price),
+  { path: ["discount_price"], message: "Must be lower than the price" }
+)
 
-const toValues = (v?: ProductVariant | null): FormValues => ({
+const preorderSchema = fields.superRefine((v, ctx) => {
+  const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message })
+  if (!v.preorder_start_date) issue("preorder_start_date", "Choose when pre-orders open")
+  if (!v.preorder_end_date) issue("preorder_end_date", "Choose when pre-orders close")
+  if (v.preorder_start_date && v.preorder_end_date && v.preorder_start_date >= v.preorder_end_date) {
+    issue("preorder_end_date", "Must be after the start")
+  }
+  if (v.release_date && v.preorder_end_date && v.release_date < v.preorder_end_date) {
+    issue("release_date", "Must not be before pre-orders close")
+  }
+  if (v.preorder_price && v.price && Number(v.preorder_price) >= Number(v.price)) {
+    issue("preorder_price", "Must be lower than the price")
+  }
+})
+
+/** `settings` supplies the pre-order fields: the variant itself, or a sibling for a new variant. */
+const toValues = (v: ProductVariant | null | undefined, settings: ProductVariant | null | undefined): FormValues => ({
   sku: v?.sku ?? "",
-  barcode: v?.barcode ?? "",
   color: v?.color ?? "",
   size: v?.size ?? "",
   price: v?.price ?? "",
   cost_price: v?.cost_price ?? "",
-  discount_price: v?.discount_price ?? "",
   weight: v?.weight ?? "",
+  is_active: v?.is_active ?? true,
+  barcode: v?.barcode ?? "",
+  discount_price: v?.discount_price ?? "",
   wholesale_price: v?.wholesale_price ?? "",
   show_wholesale_price: v?.show_wholesale_price ?? false,
-  is_active: v?.is_active ?? true,
-  is_preorder_enabled: v?.is_preorder_enabled ?? false,
-  preorder_price: v?.preorder_price ?? "",
-  preorder_start_date: toDatetimeLocal(v?.preorder_start_date),
-  preorder_end_date: toDatetimeLocal(v?.preorder_end_date),
-  release_date: toDatetimeLocal(v?.release_date),
-  preorder_stock_limit: v?.preorder_stock_limit != null ? String(v.preorder_stock_limit) : "",
+  preorder_price: settings?.preorder_price ?? "",
+  preorder_start_date: toDatetimeLocal(settings?.preorder_start_date),
+  preorder_end_date: toDatetimeLocal(settings?.preorder_end_date),
+  release_date: toDatetimeLocal(settings?.release_date),
+  preorder_stock_limit: settings?.preorder_stock_limit != null ? String(settings.preorder_stock_limit) : "",
+})
+
+const stockPayload = (values: FormValues): ProductVariantPayload => ({
+  barcode: values.barcode,
+  discount_price: values.discount_price || null,
+  wholesale_price: values.wholesale_price || null,
+  show_wholesale_price: values.show_wholesale_price,
+})
+
+const preorderPayload = (values: FormValues): ProductVariantPayload => ({
+  is_preorder_enabled: true,
+  preorder_price: values.preorder_price || null,
+  preorder_start_date: fromDatetimeLocal(values.preorder_start_date),
+  preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
+  release_date: fromDatetimeLocal(values.release_date),
+  preorder_stock_limit: values.preorder_stock_limit === "" ? null : Number(values.preorder_stock_limit),
 })
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** The kind of the variant's product; it decides which fields the dialog has. */
+  kind: Kind
   productId: string
-  /** The product's category: a pre-order category makes the variant a pre-order, a stock one never does. */
-  categoryId?: string | null
   /** The variant being edited; null/undefined creates a new one. */
   variant?: ProductVariant | null
+  /** Pre-order only: a variant of the same product whose dates, price and limit a new variant starts with. */
+  sibling?: ProductVariant | null
   onSaved: () => void
 }
 
-export function VariantFormDialog({ open, onOpenChange, productId, categoryId, variant, onSaved }: Props) {
+export function VariantFormDialog({ open, onOpenChange, kind, productId, variant, sibling, onSaved }: Props) {
   const isEditing = Boolean(variant)
+  const isStock = kind === "stock"
   const {
     control,
     register,
@@ -83,33 +117,21 @@ export function VariantFormDialog({ open, onOpenChange, productId, categoryId, v
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toValues(variant) })
+  } = useForm<FormValues>({
+    resolver: zodResolver(isStock ? stockSchema : preorderSchema),
+    defaultValues: toValues(variant, variant ?? sibling),
+  })
 
   useEffect(() => {
-    if (open) reset(toValues(variant))
-  }, [open, variant, reset])
-
-  const { categories } = useCategoryOptions()
-  // The variants list does not carry the category, so an edit there keeps the variant's own kind.
-  const preorder = categoryId
-    ? categories.find((c) => c.id === categoryId)?.category_type === "preorder"
-    : Boolean(variant?.is_preorder_enabled)
+    if (open) reset(toValues(variant, variant ?? sibling))
+  }, [open, variant, sibling, reset])
 
   const onSubmit = async (values: FormValues) => {
     const payload: ProductVariantPayload = {
-      barcode: values.barcode,
       color: values.color,
       size: values.size,
-      discount_price: values.discount_price || null,
       weight: values.weight || null,
-      wholesale_price: values.wholesale_price || null,
-      show_wholesale_price: values.show_wholesale_price,
-      is_preorder_enabled: preorder,
-      preorder_price: values.preorder_price || null,
-      preorder_start_date: fromDatetimeLocal(values.preorder_start_date),
-      preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
-      release_date: fromDatetimeLocal(values.release_date),
-      preorder_stock_limit: values.preorder_stock_limit === "" ? null : Number(values.preorder_stock_limit),
+      ...(isStock ? stockPayload(values) : preorderPayload(values)),
     }
     if (values.sku) payload.sku = values.sku
     if (values.price) payload.price = values.price
@@ -157,32 +179,32 @@ export function VariantFormDialog({ open, onOpenChange, productId, categoryId, v
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {text("sku", "SKU", { placeholder: isEditing ? undefined : "Auto-generated if blank" })}
-        {text("barcode", "Barcode")}
+        {isStock && text("barcode", "Barcode")}
         {text("color", "Colour")}
         {text("size", "Size")}
         {text("price", `Price (${getDefaultCurrency()})`, { placeholder: "0.00" })}
-        {text("discount_price", "Discount price", { placeholder: "Optional" })}
+        {isStock && text("discount_price", "Discount price", { placeholder: "Optional" })}
         {text("cost_price", "Cost price", { placeholder: "0.00" })}
         {text("weight", "Weight (kg)", { placeholder: "Optional" })}
-        {text("wholesale_price", "Wholesale price", { placeholder: "Optional" })}
-        <div className="self-end">
-          <SwitchField control={control} name="show_wholesale_price" label="Show wholesale price" />
-        </div>
-        {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
-      </div>
-
-      {preorder && (
-        <div className="space-y-4 rounded-lg border border-border p-4">
-          <p className="text-sm font-medium">Pre-order</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isStock && (
+          <>
+            {text("wholesale_price", "Wholesale price", { placeholder: "Optional" })}
+            <div className="self-end">
+              <SwitchField control={control} name="show_wholesale_price" label="Show wholesale price" />
+            </div>
+          </>
+        )}
+        {!isStock && (
+          <>
+            {text("preorder_start_date", "Pre-orders open *", { withTime: true })}
+            {text("preorder_end_date", "Pre-orders close *", { withTime: true })}
+            {text("release_date", "Release date", { withTime: true })}
             {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
             {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
-            {text("preorder_start_date", "Starts", { withTime: true })}
-            {text("preorder_end_date", "Ends", { withTime: true })}
-            {text("release_date", "Release date", { withTime: true })}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+        {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
+      </div>
     </FormDialog>
   )
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Boxes, Package, PlusIcon } from "lucide-react"
@@ -17,9 +17,10 @@ import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency, getDefaultCurrency } from "@/lib/format"
+import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 
@@ -41,9 +42,64 @@ const orderingOptions: Option[] = [
   { label: "Name Z–A", value: "-name" },
 ]
 
-const Products = () => {
-  // One list per kind: /products is stock, /preorder_products is pre-order.
-  const kind = useLocation().pathname.startsWith("/preorder_products") ? "preorder" : "stock"
+const preorderTypeOptions = productTypeOptions.filter((o) => o.value !== "bundle")
+
+const noPrice = <span className="text-sm text-muted-foreground">No price</span>
+
+const stockPriceColumn: ColumnDef<Product> = {
+  id: "price",
+  header: "PRICE",
+  cell: ({ row }) =>
+    row.original.price === null ? (
+      noPrice
+    ) : (
+      <div className="flex flex-col text-sm">
+        <span className="font-semibold">{formatCurrency(row.original.discount_price ?? row.original.price)}</span>
+        {row.original.discount_price && (
+          <span className="text-xs text-muted-foreground line-through">{formatCurrency(row.original.price)}</span>
+        )}
+      </div>
+    ),
+}
+
+const stockColumn: ColumnDef<Product> = {
+  accessorKey: "total_stock",
+  header: "STOCK",
+  cell: ({ row }) => (
+    <span className={row.original.total_stock <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+      {row.original.total_stock}
+    </span>
+  ),
+}
+
+const preorderPriceColumn: ColumnDef<Product> = {
+  id: "price",
+  header: "PRICE",
+  cell: ({ row }) =>
+    row.original.price === null ? (
+      noPrice
+    ) : (
+      <span className="text-sm font-semibold">{formatCurrency(row.original.price)}</span>
+    ),
+}
+
+const orderingColumn: ColumnDef<Product> = {
+  id: "ordering",
+  header: "ORDERING",
+  cell: ({ row }) => {
+    const variants = row.original.variants
+    const closes = variants.find((v) => v.preorder_end_date)?.preorder_end_date
+    return (
+      <div className="flex flex-col text-sm">
+        <span>{variants.some((v) => v.is_preorder_active) ? "Open" : "Closed"}</span>
+        <span className="text-xs text-muted-foreground">{closes ? `Until ${formatDate(closes)}` : "No dates set"}</span>
+      </div>
+    )
+  },
+}
+
+const Products = ({ kind }: { kind: Kind }) => {
+  const isStock = kind === "stock"
   const title = kind === "preorder" ? "Pre-order products" : "Products"
   useDocumentTitle(title)
   const navigate = useNavigate()
@@ -51,15 +107,11 @@ const Products = () => {
   const canManage = useCan("catalog.manage")
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
-  const { options: allCategoryOptions, nameById } = useCategoryOptions()
-  const categoryOptions = useMemo(
-    () => allCategoryOptions.filter((o) => o.category.category_type === kind),
-    [allCategoryOptions, kind]
-  )
+  const { options: categoryOptions, nameById } = useCategoryOptions(kind)
 
-  // CSV import: simple products only (one variant created from price/SKU in the same call).
+  // CSV import (stock page only): simple products, one variant created from price/SKU in the same call.
   const categoryLookup = useMemo(
-    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
+    () => createImportLookup("Category", () => fetchAllCategories("stock"), (c) => [c.name, c.slug]),
     []
   )
   const importFields = useMemo<ImportField[]>(
@@ -114,7 +166,7 @@ const Products = () => {
       await dispatch(deleteData(product.id)).unwrap()
       toast.success(`${product.name} deleted`)
     } catch (err) {
-      if (isBlockedByStock(err)) {
+      if (isStock && isBlockedByStock(err)) {
         // Stock has to be cleared through the existing write-off flow first.
         toast.error(getApiErrorMessage(err, "This product still has stock"), {
           duration: 15000,
@@ -162,34 +214,8 @@ const Products = () => {
         <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-    {
-      id: "price",
-      header: "PRICE",
-      cell: ({ row }) =>
-        row.original.price === null ? (
-          <span className="text-sm text-muted-foreground">No price</span>
-        ) : (
-          <div className="flex flex-col text-sm">
-            <span className="font-semibold">
-              {formatCurrency(row.original.discount_price ?? row.original.price)}
-            </span>
-            {row.original.discount_price && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatCurrency(row.original.price)}
-              </span>
-            )}
-          </div>
-        ),
-    },
-    {
-      accessorKey: "total_stock",
-      header: "STOCK",
-      cell: ({ row }) => (
-        <span className={row.original.total_stock <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
-          {row.original.total_stock}
-        </span>
-      ),
-    },
+    isStock ? stockPriceColumn : preorderPriceColumn,
+    isStock ? stockColumn : orderingColumn,
     {
       id: "status",
       header: "STATUS",
@@ -217,7 +243,7 @@ const Products = () => {
     "240px",
     "150px",
     "140px",
-    "80px",
+    isStock ? "80px" : "140px",
     "110px",
     "80px",
   ]
@@ -232,12 +258,13 @@ const Products = () => {
               <RestoreDeletedButton<Product>
                 noun="products"
                 endpoint="/admin/catalog/products/"
+                params={{ category_type: kind }}
                 restore={(item) => restoreProduct(item.id)}
                 label={(item) => item.name}
                 image={(item) => item.primary_image}
                 onRestored={list.reload}
               />
-              {kind === "stock" && (
+              {isStock && (
                 <>
                   <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
                     <Boxes className="size-5" /> New Bundle
@@ -280,7 +307,7 @@ const Products = () => {
             component: (
               <Combobox
                 placeholder="Type"
-                options={productTypeOptions}
+                options={isStock ? productTypeOptions : preorderTypeOptions}
                 value={productType}
                 onValueChange={setProductType}
               />
@@ -327,4 +354,9 @@ const Products = () => {
   )
 }
 
-export default Products
+const ProductsPage = () => {
+  const kind = useKind()
+  return <Products key={kind} kind={kind} />
+}
+
+export default ProductsPage

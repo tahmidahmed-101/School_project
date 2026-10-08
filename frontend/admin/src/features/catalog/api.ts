@@ -3,6 +3,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { fetchAllPages } from "@/lib/api/fetchAll"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
+import type { Kind } from "@/hooks/use-kind"
 import type {
   Brand,
   BrandPayload,
@@ -48,10 +49,12 @@ export const restoreProduct = (id: string) =>
 export const bulkProductStatus = (ids: string[], is_active: boolean) =>
   apiCall<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
 
-/** Search products by name (for pickers). */
-export async function searchProducts(search: string) {
+/** Search products of one kind by name (for pickers). */
+export async function searchProducts(search: string, kind: Kind) {
   try {
-    const res = await api.get(`${C}/products/`, { params: { page: 1, page_size: 20, search } })
+    const res = await api.get(`${C}/products/`, {
+      params: { page: 1, page_size: 20, search, category_type: kind },
+    })
     return unwrapList<Product>(res.data, 1, 20).items
   } catch (err) {
     throw extractApiError(err)
@@ -103,7 +106,7 @@ export const generateVariants = (productId: string, payload: VariantGeneratePayl
 /** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
 export async function downloadVariantsExport(
   fileFormat: "csv" | "xlsx",
-  filters: { search?: string; product_id?: string; category_id?: string } = {}
+  filters: { search?: string; product_id?: string; category_id?: string; category_type?: Kind } = {}
 ) {
   try {
     const res = await api.get(`${C}/variants/export/`, {
@@ -125,18 +128,18 @@ export async function importVariants(file: File, fileFormat: "csv" | "xlsx") {
 }
 
 // ---- categories ----
-/** Every category (all pages; page_size is capped at 100 server-side). */
 export const CATEGORIES_ENDPOINT = `${C}/categories/`
-export const categoryListParams = (includeDeleted = false) => ({
+export const categoryListParams = (kind?: Kind) => ({
   ordering: "name",
-  ...(includeDeleted ? { include_deleted: true } : {}),
+  ...(kind ? { category_type: kind } : {}),
 })
 const categoriesChanged = <R>(res: R) => {
   invalidateAllPages(CATEGORIES_ENDPOINT)
   return res
 }
-export const fetchAllCategories = (params: { include_deleted?: boolean } = {}) =>
-  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(params.include_deleted))
+/** Every category of one kind, or of both when no kind is given (all pages; page_size is capped at 100 server-side). */
+export const fetchAllCategories = (kind?: Kind) =>
+  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(kind))
 export const createCategory = (payload: CategoryPayload) =>
   apiCall<Category>(() => api.post(`${C}/categories/`, payload).then(categoriesChanged))
 export const updateCategory = (id: string, payload: CategoryPayload) =>
