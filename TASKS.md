@@ -142,3 +142,10 @@
 - [ ] Production order, only with backup and owner go-ahead: deploy, `migrate`, then dry run and `--apply` of `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`, `split_both_placements`, `backfill_journal_kind`, `split_shared_warehouses`, `split_shared_delivery_and_payment_setup`. Between `migrate` and the last two, pre-order checkout, goods receipt, allocation and shipping are refused: do it in a quiet hour.
 - [ ] Owner calls: carriers stay one list (courier account + webhook); "Biggest discount" sort and "Special offers" tile in the pre-order shop; local deposit percent is 100
 - Not in this phase (bookkeeper first): deposit account, Refund Payable, vendor bill date, stock intake posting
+
+## Phase Q: promotions (change request, owner "go ahead build it" 2026-10-09)
+Stock only. A coupon still applies on top of a sale price, as today. Pre-order has no promotions.
+- [ ] Q1 API: timed sales (percent off; all stock, categories, brands or products), coupon start date, once-per-customer limit, maximum discount and category/brand scope, free delivery over an amount
+- [ ] Q2 Dashboard: Shop > Marketing > Sales, new coupon fields, free delivery amount in Shop settings
+- [ ] Q3 Storefront: sale price, badge and end date, offers filter, free delivery line, new coupon messages (en + bn)
+- [ ] Merge, full backend suite once, browser check of storefront, dashboard and API
