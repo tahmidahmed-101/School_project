@@ -200,6 +200,7 @@ class AdminCustomerCartSerializer(serializers.Serializer):
     customer_name = serializers.SerializerMethodField()
     customer_phone = serializers.SerializerMethodField()
     reached_checkout = serializers.SerializerMethodField()
+    order_type = serializers.SerializerMethodField()
     items = AdminCartItemSerializer(source="lines", many=True, read_only=True)
     item_count = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -208,6 +209,11 @@ class AdminCustomerCartSerializer(serializers.Serializer):
 
     def get_is_guest_cart(self, obj) -> bool:
         return obj.customer_id is None
+
+    def get_order_type(self, obj) -> str:
+        if any(line.is_preorder for line in obj.lines.all()):
+            return SalesOrder.OrderType.PREORDER
+        return SalesOrder.OrderType.STOCK
 
     def get_customer_name(self, obj) -> str | None:
         if obj.contact_name.strip():
@@ -309,6 +315,7 @@ class CreateShipmentSerializer(serializers.Serializer):
 class ShipmentSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     carrier_id = serializers.UUIDField(read_only=True, allow_null=True)
     carrier_name = serializers.CharField(source="carrier.name", read_only=True, allow_null=True)
     tracking_number = serializers.CharField(allow_blank=True)
@@ -371,6 +378,7 @@ class AdminPaymentSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
     refunded_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     method = serializers.ChoiceField(choices=PaymentMethodKey.choices)
@@ -422,6 +430,7 @@ class AdminRMASerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     rma_number = serializers.CharField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     status = serializers.ChoiceField(choices=ReturnRMA.Status.choices)
     reason = serializers.CharField(allow_blank=True)
     lines = serializers.SerializerMethodField()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from io import StringIO
+
 import pytest
 from django.core.management import CommandError, call_command
 
@@ -54,6 +56,9 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
         SalesOrder.Status.SHIPPED,
     }
     assert any(line.shippable_quantity for order in preorders for line in order.lines.all())
+    out = StringIO()
+    call_command("fix_product_kind_mismatches", stdout=out)
+    assert "0 variant(s) would change" in out.getvalue(), out.getvalue()
 
 
 def test_a_second_run_adds_nothing_and_a_wipe_removes_the_extras():

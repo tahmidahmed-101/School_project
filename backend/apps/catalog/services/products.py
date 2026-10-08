@@ -15,6 +15,8 @@ from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_sku_for, unique_slug_for
 
+from .kind_rules import check_variant_kind
+
 
 def product_variations_in_use() -> str | None:
     """Only a second variant strands data. A product merely *typed* `variant`
@@ -267,6 +269,19 @@ def create_variant(
         start_date=preorder_start_date,
         end_date=preorder_end_date,
     )
+    check_variant_kind(
+        category=product.category,
+        values={
+            "discount_price": discount_price,
+            "wholesale_price": wholesale_price,
+            "is_preorder_enabled": is_preorder_enabled,
+            "preorder_price": preorder_price,
+            "preorder_start_date": preorder_start_date,
+            "preorder_end_date": preorder_end_date,
+            "release_date": release_date,
+            "preorder_stock_limit": preorder_stock_limit,
+        },
+    )
     # A new variation inherits the product's shared pricing instead of re-entering it.
     if price is None:
         sibling = representative_variant(product)
@@ -394,6 +409,11 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
             start_date=variant.preorder_start_date,
             end_date=variant.preorder_end_date,
         )
+    # Only what this save sets, so a legacy mixed row can still be cleaned up.
+    check_variant_kind(
+        category=variant.product.category,
+        values={field: data[field] for field in changed_fields},
+    )
     if changed_fields:
         try:
             variant.full_clean()

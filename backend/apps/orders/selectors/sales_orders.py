@@ -130,18 +130,28 @@ def get_guest_cart(token: str | None) -> SalesOrder | None:
     ).first()
 
 
-def customer_carts_list() -> QuerySet[SalesOrder]:
+def customer_carts_list(*, kind: str | None = None) -> QuerySet[SalesOrder]:
     """Every customer's open cart that has something in it — the same
     `pending` order `get_cart` returns, so a checked-out order (anything past
     pending) never appears. `updated_at` is the last cart change: every line
     edit recalculates and saves the order."""
-    return (
+    carts = (
         SalesOrder.objects.filter(status=SalesOrder.Status.PENDING, deleted_at__isnull=True)
         .filter(Exists(SalesOrderLine.objects.filter(order=OuterRef("pk"))))
         .select_related("customer")
         # Lines carry product name and SKU snapshots, so no variant join.
         .prefetch_related(Prefetch("lines", queryset=SalesOrderLine.objects.order_by("created_at")))
     )
+    if kind:
+        # A cart has no order_type until checkout; its lines decide, the same
+        # flag the mixed-basket check reads.
+        holds_preorder = Exists(
+            SalesOrderLine.objects.filter(order=OuterRef("pk"), is_preorder=True)
+        )
+        carts = carts.filter(
+            holds_preorder if kind == SalesOrder.OrderType.PREORDER else ~holds_preorder
+        )
+    return carts
 
 
 def get_order_for_document(order_id: str | UUID) -> SalesOrder | None:

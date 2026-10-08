@@ -7,8 +7,9 @@ from django.db import transaction
 
 from apps.accounting.services.postings import post_stock_adjustment, post_stock_writeoff
 from apps.audit.services.audit import log_action
-from apps.catalog.models import ProductVariant
+from apps.catalog.models import Category, ProductVariant
 from apps.catalog.selectors.products import get_variants_by_ids
+from apps.catalog.services.kind_rules import check_stock_levels_kind, is_preorder_category
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
@@ -38,6 +39,41 @@ def get_or_create_default_warehouse():
     )
 
 
+NO_STOCK_LEVELS = {"reorder_point": 0, "target_stock_level": 0}
+
+
+def _new_stock_item_levels(variant) -> dict:
+    """A pre-order variant's stock row starts with no reorder point; a stock
+    variant keeps the model default."""
+    return NO_STOCK_LEVELS if is_preorder_category(variant.product.category) else {}
+
+
+def _locked_stock_item(variant, warehouse) -> StockItem:
+    stock_item, created = StockItem.objects.select_for_update().get_or_create(
+        variant=variant, warehouse=warehouse
+    )
+    # Looked up only for a new row, so the hot path costs no extra query.
+    if created and is_preorder_category(variant.product.category):
+        for field, value in NO_STOCK_LEVELS.items():
+            setattr(stock_item, field, value)
+        stock_item.save(update_fields=[*NO_STOCK_LEVELS, "updated_at"])
+    return stock_item
+
+
+@transaction.atomic
+def set_stock_levels(
+    *, stock_item: StockItem, reorder_point: int, target_stock_level: int
+) -> StockItem:
+    check_stock_levels_kind(
+        category=stock_item.variant.product.category,
+        values={"reorder_point": reorder_point, "target_stock_level": target_stock_level},
+    )
+    stock_item.reorder_point = reorder_point
+    stock_item.target_stock_level = target_stock_level
+    stock_item.save(update_fields=["reorder_point", "target_stock_level", "updated_at"])
+    return stock_item
+
+
 def materialize_stock_items(*, variant=None, warehouse=None) -> int:
     """Create zero-quantity cached StockItem rows for every live variant that
     doesn't have one yet, so a freshly-created product (no movement history)
@@ -55,7 +91,10 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
     )
     variants = variants.exclude(id__in=existing_variant_ids)
 
-    rows = [StockItem(variant=v, warehouse=warehouse) for v in variants]
+    rows = [
+        StockItem(variant=v, warehouse=warehouse, **_new_stock_item_levels(v))
+        for v in variants.select_related("product__category")
+    ]
     if rows:
         StockItem.objects.bulk_create(rows)
     return len(rows)
@@ -80,15 +119,30 @@ def lock_variant_stock(variant_ids) -> list[StockItem]:
             "variant_id", "warehouse_id"
         )
     )
-    StockItem.objects.bulk_create(
-        [
-            StockItem(variant_id=variant_id, warehouse_id=warehouse_id)
-            for variant_id in variant_ids
-            for warehouse_id in warehouse_ids
-            if (variant_id, warehouse_id) not in existing
-        ],
-        ignore_conflicts=True,
-    )
+    missing = [
+        (variant_id, warehouse_id)
+        for variant_id in variant_ids
+        for warehouse_id in warehouse_ids
+        if (variant_id, warehouse_id) not in existing
+    ]
+    if missing:
+        preorder_ids = set(
+            ProductVariant.objects.filter(
+                id__in={variant_id for variant_id, _warehouse_id in missing},
+                product__category__category_type=Category.CategoryType.PREORDER,
+            ).values_list("id", flat=True)
+        )
+        StockItem.objects.bulk_create(
+            [
+                StockItem(
+                    variant_id=variant_id,
+                    warehouse_id=warehouse_id,
+                    **(NO_STOCK_LEVELS if variant_id in preorder_ids else {}),
+                )
+                for variant_id, warehouse_id in missing
+            ],
+            ignore_conflicts=True,
+        )
     return list(
         StockItem.objects.select_for_update()
         .select_related("variant", "warehouse")
@@ -124,9 +178,7 @@ def record_movement(
 
     # Locked for the transaction so two concurrent movements against the same
     # variant+warehouse can't both read the same starting balance.
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
 
     if movement_type in IN_MOVEMENT_TYPES:
         if unit_cost is not None:
@@ -184,9 +236,7 @@ def reserve_stock(*, variant, warehouse=None, quantity: int) -> StockItem:
 
     warehouse = _get_warehouse(warehouse)
 
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
     if stock_item.available < quantity:
         raise BusinessRuleViolationError(
             "Not enough available stock to reserve.", code="insufficient_stock"
@@ -206,9 +256,7 @@ def release_reservation(*, variant, warehouse=None, quantity: int) -> StockItem:
 
     warehouse = _get_warehouse(warehouse)
 
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
     if stock_item.quantity_reserved < quantity:
         raise BusinessRuleViolationError(
             "Cannot release more than is currently reserved.", code="over_release"

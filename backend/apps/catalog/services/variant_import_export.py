@@ -12,6 +12,7 @@ from django.db.models import QuerySet
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.catalog.models import Product, ProductVariant
+from apps.catalog.services.kind_rules import PREORDER_ONLY_FIELDS, is_preorder_category
 from apps.common.utils.export import build_csv, sanitize_cell
 from apps.inventory.selectors.stock import available_quantities_for_variants
 
@@ -67,6 +68,9 @@ def export_variants(queryset: QuerySet[ProductVariant], *, fmt: Literal["csv", "
     return output.getvalue()
 
 
+BLANK_CELLS = {"", "0", "false", "no"}
+
+
 @dataclass
 class ImportResult:
     created: int = 0
@@ -91,6 +95,22 @@ def _read_rows(file, *, fmt: Literal["csv", "xlsx"]) -> list[dict]:
     ]
 
 
+def _refuse_preorder_row(row: dict, product: Product, variant: ProductVariant | None) -> None:
+    """The import is a stock tool: it neither touches a pre-order product nor
+    sets pre-order fields."""
+    if is_preorder_category(product.category):
+        raise ValueError(f"Product '{product.name}' is a pre-order product; import is stock only")
+    if variant is not None and is_preorder_category(variant.product.category):
+        raise ValueError(f"SKU '{variant.sku}' is a pre-order SKU; import is stock only")
+    given = [
+        name
+        for name in PREORDER_ONLY_FIELDS
+        if str(row.get(name) or "").strip().lower() not in BLANK_CELLS
+    ]
+    if given:
+        raise ValueError(f"Pre-order fields cannot be imported: {', '.join(given)}")
+
+
 def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
     """Each row is processed in its own savepoint so a single bad row is
     reported and skipped instead of aborting the whole file."""
@@ -101,7 +121,7 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
     # rather than both per row — a file is often many SKUs of a few products.
     variants_by_sku = {
         variant.sku: variant
-        for variant in ProductVariant.objects.filter(
+        for variant in ProductVariant.objects.select_related("product__category").filter(
             sku__in={(row.get("sku") or "").strip() for row in rows}
         )
     }
@@ -118,9 +138,11 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                     raise ValueError("product_name is required")
 
                 if product_name not in products_by_name:
-                    products_by_name[product_name] = Product.objects.filter(
-                        name__iexact=product_name, deleted_at__isnull=True
-                    ).first()
+                    products_by_name[product_name] = (
+                        Product.objects.select_related("category")
+                        .filter(name__iexact=product_name, deleted_at__isnull=True)
+                        .first()
+                    )
                 product = products_by_name[product_name]
                 if product is None:
                     raise ValueError(f"Product '{product_name}' not found")
@@ -141,6 +163,7 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                 is_active = is_active_raw in {"1", "true", "yes"}
 
                 variant = variants_by_sku.get(sku)
+                _refuse_preorder_row(row, product, variant)
                 if variant is None:
                     # The importer writes rows directly, so the single-variant
                     # rule has to be repeated here rather than inherited.

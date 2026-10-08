@@ -10,7 +10,7 @@ from apps.catalog.selectors.questions import QUESTION_STATUSES, get_question_by_
 from apps.catalog.services.questions import delete_question, moderate_question
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_choice, get_related
+from apps.common.params import get_choice, get_kind, get_related
 from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import user_label
 
@@ -56,7 +56,9 @@ class AdminProductQuestionListView(CatalogPermissionMixin, GenericListAPIView):
         params = self.request.query_params
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         return questions_list(
-            product=product, status=get_choice(params, "status", QUESTION_STATUSES)
+            product=product,
+            status=get_choice(params, "status", QUESTION_STATUSES),
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:

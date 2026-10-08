@@ -17,6 +17,7 @@ def reservations_list(
     status: str | None = None,
     created_before: date | None = None,
     expired: bool | None = None,
+    kind: str | None = None,
 ) -> QuerySet[StockReservation]:
     queryset = StockReservation.objects.select_related(
         "order_line", "order_line__order", "variant__product"
@@ -27,6 +28,8 @@ def reservations_list(
         queryset = queryset.filter(order_line__order=order)
     if status:
         queryset = queryset.filter(status=status)
+    if kind:
+        queryset = queryset.filter(variant__product__category__category_type=kind)
     if created_before is not None:
         queryset = queryset.filter(created_at__lt=day_start(created_before))
     if expired is not None:

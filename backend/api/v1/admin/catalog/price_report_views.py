@@ -10,7 +10,7 @@ from apps.catalog.selectors.price_reports import get_price_report_by_id, price_r
 from apps.catalog.selectors.products import get_product_by_id
 from apps.catalog.services.price_reports import update_price_report
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_choice, get_related
+from apps.common.params import get_choice, get_kind, get_related
 from apps.common.responses import not_found
 from apps.common.serializers import user_label
 
@@ -71,6 +71,7 @@ class AdminPriceReportListView(CatalogPermissionMixin, GenericListAPIView):
         return price_reports_list(
             product=product,
             status=get_choice(params, "status", PriceIssueReport.Status.values),
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:

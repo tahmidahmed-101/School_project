@@ -84,8 +84,11 @@ def cash_flow(*, start: date, end: date) -> dict:
     }
 
 
-def inventory_valuation() -> Decimal:
-    total = StockItem.objects.aggregate(
+def inventory_valuation(*, kind: str | None = None) -> Decimal:
+    items = StockItem.objects.all()
+    if kind:
+        items = items.filter(variant__product__category__category_type=kind)
+    total = items.aggregate(
         total=Sum(
             F("quantity_on_hand") * F("avg_cost"),
             output_field=DecimalField(max_digits=20, decimal_places=4),

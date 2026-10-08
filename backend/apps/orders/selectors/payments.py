@@ -42,8 +42,11 @@ def payments_list(
     method: str | None = None,
     start: date | None = None,
     end: date | None = None,
+    kind: str | None = None,
 ) -> QuerySet[Payment]:
     queryset = Payment.objects.select_related("order")
+    if kind:
+        queryset = queryset.filter(order__order_type=kind)
     if order is not None:
         queryset = queryset.filter(order=order)
     if status:

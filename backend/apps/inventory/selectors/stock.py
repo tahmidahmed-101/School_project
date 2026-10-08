@@ -15,6 +15,7 @@ def stock_items_list(
     variant=None,
     warehouse=None,
     low_stock_only: bool = False,
+    kind: str | None = None,
 ) -> QuerySet[StockItem]:
     queryset = (
         StockItem.objects.select_related("variant__product", "warehouse")
@@ -25,6 +26,8 @@ def stock_items_list(
         queryset = queryset.filter(variant=variant)
     if warehouse is not None:
         queryset = queryset.filter(warehouse=warehouse)
+    if kind:
+        queryset = queryset.filter(variant__product__category__category_type=kind)
     if low_stock_only:
         queryset = queryset.annotate(
             low_stock_expr=F("quantity_on_hand") - F("quantity_reserved") - F("reorder_point")
@@ -87,7 +90,7 @@ def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> 
 
 
 def ledger_entries_list(
-    *, variant=None, warehouse=None, movement_type: str | None = None
+    *, variant=None, warehouse=None, movement_type: str | None = None, kind: str | None = None
 ) -> QuerySet[StockLedgerEntry]:
     queryset = StockLedgerEntry.objects.select_related(
         "variant__product", "warehouse"
@@ -98,4 +101,6 @@ def ledger_entries_list(
         queryset = queryset.filter(warehouse=warehouse)
     if movement_type:
         queryset = queryset.filter(movement_type=movement_type)
+    if kind:
+        queryset = queryset.filter(variant__product__category__category_type=kind)
     return queryset.order_by("-created_at")

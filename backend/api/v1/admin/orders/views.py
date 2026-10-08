@@ -17,7 +17,14 @@ from apps.accounts.selectors.users import get_user_by_id
 from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_date, get_uuid, validate_date_range
+from apps.common.params import (
+    get_bool,
+    get_choice,
+    get_date,
+    get_kind,
+    get_uuid,
+    validate_date_range,
+)
 from apps.common.pdf import PdfRenderer, pdf_response
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
@@ -49,7 +56,7 @@ from apps.orders.selectors.shipments import (
     get_shipment_detail,
     shipments_list,
 )
-from apps.orders.services.carts import add_line, create_order
+from apps.orders.services.carts import create_order
 from apps.orders.services.checkout import checkout
 from apps.orders.services.exports import export_orders
 from apps.orders.services.invoice_document import (
@@ -59,6 +66,7 @@ from apps.orders.services.invoice_document import (
 )
 from apps.orders.services.orders import (
     add_order_line,
+    add_staff_order_lines,
     cancel_order,
     delete_order,
     remove_order_line,
@@ -223,8 +231,7 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
         try:
             with transaction.atomic():
                 order = create_order(customer=customer, created_by=request.user)
-                for variant, quantity in resolved_lines:
-                    add_line(order=order, variant=variant, quantity=quantity)
+                add_staff_order_lines(order=order, lines=resolved_lines)
                 order = checkout(order=order, shipping_address=shipping_address, carrier=carrier)
                 method = data.get("payment_method") or PaymentMethodKey.MANUAL
                 if method == PaymentMethodKey.COD:
@@ -524,6 +531,7 @@ class AdminPaymentListView(GenericListAPIView):
             method=params.get("method") or None,
             start=start,
             end=end,
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:
@@ -562,7 +570,7 @@ class AdminCustomerCartListView(GenericListAPIView):
     default_ordering = "-updated_at"
 
     def get_queryset(self):
-        return customer_carts_list()
+        return customer_carts_list(kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -583,6 +591,7 @@ class AdminReservationListView(GenericListAPIView):
             status=get_choice(params, "status", StockReservation.Status.values),
             created_before=get_date(params, "created_before"),
             expired=get_bool(params, "expired"),
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:
@@ -652,7 +661,7 @@ class AdminShipmentListCreateView(GenericListAPIView):
     default_ordering = "-created_at"
 
     def get_queryset(self):
-        return shipments_list()
+        return shipments_list(kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -834,8 +843,10 @@ class AdminRMAListView(GenericListAPIView):
     default_ordering = "-created_at"
 
     def get_queryset(self):
-        status_param = get_choice(self.request.query_params, "status", ReturnRMA.Status.values)
-        return rmas_list(status=status_param)
+        params = self.request.query_params
+        return rmas_list(
+            status=get_choice(params, "status", ReturnRMA.Status.values), kind=get_kind(params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)

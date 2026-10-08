@@ -52,7 +52,7 @@ def _ensure_type_change_leaves_no_product_behind(category: Category) -> None:
     ).exists():
         raise BusinessRuleViolationError(
             "Move this category's products out before changing it between stock and pre-order.",
-            code="category_type_has_products",
+            code="category_kind_in_use",
         )
 
 

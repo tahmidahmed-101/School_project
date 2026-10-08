@@ -251,7 +251,8 @@ class AdminVariantExportView(APIView):
         params = request.query_params
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
-        queryset = variants_list(product=product, category=category)
+        category_type = get_choice(params, "category_type", Category.CategoryType.values)
+        queryset = variants_list(product=product, category=category, category_type=category_type)
         content = export_variants(filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt)
         content_type = (
             "text/csv"

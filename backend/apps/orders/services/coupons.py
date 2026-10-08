@@ -7,7 +7,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from apps.audit.services.audit import log_action
-from apps.common.exceptions import DomainError
+from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.orders.models import Coupon, SalesOrder
 from apps.orders.selectors.coupons import get_active_coupon_by_code
@@ -98,6 +98,10 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
     # ends up attached) and losing whichever change lost the race.
     lock_order(order)
     _ensure_pending(order)
+    if order.lines.filter(is_preorder=True).exists():
+        raise BusinessRuleViolationError(
+            "Coupons work on stock orders only, not on a pre-order.", code="coupon_stock_only"
+        )
     # Locks the row for the rest of the transaction so two concurrent applies
     # against a usage-limited coupon can't both read the same times_used and
     # both pass the limit check.
@@ -152,6 +156,18 @@ def remove_coupon(*, order: SalesOrder, actor=None) -> SalesOrder:
             metadata={"coupon_code": coupon_code},
         )
     return order
+
+
+def drop_coupon_from_preorder(order: SalesOrder) -> None:
+    """Coupons are for stock orders. One left on a basket that became a
+    pre-order is taken off and its use handed back, rather than failing the order."""
+    if order.coupon_id is None:
+        return
+    _release_coupon(order.coupon_id)
+    order.coupon = None
+    order.discount_total = Decimal("0")
+    order.save(update_fields=["coupon", "discount_total", "updated_at"])
+    order.recalculate_totals()
 
 
 def revalidate_applied_coupon(order: SalesOrder) -> None:

@@ -62,6 +62,15 @@ def get_choice(params, name: str, choices: Iterable[str], default: str | None = 
     return raw
 
 
+KIND_STOCK = "stock"
+KIND_PREORDER = "preorder"
+KINDS = (KIND_STOCK, KIND_PREORDER)
+
+
+def get_kind(params) -> str | None:
+    return get_choice(params, "kind", KINDS)
+
+
 def get_bool(params, name: str, default: bool | None = None) -> bool | None:
     raw = params.get(name)
     if raw in (None, ""):
