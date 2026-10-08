@@ -1,11 +1,9 @@
-import { CalendarClock, ShoppingCart, Truck } from "lucide-react"
+import { ShoppingCart, Truck } from "lucide-react"
 import { page, type FeatureModule } from "@/app/moduleTypes"
 
 export const salesModule: FeatureModule = {
   routes: [
     { path: "orders", lazy: page(() => import("./components/Orders")) },
-    { path: "preorders", lazy: page(() => import("./components/Orders")) },
-    { path: "preorder_products", lazy: page(() => import("../catalog/components/Products")) },
     { path: "orders/new", lazy: page(() => import("./components/CreateOrder")) },
     { path: "order_detail/:id", lazy: page(() => import("./components/OrderDetail")) },
     { path: "carts", lazy: page(() => import("./components/Carts")) },
@@ -31,16 +29,6 @@ export const salesModule: FeatureModule = {
         { title: "Payments", url: "/payments", permission: ["orders.view", "orders.manage"] },
         // The RMA endpoints require returns.manage even for reading.
         { title: "Returns", url: "/returns", permission: "returns.manage" },
-      ],
-    },
-    {
-      label: "Pre-orders",
-      icon: CalendarClock,
-      group: "MAIN",
-      order: 11,
-      items: [
-        { title: "Pre-order orders", url: "/preorders", permission: ["orders.view", "orders.manage"] },
-        { title: "Pre-order products", url: "/preorder_products", permission: ["catalog.view", "catalog.manage"] },
       ],
     },
     {

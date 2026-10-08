@@ -191,6 +191,8 @@ export interface CustomerCart {
   created_at: string
   /** The last cart change: every line edit saves the cart. */
   updated_at: string
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
 }
 
 /** AdminPreorderReportView */
