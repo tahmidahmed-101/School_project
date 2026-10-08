@@ -111,7 +111,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           ) : (
             <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
           )}
-          <ProductCell name={line.product_name || "—"} sku={line.variant_sku} />
+          <ProductCell name={line.product_name || "—"} sku={line.variant_sku} wrapName />
         </div>
       ),
     },
@@ -122,6 +122,12 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
       cell: ({ row }) => <span className="font-semibold">{row.original.quantity}</span>,
     },
     { id: "shipped", header: "Shipped", meta: { align: "center" }, cell: ({ row }) => row.original.shipped_quantity },
+    {
+      id: "delivered",
+      header: "Delivered",
+      meta: { align: "center" },
+      cell: ({ row }) => row.original.delivered_quantity,
+    },
     { id: "returned", header: "Returned", meta: { align: "center" }, cell: ({ row }) => row.original.returned_quantity },
     {
       id: "unit_price",
@@ -176,8 +182,8 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           showPagination={false}
           columns={columns}
           data={order.lines}
-          minWidth="820px"
-          columnWidths={["auto", "70px", "90px", "90px", "120px", "110px", "100px", ...(showActions ? ["80px"] : [])]}
+          minWidth="910px"
+          columnWidths={["auto", "70px", "90px", "90px", "90px", "120px", "110px", "100px", ...(showActions ? ["80px"] : [])]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
