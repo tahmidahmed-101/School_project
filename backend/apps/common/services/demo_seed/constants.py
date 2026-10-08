@@ -257,3 +257,108 @@ AUDIT_USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 "
     "Mobile Safari/604.1",
 ]
+
+# ---- storefront and dashboard extras (extras.py) ----------------------------
+
+# Email local part, first name, last name and role.
+DEMO_TEAM: list[tuple[str, str, str, str]] = [
+    ("admin", "Demo", "Admin", "admin"),
+    ("staff", "Demo", "Staff", "staff"),
+]
+
+# Fake wallet numbers, only filled in where staff have not set a real one.
+DEMO_PAY_TO: dict[str, str] = {
+    PaymentMethodKey.BKASH: "01700000001",
+    PaymentMethodKey.NAGAD: "01800000002",
+}
+DEMO_STOREFRONT_METHODS = [PaymentMethodKey.COD, PaymentMethodKey.BKASH, PaymentMethodKey.NAGAD]
+DEMO_DEPOSIT_PERCENT = "30"
+
+HERO_ALT_PREFIX = "Demo slide"
+# Placement, background colour, tag (en, bn), title (en, bn), link.
+HERO_SLIDES: list[tuple[str, tuple[int, int, int], str, str, str, str, str]] = [
+    (
+        "home",
+        (38, 70, 83),
+        "New arrivals",
+        "নতুন এসেছে",
+        "Fresh stock, ready to ship",
+        "নতুন স্টক, এখনই পাঠানো যাবে",
+        "/shop",
+    ),
+    (
+        "home",
+        (120, 80, 50),
+        "Offers",
+        "অফার",
+        "Collect a voucher before you order",
+        "অর্ডারের আগে ভাউচার নিয়ে নিন",
+        "/shop",
+    ),
+    (
+        "preorder",
+        (70, 60, 110),
+        "Pre-order",
+        "প্রি-অর্ডার",
+        "Order now, get it when it lands",
+        "এখন অর্ডার করুন, পণ্য এলেই পাবেন",
+        "/pre-order",
+    ),
+]
+# Placement, then the line in English and Bangla.
+PROMO_LINES: list[tuple[str, str, str]] = [
+    (
+        "both",
+        "Demo store: cash on delivery, bKash and Nagad accepted",
+        "ডেমো স্টোর: ক্যাশ অন ডেলিভারি, বিকাশ আর নগদে পেমেন্ট করা যায়",
+    ),
+    (
+        "preorder",
+        "Demo store: pay an advance now, the rest before delivery",
+        "ডেমো স্টোর: এখন অগ্রিম দিন, বাকিটা ডেলিভারির আগে",
+    ),
+]
+
+DEMO_BRANDS: list[tuple[str, str]] = [
+    ("Izara", "House label for shirting and panjabi."),
+    ("Padma Loom", "Knit and jersey basics."),
+    ("Northline", "Denim and trousers."),
+]
+
+PREORDER_CATEGORY = ("Pre-order Imports", "Ordered from the supplier after you book.")
+# Name, price and whether the pre-order window is "open" or "upcoming".
+PREORDER_PRODUCTS: list[tuple[str, str, str]] = [
+    ("Imported Travel Backpack", "3200.00", "open"),
+    ("Wireless Earbuds Pro", "2450.00", "open"),
+    ("Smart Fitness Band", "1850.00", "open"),
+    ("Mini Projector", "8900.00", "upcoming"),
+]
+
+BUNDLE_SKU = f"{SKU_PREFIX}-BND-01"
+BUNDLE_NAME = "Everyday Starter Pack"
+
+REVIEW_COMMENTS: list[tuple[int, str]] = [
+    (5, "Good fabric and the size was right. Delivery took two days."),
+    (4, "Nice product. The colour is a little darker than the photo."),
+    (5, "Second time ordering, same quality as before."),
+    (3, "Okay for the price. Packaging could be better."),
+    (4, "Fits well. Courier called before coming."),
+]
+QUESTIONS: list[tuple[str, str]] = [
+    (
+        "Is cash on delivery available outside Dhaka?",
+        "Yes, cash on delivery works everywhere we deliver.",
+    ),
+    ("Does the colour fade after washing?", "No fading in normal wash. Avoid bleach."),
+    ("Can I exchange if the size does not fit?", "Yes, see the return policy page for the steps."),
+    ("How long does delivery take to Chattogram?", ""),
+    ("Is this the same as the one in the photo?", ""),
+]
+PRICE_REPORT_COMMENTS = [
+    "Saw this cheaper at another shop last week.",
+    "Price here is higher than on your Facebook page.",
+    "Sale price is not showing in my cart.",
+    "Listed price changed after I added it.",
+]
+DEMO_FRAUD_CASE_PREFIX = "IZP-CASE-"
+EXPENSE_CATEGORY_NOTE = "Demo expense category"
