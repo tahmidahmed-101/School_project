@@ -21,6 +21,7 @@ import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
@@ -29,7 +30,7 @@ import { useLastValue } from "@/hooks/use-dialog-presence"
 import { fetchAll } from "../slices/variantSlice"
 import { deleteVariant, downloadVariantsExport, importVariants, updateVariant } from "../api"
 import { ProductPickerDialog } from "./ProductPickerDialog"
-import { VariantOptionsCell, VariantStockCell } from "./VariantCells"
+import { VariantOptionsCell, VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
 import type { Product, ProductVariant, VariantImportResult } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
@@ -45,10 +46,9 @@ const statusOptions: Option[] = [
   { label: "Active", value: "true" },
   { label: "Inactive", value: "false" },
 ]
-const preorderOptions: Option[] = [
-  { label: "Pre-order (any)", value: "any" },
-  { label: "Pre-order active", value: "active" },
-  { label: "Pre-order inactive", value: "inactive" },
+const orderingWindowOptions: Option[] = [
+  { label: "Open", value: "active" },
+  { label: "Closed", value: "inactive" },
 ]
 const orderingOptions: Option[] = [
   { label: "SKU A–Z", value: "sku" },
@@ -57,17 +57,25 @@ const orderingOptions: Option[] = [
   { label: "Price high–low", value: "-price" },
 ]
 
-const Variants = () => {
-  useDocumentTitle("Variants")
+const barcodeColumn: ColumnDef<ProductVariant> = {
+  accessorKey: "barcode",
+  header: "BARCODE",
+  cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.barcode || "—"}</span>,
+}
+
+const Variants = ({ kind }: { kind: Kind }) => {
+  const isStock = kind === "stock"
+  const title = isStock ? "Variants" : "Pre-order variants"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const variantState = useAppSelector((s) => s.variants)
-  const { options: categoryOptions } = useCategoryOptions()
+  const { options: categoryOptions } = useCategoryOptions(kind)
 
   const [category, setCategory] = useState<Option | null>(null)
   const [stock, setStock] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
-  const [preorder, setPreorder] = useState<Option | null>(null)
+  const [orderingWindow, setOrderingWindow] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [exporting, setExporting] = useState(false)
   const [editing, setEditing] = useState<ProductVariant | null>(null)
@@ -83,11 +91,11 @@ const Variants = () => {
     state: variantState,
     pageSize: PAGE_SIZE,
     params: {
+      category_type: kind,
       category_id: category?.value,
       stock_status: stock?.value,
       is_active: status?.value,
-      preorder_only: preorder ? true : undefined,
-      preorder_status: preorder && preorder.value !== "any" ? preorder.value : undefined,
+      preorder_status: orderingWindow?.value,
       ordering: ordering?.value,
     },
   })
@@ -97,6 +105,7 @@ const Variants = () => {
     try {
       // The export endpoint honours search + category only (not stock/status filters).
       await downloadVariantsExport(fmt, {
+        category_type: "stock",
         ...(list.debouncedSearch ? { search: list.debouncedSearch } : {}),
         ...(category ? { category_id: category.value } : {}),
       })
@@ -123,32 +132,27 @@ const Variants = () => {
       header: "OPTIONS",
       cell: ({ row }) => <VariantOptionsCell variant={row.original} />,
     },
-    {
-      accessorKey: "barcode",
-      header: "BARCODE",
-      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.barcode || "—"}</span>,
-    },
+    ...(isStock ? [barcodeColumn] : []),
     {
       id: "price",
       header: "PRICE",
       cell: ({ row }) => <MoneyCell value={row.original.effective_price} emphasis />,
     },
-    {
-      accessorKey: "stock",
-      header: "AVAILABLE",
-      cell: ({ row }) => <VariantStockCell variant={row.original} />,
-    },
+    isStock
+      ? {
+          accessorKey: "stock",
+          header: "AVAILABLE",
+          cell: ({ row }) => <VariantStockCell variant={row.original} />,
+        }
+      : {
+          id: "ordering",
+          header: "ORDERING",
+          cell: ({ row }) => <VariantOrderingCell variant={row.original} />,
+        },
     {
       id: "status",
       header: "STATUS",
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
-          {row.original.is_preorder_enabled && (
-            <StatusBadge status="pre-order" tone={row.original.is_preorder_active ? "info" : "secondary"} />
-          )}
-        </div>
-      ),
+      cell: ({ row }) => <StatusBadge status={row.original.is_active ? "active" : "inactive"} />,
     },
     {
       id: "actions",
@@ -179,21 +183,23 @@ const Variants = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Variants"
+        title={title}
         actions={
           <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="primary" size="action" disabled={exporting}>
-                  {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => void runExport("csv")}>CSV (.csv)</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => void runExport("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {canManage && (
+            {isStock && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="primary" size="action" disabled={exporting}>
+                    {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => void runExport("csv")}>CSV (.csv)</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void runExport("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {isStock && canManage && (
               <Button variant="outline" size="action" onClick={() => setImportOpen(true)}>
                 <UploadIcon className="size-5" /> Import
               </Button>
@@ -208,7 +214,7 @@ const Variants = () => {
       />
 
       <FilterToolbar
-        searchPlaceholder="Search SKU, barcode or product…"
+        searchPlaceholder={isStock ? "Search SKU, barcode or product…" : "Search SKU or product…"}
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[
@@ -222,24 +228,25 @@ const Variants = () => {
               />
             ),
           },
-          {
-            component: (
-              <Combobox placeholder="Stock" options={stockOptions} value={stock} onValueChange={setStock} />
-            ),
-          },
+          isStock
+            ? {
+                component: (
+                  <Combobox placeholder="Stock" options={stockOptions} value={stock} onValueChange={setStock} />
+                ),
+              }
+            : {
+                component: (
+                  <Combobox
+                    placeholder="Ordering"
+                    options={orderingWindowOptions}
+                    value={orderingWindow}
+                    onValueChange={setOrderingWindow}
+                  />
+                ),
+              },
           {
             component: (
               <Combobox placeholder="Status" options={statusOptions} value={status} onValueChange={setStatus} />
-            ),
-          },
-          {
-            component: (
-              <Combobox
-                placeholder="Pre-order"
-                options={preorderOptions}
-                value={preorder}
-                onValueChange={setPreorder}
-              />
             ),
           },
           {
@@ -270,14 +277,19 @@ const Variants = () => {
         emptyIcon={Layers}
         emptyTitle="No variants found"
         minWidth="1000px"
-        columnWidths={["280px", "130px", "150px", "120px", "100px", "160px", "80px"]}
+        columnWidths={
+          isStock
+            ? ["280px", "130px", "150px", "120px", "100px", "110px", "80px"]
+            : ["280px", "130px", "120px", "150px", "110px", "80px"]
+        }
       />
 
-      {canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={list.reload} />}
+      {isStock && canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={list.reload} />}
       {canManage && (
         <ProductPickerDialog
           open={pickingProduct}
           onOpenChange={setPickingProduct}
+          kind={kind}
           title="Add variant"
           description="Choose the product this variant belongs to."
           onPick={(product) => {
@@ -291,8 +303,9 @@ const Variants = () => {
         <VariantFormDialog
           open={Boolean(addingTo)}
           onOpenChange={(open) => !open && setAddingTo(null)}
+          kind={kind}
           productId={addingShown.id}
-          categoryId={addingShown.category_id}
+          sibling={addingShown.variants[0]}
           onSaved={list.reload}
         />
       )}
@@ -300,6 +313,7 @@ const Variants = () => {
         <VariantFormDialog
           open={Boolean(editing)}
           onOpenChange={(open) => !open && setEditing(null)}
+          kind={kind}
           productId={editingShown.product_id}
           variant={editingShown}
           onSaved={list.reload}
@@ -418,4 +432,9 @@ function ImportDialog({
   )
 }
 
-export default Variants
+const VariantsPage = () => {
+  const kind = useKind()
+  return <Variants key={kind} kind={kind} />
+}
+
+export default VariantsPage

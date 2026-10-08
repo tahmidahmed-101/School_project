@@ -20,6 +20,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, type Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
@@ -47,8 +48,9 @@ const ORDERING_OPTIONS: Option[] = [
  * Reports customers send from a product page when a price looks wrong. They are never shown
  * on the storefront; staff check the price, then mark each report resolved or dismissed.
  */
-const PriceReports = () => {
-  useDocumentTitle("Price Reports")
+const PriceReports = ({ kind }: { kind: Kind }) => {
+  const title = kind === "preorder" ? "Pre-order price reports" : "Price Reports"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const reportState = useAppSelector((s) => s.catalogPriceReports)
@@ -56,6 +58,7 @@ const PriceReports = () => {
   const [reviewing, setReviewing] = useState<PriceReport | null>(null)
 
   const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
+    kind,
     fetch: (p) => dispatch(fetchAll(p)),
     state: reportState,
     filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
@@ -150,7 +153,7 @@ const PriceReports = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Price Reports" />
+      <PageHeader title={title} />
 
       {/* ?search= matches the comment, the product name and the variant SKU. */}
       <FilterToolbar
@@ -287,4 +290,9 @@ function ReviewDialog({
   )
 }
 
-export default PriceReports
+const PriceReportsPage = () => {
+  const kind = useKind()
+  return <PriceReports key={kind} kind={kind} />
+}
+
+export default PriceReportsPage

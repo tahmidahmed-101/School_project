@@ -19,6 +19,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
+import { productKind, productListPath } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
@@ -42,7 +43,7 @@ const ProductDetail = () => {
   const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
-  const { nameById, categories } = useCategoryOptions()
+  const { nameById, categories, isLoading: categoriesLoading } = useCategoryOptions()
 
   useDocumentTitle(product?.name ? `${product.name} — Product` : "Product Details")
 
@@ -72,7 +73,9 @@ const ProductDetail = () => {
   }, [brandId])
   const brandName = brandId && brand?.id === brandId ? brand.name : null
 
-  const pageState = resolveDetailState(singleStatus, singleError, product?.id === id)
+  // The page is laid out by the product's kind, which needs the categories as well as the product.
+  const pageState =
+    resolveDetailState(singleStatus, singleError, product?.id === id) ?? (categoriesLoading ? "loading" : null)
   if (pageState || !product || product.id !== id) {
     return (
       <DetailPageState
@@ -86,7 +89,10 @@ const ProductDetail = () => {
     )
   }
 
+  const kind = productKind(product, categories)
+  const isStock = kind === "stock"
   const isBundle = product.product_type === "bundle"
+  const settings = product.variants.find((v) => v.is_preorder_enabled)
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
 
   const handleRestore = async () => {
@@ -104,11 +110,7 @@ const ProductDetail = () => {
       <PageHeader
         title={product.name}
         description={product.slug}
-        back={
-          categories.find((c) => c.id === product.category_id)?.category_type === "preorder"
-            ? { to: "/preorder_products", label: "Back to pre-order products" }
-            : { to: "/products", label: "Back to products" }
-        }
+        back={{ to: productListPath(kind), label: isStock ? "Back to products" : "Back to pre-order products" }}
         actions={
           canManage &&
           (product.deleted_at ? (
@@ -155,14 +157,32 @@ const ProductDetail = () => {
             </Row>
             <Row label="Category">{nameById.get(product.category_id) ?? "—"}</Row>
             <Row label="Brand">{brandName ?? "—"}</Row>
-            <Row label="Price">
-              <span className="font-semibold">
-                {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
-              </span>
-            </Row>
-            {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
-            <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
-            <Row label="Available stock">{product.total_stock}</Row>
+            {isStock ? (
+              <>
+                <Row label="Price">
+                  <span className="font-semibold">
+                    {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
+                  </span>
+                </Row>
+                {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
+                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
+                <Row label="Available stock">{product.total_stock}</Row>
+              </>
+            ) : (
+              <>
+                <Row label="Price">
+                  <span className="font-semibold">{product.price === null ? "—" : formatCurrency(product.price)}</span>
+                </Row>
+                {settings?.preorder_price && (
+                  <Row label="Pre-order price">{formatCurrency(settings.preorder_price)}</Row>
+                )}
+                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
+                <Row label="Pre-orders open">{formatDateTime(settings?.preorder_start_date)}</Row>
+                <Row label="Pre-orders close">{formatDateTime(settings?.preorder_end_date)}</Row>
+                <Row label="Release date">{formatDateTime(settings?.release_date)}</Row>
+                <Row label="Pre-order limit">{settings?.preorder_stock_limit ?? "Unlimited"}</Row>
+              </>
+            )}
             <Row label="Variants">{product.variants.length}</Row>
             {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
             <Row label="Description">
@@ -203,7 +223,7 @@ const ProductDetail = () => {
           ) : (
             <ProductVariantsSection
               productId={product.id}
-              categoryId={product.category_id}
+              kind={kind}
               productType={product.product_type}
               canManage={canManage}
               canViewInventory={canViewInventory}

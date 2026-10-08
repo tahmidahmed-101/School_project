@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
@@ -19,6 +17,7 @@ import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { reportFormError } from "@/lib/forms"
@@ -35,7 +34,6 @@ const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   parent_id: z.string(),
   description: z.string(),
-  category_type: z.enum(["stock", "preorder"]),
   is_active: z.boolean(),
 })
 type FormValues = z.infer<typeof schema>
@@ -48,10 +46,16 @@ const CategoryForm = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.categories)
   const existing = singleData as Category | null
-  const { categories, options } = useCategoryOptions()
+  // A saved category keeps its kind; a new one takes the kind of the list it was opened from.
+  const listKind: Kind = useSearchParams()[0].get("kind") === "preorder" ? "preorder" : "stock"
+  const kind: Kind = isEditing && existing && existing.id === id ? existing.category_type : listKind
+  const { categories, options } = useCategoryOptions(kind)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const noun = kind === "preorder" ? "pre-order category" : "category"
+  const listPath = kind === "preorder" ? "/preorder_categories" : "/categories"
 
-  useDocumentTitle(isEditing ? (existing?.name ? `Edit ${existing.name}` : "Edit Category") : "Add Category")
+  const title = isEditing ? `Edit ${noun}` : `Add ${noun}`
+  useDocumentTitle(isEditing && existing?.name ? `Edit ${existing.name}` : title)
 
   const {
     control,
@@ -62,9 +66,8 @@ const CategoryForm = () => {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", parent_id: NO_PARENT, description: "", category_type: "stock", is_active: true },
+    defaultValues: { name: "", parent_id: NO_PARENT, description: "", is_active: true },
   })
-  const parentId = useWatch({ control, name: "parent_id" })
 
   useEffect(() => {
     if (isEditing && id) dispatch(fetchSingle(id))
@@ -76,7 +79,6 @@ const CategoryForm = () => {
         name: existing.name,
         parent_id: existing.parent_id ?? NO_PARENT,
         description: existing.description ?? "",
-        category_type: existing.category_type,
         is_active: existing.is_active,
       })
     }
@@ -99,12 +101,9 @@ const CategoryForm = () => {
     return options.filter((o) => !blocked.has(o.value))
   }, [options, categories, id, isEditing])
 
-  const parent = parentId !== NO_PARENT ? categories.find((c) => c.id === parentId) : undefined
-  const isRoot = parentId === NO_PARENT
-
   if (!canManage) {
     return (
-      <NoPermission message="You don't have permission to edit categories." backTo="/categories" backLabel="Back to categories" />
+      <NoPermission message="You don't have permission to edit categories." backTo={listPath} backLabel="Back to categories" />
     )
   }
 
@@ -114,8 +113,8 @@ const CategoryForm = () => {
       <DetailPageState
         state={pageState}
         entity="Category"
-        backTo="/categories"
-        backLabel="Back to Categories"
+        backTo={listPath}
+        backLabel="Back to categories"
         error={singleError}
         onRetry={() => id && dispatch(fetchSingle(id))}
       />
@@ -128,8 +127,8 @@ const CategoryForm = () => {
       parent_id: values.parent_id === NO_PARENT ? null : values.parent_id,
       description: values.description,
     }
-    // A subcategory's type is locked to its parent's; only a root category may set it.
-    if (isRoot) payload.category_type = values.category_type
+    // A subcategory takes its parent's kind on the server; only a new root category is told it.
+    if (!isEditing && payload.parent_id === null) payload.category_type = kind
     try {
       let saved: Category
       if (isEditing && id) {
@@ -146,7 +145,7 @@ const CategoryForm = () => {
         }
       }
       toast.success(`${values.name} ${isEditing ? "updated" : "created"}`)
-      navigate("/categories")
+      navigate(listPath)
     } catch (err) {
       reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save category" })
     }
@@ -156,9 +155,9 @@ const CategoryForm = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={isEditing ? "Edit Category" : "Add Category"}
+        title={title}
         description={isEditing ? `Editing ${existing?.name ?? ""}` : undefined}
-        back={{ to: "/categories", label: "Back" }}
+        back={{ to: listPath, label: "Back" }}
       />
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -180,35 +179,6 @@ const CategoryForm = () => {
                   none={{ value: NO_PARENT, label: "None (root category)" }}
                 />
                 <FieldError errors={[errors.parent_id]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="category_type">Category type</FieldLabel>
-              <FieldContent>
-                {isRoot ? (
-                  <Controller
-                    control={control}
-                    name="category_type"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger id="category_type" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="stock">Stock</SelectItem>
-                          <SelectItem value="preorder">Pre-order</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                ) : (
-                  <Input id="category_type" disabled value={parent?.category_type === "preorder" ? "Pre-order" : "Stock"} />
-                )}
-                <FieldDescription>
-                  {isRoot ? "Subcategories inherit this type." : "Inherited from the parent category."}
-                </FieldDescription>
-                <FieldError errors={[errors.category_type]} />
               </FieldContent>
             </Field>
 
@@ -237,7 +207,7 @@ const CategoryForm = () => {
         </Card>
         <FormActions
           sticky
-          onCancel={() => navigate("/categories")}
+          onCancel={() => navigate(listPath)}
           submitLabel={isEditing ? "Save changes" : "Create category"}
           submitting={isSubmitting}
         />
