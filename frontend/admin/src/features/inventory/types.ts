@@ -1,3 +1,4 @@
+import type { Kind } from "@/hooks/use-kind"
 // Mirrors kull-mart api/v1/admin/inventory/serializers.py and the reservation serializer
 // in api/v1/admin/orders/serializers.py (StockReservationSerializer).
 
@@ -98,6 +99,8 @@ export interface StockStatusSummary {
 /** StockAdjustmentSerializer */
 export interface StockAdjustmentPayload {
   variant_id: string
+  /** The half the page belongs to; the server refuses a variant of the other half (stock_kind_mismatch). */
+  kind?: Kind
   warehouse_id?: string | null
   quantity_delta: number
   unit_cost?: string | null
@@ -107,6 +110,7 @@ export interface StockAdjustmentPayload {
 /** StockWriteOffSerializer */
 export interface StockWriteOffPayload {
   variant_id: string
+  kind?: Kind
   warehouse_id?: string | null
   quantity: number
   reason?: string
@@ -115,6 +119,7 @@ export interface StockWriteOffPayload {
 /** StockIntakeSerializer */
 export interface StockIntakePayload {
   variant_id: string
+  kind?: Kind
   warehouse_id?: string | null
   quantity: number
   unit_cost?: string | null

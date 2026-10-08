@@ -113,7 +113,7 @@ export async function downloadVariantsExport(
       params: { file_format: fileFormat, ...filters },
       responseType: "blob",
     })
-    saveBlob(res.data as Blob, `variants.${fileFormat}`)
+    saveBlob(res.data as Blob, `${filters.category_type === "preorder" ? "pre-order" : "stock"}-variants.${fileFormat}`)
   } catch (err) {
     throw extractApiError(await blobErrorToJson(err))
   }

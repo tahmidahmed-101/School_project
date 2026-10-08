@@ -17,7 +17,7 @@ import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useKind, type Kind } from "@/hooks/use-kind"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
@@ -229,8 +229,8 @@ const Products = ({ kind }: { kind: Kind }) => {
         return (
           <TableActions
             itemName={product.name}
-            viewUrl={`/product_detail/${product.id}`}
-            editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
+            viewUrl={withKind(`/product_detail/${product.id}`, kind)}
+            editUrl={canManage && product.product_type !== "bundle" ? withKind(`/product_form/${product.id}`, kind) : undefined}
             onDelete={canManage ? () => handleDelete(product) : undefined}
           />
         )
@@ -342,7 +342,7 @@ const Products = ({ kind }: { kind: Kind }) => {
         }
         data={products}
         {...list.tableProps}
-        getRowLink={(p) => `/product_detail/${p.id}`}
+        getRowLink={(p) => withKind(`/product_detail/${p.id}`, kind)}
         unlabelledColumns={["image"]}
         emptyIcon={Package}
         emptyTitle="No products found"

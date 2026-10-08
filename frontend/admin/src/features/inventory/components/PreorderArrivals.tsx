@@ -240,7 +240,7 @@ const PreorderArrivals = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <FilterToolbar
-            searchPlaceholder="Search SKU, barcode or product…"
+            searchPlaceholder="Search SKU or product…"
             searchValue={list.search}
             onSearchChange={list.setSearch}
             filters={[

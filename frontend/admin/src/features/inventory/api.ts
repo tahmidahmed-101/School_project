@@ -35,9 +35,10 @@ export const postIntake = (payload: StockIntakePayload) =>
 export const postAdjustment = (payload: StockAdjustmentPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/adjustments/`, payload))
 /** All-or-nothing batch: the server rolls the whole batch back if any line fails. */
-export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[]) =>
+export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[], kind: Kind) =>
   apiCall<{ results: { index: number; entry: StockLedgerEntry }[]; count: number }>(() =>
-    api.post(`${I}/adjustments/bulk/`, { adjustments })
+    // TODO(ask): is `kind` read on the batch or on each line? It is sent on both until the server side is fixed.
+    api.post(`${I}/adjustments/bulk/`, { kind, adjustments: adjustments.map((line) => ({ ...line, kind })) })
   )
 export const postWriteOff = (payload: StockWriteOffPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/write-offs/`, payload))
@@ -57,7 +58,7 @@ export const updateWarehouse = (id: string, payload: WarehousePayload) =>
 export async function downloadLedgerExport(filters: Record<string, unknown>) {
   try {
     const res = await api.get(`${I}/ledger-entries/export/`, { params: filters, responseType: "blob" })
-    saveBlob(res.data as Blob, "stock-ledger.csv")
+    saveBlob(res.data as Blob, filters.kind === "preorder" ? "pre-order-goods-movements.csv" : "stock-ledger.csv")
   } catch (err) {
     throw extractApiError(await blobErrorToJson(err))
   }

@@ -14,7 +14,7 @@ import { CsvImportButton, type ImportField } from "@/components/common/CsvImport
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useKind, type Kind } from "@/hooks/use-kind"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { createImportLookup } from "@/lib/importLookup"
 
@@ -119,7 +119,7 @@ const Categories = ({ kind }: { kind: Kind }) => {
         return (
           <TableActions
             itemName={o.label}
-            editUrl={`/category_form/${o.value}`}
+            editUrl={withKind(`/category_form/${o.value}`, kind)}
             onDelete={() => handleDelete(o)}
           />
         )

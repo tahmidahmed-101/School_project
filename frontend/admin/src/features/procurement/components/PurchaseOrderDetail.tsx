@@ -288,6 +288,12 @@ const PurchaseOrderDetail = () => {
     load()
   }, [load])
 
+  // A purchase order opened under the other half's address moves to its own.
+  const ownBase = po ? purchasingBase(po.kind ?? "stock") : base
+  useEffect(() => {
+    if (ownBase !== base) navigate(`${ownBase}/orders/${id}`, { replace: true })
+  }, [ownBase, base, id, navigate])
+
   const poNumber = po?.po_number
   useEffect(() => {
     if (!poNumber) return
@@ -310,7 +316,7 @@ const PurchaseOrderDetail = () => {
   const linesById = useMemo(() => new Map((po?.lines ?? []).map((l) => [l.id, l])), [po])
 
   const state = resolveDetailState(singleStatus, singleError, !!po)
-  if (state || !po) {
+  if (state || !po || ownBase !== base) {
     return (
       <DetailPageState
         state={state ?? "loading"}
@@ -467,7 +473,11 @@ const PurchaseOrderDetail = () => {
             {canManage && (po.status === "draft" || po.status === "submitted") && (
               <ConfirmDialog
                 title={`Cancel ${po.po_number}?`}
-                description="The order will be marked cancelled. Stock already received stays in inventory."
+                description={
+                  po.kind === "preorder"
+                    ? "The order will be marked cancelled. Goods already received stay counted as arrived."
+                    : "The order will be marked cancelled. Stock already received stays in inventory."
+                }
                 confirmLabel="Cancel order"
                 destructive
                 onConfirm={() => runAction(() => dispatch(cancelPurchaseOrder(po.id)).unwrap(), "Purchase order cancelled")}

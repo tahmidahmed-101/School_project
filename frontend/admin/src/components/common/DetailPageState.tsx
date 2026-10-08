@@ -6,8 +6,9 @@ import { getApiErrorMessage } from "@/lib/api/client"
 interface DetailPageStateProps {
   state: "loading" | "not-found" | "error"
   entity: string
-  backTo: string
-  backLabel: string
+  /** Left out while the record's half (stock or pre-order) is not known. */
+  backTo?: string
+  backLabel?: string
   error?: unknown
   onRetry?: () => void
 }
@@ -50,12 +51,14 @@ export function DetailPageState({ state, entity, backTo, backLabel, error, onRet
             Try again
           </Button>
         )}
-        <Button variant={isError ? "outline" : "default"} asChild>
-          <Link to={backTo}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {backLabel}
-          </Link>
-        </Button>
+        {backTo && (
+          <Button variant={isError ? "outline" : "default"} asChild>
+            <Link to={backTo}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {backLabel}
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   )

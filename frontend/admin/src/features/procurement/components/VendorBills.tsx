@@ -30,7 +30,7 @@ import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
 import { useAppDispatch } from "@/app/hooks"
 import type { Option } from "@/lib/types"
 import { useKind } from "@/hooks/use-kind"
-import { purchasingBase, purchasingTitle, useKindRows } from "../lib/kind"
+import { billsTitle, purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 
@@ -298,9 +298,9 @@ const SORT_OPTIONS: Option[] = [
   { label: "Recently created", value: "-created_at" },
 ]
 
-const VendorBills = () => {
+const VendorBillsList = () => {
   const kind = useKind()
-  const title = purchasingTitle(kind, "Vendor Bills")
+  const title = billsTitle(kind)
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.vendorBills)
@@ -309,7 +309,6 @@ const VendorBills = () => {
 
   const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
   const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ...filters.params, kind } })
-  const rows = useKindRows(data, kind)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -397,11 +396,11 @@ const VendorBills = () => {
 
       <DataTable
         columns={columns}
-        data={rows}
+        data={data}
         {...list.tableProps}
         onRowClick={(b) => setViewingId(b.id)}
         emptyIcon={FileText}
-        emptyTitle="No vendor bills"
+        emptyTitle={kind === "preorder" ? "No supplier bills" : "No vendor bills"}
         minWidth="1080px"
         columnWidths={["150px", "190px", "130px", "130px", "130px", "110px", "100px", "80px"]}
       />
@@ -418,5 +417,7 @@ const VendorBills = () => {
     </div>
   )
 }
+
+const VendorBills = () => <VendorBillsList key={useKind()} />
 
 export default VendorBills

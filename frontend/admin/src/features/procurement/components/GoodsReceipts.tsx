@@ -24,7 +24,7 @@ import { formatDate } from "@/lib/format"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
 import { useKind } from "@/hooks/use-kind"
-import { purchasingBase, purchasingTitle, useKindRows } from "../lib/kind"
+import { purchasingBase, purchasingTitle } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { useLastValue } from "@/hooks/use-dialog-presence"
@@ -139,7 +139,7 @@ function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | n
   )
 }
 
-const GoodsReceipts = () => {
+const GoodsReceiptsList = () => {
   const kind = useKind()
   const title = purchasingTitle(kind, "Goods Receipts")
   useDocumentTitle(title)
@@ -151,7 +151,6 @@ const GoodsReceipts = () => {
   const [viewing, setViewing] = useState<GoodsReceipt | null>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ordering: ordering?.value, kind } })
-  const rows = useKindRows(state.data, kind)
 
   const columns: ColumnDef<GoodsReceipt>[] = [
     {
@@ -218,7 +217,7 @@ const GoodsReceipts = () => {
 
       <DataTable
         columns={columns}
-        data={rows}
+        data={state.data}
         {...list.tableProps}
         onRowClick={setViewing}
         emptyIcon={PackageCheck}
@@ -232,5 +231,7 @@ const GoodsReceipts = () => {
     </div>
   )
 }
+
+const GoodsReceipts = () => <GoodsReceiptsList key={useKind()} />
 
 export default GoodsReceipts

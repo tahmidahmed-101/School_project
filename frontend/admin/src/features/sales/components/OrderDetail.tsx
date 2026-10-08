@@ -5,6 +5,8 @@ import { fetchSingle, selectOrderDetail } from "@/features/sales/slices/orderSli
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
+import { KIND_PATHS } from "../shared/kindPaths"
 import { resolveDetailState } from "@/lib/detailState"
 import { PreorderOrderDetail } from "./order/PreorderOrderDetail"
 import { StockOrderDetail } from "./order/StockOrderDetail"
@@ -17,6 +19,8 @@ const OrderDetail = () => {
   const { singleStatus, singleError } = useAppSelector((state) => state.orders)
   const order = singleData && singleData.id === id ? singleData : null
   const isPreorder = order?.order_type === "preorder"
+  const hint = useKindHint()
+  useRecordKind(order?.order_type)
 
   useDocumentTitle(order?.order_number ? `${order.order_number} — ${isPreorder ? "Pre-order" : "Order"}` : "Order Details")
 
@@ -27,9 +31,9 @@ const OrderDetail = () => {
     return (
       <DetailPageState
         state={pageState ?? "loading"}
-        entity="Order"
-        backTo="/orders"
-        backLabel="Back to Orders"
+        entity={hint === "preorder" ? "Pre-order" : "Order"}
+        backTo={hint && KIND_PATHS[hint].orders}
+        backLabel={hint === "preorder" ? "Back to pre-orders" : "Back to orders"}
         error={singleError}
         onRetry={refresh}
       />

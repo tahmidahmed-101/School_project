@@ -20,6 +20,7 @@ import { TextField } from "@/components/common/form-fields"
 import { useCan } from "@/hooks/use-can"
 import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency } from "@/lib/format"
@@ -41,6 +42,8 @@ const PaymentDetail = () => {
   const load = useDetailLoad(fetchPayment, id)
 
   const kind = payment?.order_type ?? "stock"
+  const hint = useKindHint()
+  useRecordKind(payment ? kind : undefined)
   // Only a pre-order has a deposit and a balance; they live on the order, not on the payment.
   const preorderId = kind === "preorder" ? payment?.order_id : undefined
   const [order, setOrder] = useState<Order | null>(null)
@@ -60,8 +63,8 @@ const PaymentDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Payment"
-        backTo="/payments"
-        backLabel="Back to Payments"
+        backTo={hint && KIND_PATHS[hint].payments}
+        backLabel={hint === "preorder" ? "Back to pre-order payments" : "Back to payments"}
         error={singleError}
         onRetry={load}
       />

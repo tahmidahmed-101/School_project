@@ -15,14 +15,20 @@ import { ChevronDown, Store } from "lucide-react"
 import { getNavGroups } from "@/app/modules"
 import { userDisplayName } from "@/lib/user-display"
 import type { NavItem } from "@/app/moduleTypes"
+import { useKind } from "@/hooks/use-kind"
+import { findNavEntry } from "./navEntry"
 
-// Detail/form routes (e.g. /order_detail/:id) don't appear in the nav; a link stays
-// active for its own path and anything nested under it.
-const isItemActive = (item: NavItem, pathname: string) =>
-  item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
+// A link is active for its own path and anything nested under it; a detail or form route
+// (/order_detail/:id) is not in the nav, so `ownUrl` names the list of the half its record belongs to.
+const isItemActive = (item: NavItem, pathname: string, ownUrl?: string) =>
+  item.url === "/"
+    ? pathname === "/"
+    : pathname === item.url || pathname.startsWith(`${item.url}/`) || item.url === ownUrl
 
 export function AppSidebar() {
   const location = useLocation()
+  const kind = useKind()
+  const ownUrl = findNavEntry(location.pathname, kind)?.item.url
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
   const user = useAppSelector((state) => state.auth.user)
   const permissions = user?.permissions
@@ -54,15 +60,16 @@ export function AppSidebar() {
   // Close all sections when collapsed, and auto-open the active route's section when
   // the route changes or the sidebar expands. Adjusted during render rather than in
   // effects, which would paint once with stale sections and then re-render.
-  const [syncedWith, setSyncedWith] = useState({ pathname: "", isCollapsed: !isCollapsed })
-  if (syncedWith.pathname !== location.pathname || syncedWith.isCollapsed !== isCollapsed) {
-    setSyncedWith({ pathname: location.pathname, isCollapsed })
+  const routeKey = `${location.pathname}|${ownUrl ?? ""}`
+  const [syncedWith, setSyncedWith] = useState({ routeKey: "", isCollapsed: !isCollapsed })
+  if (syncedWith.routeKey !== routeKey || syncedWith.isCollapsed !== isCollapsed) {
+    setSyncedWith({ routeKey, isCollapsed })
 
     if (isCollapsed) {
       setOpenSections([])
     } else {
       const active = sidebarItems.find((section) =>
-        section.items.some((item) => isItemActive(item, location.pathname)),
+        section.items.some((item) => isItemActive(item, location.pathname, ownUrl)),
       )
       if (active) {
         setOpenSections((prev) =>
@@ -120,7 +127,7 @@ export function AppSidebar() {
 
                 const isOpen = openSections.includes(section.label)
                 const isActive = section.items.some(
-                  (item) => isItemActive(item, location.pathname),
+                  (item) => isItemActive(item, location.pathname, ownUrl),
                 )
 
                 return (
@@ -166,7 +173,7 @@ export function AppSidebar() {
                               onClick={handleLinkClick}
                               className={({ isActive: itemActive }) =>
                                 `flex items-center rounded-lg px-3 py-2 pl-6 text-sm transition-colors duration-200 ${
-                                  itemActive
+                                  itemActive || item.url === ownUrl
                                     ? "bg-primary-500/10 font-medium text-primary-500"
                                     : "text-gray-700 hover:bg-muted hover:text-sidebar-accent-foreground dark:text-sidebar-foreground dark:hover:bg-sidebar-accent"
                                 }`
