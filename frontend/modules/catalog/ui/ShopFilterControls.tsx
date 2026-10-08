@@ -25,14 +25,13 @@ interface ShopFilterControlsProps {
 export function ShopFilterControls({ filters, onFilterChange }: ShopFilterControlsProps) {
   const { t, ui, money } = useLang();
   const { categories } = useCatalog();
-  const { products } = useProducts();
-  const { min: minPrice, max: maxPrice } = priceBounds(products);
+  const { stockProducts, preorderProducts } = useProducts();
+  const isPreorderShop = filters.stockType === "preorder";
+  const { min: minPrice, max: maxPrice } = priceBounds(isPreorderShop ? preorderProducts : stockProducts);
 
   // Stock or pre-order is decided by the link that led here (`?type=`), not by the visitor: the shop
   // stays inside one catalogue, and so does its category list.
-  const visibleCategories = categories.filter(
-    (c) => c.type === (filters.stockType === "preorder" ? "preorder" : "stock"),
-  );
+  const visibleCategories = categories.filter((c) => c.type === (isPreorderShop ? "preorder" : "stock"));
   const selectedCategory = categories.find((c) => c.id === filters.category);
   const selectedCollection = COLLECTIONS.find((c) => c.id === filters.collection) ?? COLLECTIONS[0]!;
 
@@ -109,17 +108,19 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
         </div>
       </div>
 
-      <div className="border-t border-ink-200 pt-3">
-        <label className="flex cursor-pointer select-none items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={filters.inStockOnly}
-            onChange={(e) => onFilterChange("inStockOnly", e.target.checked)}
-            className="h-4 w-4 rounded border-ink-300 text-gold-500 accent-gold-500 focus:ring-gold-500"
-          />
-          <span className="text-xs font-semibold text-ink-800">{ui("filterInStockOnly")}</span>
-        </label>
-      </div>
+      {!isPreorderShop && (
+        <div className="border-t border-ink-200 pt-3">
+          <label className="flex cursor-pointer select-none items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={filters.inStockOnly}
+              onChange={(e) => onFilterChange("inStockOnly", e.target.checked)}
+              className="h-4 w-4 rounded border-ink-300 text-gold-500 accent-gold-500 focus:ring-gold-500"
+            />
+            <span className="text-xs font-semibold text-ink-800">{ui("filterInStockOnly")}</span>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

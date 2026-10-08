@@ -19,6 +19,11 @@ export function parseStockType(value: string | null): StockType {
   return value === "preorder" ? value : "normal";
 }
 
+/** Which shop a `/shop` URL shows: its `?type=`, unless it names a category, which belongs to one shop only. */
+export function shopKindFor(type: unknown, category?: { type: "stock" | "preorder" }): "stock" | "preorder" {
+  return category?.type ?? (type === "preorder" ? "preorder" : "stock");
+}
+
 export type FilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
 
 /** Price step of the "max price" slider. */
@@ -44,6 +49,9 @@ export const DEFAULT_FILTERS: FilterState = {
   stockType: "normal",
 };
 
+/** "In stock only" is a stock-shop filter; a pre-order is never in stock. */
+const appliesInStockOnly = (filters: FilterState) => filters.inStockOnly && filters.stockType === "normal";
+
 /** How many filters (search, category, collection, price cap, stock) narrow the catalogue. */
 export function countActiveFilters(filters: FilterState): number {
   return [
@@ -51,7 +59,7 @@ export function countActiveFilters(filters: FilterState): number {
     filters.category !== "all",
     filters.collection !== "all",
     Number.isFinite(filters.maxPrice),
-    filters.inStockOnly,
+    appliesInStockOnly(filters),
   ].filter(Boolean).length;
 }
 
@@ -86,7 +94,7 @@ function matchesFilters(product: Product, filters: FilterState): boolean {
   if (filters.collection === "new" && !product.newArrival) return false;
 
   if (product.price > filters.maxPrice) return false;
-  if (filters.inStockOnly && !product.inStock) return false;
+  if (appliesInStockOnly(filters) && !product.inStock) return false;
 
   return true;
 }

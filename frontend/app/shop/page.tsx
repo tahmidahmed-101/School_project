@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ShopCatalog, ShopSkeleton } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
-import { ProductsProvider, forListing } from "@/modules/catalog";
+import { ProductsProvider, forListing, shopKindFor } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 import { photo } from "@/lib/photo";
@@ -51,10 +51,15 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
 }
 
 export default async function KullMartShopPage({ searchParams }: { searchParams: ShopSearchParams }) {
-  const [category, { products }] = await Promise.all([categoryFrom(searchParams), getCatalog()]);
+  const [category, { products }, { type }] = await Promise.all([
+    categoryFrom(searchParams),
+    getCatalog(),
+    searchParams,
+  ]);
+  const kind = shopKindFor(type, category);
   const trail = [
     { name: "Home", path: "/" },
-    { name: "Shop", path: "/shop" },
+    kind === "preorder" ? { name: "Pre-order Collection", path: "/pre-order" } : { name: "Shop", path: "/shop" },
     ...(category
       ? [
           {
@@ -72,7 +77,7 @@ export default async function KullMartShopPage({ searchParams }: { searchParams:
     <>
       <JsonLd data={breadcrumbJsonLd(trail)} />
       <Suspense fallback={<ShopSkeleton />}>
-        <ProductsProvider products={products.map(forListing)}>
+        <ProductsProvider products={products.filter((p) => p.kind === kind).map(forListing)}>
           <ShopCatalog />
         </ProductsProvider>
       </Suspense>

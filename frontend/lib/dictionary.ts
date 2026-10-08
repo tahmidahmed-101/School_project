@@ -56,6 +56,15 @@ export const DICT = {
   },
   ordersTotal: { en: "Total", bn: "মোট" },
   ordersTrack: { en: "Track order", bn: "অর্ডার ট্র্যাক করুন" },
+  ordersTabStock: { en: "Orders", bn: "অর্ডার" },
+  ordersTabPreorder: { en: "Pre-orders", bn: "প্রি-অর্ডার" },
+  ordersPreorderEmpty: {
+    en: "You have no pre-orders yet. Pre-orders you place while logged in will appear here.",
+    bn: "এখনও কোনো প্রি-অর্ডার নেই। লগ ইন অবস্থায় করা প্রি-অর্ডার এখানে দেখা যাবে।",
+  },
+  preorderAdvance: { en: "Advance", bn: "অগ্রিম" },
+  preorderPaid: { en: "Paid", bn: "পেমেন্ট হয়েছে" },
+  preorderBalanceDue: { en: "Balance due", bn: "বাকি আছে" },
   orderStatusAwaitingPayment: { en: "Awaiting payment", bn: "পেমেন্টের অপেক্ষায়" },
   orderStatusConfirmed: { en: "Confirmed", bn: "নিশ্চিত" },
   orderStatusShipped: { en: "Shipped", bn: "পাঠানো হয়েছে" },
@@ -107,6 +116,8 @@ export const DICT = {
   clearSearch: { en: "Clear search", bn: "লেখা মুছুন" },
   matchingProducts: { en: "Matching products", bn: "সম্পর্কিত পণ্যসমূহ" },
   viewAllResults: { en: "View all matching results", bn: "সব ফলাফল দেখুন" },
+  searchViewAllStock: { en: "View all stock results", bn: "স্টকের সব ফলাফল দেখুন" },
+  searchViewAllPreorder: { en: "View all pre-order results", bn: "প্রি-অর্ডারের সব ফলাফল দেখুন" },
 
   // Hero
   heroCategoriesTitle: { en: "Shop by Category", bn: "ক্যাটাগরি দেখুন" },
@@ -326,6 +337,16 @@ export const DICT = {
     en: "Stock items and pre-order items are ordered separately. Remove one kind to continue.",
     bn: "স্টকের পণ্য আর প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। এগোতে চাইলে যেকোনো এক ধরনের পণ্য সরিয়ে দিন।",
   },
+  cartHoldsStock: {
+    en: "Your cart has stock items. Pre-order items are ordered separately. Finish this order or remove these items first.",
+    bn: "কার্টে স্টকের পণ্য আছে। প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
+  },
+  cartHoldsPreorder: {
+    en: "Your cart has pre-order items. Stock items are ordered separately. Finish this order or remove these items first.",
+    bn: "কার্টে প্রি-অর্ডার পণ্য আছে। স্টকের পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
+  },
+  kindStockItems: { en: "Stock items", bn: "স্টকের পণ্য" },
+  kindPreorderItems: { en: "Pre-order items", bn: "প্রি-অর্ডার পণ্য" },
 
   // Wishlist Drawer
   wishlistTitle: { en: "My wishlist", bn: "আমার পছন্দের তালিকা" },
@@ -336,7 +357,8 @@ export const DICT = {
   },
   wishlistMoveToCart: { en: "Move to cart", bn: "কার্টে নিন" },
   wishlistClear: { en: "Clear all", bn: "সব মুছুন" },
-  wishlistMoveAllToCart: { en: "Move all to cart", bn: "সবগুলো কার্টে নিন" },
+  wishlistMoveStockToCart: { en: "Move stock items to cart", bn: "স্টকের পণ্যগুলো কার্টে নিন" },
+  wishlistMovePreorderToCart: { en: "Move pre-order items to cart", bn: "প্রি-অর্ডার পণ্যগুলো কার্টে নিন" },
 
   // Checkout Page
   checkoutTitle: { en: "Complete your order", bn: "অর্ডার সম্পন্ন করুন" },
@@ -467,6 +489,10 @@ export const DICT = {
   checkoutCouponApply: { en: "Apply", bn: "প্রয়োগ" },
   checkoutCouponRemove: { en: "Remove", bn: "বাদ দিন" },
   checkoutCouponApplied: { en: "Coupon applied", bn: "কুপন প্রয়োগ হয়েছে" },
+  checkoutCouponStockOnly: {
+    en: "Coupons work on stock orders only, not on a pre-order.",
+    bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",
+  },
   checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
   checkoutShippingChecking: { en: "Calculating…", bn: "হিসাব হচ্ছে…" },
   checkoutShippingUnavailable: { en: "Not available for this address", bn: "এই ঠিকানায় ডেলিভারি নেই" },

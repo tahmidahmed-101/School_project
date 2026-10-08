@@ -11,7 +11,7 @@ from apps.accounts.selectors.addresses import get_address_for_user
 from apps.catalog.selectors.products import get_variant_by_id
 from apps.common.exceptions import DomainError
 from apps.common.generics import list_response
-from apps.common.params import get_uuid
+from apps.common.params import get_choice, get_uuid
 from apps.common.permissions import IsCustomer
 from apps.common.responses import error_from_exception, error_response, not_found
 from apps.common.throttling import CouponRateThrottle
@@ -363,7 +363,14 @@ class OrderHistoryListView(APIView):
     permission_classes: ClassVar[list] = [IsCustomer]
 
     def get(self, request) -> Response:
-        orders = orders_for_customer(request.user).exclude(status=SalesOrder.Status.PENDING)
+        order_type = get_choice(request.query_params, "order_type", SalesOrder.OrderType.values)
+        orders = (
+            orders_for_customer(request.user)
+            .exclude(status=SalesOrder.Status.PENDING)
+            .prefetch_related("payments")
+        )
+        if order_type:
+            orders = orders.filter(order_type=order_type)
         return list_response(request, orders, OrderHistorySerializer, view=self)
 
 

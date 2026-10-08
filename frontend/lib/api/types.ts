@@ -162,6 +162,13 @@ export interface ApiCustomerOrder {
   /** Decimal string. */
   grand_total: string;
   created_at: string;
+  order_type: "stock" | "preorder";
+  /** Blank on stock orders and until staff record the first pre-order stage. */
+  preorder_stage: string;
+  /** Decimal strings. `deposit_due` is the advance a pre-order needs before it is confirmed. */
+  deposit_due: string;
+  paid_total: string;
+  balance_due: string;
   lines: {
     id: string;
     quantity: number;
@@ -385,4 +392,8 @@ export interface ApiTrackOrder {
   /** Blank on stock orders and until staff record the first pre-order stage. */
   preorder_stage: string;
   preorder_timeline: { stage: string; at: string }[];
+  order_type: "stock" | "preorder";
+  /** Decimal strings: money received and not refunded, and what is still owed. */
+  paid_total: string;
+  balance_due: string;
 }

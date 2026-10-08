@@ -77,6 +77,20 @@ describe("syncGuestCart", () => {
     expect(inSync).toBe(false);
     expect(calls()).toEqual(["POST /cart/", "POST /cart/lines/", "POST /cart/lines/"]);
   });
+
+  it("says why the backend refused a line, and forgets it once a sync goes through", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
+      .mockRejectedValueOnce(new ApiError({ status: 409, code: "mixed_basket", message: "separate" }))
+      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 1 }]));
+    const { MIXED_BASKET_CODE, cartRefusalCode, syncGuestCart } = await load();
+
+    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
+    expect(cartRefusalCode()).toBe(MIXED_BASKET_CODE);
+
+    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
+    expect(cartRefusalCode()).toBeNull();
+  });
 });
 
 describe("syncedGuestCartToken", () => {

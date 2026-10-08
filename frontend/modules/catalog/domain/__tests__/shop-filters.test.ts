@@ -7,6 +7,7 @@ import {
   filterAndSortProducts,
   parseStockType,
   priceBounds,
+  shopKindFor,
 } from "../shop-filters";
 
 const products = [
@@ -27,7 +28,14 @@ const products = [
     newArrival: true,
     inStock: false,
   }),
-  makeProduct({ id: "4", name: { en: "Earbuds", bn: "" }, price: 900, category: "gadgets", isPreOrder: true, kind: "preorder" }),
+  makeProduct({
+    id: "4",
+    name: { en: "Earbuds", bn: "" },
+    price: 900,
+    category: "gadgets",
+    isPreOrder: true,
+    kind: "preorder",
+  }),
 ];
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
 
@@ -102,5 +110,26 @@ describe("countActiveFilters", () => {
     expect(
       countActiveFilters({ ...DEFAULT_FILTERS, searchQuery: "x", category: "bags", maxPrice: 500, inStockOnly: true }),
     ).toBe(4);
+  });
+});
+
+describe("shopKindFor", () => {
+  it("follows the type in the URL, and the category's own shop when one is named", () => {
+    expect(shopKindFor(undefined)).toBe("stock");
+    expect(shopKindFor("preorder")).toBe("preorder");
+    expect(shopKindFor(["preorder"])).toBe("stock");
+    expect(shopKindFor(undefined, { type: "preorder" })).toBe("preorder");
+    expect(shopKindFor("preorder", { type: "stock" })).toBe("stock");
+  });
+});
+
+describe("in stock only", () => {
+  const preorderShop = { ...DEFAULT_FILTERS, stockType: "preorder" as const, inStockOnly: true };
+
+  it("is not a pre-order shop filter: it neither hides pre-orders nor counts as active", () => {
+    const closed = makeProduct({ id: "9", kind: "preorder", inStock: false });
+    expect(filterAndSortProducts([closed], preorderShop)).toHaveLength(1);
+    expect(countActiveFilters(preorderShop)).toBe(0);
+    expect(countActiveFilters({ ...DEFAULT_FILTERS, inStockOnly: true })).toBe(1);
   });
 });

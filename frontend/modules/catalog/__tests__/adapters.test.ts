@@ -60,7 +60,10 @@ describe("toProduct pre-order state", () => {
     ...fields,
   });
   const product = (fields: Record<string, unknown>, kind?: string) =>
-    toProduct({ id: "p1", category_id: "c1", kind, name: "Boot", slug: "boot", variants: [variant(fields)] } as never, []);
+    toProduct(
+      { id: "p1", category_id: "c1", kind, name: "Boot", slug: "boot", variants: [variant(fields)] } as never,
+      [],
+    );
 
   it("marks a pre-order that has not opened as upcoming and not buyable", () => {
     const shown = product({ is_preorder_upcoming: true, in_stock: true }, "preorder");
@@ -71,5 +74,11 @@ describe("toProduct pre-order state", () => {
     expect(product({ in_stock: true })).toMatchObject({ isPreOrder: false, inStock: true });
     expect(product({ in_stock: true }).preorderStatus).toBeUndefined();
     expect(product({ in_stock: false })).toMatchObject({ inStock: false, preorderStatus: "closed" });
+  });
+
+  it("never sells a pre-order product from stock once its window has ended", () => {
+    const shown = product({ in_stock: true }, "preorder");
+    expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "closed" });
+    expect(shown.stockCount).toBe(0);
   });
 });

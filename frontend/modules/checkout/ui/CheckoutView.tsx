@@ -13,6 +13,7 @@ import { toOrderResult } from "../data/adapters";
 import {
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
+  acceptsCoupon,
   buildCheckoutRequest,
   isBdMobile,
   mapApiFieldErrors,
@@ -91,7 +92,10 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
       // The backend prices the order (shipping zone, tax, discounts); its response is what the shopper sees.
       // Check out the shopper's saved cart when the backend holds exactly these items, so it stops being an open cart.
       const cartToken = await syncedGuestCartToken(items);
-      const request = buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code });
+      const request = buildCheckoutRequest(form, items, {
+        paymentMethod,
+        couponCode: acceptsCoupon(items) ? coupon.applied?.code : undefined,
+      });
       // Logged in: the order is placed on the customer's account. Guest: exactly as before.
       const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
       if (cartToken) forgetGuestCart();
@@ -110,6 +114,8 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
         if (Object.keys(mapped).length > 0) {
           setFieldErrors(mapped);
           setErrorMsg(ui(errorKey(error)));
+        } else if (error.code === "mixed_basket") {
+          setErrorMsg(ui("cartMixedNotice"));
         } else if (NO_SHIPPING_CODES.has(error.code)) {
           setErrorMsg(ui("errNoShipping"));
         } else if (error.status === 400 || error.status === 409) {
