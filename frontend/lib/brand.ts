@@ -26,6 +26,9 @@ export const BRAND_INFO = {
   phoneTel: "+8801603671030",
   email: "kullmart2026@gmail.com",
   facebook: "https://www.facebook.com/kullmartbd",
+  /** Filled from the admin business profile; an empty link hides that icon. */
+  social: { instagram: "", tiktok: "", youtube: "", linkedin: "" },
+  mapsUrl: "",
   logo: "brand/logo.png",
   logoMark: "brand/logo-mark.png",
   /** Gold cart cut out of the logo on a transparent background, for the green header. */
@@ -58,6 +61,13 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
   const email = isPlaceholderEmail(profile.email.trim()) ? "" : profile.email.trim();
   const address = profile.address.trim();
   const facebook = profile.social?.facebook?.trim();
+  const social = {
+    instagram: profile.social?.instagram?.trim() ?? "",
+    tiktok: profile.social?.tiktok?.trim() ?? "",
+    youtube: profile.social?.youtube?.trim() ?? "",
+    linkedin: profile.social?.linkedin?.trim() ?? "",
+  };
+  const mapsUrl = profile.google_maps_url?.trim() ?? "";
   return {
     ...BRAND_INFO,
     ...(phone && {
@@ -69,5 +79,7 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     ...(email && { email }),
     ...(address && { address: { en: address, bn: address } }),
     ...(facebook && { facebook }),
+    social,
+    mapsUrl,
   };
 }

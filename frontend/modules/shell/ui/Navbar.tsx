@@ -14,6 +14,8 @@ import { photo } from "@/lib/photo";
 import { NavbarSearch } from "@/modules/catalog";
 import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
+import { mapsHref, socialLinks } from "./contactLinks";
+import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { WithActiveCategory } from "@/modules/catalog";
 import { containerClass } from "@/design-system/ui/Container";
 import { CountBadge } from "@/design-system/ui/CountBadge";
@@ -43,6 +45,9 @@ interface NavbarProps {
   /** Opens the mobile hamburger menu, rendered at the ClientShell root so it can stack above the bottom bar. */
   onOpenMenu: () => void;
 }
+
+const contactIconClass =
+  "flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-gold-300 transition-colors hover:border-gold-300 hover:bg-accent hover:text-brand-950";
 
 export function Navbar({ onOpenMenu }: NavbarProps) {
   const pathname = usePathname();
@@ -206,29 +211,51 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
             </nav>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2.5 border-l border-white/15 py-1 pl-4 xl:gap-3.5">
-            <div className="flex items-center gap-1.5" title={t(BRAND_INFO.address)}>
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-gold-300">
-                <MapPin className="h-3 w-3" />
-              </div>
-              <span className="whitespace-nowrap text-2xs font-medium text-white/85">
-                {lang === "bn" ? "ঢাকা, বাংলাদেশ" : "Dhaka, Bangladesh"}
-              </span>
-            </div>
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-white/15 py-1 pl-4">
+            <a
+              href={mapsHref(BRAND_INFO, t(BRAND_INFO.address))}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t(BRAND_INFO.address)}
+              title={t(BRAND_INFO.address)}
+              className={contactIconClass}
+            >
+              <MapPin className="h-4 w-4" />
+            </a>
+            <a
+              href={`tel:${BRAND_INFO.phoneTel}`}
+              aria-label={`${ui("orderCallStore")}: ${BRAND_INFO.phone}`}
+              title={BRAND_INFO.phone}
+              className={contactIconClass}
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+            <a
+              href={`https://wa.me/${BRAND_INFO.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={ui("whatsappLink")}
+              title="WhatsApp"
+              className={contactIconClass}
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+            </a>
 
-            <span className="h-3.5 w-px bg-white/20" aria-hidden="true" />
+            <span className="mx-1 h-3.5 w-px bg-white/20" aria-hidden="true" />
 
-            <div className="flex items-center gap-1.5">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gold-400/40 bg-gold-500/15 text-gold-300">
-                <Phone className="h-3 w-3" />
-              </div>
+            {socialLinks(BRAND_INFO).map(({ id, name, href, icon: Icon }) => (
               <a
-                href={`tel:${BRAND_INFO.phoneTel}`}
-                className="whitespace-nowrap text-xs font-bold text-white transition-colors hover:text-gold-300"
+                key={id}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={id === "facebook" ? ui("facebookLink") : name}
+                title={name}
+                className={contactIconClass}
               >
-                {BRAND_INFO.phone}
+                <Icon className="h-4 w-4" />
               </a>
-            </div>
+            ))}
           </div>
         </div>
       </div>

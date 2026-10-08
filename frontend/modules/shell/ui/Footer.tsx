@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
-import { FacebookIcon, WhatsAppIcon } from "@/design-system/icons/BrandIcons";
+import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
+import { mapsHref, socialLinks } from "./contactLinks";
 import { getBrand } from "@/modules/business/server";
 import { getShellCatalog } from "@/modules/catalog/server";
 import { getServerText } from "@/lib/i18n.server";
@@ -36,17 +37,20 @@ export async function Footer() {
               </span>
             </Link>
             <p className="max-w-sm leading-relaxed text-white/75">{ui("footerAboutText")}</p>
-            <div className="flex items-center gap-3 pt-1">
-              <a
-                href={BRAND_INFO.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={ui("facebookLink")}
-                title="Facebook"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-accent hover:text-brand-950"
-              >
-                <FacebookIcon className="h-5 w-5" />
-              </a>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {socialLinks(BRAND_INFO).map(({ id, name, href, icon: Icon }) => (
+                <a
+                  key={id}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={id === "facebook" ? ui("facebookLink") : name}
+                  title={name}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-gold-300 hover:bg-accent hover:text-brand-950"
+                >
+                  <Icon className="h-5 w-5" />
+                </a>
+              ))}
               <a
                 href={`https://wa.me/${BRAND_INFO.whatsapp}`}
                 target="_blank"
@@ -126,7 +130,14 @@ export async function Footer() {
             <ul className="space-y-2.5">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold-300" />
-                <span>{t(BRAND_INFO.address)}</span>
+                <a
+                  href={mapsHref(BRAND_INFO, t(BRAND_INFO.address))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-gold-300"
+                >
+                  {t(BRAND_INFO.address)}
+                </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-gold-300" />
