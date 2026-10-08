@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
+from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.images import variant_image_url
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, VendorBill
+
+ZERO = Decimal("0")
 
 
 class SupplierSerializer(serializers.Serializer):
@@ -40,9 +45,13 @@ class PurchaseOrderLineSerializer(serializers.Serializer):
     quantity_ordered = serializers.IntegerField()
     quantity_received = serializers.IntegerField()
     unit_cost = serializers.DecimalField(max_digits=12, decimal_places=4)
+    line_total = serializers.SerializerMethodField()
 
     def get_product_image(self, obj) -> str | None:
         return variant_image_url(obj.variant)
+
+    def get_line_total(self, obj) -> str:
+        return str(quantize_money(obj.unit_cost * obj.quantity_ordered))
 
 
 class PurchaseOrderLineInputSerializer(serializers.Serializer):
@@ -60,9 +69,21 @@ class PurchaseOrderSerializer(serializers.Serializer):
     order_date = serializers.DateField()
     notes = serializers.CharField(allow_blank=True)
     lines = serializers.SerializerMethodField()
+    ordered_total = serializers.SerializerMethodField()
+    received_total = serializers.SerializerMethodField()
 
     def get_lines(self, obj) -> list[dict]:
         return PurchaseOrderLineSerializer(obj.lines.all(), many=True).data
+
+    # Unit cost has four decimals: sum at full precision and round once, so the
+    # dashboard never has to multiply money itself.
+    def get_ordered_total(self, obj) -> str:
+        total = sum((line.unit_cost * line.quantity_ordered for line in obj.lines.all()), ZERO)
+        return str(quantize_money(total))
+
+    def get_received_total(self, obj) -> str:
+        total = sum((line.unit_cost * line.quantity_received for line in obj.lines.all()), ZERO)
+        return str(quantize_money(total))
 
 
 class PurchaseOrderCreateSerializer(serializers.Serializer):

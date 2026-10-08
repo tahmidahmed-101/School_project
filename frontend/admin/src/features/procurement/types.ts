@@ -32,6 +32,8 @@ export interface PurchaseOrderLine {
   quantity_ordered: number
   quantity_received: number
   unit_cost: string
+  /** Decimal string, unit cost x quantity ordered, rounded by the API. */
+  line_total: string
 }
 
 /** PurchaseOrderLineInputSerializer (create / add line) */
@@ -54,6 +56,9 @@ export interface PurchaseOrder {
   order_date: string
   notes: string
   lines: PurchaseOrderLine[]
+  /** Decimal strings, summed and rounded once by the API. */
+  ordered_total: string
+  received_total: string
 }
 
 /** PurchaseOrderCreateSerializer */

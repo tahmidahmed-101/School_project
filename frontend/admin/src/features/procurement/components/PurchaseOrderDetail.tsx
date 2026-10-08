@@ -63,6 +63,7 @@ import {
 import { GoodsReceiptDialog } from "./GoodsReceiptDialog"
 import { VendorBillFormDialog } from "./VendorBillFormDialog"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
+import { toPaisa } from "@/lib/money"
 
 // ---- Dialogs -------------------------------------------------------------------------------
 
@@ -386,7 +387,7 @@ const PurchaseOrderDetail = () => {
       meta: { align: "right" },
       cell: ({ row: { original: line } }) => (
         <span className="font-semibold tabular-nums">
-          {formatCurrency(Number(line.unit_cost) * line.quantity_ordered)}
+          {formatCurrency(line.line_total)}
         </span>
       ),
     },
@@ -451,7 +452,7 @@ const PurchaseOrderDetail = () => {
                 <PackageCheck className="size-4" /> Receive Goods
               </Button>
             )}
-            {canBill && (po.status === "submitted" || po.status === "received") && receivedValue > 0 && (
+            {canBill && (po.status === "submitted" || po.status === "received") && toPaisa(receivedValue) > 0 && (
               <Button variant="primary" size="action" onClick={() => setBillOpen(true)}>
                 <FileText className="size-4" /> Create Bill
               </Button>

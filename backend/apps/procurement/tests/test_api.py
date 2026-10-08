@@ -533,6 +533,28 @@ def test_purchase_order_list_exposes_human_labels_without_n_plus_one(api_client)
     assert len(many_rows) == len(single_row)
 
 
+def test_purchase_order_totals_are_summed_at_full_precision_and_rounded_once(api_client):
+    admin = create_user(email="proc-po-totals@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    purchase_order = PurchaseOrderFactory()
+    for _ in range(3):
+        PurchaseOrderLineFactory(
+            purchase_order=purchase_order,
+            unit_cost=Decimal("0.3350"),
+            quantity_ordered=1,
+            quantity_received=1,
+        )
+
+    response = api_client.get(f"/api/v1/admin/procurement/purchase-orders/{purchase_order.id}/")
+
+    assert response.status_code == 200
+    data = response.data["data"]
+    # Rounding each line first would give 0.34 x 3 = 1.02.
+    assert data["ordered_total"] == "1.01"
+    assert data["received_total"] == "1.01"
+    assert data["lines"][0]["line_total"] == "0.34"
+
+
 def test_vendor_bill_list_exposes_human_labels_without_n_plus_one(api_client):
     admin = create_user(email="proc-bill-labels@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
