@@ -261,6 +261,24 @@ class AdminOrderCreateSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(
         choices=PaymentMethodKey.choices, required=False, default=PaymentMethodKey.MANUAL
     )
+    order_type = serializers.ChoiceField(
+        choices=SalesOrder.OrderType.choices, required=False, default=SalesOrder.OrderType.STOCK
+    )
+    # Read only so a pre-order can refuse them by name; a staff stock order uses neither.
+    coupon_code = serializers.CharField(required=False, allow_blank=True)
+    discount_total = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False, allow_null=True
+    )
+
+
+class AdminOrderQuoteSerializer(serializers.Serializer):
+    customer_id = serializers.UUIDField(required=False, allow_null=True)
+    shipping_address_id = serializers.UUIDField(required=False, allow_null=True)
+    carrier_id = serializers.UUIDField(required=False, allow_null=True)
+    lines = AdminOrderCreateLineSerializer(many=True, allow_empty=False)
+    order_type = serializers.ChoiceField(
+        choices=SalesOrder.OrderType.choices, required=False, default=SalesOrder.OrderType.STOCK
+    )
 
 
 # Ship-to keys as the API spells them, mapped to their `Address` field names.

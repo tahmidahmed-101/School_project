@@ -13,6 +13,7 @@ from .views import (
     AdminOrderLineDetailView,
     AdminOrderListView,
     AdminOrderPreorderStageView,
+    AdminOrderQuoteView,
     AdminOrderRMACreateView,
     AdminOrderShipmentCreateView,
     AdminOrderStatusView,
@@ -41,6 +42,7 @@ app_name = "admin_orders"
 urlpatterns = [
     path("", AdminOrderListView.as_view(), name="order-list"),
     path("export/", AdminOrderExportView.as_view(), name="order-export"),
+    path("quote/", AdminOrderQuoteView.as_view(), name="order-quote"),
     path("<uuid:order_id>/", AdminOrderDetailView.as_view(), name="order-detail"),
     path(
         "<uuid:order_id>/invoice/",

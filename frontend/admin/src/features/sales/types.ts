@@ -159,6 +159,18 @@ export interface OrderCreatePayload {
   lines: { variant_id: string; quantity: number }[]
   capture_payment?: boolean
   payment_method?: PaymentMethod
+  /** Defaults to "stock". A pre-order is never paid at creation; it waits for its deposit. */
+  order_type?: "stock" | "preorder"
+}
+
+/** POST /admin/orders/quote/ — totals as decimal strings. */
+export interface OrderQuote {
+  order_type: "stock" | "preorder"
+  subtotal: string
+  tax_total: string
+  shipping_total: string
+  grand_total: string
+  deposit_due: string
 }
 
 /** AdminCartItemSerializer — a cart line's product name and SKU snapshots. */
