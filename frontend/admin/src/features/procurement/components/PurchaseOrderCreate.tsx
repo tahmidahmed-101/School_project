@@ -22,11 +22,17 @@ import { useAllPages } from "@/hooks/use-all-pages"
 import { createPurchaseOrder } from "../slices/purchaseOrderSlice"
 import type { Supplier } from "../types"
 import { useCanManagePurchasing } from "../hooks/useProcurement"
-import { VariantPicker } from "./VariantPicker"
+import { VariantPicker } from "@/components/common/VariantPicker"
 
 const lineSchema = z.object({
   variant: z
-    .object({ id: z.string(), label: z.string(), sku: z.string(), cost_price: z.string().nullable() })
+    .object({
+      id: z.string(),
+      product_name: z.string(),
+      label: z.string(),
+      sku: z.string(),
+      cost_price: z.string().nullable(),
+    })
     .nullable()
     .refine((v) => Boolean(v), "Pick a variant"),
   quantity_ordered: z.string().refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, "Min 1"),
@@ -147,6 +153,7 @@ const PurchaseOrderCreate = () => {
                       name={`lines.${index}.variant`}
                       render={({ field }) => (
                         <VariantPicker
+                          variant="combobox"
                           value={field.value}
                           invalid={!!lineErrors?.variant}
                           onChange={(v) => {

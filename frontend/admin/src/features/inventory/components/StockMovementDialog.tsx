@@ -11,7 +11,7 @@ import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@
 import { reportFormError } from "@/lib/forms"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
-import { VariantPicker, type PickedVariant } from "@/features/catalog/components/VariantPicker"
+import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
 import { postAdjustment, postIntake, postWriteOff } from "../api"
 import type { Warehouse } from "../types"
