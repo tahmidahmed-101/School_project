@@ -1,14 +1,16 @@
 import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Boxes, CreditCard, Plug, Store } from "lucide-react"
+import { Boxes, CreditCard, Images, Plug, Store } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch } from "@/app/hooks"
 import {
   fetchBusinessProfile,
+  fetchHeroSlides,
   fetchIntegrations,
   fetchModules,
   fetchPaymentMethods,
+  fetchPromoLines,
 } from "@/features/system/slices/businessSettingsSlice"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -16,9 +18,11 @@ import { BusinessProfileForm } from "./settings/BusinessProfileForm"
 import { ModulesPanel } from "./settings/ModulesPanel"
 import { PaymentMethodsPanel } from "./settings/PaymentMethodsPanel"
 import { IntegrationsPanel } from "./settings/IntegrationsPanel"
+import { StorefrontContentPanel } from "./settings/StorefrontContentPanel"
 
 const TABS = [
   { value: "business", label: "Business Profile", icon: Store },
+  { value: "storefront", label: "Storefront Content", icon: Images },
   { value: "modules", label: "Modules", icon: Boxes },
   { value: "payments", label: "Payment Methods", icon: CreditCard },
   { value: "integrations", label: "Integrations", icon: Plug },
@@ -38,6 +42,8 @@ const Settings = () => {
       dispatch(fetchModules()),
       dispatch(fetchPaymentMethods()),
       dispatch(fetchIntegrations()),
+      dispatch(fetchHeroSlides()),
+      dispatch(fetchPromoLines()),
     ]
     return () => requests.forEach((r) => r.abort())
   }, [dispatch])
@@ -65,6 +71,9 @@ const Settings = () => {
         </div>
         <TabsContent value="business" className="mt-4">
           <BusinessProfileForm canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="storefront" className="mt-4">
+          <StorefrontContentPanel canManage={canManage} />
         </TabsContent>
         <TabsContent value="modules" className="mt-4">
           <ModulesPanel canManage={canManage} />

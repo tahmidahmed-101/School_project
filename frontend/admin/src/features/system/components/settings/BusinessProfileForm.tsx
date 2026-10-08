@@ -7,6 +7,7 @@ import { Save, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
 import { ImagePicker } from "@/components/common/ImagePicker"
@@ -48,6 +49,8 @@ const schema = z.object({
   tiktok_url: optional(500),
   youtube_url: optional(500),
   linkedin_url: optional(500),
+  about_en: z.string().trim(),
+  about_bn: z.string().trim(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -56,7 +59,14 @@ const FIELDS = Object.keys(schema.shape) as (keyof FormValues)[]
 const toForm = (p: BusinessProfile): FormValues =>
   Object.fromEntries(FIELDS.map((key) => [key, p[key] ?? ""])) as FormValues
 
-type FieldSpec = { name: keyof FormValues; label: string; type?: string; placeholder?: string; hint?: string }
+type FieldSpec = {
+  name: keyof FormValues
+  label: string
+  type?: string
+  placeholder?: string
+  hint?: string
+  multiline?: boolean
+}
 
 const SECTIONS: { title: string; description: string; fields: FieldSpec[] }[] = [
   {
@@ -66,6 +76,14 @@ const SECTIONS: { title: string; description: string; fields: FieldSpec[] }[] = 
       { name: "name", label: "Business name" },
       { name: "legal_name", label: "Legal name" },
       { name: "tagline", label: "Tagline" },
+    ],
+  },
+  {
+    title: "About the store",
+    description: "Shown in the storefront footer.",
+    fields: [
+      { name: "about_en", label: "About (English)", multiline: true },
+      { name: "about_bn", label: "About (Bangla)", multiline: true },
     ],
   },
   {
@@ -217,13 +235,22 @@ export function BusinessProfileForm({ canManage }: { canManage: boolean }) {
                 <Field key={field.name}>
                   <FieldLabel htmlFor={`bp-${field.name}`}>{field.label}</FieldLabel>
                   <FieldContent>
-                    <Input
-                      id={`bp-${field.name}`}
-                      type={field.type ?? "text"}
-                      placeholder={field.placeholder}
-                      aria-invalid={!!errors[field.name]}
-                      {...register(field.name)}
-                    />
+                    {field.multiline ? (
+                      <Textarea
+                        id={`bp-${field.name}`}
+                        rows={4}
+                        aria-invalid={!!errors[field.name]}
+                        {...register(field.name)}
+                      />
+                    ) : (
+                      <Input
+                        id={`bp-${field.name}`}
+                        type={field.type ?? "text"}
+                        placeholder={field.placeholder}
+                        aria-invalid={!!errors[field.name]}
+                        {...register(field.name)}
+                      />
+                    )}
                     {field.hint && <FieldDescription>{field.hint}</FieldDescription>}
                     <FieldError errors={[errors[field.name]]} />
                   </FieldContent>
