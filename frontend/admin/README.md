@@ -8,11 +8,11 @@ and Recharts.
 
 ## Getting started
 
-1. Run the backend (`../kull-mart/backend`):
+1. Run the backend (`../../backend`):
 
    ```bash
-   cd ../kull-mart/backend
-   .venv/Scripts/python manage.py runserver 8000      # macOS/Linux: .venv/bin/python
+   cd ../../backend
+   python manage.py runserver 8000
    ```
 
    For a local admin login and demo data:
@@ -41,6 +41,7 @@ and Recharts.
 | `npm run dev` | Dev server with HMR |
 | `npm run build` | Type-check (`tsc -b`) and production build |
 | `npm run lint` | ESLint |
+| `npm run test:unit` | Unit tests in `tests/unit` (Node test runner) |
 | `npx playwright test` | E2E tests (needs `E2E_EMAIL` / `E2E_PASSWORD`, see `.env.example`) |
 
 ## Architecture
@@ -67,6 +68,7 @@ and Recharts.
 
 ## Deployment
 
-`vercel.json` rewrites `/api/*` to the backend. Point it at your deployed kull-mart
-instance, and add the dashboard's origin to the backend's `CORS_ALLOWED_ORIGINS` /
-`CSRF_TRUSTED_ORIGINS` if it is served from a different domain.
+`npm run cf:deploy` builds with `VITE_API_BASE_URL` set to the production API and runs
+`wrangler deploy`. `wrangler.jsonc` serves `dist/` as static assets with a single-page-app
+fallback on the `admin.kullmart.com` custom domain. The dashboard's origin must be in the
+backend's `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS`.
