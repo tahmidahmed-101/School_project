@@ -1,9 +1,14 @@
 import { CalendarClock } from "lucide-react"
 import { page, type FeatureModule } from "@/app/moduleTypes"
+import { ADMIN_ONLY } from "@/features/system/permissions"
 
 // Every route of the pre-order half starts with "preorder" (see hooks/use-kind).
 export const preorderModule: FeatureModule = {
   routes: [
+    { path: "preorder_overview", lazy: page(() => import("../dashboard/components/PreorderOverview")) },
+    { path: "preorder_analytics", lazy: page(() => import("../analytics/components/Analytics")) },
+    { path: "preorder_customers", lazy: page(() => import("../users/components/Customers")) },
+    { path: "preorder_customers/:id", lazy: page(() => import("../users/components/CustomerDetail")) },
     { path: "preorders", lazy: page(() => import("../sales/components/Orders")) },
     { path: "preorder_products", lazy: page(() => import("../catalog/components/Products")) },
     { path: "preorder_categories", lazy: page(() => import("../catalog/components/Categories")) },
@@ -39,6 +44,7 @@ export const preorderModule: FeatureModule = {
       group: "MAIN",
       order: 11,
       items: [
+        { title: "Overview", url: "/preorder_overview" },
         { title: "Orders", url: "/preorders", permission: ["orders.view", "orders.manage"] },
         { title: "Products", url: "/preorder_products", permission: ["catalog.view", "catalog.manage"] },
         { title: "Categories", url: "/preorder_categories", permission: ["catalog.view", "catalog.manage"] },
@@ -77,6 +83,8 @@ export const preorderModule: FeatureModule = {
         { title: "Reviews", url: "/preorder_reviews", permission: ["catalog.view", "catalog.manage"] },
         { title: "Questions", url: "/preorder_questions", permission: ["catalog.view", "catalog.manage"] },
         { title: "Price reports", url: "/preorder_price_reports", permission: ["catalog.view", "catalog.manage"] },
+        { title: "Customers", url: "/preorder_customers", permission: ADMIN_ONLY },
+        { title: "Analytics", url: "/preorder_analytics", permission: "reports.view" },
         { title: "Settings", url: "/preorder_settings", permission: "settings.view" },
       ],
     },
