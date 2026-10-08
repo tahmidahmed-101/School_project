@@ -153,17 +153,14 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
   }
 
   const text = (name: keyof FormValues, label: string, opts: { placeholder?: string; withTime?: boolean } = {}) => {
-    const FieldComponent = opts.withTime ? DateField : TextField
-    return (
-      <FieldComponent
-        id={`variant-${name}`}
-        label={label}
-        placeholder={opts.placeholder}
-        withTime={opts.withTime}
-        error={errors[name]}
-        {...register(name)}
-      />
-    )
+    const field = {
+      id: `variant-${name}`,
+      label,
+      placeholder: opts.placeholder,
+      error: errors[name],
+      ...register(name),
+    }
+    return opts.withTime ? <DateField withTime {...field} /> : <TextField {...field} />
   }
 
   return (
