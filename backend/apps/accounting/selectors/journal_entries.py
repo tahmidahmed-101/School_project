@@ -5,10 +5,11 @@ from uuid import UUID
 from django.db.models import QuerySet
 
 from apps.accounting.models import JournalEntry
+from apps.accounting.selectors.kind import COMPANY
 
 
 def journal_entries_list(
-    *, status: str | None = None, reference_type: str | None = None
+    *, status: str | None = None, reference_type: str | None = None, kind: str | None = None
 ) -> QuerySet[JournalEntry]:
     queryset = JournalEntry.objects.prefetch_related("lines", "reversals").filter(
         deleted_at__isnull=True
@@ -17,6 +18,8 @@ def journal_entries_list(
         queryset = queryset.filter(status=status)
     if reference_type:
         queryset = queryset.filter(reference_type=reference_type)
+    if kind:
+        queryset = queryset.filter(kind="" if kind == COMPANY else kind)
     return queryset.order_by("-entry_date")
 
 

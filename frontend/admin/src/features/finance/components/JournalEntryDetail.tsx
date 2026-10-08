@@ -175,6 +175,9 @@ const JournalEntryDetail = () => {
               <StatusBadge status={entry.status} tone={entry.status === "posted" ? "success" : "secondary"} />
             </DetailRow>
             <DetailRow label="Entry date">{formatDate(entry.entry_date)}</DetailRow>
+            <DetailRow label="Belongs to">
+              {entry.kind === "stock" ? "Stock" : entry.kind === "preorder" ? "Pre-order" : "Whole business"}
+            </DetailRow>
             <DetailRow label="Source">{entry.reference_type ? humanize(entry.reference_type) : "Manual entry"}</DetailRow>
             {entry.reference_id && (
               <DetailRow label="Reference id">

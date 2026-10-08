@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FieldError } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
-import { DateField, TextField } from "@/components/common/form-fields"
+import { DateField, SelectField, TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
@@ -25,6 +25,7 @@ const schema = z
   .object({
     entry_date: z.string().min(1, "Pick a date"),
     description: z.string(),
+    belongs_to: z.enum(["company", "stock", "preorder"]),
     lines: z
       .array(
         z.object({
@@ -52,14 +53,22 @@ type FormValues = z.infer<typeof schema>
 
 const emptyLine = { account_id: "", debit: "", credit: "" }
 
+const BELONGS_TO_OPTIONS: { label: string; value: FormValues["belongs_to"] }[] = [
+  { label: "Whole business", value: "company" },
+  { label: "Stock", value: "stock" },
+  { label: "Pre-order", value: "preorder" },
+]
+
 export function JournalEntryFormDialog({
   open,
   onOpenChange,
   accounts,
+  defaultBelongsTo = "company",
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   accounts: Account[]
+  defaultBelongsTo?: FormValues["belongs_to"]
 }) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -72,14 +81,26 @@ export function JournalEntryFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { entry_date: todayLocalISODate(), description: "", lines: [emptyLine, emptyLine] },
+    defaultValues: {
+      entry_date: todayLocalISODate(),
+      description: "",
+      belongs_to: defaultBelongsTo,
+      lines: [emptyLine, emptyLine],
+    },
   })
   const { fields, append, remove } = useFieldArray({ control, name: "lines" })
   const lines = useWatch({ control, name: "lines" })
 
   useEffect(() => {
-    if (open) reset({ entry_date: todayLocalISODate(), description: "", lines: [emptyLine, emptyLine] })
-  }, [open, reset])
+    if (open) {
+      reset({
+        entry_date: todayLocalISODate(),
+        description: "",
+        belongs_to: defaultBelongsTo,
+        lines: [emptyLine, emptyLine],
+      })
+    }
+  }, [open, reset, defaultBelongsTo])
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.is_active), [accounts])
   const totalDebit = sumMoney((lines ?? []).map((l) => l.debit))
@@ -93,6 +114,7 @@ export function JournalEntryFormDialog({
         createJournalEntry({
           entry_date: values.entry_date,
           description: values.description.trim(),
+          kind: values.belongs_to === "company" ? "" : values.belongs_to,
           lines: values.lines.map((l) => ({
             account_id: l.account_id,
             debit: l.debit || "0",
@@ -106,7 +128,7 @@ export function JournalEntryFormDialog({
     } catch (err) {
       reportFormError(err, {
         setError,
-        fields: ["entry_date", "description", "lines"],
+        fields: ["entry_date", "description", "belongs_to", "lines"],
         fallback: "Failed to post journal entry",
       })
     }
@@ -139,6 +161,14 @@ export function JournalEntryFormDialog({
           id="je-desc"
           placeholder="e.g. Owner capital injection"
           {...register("description")}
+        />
+        <SelectField
+          control={control}
+          name="belongs_to"
+          label="Belongs to"
+          id="je-belongs-to"
+          options={BELONGS_TO_OPTIONS}
+          description="Pick stock or pre-order only when the entry is for that half alone."
         />
       </div>
 

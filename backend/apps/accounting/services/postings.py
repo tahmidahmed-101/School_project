@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.accounting.constants import ACCOUNT_CODES
 from apps.accounting.models import Account, JournalEntry
 from apps.accounting.selectors.accounts import get_account_by_code
+from apps.accounting.selectors.kind import order_kind, purchase_kind, variant_kind
 from apps.accounting.services.journal import post_journal_entry, reverse_journal_entry
 from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.bundles import expand_variant
@@ -40,6 +41,7 @@ def post_goods_received(grn_line) -> JournalEntry:
         reference_type="goods_receipt_line",
         reference_id=grn_line.id,
         description=f"Goods received: variant {po_line.variant_id}",
+        kind=variant_kind(po_line.variant),
         lines=[
             {"account": _account("inventory_asset"), "debit": amount, "credit": Decimal("0")},
             {"account": _account("grni"), "debit": Decimal("0"), "credit": amount},
@@ -55,6 +57,7 @@ def post_vendor_bill(bill) -> JournalEntry:
         reference_type="vendor_bill",
         reference_id=bill.id,
         description=f"Vendor bill {bill.bill_number}",
+        kind=purchase_kind(bill.purchase_order),
         lines=[
             {"account": _account("grni"), "debit": bill.amount, "credit": Decimal("0")},
             {"account": _account("accounts_payable"), "debit": Decimal("0"), "credit": bill.amount},
@@ -68,6 +71,7 @@ def post_vendor_payment(payment) -> JournalEntry:
         reference_type="vendor_payment",
         reference_id=payment.id,
         description=f"Payment on {payment.vendor_bill.bill_number}",
+        kind=purchase_kind(payment.vendor_bill.purchase_order),
         lines=[
             {
                 "account": _account("accounts_payable"),
@@ -151,6 +155,7 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
         reference_type="shipment_revenue",
         reference_id=shipment.id,
         description=f"Shipment revenue for {shipment.order.order_number}",
+        kind=order_kind(order),
         lines=[
             {
                 "account": _account("accounts_receivable"),
@@ -166,6 +171,7 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
         reference_type="shipment_cogs",
         reference_id=shipment.id,
         description=f"COGS for {shipment.order.order_number}",
+        kind=order_kind(order),
         lines=[
             {"account": _account("cogs"), "debit": cogs_total, "credit": Decimal("0")},
             {"account": _account("inventory_asset"), "debit": Decimal("0"), "credit": cogs_total},
@@ -273,6 +279,7 @@ def post_sales_return(rma) -> list[JournalEntry]:
             reference_type="rma_revenue_reversal",
             reference_id=rma.id,
             description=f"Sales return {rma.rma_number}",
+            kind=order_kind(order),
             lines=revenue_lines,
         )
     )
@@ -305,6 +312,7 @@ def post_sales_return(rma) -> list[JournalEntry]:
                 reference_type="rma_cogs_reversal",
                 reference_id=rma.id,
                 description=f"COGS reversal for return {rma.rma_number}",
+                kind=order_kind(order),
                 lines=cost_lines,
             )
         )
@@ -312,11 +320,14 @@ def post_sales_return(rma) -> list[JournalEntry]:
 
 
 def post_customer_payment(payment, *, entry_date=None) -> JournalEntry:
+    # TODO(ask): bookkeeper — a pre-order deposit is credited to Accounts Receivable, so money
+    # held shows as a minus receivable. Should it sit in its own Customer Deposits liability?
     return post_journal_entry(
         entry_date=entry_date or payment.created_at.date(),
         reference_type="customer_payment",
         reference_id=payment.id,
         description=f"Payment for {payment.order.order_number}",
+        kind=order_kind(payment.order),
         lines=[
             {"account": _account("bank"), "debit": payment.amount, "credit": Decimal("0")},
             {
@@ -335,12 +346,15 @@ def post_customer_refund(payment, *, amount: Decimal | None = None) -> JournalEn
     `amount` is the value of this individual refund, which for a partial
     refund is less than the payment total; it defaults to the full payment.
     """
+    # TODO(ask): bookkeeper — nothing ever credits Refund Payable (a return credits Accounts
+    # Receivable), so this debit never clears. Which account should a refund reduce?
     amount = quantize_money(payment.amount if amount is None else amount)
     return post_journal_entry(
         entry_date=timezone.now().date(),
         reference_type="customer_refund",
         reference_id=payment.id,
         description=f"Refund for {payment.order.order_number}",
+        kind=order_kind(payment.order),
         lines=[
             {
                 "account": _account("refund_payable"),
@@ -379,6 +393,7 @@ def post_stock_adjustment(ledger_entry, *, unit_cost: Decimal | None = None) -> 
         reference_type="stock_adjustment",
         reference_id=ledger_entry.id,
         description=f"Stock adjustment: variant {ledger_entry.variant_id}",
+        kind=variant_kind(ledger_entry.variant),
         lines=[
             {"account": debit_account, "debit": amount, "credit": Decimal("0")},
             {"account": credit_account, "debit": Decimal("0"), "credit": amount},
@@ -399,6 +414,7 @@ def post_stock_writeoff(ledger_entry) -> JournalEntry:
         reference_type="stock_writeoff",
         reference_id=ledger_entry.id,
         description=f"Write-off: variant {ledger_entry.variant_id}",
+        kind=variant_kind(ledger_entry.variant),
         lines=[
             {"account": _account("inventory_shrinkage"), "debit": amount, "credit": Decimal("0")},
             {"account": _account("inventory_asset"), "debit": Decimal("0"), "credit": amount},

@@ -18,9 +18,11 @@ from apps.accounting.selectors.expense_categories import (
 )
 from apps.accounting.selectors.expenses import expenses_list, get_expense_by_id
 from apps.accounting.selectors.journal_entries import get_journal_entry_by_id, journal_entries_list
+from apps.accounting.selectors.kind import COMPANY
 from apps.accounting.selectors.reports import (
     balance_sheet,
     cash_flow,
+    inventory_ledger_check,
     inventory_valuation,
     profit_and_loss,
 )
@@ -49,7 +51,7 @@ from apps.accounting.services.journal import post_journal_entry, reverse_journal
 from apps.accounts.constants import StaffPermissionCode
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.generics import GenericListAPIView, IncludeDeletedMixin, RestoreAPIView
-from apps.common.params import get_choice, get_date, get_kind, get_uuid, validate_date_range
+from apps.common.params import KINDS, get_choice, get_date, get_kind, get_uuid, validate_date_range
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import DateRangeSerializer
@@ -187,7 +189,10 @@ class AdminJournalEntryListView(AccountingPermissionMixin, GenericListAPIView):
     def get_queryset(self):
         status_param = get_choice(self.request.query_params, "status", JournalEntry.Status.values)
         reference_type = self.request.query_params.get("reference_type")
-        return journal_entries_list(status=status_param, reference_type=reference_type)
+        kind = get_choice(self.request.query_params, "kind", [*KINDS, COMPANY])
+        return journal_entries_list(
+            status=status_param, reference_type=reference_type, kind=kind
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -566,7 +571,7 @@ class ProfitAndLossReportView(APIView):
     def get(self, request):
         serializer = DateRangeSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        params = dict(serializer.validated_data)
+        params = dict(serializer.validated_data, kind=get_kind(request.query_params))
         if _wants_csv(request):
             return csv_response(
                 "profit-and-loss.csv", REPORT_COLUMNS, profit_and_loss_rows(**params)
@@ -583,7 +588,7 @@ class BalanceSheetReportView(APIView):
     def get(self, request):
         serializer = AsOfSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        params = dict(serializer.validated_data)
+        params = dict(serializer.validated_data, kind=get_kind(request.query_params))
         if _wants_csv(request):
             return csv_response("balance-sheet.csv", REPORT_COLUMNS, balance_sheet_rows(**params))
         return Response({"data": balance_sheet(**params), "message": "Success"})
@@ -598,7 +603,7 @@ class CashFlowReportView(APIView):
     def get(self, request):
         serializer = DateRangeSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        params = dict(serializer.validated_data)
+        params = dict(serializer.validated_data, kind=get_kind(request.query_params))
         if _wants_csv(request):
             return csv_response("cash-flow.csv", REPORT_COLUMNS, cash_flow_rows(**params))
         return Response({"data": cash_flow(**params), "message": "Success"})
@@ -610,5 +615,8 @@ class InventoryValuationReportView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def get(self, request) -> Response:
-        value = inventory_valuation(kind=get_kind(request.query_params))
+        kind = get_kind(request.query_params)
+        if kind:
+            return Response({"data": inventory_ledger_check(kind=kind), "message": "Success"})
+        value = inventory_valuation()
         return Response({"data": {"inventory_value": value}, "message": "Success"})
