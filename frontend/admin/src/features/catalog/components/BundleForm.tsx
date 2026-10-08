@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
 import { FormActions } from "@/components/common/FormActions"
 import { NoPermission } from "@/components/common/NoPermission"
-import { MoneyField, TextField, TextareaField } from "@/components/common/form-fields"
+import { TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
@@ -24,6 +24,7 @@ import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency } from "@/lib/format"
 
 import { fetchSingle } from "../slices/bundleSlice"
+import { PricingFields } from "./PricingFields"
 import { createBundle, updateBundle } from "../api"
 import type { Bundle, BundlePayload } from "../types"
 import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
@@ -329,28 +330,12 @@ const BundleForm = () => {
             <CardDescription>Leave price or cost blank to default them to the component totals.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <MoneyField
-              label="Price"
-              showCurrency
-              id="price"
-              placeholder={componentTotal ? componentTotal.toFixed(2) : "0.00"}
-              error={errors.price}
-              {...register("price")}
-            />
-            <MoneyField
-              label="Discount price"
-              id="discount_price"
-              placeholder="Optional"
-              error={errors.discount_price}
-              {...register("discount_price")}
-            />
-            <MoneyField
-              label="Cost price"
-              id="cost_price"
-              placeholder="From components"
-              description="Defaults to the components' cost."
-              error={errors.cost_price}
-              {...register("cost_price")}
+            <PricingFields
+              register={register}
+              errors={errors}
+              pricePlaceholder={componentTotal ? componentTotal.toFixed(2) : "0.00"}
+              costPlaceholder="From components"
+              costDescription="Defaults to the components' cost."
             />
           </CardContent>
         </Card>

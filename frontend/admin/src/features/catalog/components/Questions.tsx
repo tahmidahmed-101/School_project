@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -7,26 +6,24 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { Eye, EyeOff, MessageCircleQuestion } from "lucide-react"
 
-import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { TextareaField } from "@/components/common/form-fields"
 import { PageHeader } from "@/components/common/PageHeader"
-import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { DateCell } from "@/components/common/cells"
+import { DateCell, LinkCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import type { Option } from "@/lib/types"
 
 import { deleteData, fetchAll, patchData } from "../slices/questionSlice"
+import { useModerationList } from "../lib/useModerationList"
 import type { ProductQuestion, ProductQuestionStatus } from "../types"
 
 // QUESTION_STATUSES on the backend: pending = no answer, answered = answered but hidden,
@@ -57,22 +54,20 @@ const Questions = () => {
   const canManage = useCan("catalog.manage")
   const questionState = useAppSelector((s) => s.catalogQuestions)
 
-  const [status, setStatus] = useState<Option | null>(null)
-  const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
   const [answering, setAnswering] = useState<ProductQuestion | null>(null)
 
-  const list = useListPage({
+  const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
     fetch: (p) => dispatch(fetchAll(p)),
     state: questionState,
-    params: { status: status?.value, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
+    orderingOptions: ORDERING_OPTIONS,
   })
 
   const handlePublish = async (question: ProductQuestion, is_published: boolean) => {
     try {
       await dispatch(patchData({ id: question.id, payload: { is_published } })).unwrap()
       toast.success(is_published ? "Question published" : "Question hidden from the storefront")
-      // With a status filter on, the row may no longer belong in the list.
-      if (status) list.reload()
+      reloadIfFiltered()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update question"))
     }
@@ -92,13 +87,9 @@ const Questions = () => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <Link
-          to={`/product_detail/${row.original.product_id}`}
-          className="block truncate text-sm font-medium text-primary hover:underline"
-          data-no-row-click="true"
-        >
+        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
           {row.original.product_name}
-        </Link>
+        </LinkCell>
       ),
     },
     {
@@ -169,12 +160,7 @@ const Questions = () => {
         searchPlaceholder="Search question, answer or product…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={[
-          {
-            component: <Combobox placeholder="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />,
-          },
-          { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
-        ]}
+        filters={filters}
       />
 
       <DataTable
@@ -190,7 +176,7 @@ const Questions = () => {
         emptyIcon={MessageCircleQuestion}
         emptyTitle="No questions"
         emptyDescription={
-          list.debouncedSearch || status
+          isFiltered
             ? "Try adjusting the search or filters."
             : "Questions customers ask on a product page appear here."
         }
@@ -200,13 +186,7 @@ const Questions = () => {
       />
 
       {canManage && (
-        <AnswerDialog
-          question={answering}
-          onClose={() => setAnswering(null)}
-          onSaved={() => {
-            if (status) list.reload()
-          }}
-        />
+        <AnswerDialog question={answering} onClose={() => setAnswering(null)} onSaved={reloadIfFiltered} />
       )}
     </div>
   )

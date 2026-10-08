@@ -7,28 +7,26 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { CheckCircle2, RotateCcw, Tag, XCircle } from "lucide-react"
 
-import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { DetailRow } from "@/components/common/DetailRow"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { FormDialog } from "@/components/common/FormDialog"
 import { SelectField, TextareaField } from "@/components/common/form-fields"
 import { PageHeader } from "@/components/common/PageHeader"
-import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { DateCell, MoneyCell } from "@/components/common/cells"
+import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
 import type { Option } from "@/lib/types"
 
 import { fetchAll, patchData } from "../slices/priceReportSlice"
+import { useModerationList } from "../lib/useModerationList"
 import type { PriceReport, PriceReportStatus } from "../types"
 
 // PriceIssueReport.Status on the backend.
@@ -55,22 +53,20 @@ const PriceReports = () => {
   const canManage = useCan("catalog.manage")
   const reportState = useAppSelector((s) => s.catalogPriceReports)
 
-  const [status, setStatus] = useState<Option | null>(null)
-  const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
   const [reviewing, setReviewing] = useState<PriceReport | null>(null)
 
-  const list = useListPage({
+  const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
     fetch: (p) => dispatch(fetchAll(p)),
     state: reportState,
-    params: { status: status?.value, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
+    orderingOptions: ORDERING_OPTIONS,
   })
 
   const handleStatus = async (report: PriceReport, next: PriceReportStatus) => {
     try {
       await dispatch(patchData({ id: report.id, payload: { status: next } })).unwrap()
       toast.success(next === "open" ? "Report reopened" : `Report ${next}`)
-      // With a status filter on, the row may no longer belong in the list.
-      if (status) list.reload()
+      reloadIfFiltered()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update report"))
     }
@@ -82,12 +78,9 @@ const PriceReports = () => {
       header: "PRODUCT",
       cell: ({ row }) => (
         <div className="min-w-0" data-no-row-click="true">
-          <Link
-            to={`/product_detail/${row.original.product_id}`}
-            className="block truncate text-sm font-medium text-primary hover:underline"
-          >
+          <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
             {row.original.product_name}
-          </Link>
+          </LinkCell>
           <p className="truncate font-mono text-xs text-muted-foreground">
             {row.original.variant_sku ?? "Whole product"}
           </p>
@@ -164,12 +157,7 @@ const PriceReports = () => {
         searchPlaceholder="Search comment, product or SKU…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={[
-          {
-            component: <Combobox placeholder="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />,
-          },
-          { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
-        ]}
+        filters={filters}
       />
 
       <DataTable
@@ -180,7 +168,7 @@ const PriceReports = () => {
         emptyIcon={Tag}
         emptyTitle="No price reports"
         emptyDescription={
-          list.debouncedSearch || status
+          isFiltered
             ? "Try adjusting the search or filters."
             : "Reports customers send about a wrong price appear here."
         }
@@ -193,9 +181,7 @@ const PriceReports = () => {
         report={reviewing}
         canManage={canManage}
         onClose={() => setReviewing(null)}
-        onSaved={() => {
-          if (status) list.reload()
-        }}
+        onSaved={reloadIfFiltered}
       />
     </div>
   )
