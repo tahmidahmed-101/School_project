@@ -26,6 +26,7 @@ import { DialogActions } from "@/components/common/FormDialog"
 import { DateField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime, fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
+import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
 import { useAppDispatch } from "@/app/hooks"
 import type { Option } from "@/lib/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -40,8 +41,11 @@ import { VendorBillFormDialog } from "./VendorBillFormDialog"
 
 const PAYMENT_METHODS = ["Bank transfer", "Cash", "Cheque", "bKash", "Nagad", "Card"]
 
-const paidOf = (bill: VendorBill) => bill.payments.reduce((s, p) => s + Number(p.amount), 0)
-const outstandingOf = (bill: VendorBill) => Math.max(0, Math.round((Number(bill.amount) - paidOf(bill)) * 100) / 100)
+const paidOf = (bill: VendorBill) => sumMoney(bill.payments.map((p) => p.amount))
+const outstandingOf = (bill: VendorBill) => {
+  const left = toPaisa(bill.amount) - toPaisa(paidOf(bill))
+  return fromPaisa(left > 0 ? left : BigInt(0))
+}
 const isOpen = (bill: VendorBill) => bill.status === "unpaid" || bill.status === "overdue"
 
 function PaymentDialog({
@@ -57,13 +61,13 @@ function PaymentDialog({
 }) {
   const dispatch = useAppDispatch()
   const outstanding = outstandingOf(bill)
-  const [amount, setAmount] = useState(outstanding.toFixed(2))
+  const [amount, setAmount] = useState(outstanding)
   const [paidAt, setPaidAt] = useState(() => toDatetimeLocal(new Date().toISOString()))
   const [method, setMethod] = useState("Bank transfer")
   const [reference, setReference] = useState("")
   const [saving, setSaving] = useState(false)
 
-  const amountValid = Number(amount) > 0 && Number(amount) <= outstanding + 0.001
+  const amountValid = toPaisa(amount) > 0 && toPaisa(amount) <= toPaisa(outstanding)
 
   const save = async () => {
     const paidAtIso = fromDatetimeLocal(paidAt)
