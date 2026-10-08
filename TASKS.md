@@ -29,11 +29,11 @@
 - [ ] One loading / error / content wrapper; one fetch hook
 - [ ] `StatCard`, `Thumbnail`, `RefCell` / `LinkCell`
 - [x] Reference lists cached, pages fetched in parallel
-- [ ] Reference-list cache has no max age: another staff member's edit shows only after a reload
+- [x] Reference-list cache max age (5 min)
 - [x] Money arithmetic through one module (4 of 5 sites)
-- [ ] Purchase-order totals still on floats: unit cost has 4 decimals, the money module needs an exact multiply first (also PurchaseOrderCreate.tsx:66)
+- [ ] Purchase-order totals still on floats: unit cost has 4 decimals, the scaffold money module has no multiply; owner to pick: API sends the totals, or scaffold gains a multiply (also PurchaseOrderCreate.tsx:72)
 - [x] Currency label from business profile, not "(BDT)"
-- [ ] Bell offers low-stock to inventory-only staff, but the endpoint needs reports permission (403, shows nothing)
+- [x] Bell low-stock source asks for the endpoint's own permission (reports or accounting view)
 
 ## Phase D: admin consistency
 - [ ] Success / warning tokens (needs colour approval)
