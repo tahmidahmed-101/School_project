@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.images import variant_image_url
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, VendorBill
+from apps.procurement.selectors.kind import purchase_order_kind
 
 ZERO = Decimal("0")
 
@@ -85,6 +86,11 @@ class PurchaseOrderSerializer(serializers.Serializer):
         total = sum((line.unit_cost * line.quantity_received for line in obj.lines.all()), ZERO)
         return str(quantize_money(total))
 
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj)
+
 
 class PurchaseOrderCreateSerializer(serializers.Serializer):
     supplier_id = serializers.UUIDField()
@@ -131,6 +137,11 @@ class GoodsReceiptNoteSerializer(serializers.Serializer):
     def get_lines(self, obj) -> list[dict]:
         return GRNLineSerializer(obj.lines.all(), many=True).data
 
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj.purchase_order)
+
 
 class GoodsReceiptCreateSerializer(serializers.Serializer):
     purchase_order_id = serializers.UUIDField()
@@ -153,6 +164,11 @@ class VendorBillSerializer(serializers.Serializer):
     def get_payments(self, obj) -> list[dict]:
         return VendorPaymentSerializer(obj.payments.all(), many=True).data
 
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj.purchase_order)
+
 
 class VendorBillCreateSerializer(serializers.Serializer):
     purchase_order_id = serializers.UUIDField()
@@ -174,6 +190,16 @@ class VendorPaymentSerializer(serializers.Serializer):
     paid_at = serializers.DateTimeField()
     method = serializers.CharField(allow_blank=True)
     reference = serializers.CharField(allow_blank=True)
+
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        bill = obj.vendor_bill
+        return (
+            getattr(obj, "kind", None)
+            or getattr(bill, "kind", None)
+            or purchase_order_kind(bill.purchase_order)
+        )
 
 
 class VendorPaymentCreateSerializer(serializers.Serializer):

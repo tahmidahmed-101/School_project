@@ -7,6 +7,7 @@ from django.db.models import QuerySet
 
 from apps.common.utils.dates import day_after, day_start
 from apps.procurement.models import VendorPayment
+from apps.procurement.selectors.kind import filter_by_kind
 
 
 def vendor_payments_list(
@@ -15,6 +16,7 @@ def vendor_payments_list(
     method: str | None = None,
     start: date | None = None,
     end: date | None = None,
+    kind: str | None = None,
 ) -> QuerySet[VendorPayment]:
     queryset = VendorPayment.objects.select_related("vendor_bill")
     if vendor_bill_id is not None:
@@ -25,6 +27,9 @@ def vendor_payments_list(
         queryset = queryset.filter(paid_at__gte=day_start(start))
     if end is not None:
         queryset = queryset.filter(paid_at__lt=day_after(end))
+    queryset = filter_by_kind(
+        queryset, kind, purchase_order_field="vendor_bill__purchase_order_id"
+    )
     return queryset.order_by("-paid_at")
 
 

@@ -5,6 +5,21 @@ from django.db import transaction
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
 from apps.procurement.models import PurchaseOrder, PurchaseOrderLine
+from apps.procurement.selectors.kind import LINE_KIND
+
+
+def _check_one_kind(purchase_order: PurchaseOrder | None, variants, *, skip_line=None) -> None:
+    kinds = {variant.product.category.category_type for variant in variants}
+    if purchase_order is not None:
+        lines = purchase_order.lines.all()
+        if skip_line is not None:
+            lines = lines.exclude(id=skip_line.id)
+        kinds.update(lines.values_list(LINE_KIND, flat=True))
+    if len(kinds) > 1:
+        raise BusinessRuleViolationError(
+            "A purchase order holds stock items or pre-order items, not both.",
+            code="purchase_kind_mismatch",
+        )
 
 
 @transaction.atomic
@@ -15,6 +30,8 @@ def create_purchase_order(
         raise BusinessRuleViolationError(
             "A purchase order needs at least one line.", code="no_lines"
         )
+
+    _check_one_kind(None, [line["variant"] for line in lines])
 
     po_number = generate_document_number("PO")
     while PurchaseOrder.objects.filter(po_number=po_number).exists():
@@ -91,6 +108,7 @@ def add_purchase_order_line(
     *, purchase_order: PurchaseOrder, variant, quantity_ordered: int, unit_cost
 ) -> PurchaseOrderLine:
     _ensure_draft(purchase_order)
+    _check_one_kind(purchase_order, [variant])
     return PurchaseOrderLine.objects.create(
         purchase_order=purchase_order,
         variant=variant,
@@ -104,6 +122,8 @@ def update_purchase_order_line(
     *, purchase_order: PurchaseOrder, line: PurchaseOrderLine, data: dict
 ) -> PurchaseOrderLine:
     _ensure_draft(purchase_order)
+    if "variant" in data:
+        _check_one_kind(purchase_order, [data["variant"]], skip_line=line)
     allowed_fields = {"variant", "quantity_ordered", "unit_cost"}
     update_fields = [field for field in data if field in allowed_fields]
     for field in update_fields:

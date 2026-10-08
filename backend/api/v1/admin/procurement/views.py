@@ -15,7 +15,7 @@ from apps.catalog.selectors.products import get_variant_by_id, get_variants_by_i
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView, IncludeDeletedMixin, RestoreAPIView
-from apps.common.params import get_choice, get_date, get_uuid, validate_date_range
+from apps.common.params import get_choice, get_date, get_kind, get_uuid, validate_date_range
 from apps.common.pdf import PdfRenderer, pdf_response
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
@@ -194,7 +194,9 @@ class AdminPurchaseOrderListCreateView(PurchasingPermissionMixin, GenericListAPI
 
     def get_queryset(self):
         status_param = get_choice(self.request.query_params, "status", PurchaseOrder.Status.values)
-        return purchase_orders_list(status=status_param)
+        return purchase_orders_list(
+            status=status_param, kind=get_kind(self.request.query_params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -412,7 +414,7 @@ class AdminGoodsReceiptListCreateView(PurchasingPermissionMixin, GenericListAPIV
     default_ordering = "-received_date"
 
     def get_queryset(self):
-        return goods_receipts_list()
+        return goods_receipts_list(kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -479,7 +481,9 @@ class AdminVendorBillListCreateView(VendorBillPermissionMixin, GenericListAPIVie
 
     def get_queryset(self):
         status_param = get_choice(self.request.query_params, "status", VendorBill.Status.values)
-        return vendor_bills_list(status=status_param)
+        return vendor_bills_list(
+            status=status_param, kind=get_kind(self.request.query_params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -565,6 +569,7 @@ class VendorPaymentQuerysetMixin:
             method=params.get("method") or None,
             start=start,
             end=end,
+            kind=get_kind(params),
         )
 
 
