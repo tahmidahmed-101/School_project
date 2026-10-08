@@ -39,7 +39,9 @@ export function Modal({
     <>
       {mounted && (
         <div data-shown={shown} className={`group fixed inset-0 z-50 ${containerClassName}`}>
-          <div
+          <button
+            type="button"
+            tabIndex={-1}
             onClick={onClose}
             className={`fixed inset-0 cursor-default transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"} ${backdropClassName}`}
             aria-label={label}

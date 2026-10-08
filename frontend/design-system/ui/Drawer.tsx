@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import Image from "next/image";
 import { ArrowLeft, Trash2, X } from "lucide-react";
+import { useFocusReturn } from "@/lib/useFocusReturn";
 import { useOverlay } from "@/lib/useOverlay";
 import { photo } from "@/lib/photo";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
@@ -27,6 +28,8 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
   useOverlay(open, onClose);
   const { mounted, shown } = usePresence(open, 300);
   const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusReturn(mounted, panelRef);
 
   return (
     <>
@@ -41,10 +44,12 @@ export function Drawer({ open, onClose, label, closeLabel, icon, title, actions,
 
           <div className="pointer-events-none fixed inset-y-0 right-0 flex w-full max-w-full justify-end">
             <div
+              ref={panelRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              className={`pointer-events-auto z-10 flex w-full flex-col justify-between border-l border-ink-200 bg-card p-5 shadow-2xl transition-transform duration-300 sm:max-w-md sm:p-6 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
+              className={`pointer-events-auto z-10 flex outline-none w-full flex-col justify-between border-l border-ink-200 bg-card p-5 shadow-2xl transition-transform duration-300 sm:max-w-md sm:p-6 ${SLIDE_EASE} ${shown ? "translate-x-0" : "translate-x-full"}`}
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-ink-200 pb-3">

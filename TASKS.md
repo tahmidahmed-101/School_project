@@ -19,7 +19,7 @@
 - [x] Upstream API responses cached inside the Worker (warm pages 0.85-1.2 s -> 0.07-0.13 s)
 - [ ] Pre-order and shop pages send slim product data; single-language strings not doubled
 - [x] Cart / wishlist context values memoised (drawer state still in the same context)
-- [ ] Payment methods fetched on the server
+- [x] Payment methods fetched on the server
 - [x] Bell low-stock count from a count endpoint (API)
 
 ## Phase C: admin shared pieces
@@ -45,11 +45,11 @@
 - [ ] Stale docs replaced
 
 ## Phase E: storefront consistency
-- [ ] `Card`, `Badge`, overlay focus handling (Drawer has dialog role)
-- [ ] Buttons through `Button`
-- [ ] Semantic tokens for surface, border, status
-- [ ] Auth card, accordion body (contact buttons done; grid class has one user left)
-- [ ] Policies from one source
+- [x] Card frame helper; Drawer moves and returns focus; Modal backdrop is a button (badges differ by colour on purpose, left)
+- [x] Buttons through `Button` (checked: the raw buttons left are icon, toggle and menu controls `Button` has no variant for)
+- [x] Semantic tokens where the value is identical (`border-ink-200`, `text-ink-950/700/800` have no equal token: would change colour, needs approval)
+- [x] Auth card, accordion body, contact buttons
+- [x] Policies from one source (pages read the published policy; built-in copy is the fallback)
 - [x] Dead fonts, CSS and props removed
 - [x] Image `sizes` corrected (product card)
 
