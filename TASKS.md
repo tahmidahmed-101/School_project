@@ -132,10 +132,13 @@
 - [ ] Bookkeeper: deposit credited to Accounts Receivable (no deposits-held account), Refund Payable never credited, vendor bill dated on due date, `stock_intake` posts no journal entry
 
 ## Phase P: the last shared things (owner "fix rest" 2026-10-09)
-- [ ] P1 Delivery rates and payment methods per kind; own set-up page per half
-- [ ] P2 Warehouses per kind; pre-order goods in a pre-order warehouse
-- [ ] P3 Expenses can belong to one half; per-kind profit and loss includes them
-- [ ] P4 Small leftovers: storefront badges, hero tile, "On sale" filter, coupon refusal at checkout, page titles, order history query
-- [ ] P5 Staff can create a pre-order (deposit first, same rules as the customer path)
-- [ ] Merge, routes, full backend suite once, hand-test: payment capture, shipment, return, pre-order purchase order, per-kind reports, cart refusal, pre-order invoice
+- [x] P1 Delivery rates and payment methods per kind; own set-up page per half
+- [x] P2 Warehouses per kind; pre-order goods in a pre-order warehouse
+- [x] P3 Expenses can belong to one half; per-kind profit and loss includes them
+- [x] P4 Small leftovers: storefront badges, hero tile, "On sale" filter, coupon refusal at checkout, page titles, order history query
+- [x] P5 Staff can create a pre-order (deposit first, same rules as the customer path)
+- [x] Merge, routes, full backend suite once (2375 passed), staff pre-order create + deposit capture + invoice hand-tested over the local API, new pages opened in the browser
+- [ ] Hand-test still open: shipment create, return, saving a pre-order purchase order, per-kind report numbers, storefront cart refusal and badges
+- [ ] Production order, only with backup and owner go-ahead: deploy, `migrate`, then dry run and `--apply` of `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`, `split_both_placements`, `backfill_journal_kind`, `split_shared_warehouses`, `split_shared_delivery_and_payment_setup`. Between `migrate` and the last two, pre-order checkout, goods receipt, allocation and shipping are refused: do it in a quiet hour.
+- [ ] Owner calls: carriers stay one list (courier account + webhook); "Biggest discount" sort and "Special offers" tile in the pre-order shop; local deposit percent is 100
 - Not in this phase (bookkeeper first): deposit account, Refund Payable, vendor bill date, stock intake posting

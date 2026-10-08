@@ -111,6 +111,11 @@ Forms:
 - Company-wide on purpose: staff and roles, audit log, tax rates, chart of accounts, expenses, business profile,
   integrations, media, policy texts, customer accounts, courier accounts (carriers). Delivery zones and rates and
   payment methods are one set per half; warehouses: see "Delivery, payment and warehouse set-up" below.
+- Phase P: warehouses carry a kind with one default per kind (`warehouse_kind_mismatch`,
+  `preorder_warehouse_missing`); expenses may belong to one half and count in that half's profit and loss; staff
+  can create a pre-order (`POST orders/` with `order_type=preorder`, `orders/quote/`), deposit first; checkout
+  refuses a coupon on a pre-order; a leftover discount price is never charged on a pre-order item. Carriers stay
+  one list: a carrier is the courier account and its webhook.
 - Data commands, all dry run by default: `fix_product_kind_mismatches`, `split_shared_suppliers_and_brands`,
   `split_both_placements`, `backfill_journal_kind`, `split_shared_delivery_and_payment_setup`.
 - Staff-created orders are stock only (`order_kind_mismatch`); a staff-made pre-order needs a deposit step first.
