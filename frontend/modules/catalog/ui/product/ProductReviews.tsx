@@ -10,6 +10,7 @@ import { LoginPrompt } from "./customerAction";
 import { ListStatus, useShortDate } from "./ListStatus";
 import { ReviewForm } from "./ReviewForm";
 import { usePagedList } from "./usePagedList";
+import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -35,7 +36,7 @@ export function ProductReviews({ slug, productId }: { slug: string; productId: s
   const [version, setVersion] = useState(0);
 
   return (
-    <div className="space-y-4 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+    <div className={`space-y-4 ${ACCORDION_BODY}`}>
       <ReviewList key={version} slug={slug} />
       {status === "authenticated" ? (
         <ReviewForm productId={productId} onPosted={() => setVersion((v) => v + 1)} />

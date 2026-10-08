@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { AccordionItem } from "@/design-system/ui/AccordionItem";
+import { ACCORDION_BODY, AccordionItem } from "@/design-system/ui/AccordionItem";
 import { PanelLoading } from "./ListStatus";
 
 // Each panel's code loads when its accordion is first opened, not with the product page. (next/dynamic needs its
@@ -54,7 +54,7 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
       <div className="mt-8 divide-y divide-ink-100 border-b border-t border-ink-200 sm:mt-12">
         {(description || hasHighlights) && (
           <AccordionItem title={ui("description")} defaultOpen>
-            <div className="space-y-3 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+            <div className={`space-y-3 ${ACCORDION_BODY}`}>
               {description && <p>{description}</p>}
               {product.highlights && product.highlights.length > 0 && (
                 <div className="space-y-2 pt-1">

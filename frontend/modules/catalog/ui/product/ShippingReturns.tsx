@@ -6,6 +6,7 @@ import { getStorePolicy } from "@/lib/api/store-policy";
 import type { ApiStorePolicy } from "@/lib/api/types";
 import { useLang } from "@/lib/i18n";
 import { Loader } from "@/design-system/patterns/Loader";
+import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 type Bilingual = { en?: string; bn?: string };
 
@@ -41,7 +42,7 @@ export function ShippingReturns() {
 
   if (policies.length === 0) {
     return (
-      <div className="space-y-2 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+      <div className={`space-y-2 ${ACCORDION_BODY}`}>
         <p>{ui("shippingReturnsDelivery")}</p>
         <p>{ui("shippingReturnsHelp")}</p>
       </div>
@@ -49,7 +50,7 @@ export function ShippingReturns() {
   }
 
   return (
-    <div className="space-y-4 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+    <div className={`space-y-4 ${ACCORDION_BODY}`}>
       {policies.map((policy) => {
         const windowDays = policy.eligibility?.return_window_days;
         return (

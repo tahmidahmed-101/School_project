@@ -10,6 +10,7 @@ import { fetchProductQuestions, questionPath } from "../../data/product-extras";
 import { LoginPrompt, SentNote, customerActionError, useCustomerSubmit } from "./customerAction";
 import { ListStatus, useShortDate } from "./ListStatus";
 import { usePagedList } from "./usePagedList";
+import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 const MAX_LENGTH = 1000;
 
@@ -68,7 +69,7 @@ export function ProductQuestions({ slug, productId }: { slug: string; productId:
   const { items, loading, failed, hasMore, loadMore, retry } = usePagedList<ApiQuestion>(fetchPage);
 
   return (
-    <div className="space-y-4 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+    <div className={`space-y-4 ${ACCORDION_BODY}`}>
       {items.length > 0 && (
         <ul className="divide-y divide-ink-100">
           {items.map((item) => (

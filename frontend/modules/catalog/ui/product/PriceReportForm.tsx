@@ -7,6 +7,7 @@ import { Button } from "@/design-system/ui/Button";
 import { FormAlert, FormField, inputClass } from "@/design-system/ui/FormField";
 import { priceReportPath, toPriceReportInput } from "../../data/product-extras";
 import { LoginPrompt, SentNote, customerActionError, useCustomerSubmit } from "./customerAction";
+import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 interface PriceReportFormProps {
   slug: string;
@@ -43,7 +44,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
   };
 
   return (
-    <div className="space-y-3 pb-3 pt-3 text-xs leading-relaxed text-fg-muted">
+    <div className={`space-y-3 ${ACCORDION_BODY}`}>
       <p>{ui("priceReportIntro")}</p>
 
       {status === "authenticated" ? (
