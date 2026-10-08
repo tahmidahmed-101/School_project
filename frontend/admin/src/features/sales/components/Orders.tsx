@@ -19,6 +19,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 import { ORDER_STATUS_OPTIONS, PREORDER_STAGE_OPTIONS, preorderStageLabel, type Order } from "@/features/sales/types"
 import { PreorderBook } from "@/features/sales/components/PreorderBook"
+import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
 import { paymentMethodLabel } from "@/features/payments/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { downloadFile } from "@/lib/download"
@@ -175,9 +176,9 @@ const OrdersList = () => {
                 downloadFile("/admin/orders/export/", isPreorder ? "pre-orders.csv" : "stock-orders.csv", list.query, true)
               }
             />
-            {canManage && !isPreorder && (
-              <Button size="action" onClick={() => navigate("/orders/new")}>
-                <PlusIcon className="size-5" /> New Order
+            {canManage && (
+              <Button size="action" onClick={() => navigate(`${KIND_PATHS[kind].orders}/new`)}>
+                <PlusIcon className="size-5" /> {isPreorder ? "New pre-order" : "New Order"}
               </Button>
             )}
           </>

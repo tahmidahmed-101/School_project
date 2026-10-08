@@ -284,11 +284,13 @@ def ensure_variant_of_kind(variant, kind: str) -> None:
 
 
 @transaction.atomic
-def add_staff_order_lines(*, order: SalesOrder, lines: list[tuple]) -> None:
-    """Lines of an order staff key in. Stock only: a pre-order placed here would
-    be charged in full, with no deposit step."""
+def add_staff_order_lines(
+    *, order: SalesOrder, lines: list[tuple], kind: str = SalesOrder.OrderType.STOCK
+) -> None:
+    """Lines of an order staff key in. Every line must be of the order's kind;
+    `add_line` then applies the shopper's own window, limit and price rules."""
     for variant, _quantity in lines:
-        ensure_variant_of_kind(variant, SalesOrder.OrderType.STOCK)
+        ensure_variant_of_kind(variant, kind)
     for variant, quantity in lines:
         add_line(order=order, variant=variant, quantity=quantity)
 
@@ -363,6 +365,7 @@ def update_order_line(*, line: SalesOrderLine, quantity: int, actor=None) -> Sal
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
     if line.is_preorder and quantity > line.quantity:
+        ensure_purchasable(line.variant)
         held = 0 if line.order.status == SalesOrder.Status.PENDING else line.quantity
         _check_preorder_stock_limit(line.variant, quantity, held)
 
