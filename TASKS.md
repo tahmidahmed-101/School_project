@@ -113,6 +113,7 @@
 - [x] M4 Stock section shows stock only (inventory, sales, logistics)
 - [x] M5 Home, reports, settings split
 - [x] Wire `features/preorder` menu and routes; full typecheck; targeted backend tests; local smoke
-- [ ] Owner decisions: pre-order purchasing screen; staff-created pre-orders (needs deposit step on server); keep featured / highlights / meta keywords on the pre-order product form; `both` slides and promo lines
+- [x] Purchasing split by kind (purchase orders, goods receipts, bills, payments), owner "no shared anything" 2026-10-09
+- [ ] Owner decisions: which of suppliers / brands / customers / warehouses / delivery set-up / ledger reports to split; staff-created pre-orders (needs deposit step on server); keep featured / highlights / meta keywords on the pre-order product form; `both` slides and promo lines
 - [x] Duplicate React key warning on `/products`: nested fragment in header actions, keys fixed in `PageHeader`
 - [ ] Production: run `fix_product_kind_mismatches` (dry run first) only with a backup and the owner's go-ahead

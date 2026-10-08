@@ -1,3 +1,4 @@
+import type { Kind } from "@/hooks/use-kind"
 // Mirrors kull-mart api/v1/admin/procurement/serializers.py. Decimals arrive as strings.
 
 /** SupplierSerializer */
@@ -48,6 +49,7 @@ export type PurchaseOrderLineUpdate = Partial<PurchaseOrderLineInput>
 
 /** PurchaseOrderSerializer */
 export interface PurchaseOrder {
+  kind?: Kind
   id: string
   po_number: string
   supplier_id: string
@@ -90,6 +92,7 @@ export interface GRNLine {
 
 /** GoodsReceiptNoteSerializer */
 export interface GoodsReceipt {
+  kind?: Kind
   id: string
   purchase_order_id: string
   purchase_order_number: string
@@ -110,6 +113,7 @@ export type VendorBillStatus = "unpaid" | "paid" | "overdue" | "void"
 
 /** VendorPaymentSerializer */
 export interface VendorPayment {
+  kind?: Kind
   id: string
   vendor_bill_id: string
   vendor_bill_number: string
@@ -129,6 +133,7 @@ export interface VendorPaymentCreatePayload {
 
 /** VendorBillSerializer */
 export interface VendorBill {
+  kind?: Kind
   id: string
   bill_number: string
   purchase_order_id: string

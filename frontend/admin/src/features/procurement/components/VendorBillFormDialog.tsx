@@ -14,6 +14,7 @@ import { formatCurrency, getDefaultCurrency } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
+import { useKind } from "@/hooks/use-kind"
 
 import { createVendorBill, updateVendorBill } from "../slices/vendorBillSlice"
 import type { PurchaseOrder, VendorBill } from "../types"
@@ -46,10 +47,11 @@ export function VendorBillFormDialog({
   onSaved?: (bill: VendorBill) => void
 }) {
   const dispatch = useAppDispatch()
+  const kind = useKind()
   const pickMode = !bill && !purchaseOrder
   const { items: allPos, isLoading: posLoading } = useAllPages<PurchaseOrder>(
     "/admin/procurement/purchase-orders/",
-    undefined,
+    { kind },
     { enabled: open && pickMode }
   )
   const billablePos = useMemo(

@@ -33,6 +33,8 @@ import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
+import { useKind } from "@/hooks/use-kind"
+import { purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useAllPages } from "@/hooks/use-all-pages"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
@@ -151,6 +153,7 @@ function LineDialog({
   line: PurchaseOrderLine | null
   onSaved: () => void
 }) {
+  const kind = useKind()
   const dispatch = useAppDispatch()
   const [variant, setVariant] = useState<PickedVariant | null>(
     line
@@ -205,6 +208,7 @@ function LineDialog({
           <VariantPicker
             variant="combobox"
             id="line-variant"
+            filters={{ category_type: kind }}
             value={variant}
             onChange={(v) => {
               setVariant(v)
@@ -252,6 +256,8 @@ function SummaryStat({ label, value, sub }: { label: string; value: string; sub?
 }
 
 const PurchaseOrderDetail = () => {
+  const kind = useKind()
+  const base = purchasingBase(kind)
   const { id = "" } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -308,7 +314,7 @@ const PurchaseOrderDetail = () => {
       <DetailPageState
         state={state ?? "loading"}
         entity="Purchase order"
-        backTo="/purchasing/orders"
+        backTo={`${base}/orders`}
         backLabel="Back to purchase orders"
         error={singleError}
         onRetry={load}
@@ -335,7 +341,7 @@ const PurchaseOrderDetail = () => {
   const handleDelete = () =>
     runAction(async () => {
       await dispatch(deleteData(po.id)).unwrap()
-      navigate("/purchasing/orders")
+      navigate(`${base}/orders`)
     }, `${po.po_number} deleted`)
 
   const canEditLines = canManage && isDraft
@@ -420,7 +426,7 @@ const PurchaseOrderDetail = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
+        back={{ to: `${base}/orders`, label: "Back to purchase orders" }}
         title={<span className="font-mono">{po.po_number}</span>}
         badges={<StatusBadge status={po.status} tone={PO_STATUS_TONE[po.status]} />}
         description={`${po.supplier_name} · ordered ${formatDate(po.order_date)}`}
@@ -582,7 +588,7 @@ const PurchaseOrderDetail = () => {
         open={billOpen}
         onOpenChange={setBillOpen}
         purchaseOrder={po}
-        onSaved={() => navigate("/purchasing/bills")}
+        onSaved={() => navigate(`${base}/bills`)}
       />
     </div>
   )

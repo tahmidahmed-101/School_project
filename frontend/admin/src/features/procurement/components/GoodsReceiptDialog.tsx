@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
+import { useKind } from "@/hooks/use-kind"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
 
 import { createGoodsReceipt } from "../slices/goodsReceiptSlice"
@@ -43,10 +44,11 @@ export function GoodsReceiptDialog({
   purchaseOrder?: PurchaseOrder | null
   onReceived?: (grn: GoodsReceipt) => void
 }) {
+  const kind = useKind()
   const pickMode = !purchaseOrder
   const { items: submittedPos, isLoading: posLoading } = useAllPages<PurchaseOrder>(
     "/admin/procurement/purchase-orders/",
-    { status: "submitted" },
+    { status: "submitted", kind },
     { enabled: open && pickMode }
   )
   const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)

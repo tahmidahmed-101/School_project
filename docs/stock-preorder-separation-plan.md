@@ -95,7 +95,11 @@ Forms:
 
 ## As built (2026-10-09)
 
-- Purchase orders and goods receipts stay shared: the server has one buying flow and no kind on it.
+- Purchasing is split (owner: "no shared anything"): a purchase order holds one kind (`purchase_kind_mismatch`);
+  purchase orders, goods receipts, vendor bills and vendor payments take `kind` and carry `kind` on each row.
+  Pre-order pages live under `/preorder_purchasing/*`. A bill with no purchase order counts as stock.
+- Still one list for both halves: suppliers, brands, customers, warehouses, carriers / zones / rates,
+  payment methods, staff, and the ledger reports below.
 - Profit and loss, balance sheet and cash flow are not split: journal lines carry no kind.
 - Staff-created orders are stock only (`order_kind_mismatch`); a staff-made pre-order needs a deposit step first.
 - `kind` also on `inventory/stock-status/`, `reporting/low-stock/`, `accounting/reports/inventory-valuation/`,

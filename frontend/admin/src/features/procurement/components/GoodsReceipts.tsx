@@ -23,6 +23,8 @@ import { unwrapItem } from "@/lib/api/envelope"
 import { formatDate } from "@/lib/format"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
+import { useKind } from "@/hooks/use-kind"
+import { purchasingBase, purchasingTitle, useKindRows } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 import { useLastValue } from "@/hooks/use-dialog-presence"
@@ -75,7 +77,7 @@ function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | n
             </DialogTitle>
             <DialogDescription>
               Received {formatDate(grn.received_date)} against{" "}
-              <Link to={`/purchasing/orders/${grn.purchase_order_id}`} className="text-primary hover:underline">
+              <Link to={`${purchasingBase(grn.kind)}/orders/${grn.purchase_order_id}`} className="text-primary hover:underline">
                 {grn.purchase_order_number}
               </Link>
             </DialogDescription>
@@ -138,7 +140,9 @@ function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | n
 }
 
 const GoodsReceipts = () => {
-  useDocumentTitle("Goods Receipts")
+  const kind = useKind()
+  const title = purchasingTitle(kind, "Goods Receipts")
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.goodsReceipts)
   const canManage = useCanManagePurchasing()
@@ -146,7 +150,8 @@ const GoodsReceipts = () => {
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [viewing, setViewing] = useState<GoodsReceipt | null>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)
-  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ordering: ordering?.value } })
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ordering: ordering?.value, kind } })
+  const rows = useKindRows(state.data, kind)
 
   const columns: ColumnDef<GoodsReceipt>[] = [
     {
@@ -158,7 +163,7 @@ const GoodsReceipts = () => {
       accessorKey: "purchase_order_number",
       header: "PURCHASE ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/purchasing/orders/${row.original.purchase_order_id}`} className="font-mono font-semibold">
+        <LinkCell to={`${purchasingBase(row.original.kind)}/orders/${row.original.purchase_order_id}`} className="font-mono font-semibold">
           {row.original.purchase_order_number}
         </LinkCell>
       ),
@@ -194,7 +199,7 @@ const GoodsReceipts = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Goods Receipts"
+        title={title}
         actions={
           canManage && (
             <Button size="action" onClick={() => setReceiveOpen(true)}>
@@ -213,7 +218,7 @@ const GoodsReceipts = () => {
 
       <DataTable
         columns={columns}
-        data={state.data}
+        data={rows}
         {...list.tableProps}
         onRowClick={setViewing}
         emptyIcon={PackageCheck}

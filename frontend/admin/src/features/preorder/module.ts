@@ -16,6 +16,18 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_reviews", lazy: page(() => import("../catalog/components/Reviews")) },
     { path: "preorder_questions", lazy: page(() => import("../catalog/components/Questions")) },
     { path: "preorder_price_reports", lazy: page(() => import("../catalog/components/PriceReports")) },
+    { path: "preorder_purchasing/orders", lazy: page(() => import("../procurement/components/PurchaseOrders")) },
+    {
+      path: "preorder_purchasing/orders/new",
+      lazy: page(() => import("../procurement/components/PurchaseOrderCreate")),
+    },
+    {
+      path: "preorder_purchasing/orders/:id",
+      lazy: page(() => import("../procurement/components/PurchaseOrderDetail")),
+    },
+    { path: "preorder_purchasing/receipts", lazy: page(() => import("../procurement/components/GoodsReceipts")) },
+    { path: "preorder_purchasing/bills", lazy: page(() => import("../procurement/components/VendorBills")) },
+    { path: "preorder_purchasing/payments", lazy: page(() => import("../procurement/components/VendorPayments")) },
     { path: "preorder_settings", lazy: page(() => import("../system/components/PreorderSettings")) },
   ],
   nav: [
@@ -36,6 +48,18 @@ export const preorderModule: FeatureModule = {
         { title: "Payments", url: "/preorder_payments", permission: ["orders.view", "orders.manage"] },
         { title: "Shipments", url: "/preorder_shipments", permission: ["shipments.view", "shipments.update"] },
         { title: "Returns", url: "/preorder_returns", permission: "returns.manage" },
+        {
+          title: "Purchase orders",
+          url: "/preorder_purchasing/orders",
+          permission: ["purchasing.view", "purchasing.manage"],
+        },
+        {
+          title: "Goods receipts",
+          url: "/preorder_purchasing/receipts",
+          permission: ["purchasing.view", "purchasing.manage"],
+        },
+        { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: ["accounting.view", "accounting.post", "invoices.manage"] },
+        { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: ["accounting.view", "accounting.post", "invoices.manage"] },
         { title: "Carts", url: "/preorder_carts", permission: ["orders.view", "orders.manage"] },
         {
           title: "Goods movements",

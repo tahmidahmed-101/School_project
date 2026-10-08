@@ -50,6 +50,7 @@ interface ComboboxProps {
   variant: "combobox"
   value: PickedVariant | null
   onChange: (variant: PickedVariant) => void
+  filters?: Record<string, unknown>
   invalid?: boolean
   id?: string
 }
@@ -203,13 +204,15 @@ function InlineVariantPicker({
   )
 }
 
-function ComboboxVariantPicker({ value, onChange, invalid, id }: ComboboxProps) {
+function ComboboxVariantPicker({ value, onChange, filters, invalid, id }: ComboboxProps) {
+  const filtersKey = JSON.stringify(filters ?? {})
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const { results, loading } = useDebouncedSearch({
     query,
     enabled: open,
-    search: (search, signal) => fetchVariants(search ? { search } : {}, signal),
+    search: (search, signal) => fetchVariants({ ...(search ? { search } : {}), ...JSON.parse(filtersKey) }, signal),
+    refetchKey: filtersKey,
   })
 
   return (
