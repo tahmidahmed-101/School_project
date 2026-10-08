@@ -1,15 +1,6 @@
-import { useCallback, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import {
-  BellIcon,
-  CircleHelp,
-  CreditCard,
-  PackageX,
-  RotateCcw,
-  Tag,
-  Truck,
-  type LucideIcon,
-} from "lucide-react"
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { BellIcon, CircleHelp, CreditCard, PackageX, RotateCcw, Tag, Truck, type LucideIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -17,10 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAppSelector } from "@/app/hooks"
-import { hasPermission } from "@/app/modules"
-import { api } from "@/lib/api/client"
+} from "@/components/ui/dropdown-menu";
+import { useAppSelector } from "@/app/hooks";
+import { hasPermission } from "@/app/modules";
+import { api } from "@/lib/api/client";
 
 /**
  * The backend has no staff notification feed, so the bell reports work that is waiting, counted
@@ -29,23 +20,23 @@ import { api } from "@/lib/api/client"
  * when the signed-in user may open the page it links to.
  */
 interface Source {
-  key: string
-  icon: LucideIcon
+  key: string;
+  icon: LucideIcon;
   /** Message for a count of one, and for any other count. */
-  one: string
-  many: (count: number) => string
-  hint: string
-  to: string
-  permission: string[]
+  one: string;
+  many: (count: number) => string;
+  hint: string;
+  to: string;
+  permission: string[];
   /** How many are waiting. */
-  count: () => Promise<number>
+  count: () => Promise<number>;
 }
 
 /** `count` of a paginated list endpoint, asking for a single row. */
 const listCount = (url: string, params: Record<string, string>) => async () => {
-  const res = await api.get(url, { params: { ...params, page_size: 1 } })
-  return Number(res.data?.data?.count ?? 0)
-}
+  const res = await api.get(url, { params: { ...params, page_size: 1 } });
+  return Number(res.data?.data?.count ?? 0);
+};
 
 const SOURCES: Source[] = [
   {
@@ -105,81 +96,81 @@ const SOURCES: Source[] = [
     many: (n) => `${n} items are low on stock`,
     hint: "At or below their reorder point.",
     to: "/inventory",
-    permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
+    permission: ["reports.view", "accounting.view"],
     count: async () => {
-      const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1 } })
-      const data = res.data?.data
+      const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1 } });
+      const data = res.data?.data;
       // An API deployed before count_only existed ignores it and sends the rows.
-      return Array.isArray(data) ? data.length : Number(data?.count) || 0
+      return Array.isArray(data) ? data.length : Number(data?.count) || 0;
     },
   },
-]
+];
 
 interface Notice {
-  source: Source
-  count: number
+  source: Source;
+  count: number;
 }
 
-const REFRESH_MS = 5 * 60_000
+const REFRESH_MS = 5 * 60_000;
 /** What the user last saw when they opened the bell, so the dot only returns when something changed. */
-const SEEN_KEY = "notifications:seen"
+const SEEN_KEY = "notifications:seen";
 
-const signature = (notices: Notice[]) => notices.map((n) => `${n.source.key}:${n.count}`).join("|")
+const signature = (notices: Notice[]) => notices.map((n) => `${n.source.key}:${n.count}`).join("|");
 
 function readSeen(): string {
   try {
-    return localStorage.getItem(SEEN_KEY) ?? ""
+    return localStorage.getItem(SEEN_KEY) ?? "";
   } catch {
-    return ""
+    return "";
   }
 }
 
 export function NotificationBell() {
-  const navigate = useNavigate()
-  const permissions = useAppSelector((state) => state.auth.user?.permissions)
-  const [notices, setNotices] = useState<Notice[] | null>(null)
-  const [seen, setSeen] = useState(readSeen)
+  const navigate = useNavigate();
+  const permissions = useAppSelector((state) => state.auth.user?.permissions);
+  const [notices, setNotices] = useState<Notice[] | null>(null);
+  const [seen, setSeen] = useState(readSeen);
 
   const load = useCallback(async () => {
-    const allowed = SOURCES.filter((source) => hasPermission(permissions, source.permission))
+    const allowed = SOURCES.filter((source) => hasPermission(permissions, source.permission));
     // A source that fails (no permission after all, backend hiccup) is left out rather than failing the bell.
-    const counts = await Promise.all(allowed.map((source) => source.count().catch(() => 0)))
-    setNotices(allowed.map((source, i) => ({ source, count: counts[i] })).filter((notice) => notice.count > 0))
-  }, [permissions])
+    const counts = await Promise.all(allowed.map((source) => source.count().catch(() => 0)));
+    setNotices(allowed.map((source, i) => ({ source, count: counts[i] })).filter((notice) => notice.count > 0));
+  }, [permissions]);
 
   useEffect(() => {
     // A hidden tab stops asking; it catches up the moment it is shown again.
     const refresh = () => {
-      if (!document.hidden) void load()
-    }
-    const first = setTimeout(refresh, 0)
-    const timer = setInterval(refresh, REFRESH_MS)
-    document.addEventListener("visibilitychange", refresh)
+      if (!document.hidden) void load();
+    };
+    const first = setTimeout(refresh, 0);
+    const timer = setInterval(refresh, REFRESH_MS);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
-      clearTimeout(first)
-      clearInterval(timer)
-      document.removeEventListener("visibilitychange", refresh)
-    }
-  }, [load])
+      clearTimeout(first);
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
 
-  const current = notices ? signature(notices) : ""
-  const hasNew = Boolean(notices?.length) && current !== seen
+  const current = notices ? signature(notices) : "";
+  const hasNew = Boolean(notices?.length) && current !== seen;
 
   const markSeen = () => {
-    setSeen(current)
+    setSeen(current);
     try {
-      localStorage.setItem(SEEN_KEY, current)
+      localStorage.setItem(SEEN_KEY, current);
     } catch {
       // storage unavailable: the dot simply comes back after a reload
     }
-  }
+  };
 
   return (
     <DropdownMenu
       onOpenChange={(open) => {
-        if (!open) return
-        markSeen()
-        void load()
+        if (!open) return;
+        markSeen();
+        void load();
       }}
     >
       <DropdownMenuTrigger asChild>
@@ -231,5 +222,5 @@ export function NotificationBell() {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
