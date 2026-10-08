@@ -68,6 +68,9 @@ Menu "Pre-orders" (`features/preorder/`):
 | Payments | `/preorder_payments` | deposits and balances |
 | Shipments | `/preorder_shipments` | |
 | Returns | `/preorder_returns` | |
+| Carts | `/preorder_carts` | carts holding a pre-order line |
+| Goods movements | `/preorder_movements` | ledger of pre-order goods |
+| Reviews, Questions, Price reports | `/preorder_reviews`, `/preorder_questions`, `/preorder_price_reports` | feedback on pre-order products |
 | Settings | `/preorder_settings` | deposit percent, pre-order slides, pre-order promo lines |
 
 Stock half keeps its menus (Catalog, Sales, Logistics, Inventory) and shows stock only.
@@ -89,6 +92,14 @@ Forms:
 - M3 pre-order section: orders side (payments, shipments, returns) and arrivals
 - M4 stock section shows stock only
 - M5 home, reports, settings
+
+## As built (2026-10-09)
+
+- Purchase orders and goods receipts stay shared: the server has one buying flow and no kind on it.
+- Profit and loss, balance sheet and cash flow are not split: journal lines carry no kind.
+- Staff-created orders are stock only (`order_kind_mismatch`); a staff-made pre-order needs a deposit step first.
+- `kind` also on `inventory/stock-status/`, `reporting/low-stock/`, `accounting/reports/inventory-valuation/`,
+  the ledger export; variants export takes `category_type`; variants import refuses pre-order rows.
 
 ## Out of scope
 

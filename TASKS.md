@@ -107,9 +107,12 @@
 - [ ] D Cut the 23 pre-order stages to the ones in use (needs owner's list)
 
 ## Phase M: full stock / pre-order separation (change request, owner "create a plan and start execution with agents" 2026-10-09; plan `docs/stock-preorder-separation-plan.md`)
-- [ ] M1 Server rules, `kind` filter on every list, reporting split, `fix_product_kind_mismatches`
-- [ ] M2 Catalog: products, categories, variants, forms per kind
-- [ ] M3 Pre-order section: orders, payments, shipments, returns, arrivals
-- [ ] M4 Stock section shows stock only (inventory, sales, logistics)
-- [ ] M5 Home, reports, settings split
-- [ ] Wire `features/preorder` menu and routes; full typecheck; targeted backend tests; local smoke
+- [x] M1 Server rules, `kind` filter on every list, reporting split, `fix_product_kind_mismatches`
+- [x] M2 Catalog: products, categories, variants, forms per kind
+- [x] M3 Pre-order section: orders, payments, shipments, returns, arrivals
+- [x] M4 Stock section shows stock only (inventory, sales, logistics)
+- [x] M5 Home, reports, settings split
+- [x] Wire `features/preorder` menu and routes; full typecheck; targeted backend tests; local smoke
+- [ ] Owner decisions: pre-order purchasing screen; staff-created pre-orders (needs deposit step on server); keep featured / highlights / meta keywords on the pre-order product form; `both` slides and promo lines
+- [ ] Duplicate React key warning on `/products` (stock list), source not found yet
+- [ ] Production: run `fix_product_kind_mismatches` (dry run first) only with a backup and the owner's go-ahead
