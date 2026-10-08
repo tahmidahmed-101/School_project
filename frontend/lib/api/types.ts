@@ -207,6 +207,8 @@ export interface ApiBusinessProfile {
   opening_hours: string;
   address: string;
   social: Record<string, string>;
+  /** Absent on backends that predate the about field. */
+  about?: ApiBilingual;
 }
 
 type ApiLocalizedText = { en: string; bn: string };

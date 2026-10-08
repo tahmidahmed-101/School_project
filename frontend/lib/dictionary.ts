@@ -82,6 +82,7 @@ export const DICT = {
   voucherMinSpend: { en: "Min. spend", bn: "সর্বনিম্ন খরচ" },
   voucherNoMinSpend: { en: "No minimum spend", bn: "সর্বনিম্ন খরচ নেই" },
   voucherCode: { en: "Code", bn: "কোড" },
+  voucherValidUntil: { en: "Valid until {date}", bn: "মেয়াদ {date} পর্যন্ত" },
   loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
@@ -243,6 +244,7 @@ export const DICT = {
   policyReturnWindow: { en: "Returns are accepted within", bn: "রিটার্ন করা যাবে" },
   policyReturnWindowDays: { en: "days of delivery.", bn: "দিনের মধ্যে (ডেলিভারির পর থেকে)।" },
   policyReadFull: { en: "Read the full return policy", bn: "সম্পূর্ণ রিটার্ন নীতি পড়ুন" },
+  policyLastUpdated: { en: "Last updated", bn: "সর্বশেষ আপডেট" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   navReadyStock: { en: "Stock Items", bn: "স্টক আইটেম" },
@@ -418,6 +420,7 @@ export const DICT = {
   footerContactUs: { en: "Store contact", bn: "যোগাযোগের ঠিকানা" },
   footerReturnPolicy: { en: "Return policy", bn: "রিটার্ন নীতি" },
   footerRefundPolicy: { en: "Refund policy", bn: "রিফান্ড নীতি" },
+  footerShippingPolicy: { en: "Shipping policy", bn: "ডেলিভারি নীতি" },
   footerHours: { en: "Always open for online orders", bn: "অনলাইন অর্ডারের জন্য সবসময় খোলা" },
   footerRights: { en: "All rights reserved.", bn: "সর্বস্বত্ব সংরক্ষিত।" },
   // API errors and states

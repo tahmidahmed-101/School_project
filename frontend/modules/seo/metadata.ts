@@ -99,10 +99,11 @@ export function assetUrl(path: string): string {
 }
 
 export function organizationJsonLd(brand: BrandInfo = BRAND_INFO): JsonLdNode {
+  const { instagram, tiktok, youtube, linkedin } = brand.social;
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: SITE_NAME,
+    name: brand.name,
     legalName: brand.legalName,
     url: absoluteUrl("/"),
     logo: assetUrl(brand.logo),
@@ -110,7 +111,7 @@ export function organizationJsonLd(brand: BrandInfo = BRAND_INFO): JsonLdNode {
     description: SITE_DESCRIPTION,
     email: brand.email,
     telephone: brand.phoneInternational,
-    sameAs: [brand.facebook],
+    sameAs: [brand.facebook, instagram, tiktok, youtube, linkedin].filter(Boolean),
     address: {
       "@type": "PostalAddress",
       addressLocality: brand.city,

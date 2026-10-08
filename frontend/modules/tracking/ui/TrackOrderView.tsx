@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { CheckCircle2, ClipboardList, MapPin, Package, PackageCheck, Search, Truck, XCircle } from "lucide-react";
 import { ContactButtons } from "@/modules/catalog";
+import { shortDate } from "@/lib/date";
 import { useLang } from "@/lib/i18n";
 import { ApiError } from "@/lib/api/client";
 import { trackOrder } from "../data/mutations";
@@ -16,8 +17,6 @@ import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 import { cardClass } from "@/design-system/ui/Card";
 
-const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 /** The backend's progress statuses in order (Cancelled is a separate end state). */
 const STAGES = [
   { status: "Placed", labelKey: "trackStagePlaced", icon: ClipboardList },
@@ -30,18 +29,14 @@ const STAGES = [
 ] as const satisfies readonly { status: ApiTrackStatus; labelKey: string; icon: unknown }[];
 
 export function TrackOrderView() {
-  const { t, ui, n } = useLang();
+  const { lang, t, ui } = useLang();
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiTrackOrder | null>(null);
 
-  const formatDate = (iso: string) => {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "";
-    return `${n(date.getDate())} ${MONTHS_EN[date.getMonth()]} ${n(date.getFullYear())}`;
-  };
+  const formatDate = (iso: string) => shortDate(iso, lang);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,6 +74,8 @@ export function TrackOrderView() {
   const currentStageIndex = result ? STAGES.findIndex((stage) => stage.status === result.status) : -1;
   const isCancelled = result?.status === "Cancelled";
   const stageEvent = (status: string) => result?.tracking_timeline.find((event) => event.status === status);
+
+  const carrierShipments = result?.shipments.filter((shipment) => shipment.carrier_name) ?? [];
 
   const breadcrumbs = [{ label: ui("navTrackOrder") }];
 
@@ -134,6 +131,17 @@ export function TrackOrderView() {
                 </span>
               </div>
             </div>
+
+            {carrierShipments.length > 0 && (
+              <ul className="space-y-1 text-2xs text-fg-subtle">
+                {carrierShipments.map((shipment) => (
+                  <li key={shipment.id}>
+                    {ui("trackOrderShipment")}: <span className="font-semibold text-fg">{shipment.carrier_name}</span>
+                    {shipment.tracking_number && ` · ${ui("trackOrderTrackingNo")} ${shipment.tracking_number}`}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {result.preorder_stage && (
               <section className="rounded-xl bg-surface p-4">
