@@ -8,6 +8,8 @@ export interface Voucher {
   value: number;
   /** Cart subtotal needed before the code applies; 0 means no minimum. */
   minSpend: number;
+  /** API timestamp after which the code stops working; null when it does not expire. */
+  expiresAt: string | null;
 }
 
 export function toVoucher(coupon: ApiStorefrontCoupon): Voucher {
@@ -16,6 +18,7 @@ export function toVoucher(coupon: ApiStorefrontCoupon): Voucher {
     kind: coupon.discount_type === "fixed" ? "fixed" : "percentage",
     value: Number(coupon.value),
     minSpend: Number(coupon.min_order_amount),
+    expiresAt: coupon.expires_at || null,
   };
 }
 

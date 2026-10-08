@@ -17,19 +17,24 @@ const POLICY_LINKS = [
   { href: "/return-policy", key: "footerReturnPolicy" },
   { href: "/refund-policy", key: "footerRefundPolicy" },
 ] as const;
+const SHIPPING_POLICY_LINK = { href: "/shipping-policy", key: "footerShippingPolicy" } as const;
 
 interface MobileNavMenuProps {
   open: boolean;
   onClose: () => void;
+  /** The shipping policy has no built-in copy, so its link shows only once staff publish one. */
+  hasShippingPolicy: boolean;
 }
 
 /** Left-hand slide-in menu with ready stock, pre-order, categories and the language toggle, mobile only. */
-export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
+export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMenuProps) {
   const pathname = usePathname();
   const { lang, setLang, t, ui } = useLang();
   const { categories: allCategories } = useCatalog();
   // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
   const categories = allCategories.filter((category) => category.type === "stock");
+
+  const policyLinks = hasShippingPolicy ? [...POLICY_LINKS, SHIPPING_POLICY_LINK] : POLICY_LINKS;
 
   useOverlay(open, onClose);
 
@@ -128,7 +133,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                 </WithActiveCategory>
 
                 <ul className="mt-4 space-y-0.5 border-t border-white/10 pt-3">
-                  {POLICY_LINKS.map(({ href, key }) => (
+                  {policyLinks.map(({ href, key }) => (
                     <li key={href}>
                       <Link
                         href={href}

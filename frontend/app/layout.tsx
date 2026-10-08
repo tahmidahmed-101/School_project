@@ -8,6 +8,7 @@ import { LANG_COOKIE, toLang } from "@/lib/lang";
 import { CatalogProvider } from "@/modules/catalog";
 import { getShellCatalog } from "@/modules/catalog/server";
 import { getBrand } from "@/modules/business/server";
+import { isPolicyPublished } from "@/modules/policies/server";
 import { AuthProvider } from "@/modules/auth";
 import { CartProvider } from "@/modules/cart";
 import { WishlistProvider } from "@/modules/wishlist";
@@ -84,7 +85,12 @@ const takaFont = localFont({
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [catalog, brand, cookieStore] = await Promise.all([getShellCatalog(), getBrand(), cookies()]);
+  const [catalog, brand, cookieStore, hasShippingPolicy] = await Promise.all([
+    getShellCatalog(),
+    getBrand(),
+    cookies(),
+    isPolicyPublished("shipping"),
+  ]);
   const lang = toLang(cookieStore.get(LANG_COOKIE)?.value);
 
   return (
@@ -102,7 +108,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>
-                    <ClientShell footer={<Footer />}>{children}</ClientShell>
+                    <ClientShell footer={<Footer />} hasShippingPolicy={hasShippingPolicy}>
+                      {children}
+                    </ClientShell>
                   </WishlistProvider>
                 </CartProvider>
               </AuthProvider>

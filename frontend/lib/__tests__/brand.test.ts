@@ -55,4 +55,32 @@ describe("mergeBrand", () => {
       linkedin: "",
     });
   });
+
+  it("takes the store name and legal name from the profile", () => {
+    const brand = mergeBrand(profile({ name: " Kull Mart BD ", legal_name: "Kull Mart Trading" }));
+    expect(brand.name).toBe("Kull Mart BD");
+    expect(brand.legalName).toBe("Kull Mart Trading");
+  });
+
+  it("ignores the store name a fresh backend ships with", () => {
+    const brand = mergeBrand(profile({ name: "LaunchCart", legal_name: "LaunchCart Ltd" }));
+    expect(brand.name).toBe(BRAND_INFO.name);
+    expect(brand.legalName).toBe(BRAND_INFO.legalName);
+  });
+
+  it("takes the opening hours and the about text from the profile", () => {
+    const brand = mergeBrand(profile({ opening_hours: " Sat-Thu, 10am-8pm ", about: { bn: " আমাদের কথা " } }));
+    expect(brand.openingHours).toBe("Sat-Thu, 10am-8pm");
+    expect(brand.about).toEqual({ en: "", bn: "আমাদের কথা" });
+  });
+
+  it("leaves the about text empty while the API does not send it", () => {
+    expect(mergeBrand(profile({ phone: "01811-222333" })).about).toEqual({ en: "", bn: "" });
+  });
+
+  it("does not take the tagline or the logo from the profile", () => {
+    const brand = mergeBrand(profile({ tagline: "#kullmart", logo_url: "https://cdn.test/logo.png" }));
+    expect(brand.tagline).toEqual(BRAND_INFO.tagline);
+    expect(brand.logo).toBe(BRAND_INFO.logo);
+  });
 });

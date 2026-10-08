@@ -5,16 +5,19 @@ import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { mapsHref, socialLinks } from "./contactLinks";
 import { getBrand } from "@/modules/business/server";
 import { getShellCatalog } from "@/modules/catalog/server";
+import { isPolicyPublished } from "@/modules/policies/server";
 import { getServerText } from "@/lib/i18n.server";
 import { photo } from "@/lib/photo";
 import { containerClass } from "@/design-system/ui/Container";
 
 export async function Footer() {
-  const [{ t, ui, lang }, BRAND_INFO, { categories: allCategories }] = await Promise.all([
+  const [{ t, ui, lang }, BRAND_INFO, { categories: allCategories }, hasShippingPolicy] = await Promise.all([
     getServerText(),
     getBrand(),
     getShellCatalog(),
+    isPolicyPublished("shipping"),
   ]);
+  const about = BRAND_INFO.about[lang] || BRAND_INFO.about.en || BRAND_INFO.about.bn || ui("footerAboutText");
   // Pre-order has its own nav link and category rail; the footer covers the regular stock catalogue.
   const categories = allCategories.filter((category) => category.type === "stock");
 
@@ -36,7 +39,7 @@ export async function Footer() {
                 {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
               </span>
             </Link>
-            <p className="max-w-sm leading-relaxed text-white/75">{ui("footerAboutText")}</p>
+            <p className="max-w-sm leading-relaxed text-white/75">{about}</p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
               {socialLinks(BRAND_INFO).map(({ id, name, href, icon: Icon }) => (
                 <a
@@ -121,6 +124,13 @@ export async function Footer() {
                   {ui("footerRefundPolicy")}
                 </Link>
               </li>
+              {hasShippingPolicy && (
+                <li>
+                  <Link href="/shipping-policy" className="transition-colors hover:text-gold-300">
+                    {ui("footerShippingPolicy")}
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -153,7 +163,7 @@ export async function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Clock className="h-4 w-4 shrink-0 text-gold-300" />
-                <span>{ui("footerHours")}</span>
+                <span>{BRAND_INFO.openingHours || ui("footerHours")}</span>
               </li>
             </ul>
           </div>

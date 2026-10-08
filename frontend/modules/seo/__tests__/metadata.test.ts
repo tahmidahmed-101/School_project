@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct, makeSku } from "@/tests/fixtures";
-import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate, websiteJsonLd } from "../metadata";
+import { BRAND_INFO } from "@/lib/brand";
+import {
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  pageMetadata,
+  productJsonLd,
+  truncate,
+  websiteJsonLd,
+} from "../metadata";
 
 describe("truncate", () => {
   it("leaves short text alone and collapses whitespace", () => {
@@ -57,6 +65,31 @@ describe("breadcrumbJsonLd", () => {
       [2, "Shop"],
     ]);
     expect(ld.itemListElement[1]!.item).toMatch(/\/shop$/);
+  });
+});
+
+describe("organizationJsonLd", () => {
+  it("lists every social profile the brand has, and none it lacks", () => {
+    const brand = {
+      ...BRAND_INFO,
+      social: {
+        instagram: "https://instagram.com/kullmartbd",
+        tiktok: "",
+        youtube: "https://youtube.com/@km",
+        linkedin: "",
+      },
+    };
+    expect(organizationJsonLd(brand).sameAs).toEqual([
+      BRAND_INFO.facebook,
+      "https://instagram.com/kullmartbd",
+      "https://youtube.com/@km",
+    ]);
+    expect(organizationJsonLd().sameAs).toEqual([BRAND_INFO.facebook]);
+  });
+
+  it("names the organisation from the merged brand", () => {
+    const ld = organizationJsonLd({ ...BRAND_INFO, name: "Kull Mart BD", legalName: "Kull Mart Trading" });
+    expect(ld).toMatchObject({ name: "Kull Mart BD", legalName: "Kull Mart Trading" });
   });
 });
 
