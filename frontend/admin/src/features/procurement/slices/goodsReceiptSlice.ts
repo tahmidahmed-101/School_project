@@ -1,6 +1,8 @@
 import { createApiThunk, createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
 import { api } from "@/lib/api/client"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 import type { GoodsReceipt, GoodsReceiptCreatePayload } from "../types"
+import { PURCHASE_ORDERS_ENDPOINT } from "./purchaseOrderSlice"
 
 const ENDPOINT = "/admin/procurement/goods-receipts/"
 
@@ -15,7 +17,12 @@ export { fetchAll, fetchSingle }
 
 export const createGoodsReceipt = createApiThunk<GoodsReceiptCreatePayload, GoodsReceipt>(
   "goodsReceipts/create",
-  (payload) => api.post(ENDPOINT, payload)
+  async (payload) => {
+    const res = await api.post(ENDPOINT, payload)
+    // A receipt changes the received quantities and status of its purchase order.
+    invalidateAllPages(PURCHASE_ORDERS_ENDPOINT)
+    return res
+  }
 )
 
 export default withExtraCases(reducer, (builder) => {

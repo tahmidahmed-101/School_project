@@ -15,6 +15,7 @@ import { DateField, TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
+import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
 import { cn } from "@/lib/utils"
 import { createJournalEntry } from "../slices/journalEntrySlice"
 import type { Account } from "../types"
@@ -36,15 +37,13 @@ const schema = z
   })
   .superRefine((values, ctx) => {
     values.lines.forEach((line, i) => {
-      const d = Number(line.debit || 0)
-      const c = Number(line.credit || 0)
-      if ((d > 0 && c > 0) || (d === 0 && c === 0)) {
+      const d = toPaisa(line.debit)
+      const c = toPaisa(line.credit)
+      if ((d > 0) === (c > 0)) {
         ctx.addIssue({ code: "custom", path: ["lines", i, "debit"], message: "Enter a debit or a credit" })
       }
     })
-    const totalDebit = values.lines.reduce((s, l) => s + Math.round(Number(l.debit || 0) * 100), 0)
-    const totalCredit = values.lines.reduce((s, l) => s + Math.round(Number(l.credit || 0) * 100), 0)
-    if (totalDebit !== totalCredit) {
+    if (sumMoney(values.lines.map((l) => l.debit)) !== sumMoney(values.lines.map((l) => l.credit))) {
       ctx.addIssue({ code: "custom", path: ["lines"], message: "Debits must equal credits" })
     }
   })
@@ -83,9 +82,10 @@ export function JournalEntryFormDialog({
   }, [open, reset])
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.is_active), [accounts])
-  const totalDebit = (lines ?? []).reduce((s, l) => s + Number(l.debit || 0), 0)
-  const totalCredit = (lines ?? []).reduce((s, l) => s + Number(l.credit || 0), 0)
-  const balanced = Math.round(totalDebit * 100) === Math.round(totalCredit * 100) && totalDebit > 0
+  const totalDebit = sumMoney((lines ?? []).map((l) => l.debit))
+  const totalCredit = sumMoney((lines ?? []).map((l) => l.credit))
+  const gap = toPaisa(totalDebit) - toPaisa(totalCredit)
+  const balanced = gap === BigInt(0) && toPaisa(totalDebit) > 0
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -219,7 +219,7 @@ export function JournalEntryFormDialog({
       <p className={cn("text-sm", balanced ? "text-green-600 dark:text-green-500" : "text-muted-foreground")}>
         {balanced
           ? "Balanced — debits equal credits."
-          : `Out of balance by ${formatCurrency(Math.abs(totalDebit - totalCredit))}.`}
+          : `Out of balance by ${formatCurrency(fromPaisa(gap < 0 ? -gap : gap))}.`}
       </p>
       {linesMessage && <p className="text-sm text-destructive">{linesMessage}</p>}
     </FormDialog>

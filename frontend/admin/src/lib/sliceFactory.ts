@@ -9,6 +9,7 @@ import {
 import { generateId } from "@/lib/utils"
 import { api, extractApiError } from "@/lib/api/client"
 import { unwrapList, unwrapItem, type ListMeta } from "@/lib/api/envelope"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 
 interface WithId {
   id: string
@@ -107,6 +108,7 @@ export function createSliceFactory<T extends WithId>({
       if (endpoint) {
         try {
           const res = await api.post(endpoint, payload)
+          invalidateAllPages(endpoint)
           const item = unwrapItem<T>(res.data)
           onSuccess?.()
           return item
@@ -127,6 +129,7 @@ export function createSliceFactory<T extends WithId>({
       if (endpoint) {
         try {
           const res = await api.put(resourceUrl(id), payload)
+          invalidateAllPages(endpoint)
           return unwrapItem<T>(res.data)
         } catch (err) {
           return rejectWithValue(extractApiError(err))
@@ -146,6 +149,7 @@ export function createSliceFactory<T extends WithId>({
       if (endpoint) {
         try {
           const res = await api.patch(resourceUrl(id), payload)
+          invalidateAllPages(endpoint)
           return unwrapItem<T>(res.data)
         } catch (err) {
           return rejectWithValue(extractApiError(err))
@@ -165,6 +169,7 @@ export function createSliceFactory<T extends WithId>({
       if (endpoint) {
         try {
           await api.delete(resourceUrl(id))
+          invalidateAllPages(endpoint)
           return id
         } catch (err) {
           return rejectWithValue(extractApiError(err))
@@ -405,7 +410,11 @@ export function createApiThunk<Arg, T>(
 
 /** POST to a record action endpoint (`<endpoint><id>/<action>/`, e.g. `restore`) and return the updated record. */
 export function createActionThunk<T>(type: string, endpoint: string, action: string) {
-  return createApiThunk<string, T>(type, (id) => api.post(`${endpoint}${id}/${action}/`))
+  return createApiThunk<string, T>(type, async (id) => {
+    const res = await api.post(`${endpoint}${id}/${action}/`)
+    invalidateAllPages(endpoint)
+    return res
+  })
 }
 
 type ListState = { data: WithId[]; singleData?: unknown }

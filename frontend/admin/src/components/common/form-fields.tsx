@@ -5,6 +5,7 @@ import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getDefaultCurrency } from "@/lib/format"
 import type { Option } from "@/lib/types"
 
 type FieldErrorLike = { message?: string } | undefined
@@ -64,9 +65,19 @@ export function TextField({
   )
 }
 
-/** A labelled amount input; pair it with `moneySchema` from `@/lib/forms`. */
-export function MoneyField(props: ComponentProps<typeof TextField>) {
-  return <TextField inputMode="decimal" {...props} />
+/** A labelled amount input; pair it with `moneySchema` from `@/lib/forms`. `showCurrency` adds the shop currency to the label. */
+export function MoneyField({
+  showCurrency = false,
+  label,
+  ...props
+}: ComponentProps<typeof TextField> & { showCurrency?: boolean }) {
+  return (
+    <TextField
+      inputMode="decimal"
+      label={showCurrency ? <>{label} ({getDefaultCurrency()})</> : label}
+      {...props}
+    />
+  )
 }
 
 /** A labelled calendar-day input ("YYYY-MM-DD"), or date + time with `withTime`. */

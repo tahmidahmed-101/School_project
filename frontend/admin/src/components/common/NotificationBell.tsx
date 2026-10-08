@@ -107,9 +107,10 @@ const SOURCES: Source[] = [
     to: "/inventory",
     permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
     count: async () => {
-      const res = await api.get("/admin/reporting/low-stock/")
-      const rows = res.data?.data
-      return Array.isArray(rows) ? rows.length : 0
+      const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1 } })
+      const data = res.data?.data
+      // An API deployed before count_only existed ignores it and sends the rows.
+      return Array.isArray(data) ? data.length : Number(data?.count) || 0
     },
   },
 ]

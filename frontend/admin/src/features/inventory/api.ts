@@ -1,6 +1,7 @@
 import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope } from "@/lib/api/envelope"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 import type {
   StockAdjustmentPayload,
   StockIntakePayload,
@@ -40,10 +41,14 @@ export const postWriteOff = (payload: StockWriteOffPayload) =>
 
 // ---- warehouses ----
 export const WAREHOUSES_ENDPOINT = `${I}/warehouses/`
+const warehousesChanged = <R>(res: R) => {
+  invalidateAllPages(WAREHOUSES_ENDPOINT)
+  return res
+}
 export const createWarehouse = (payload: WarehousePayload) =>
-  apiCall<Warehouse>(() => api.post(WAREHOUSES_ENDPOINT, payload))
+  apiCall<Warehouse>(() => api.post(WAREHOUSES_ENDPOINT, payload).then(warehousesChanged))
 export const updateWarehouse = (id: string, payload: WarehousePayload) =>
-  apiCall<Warehouse>(() => api.patch(`${I}/warehouses/${id}/`, payload))
+  apiCall<Warehouse>(() => api.patch(`${I}/warehouses/${id}/`, payload).then(warehousesChanged))
 
 // ---- ledger ----
 export async function downloadLedgerExport(filters: Record<string, unknown>) {
