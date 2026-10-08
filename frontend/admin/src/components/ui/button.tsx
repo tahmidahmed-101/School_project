@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary-600",
+        default: "bg-primary text-white hover:bg-primary-600",
         outline:
           "border-border bg-card text-foreground hover:bg-accent aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
@@ -23,7 +23,7 @@ const buttonVariants = cva(
           "border-border bg-card text-foreground hover:bg-accent aria-expanded:bg-muted aria-expanded:text-foreground",
         back:
           "hover:bg-accent border border-border hover:text-foreground border aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-accent",
-        apply: "bg-primary text-primary-foreground hover:bg-primary-600 shadow-sm",
+        apply: "bg-primary text-white hover:bg-primary-600 shadow-sm",
         reset: "bg-red-600 text-white border-red-700 hover:bg-red-600/50",
       },
       size: {

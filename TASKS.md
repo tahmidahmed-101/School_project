@@ -25,9 +25,9 @@
 ## Phase C: admin shared pieces
 - [x] `useSoftDeleteList` promoted; four reference-list pages migrated (Warehouses and Brands differ too much, left as they are)
 - [x] One `VariantPicker` and one debounced-search hook (CreateOrder's search behaves differently, left)
-- [ ] Catalog pairs: pricing fields, variant columns, moderation list
-- [ ] One loading / error / content wrapper; one fetch hook
-- [ ] `StatCard`, `Thumbnail`, `RefCell` / `LinkCell`
+- [x] Catalog pairs: pricing fields, variant cells, moderation list state
+- [x] Fetch hook `useDetailLoad` (4 detail pages); wrapper already existed (`DetailPageState`)
+- [x] `Thumbnail`, `LinkCell` (stat cards: only two, and they differ; left)
 - [x] Reference lists cached, pages fetched in parallel
 - [x] Reference-list cache max age (5 min)
 - [x] Money arithmetic through one module (4 of 5 sites)
@@ -37,12 +37,12 @@
 
 ## Phase D: admin consistency
 - [ ] Success / warning tokens (needs colour approval)
-- [ ] App shell on theme tokens; icon buttons use `Button`
-- [ ] Status tones in one map; conflicts resolved
+- [x] App shell on theme tokens; icon buttons use `Button` (`gray-700/800`, `primary-500` have no equal token; left)
+- [x] Status tones in one map (open conflicts for owner: inactive coupon grey vs red elsewhere; `disabled`, `refunded`)
 - [ ] Card, heading, spacing, table-header rules
-- [ ] Dark-mode gaps
-- [ ] Bundle: lazy charts, combobox, chunk grouping, fonts
-- [ ] Stale docs replaced
+- [x] Dark-mode gaps with an existing token (primary button text in dark mode and green/amber text wait on colour approval)
+- [x] Bundle: lazy charts, vendor chunk groups; entry 358 kB -> 101 kB (fonts untouched)
+- [x] Stale docs replaced
 
 ## Phase E: storefront consistency
 - [x] Card frame helper; Drawer moves and returns focus; Modal backdrop is a button (badges differ by colour on purpose, left)
