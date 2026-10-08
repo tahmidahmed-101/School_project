@@ -54,4 +54,5 @@
 - [x] Image `sizes` corrected (product card)
 
 ## Phase F: storefront language on the server
-- [ ] Language resolved from a cookie; static content rendered as server components
+- [x] Language resolved from a cookie: first HTML and `<html lang>` are in the shopper's language
+- [ ] Static content rendered as server components (98 client files; separate, larger refactor)
