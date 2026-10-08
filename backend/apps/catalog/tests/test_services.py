@@ -512,7 +512,7 @@ def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
     product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
-    variant = create_variant(
+    variant = ProductVariantFactory(
         product=product,
         price=Decimal("1000"),
         discount_price=Decimal("950"),
@@ -655,7 +655,7 @@ def test_lower_of_discount_and_preorder_price_is_charged():
         "preorder_end_date": now + timedelta(days=1),
     }
 
-    discount_lower = create_variant(
+    discount_lower = ProductVariantFactory(
         product=product,
         price=Decimal("1000"),
         discount_price=Decimal("800"),
@@ -663,7 +663,7 @@ def test_lower_of_discount_and_preorder_price_is_charged():
         size="M",
         **window,
     )
-    preorder_lower = create_variant(
+    preorder_lower = ProductVariantFactory(
         product=product,
         price=Decimal("1000"),
         discount_price=Decimal("950"),

@@ -11,7 +11,7 @@ from apps.catalog.selectors.products import get_product_by_id
 from apps.catalog.selectors.reviews import get_review_by_id, reviews_list
 from apps.catalog.services.reviews import delete_review
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_choice, get_related
+from apps.common.params import get_choice, get_kind, get_related
 from apps.common.responses import not_found
 from apps.common.serializers import user_label
 
@@ -46,7 +46,9 @@ class AdminProductReviewListView(CatalogPermissionMixin, GenericListAPIView):
         params = self.request.query_params
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         rating = get_choice(params, "rating", ("1", "2", "3", "4", "5"))
-        return reviews_list(product=product, rating=int(rating) if rating else None)
+        return reviews_list(
+            product=product, rating=int(rating) if rating else None, kind=get_kind(params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)

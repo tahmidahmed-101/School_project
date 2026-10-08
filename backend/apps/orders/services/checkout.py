@@ -16,7 +16,11 @@ from apps.orders.services.carts import (
     _check_preorder_stock_limit,
     compute_line_tax,
 )
-from apps.orders.services.coupons import _compute_discount, revalidate_applied_coupon
+from apps.orders.services.coupons import (
+    _compute_discount,
+    drop_coupon_from_preorder,
+    revalidate_applied_coupon,
+)
 from apps.orders.services.orders import lock_order
 from apps.risk.services import blocklist, ip_blocklist
 
@@ -53,6 +57,14 @@ def _reprice_lines(order: SalesOrder, lines) -> None:
     if order.coupon is not None:
         order.discount_total = _compute_discount(order.coupon, order.subtotal)
         order.save(update_fields=["discount_total", "updated_at"])
+
+
+def _settle_coupon(order: SalesOrder, lines) -> None:
+    if any(_is_preorder_line(line) for line in lines):
+        drop_coupon_from_preorder(order)
+    # A cart can sit long enough for its applied coupon to expire or hit its
+    # usage limit before checkout actually runs — re-validate here too.
+    revalidate_applied_coupon(order)
 
 
 @transaction.atomic
@@ -108,9 +120,7 @@ def checkout(
 
     _reprice_lines(order, lines)
 
-    # A cart can sit long enough for its applied coupon to expire or hit its
-    # usage limit before checkout actually runs — re-validate here too.
-    revalidate_applied_coupon(order)
+    _settle_coupon(order, lines)
 
     kinds: set[bool] = set()
     for line in lines:

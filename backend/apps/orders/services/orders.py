@@ -11,6 +11,7 @@ from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
 from apps.orders.services.carts import (
     _check_preorder_stock_limit,
+    add_line,
     compute_line_tax,
     ensure_single_kind,
 )
@@ -272,6 +273,25 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         )
 
 
+def ensure_variant_of_kind(variant, kind: str) -> None:
+    if variant.product.category.category_type != kind:
+        label = SalesOrder.OrderType(kind).label.lower()
+        raise BusinessRuleViolationError(
+            f"{variant.product.name} ({variant.sku}) cannot go on a {label} order.",
+            code="order_kind_mismatch",
+        )
+
+
+@transaction.atomic
+def add_staff_order_lines(*, order: SalesOrder, lines: list[tuple]) -> None:
+    """Lines of an order staff key in. Stock only: a pre-order placed here would
+    be charged in full, with no deposit step."""
+    for variant, _quantity in lines:
+        ensure_variant_of_kind(variant, SalesOrder.OrderType.STOCK)
+    for variant, quantity in lines:
+        add_line(order=order, variant=variant, quantity=quantity)
+
+
 @transaction.atomic
 def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> SalesOrderLine:
     """Add a variant to an order that has not shipped, at today's price.
@@ -288,6 +308,9 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         )
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+    # A pending order has no kind yet; the mixed-basket check covers it.
+    if order.status != SalesOrder.Status.PENDING:
+        ensure_variant_of_kind(variant, order.order_type)
     if order.lines.filter(variant=variant).exists():
         raise BusinessRuleViolationError(
             "This item is already on the order. Change its quantity instead.",

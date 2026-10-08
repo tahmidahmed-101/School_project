@@ -49,7 +49,7 @@ from apps.accounting.services.journal import post_journal_entry, reverse_journal
 from apps.accounts.constants import StaffPermissionCode
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.generics import GenericListAPIView, IncludeDeletedMixin, RestoreAPIView
-from apps.common.params import get_choice, get_date, get_uuid, validate_date_range
+from apps.common.params import get_choice, get_date, get_kind, get_uuid, validate_date_range
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import DateRangeSerializer
@@ -610,4 +610,5 @@ class InventoryValuationReportView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def get(self, request) -> Response:
-        return Response({"data": {"inventory_value": inventory_valuation()}, "message": "Success"})
+        value = inventory_valuation(kind=get_kind(request.query_params))
+        return Response({"data": {"inventory_value": value}, "message": "Success"})

@@ -224,6 +224,10 @@ def add_line(
         line.save(update_fields=["quantity", "tax_amount"])
 
     order.recalculate_totals()
+    if is_preorder and order.coupon_id is not None:
+        from apps.orders.services.coupons import drop_coupon_from_preorder
+
+        drop_coupon_from_preorder(order)
     return line
 
 

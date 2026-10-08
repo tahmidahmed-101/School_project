@@ -20,7 +20,7 @@ from apps.catalog.services.products import create_quick_product
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_related
+from apps.common.params import get_bool, get_choice, get_kind, get_related
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.utils.export import CsvRenderer, csv_response
@@ -101,7 +101,12 @@ class AdminStockItemListView(GenericListAPIView):
         low_stock_only = get_bool(params, "low_stock_only", default=False)
         if warehouse is None:
             materialize_stock_items(variant=variant)
-        return stock_items_list(variant=variant, warehouse=warehouse, low_stock_only=low_stock_only)
+        return stock_items_list(
+            variant=variant,
+            warehouse=warehouse,
+            low_stock_only=low_stock_only,
+            kind=get_kind(params),
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -133,7 +138,9 @@ def _filtered_ledger_entries(params):
     variant = get_related(params, "variant_id", get_variant_by_id, "Variant not found.")
     warehouse = get_related(params, "warehouse_id", get_warehouse_by_id, "Warehouse not found.")
     movement_type = get_choice(params, "movement_type", MovementType.values)
-    return ledger_entries_list(variant=variant, warehouse=warehouse, movement_type=movement_type)
+    return ledger_entries_list(
+        variant=variant, warehouse=warehouse, movement_type=movement_type, kind=get_kind(params)
+    )
 
 
 class LedgerQuerysetMixin:
@@ -263,7 +270,8 @@ class AdminStockStatusView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def get(self, request) -> Response:
-        return Response({"data": stock_status_summary(), "message": "Success"})
+        summary = stock_status_summary(kind=get_kind(request.query_params))
+        return Response({"data": summary, "message": "Success"})
 
 
 @extend_schema(tags=["Inventory"])

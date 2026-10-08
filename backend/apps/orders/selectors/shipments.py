@@ -8,7 +8,9 @@ from django.db.models.functions import Coalesce
 from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, StockReservation
 
 
-def shipments_list(*, order=None, status: str | None = None) -> QuerySet[Shipment]:
+def shipments_list(
+    *, order=None, status: str | None = None, kind: str | None = None
+) -> QuerySet[Shipment]:
     queryset = (
         Shipment.objects.select_related("order", "carrier")
         .prefetch_related("lines")
@@ -18,6 +20,8 @@ def shipments_list(*, order=None, status: str | None = None) -> QuerySet[Shipmen
         queryset = queryset.filter(order=order)
     if status:
         queryset = queryset.filter(status=status)
+    if kind:
+        queryset = queryset.filter(order__order_type=kind)
     return queryset.order_by("-created_at")
 
 
@@ -85,7 +89,7 @@ def order_shipments_complete(order: SalesOrder) -> bool:
 def get_shipment_detail(shipment_id: str | UUID) -> Shipment | None:
     """One shipment with what its detail serializer reads, in three queries."""
     return (
-        Shipment.objects.select_related("carrier")
+        Shipment.objects.select_related("carrier", "order")
         .prefetch_related("lines__order_line__variant__product")
         .filter(id=shipment_id, deleted_at__isnull=True)
         .first()

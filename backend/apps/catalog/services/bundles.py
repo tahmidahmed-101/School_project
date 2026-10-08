@@ -13,6 +13,7 @@ from apps.catalog.models import BundleItem, Product, ProductVariant
 from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import BusinessRuleViolationError
 
+from .kind_rules import is_preorder_category
 from .products import create_product, create_variant
 
 TWO_PLACES = Decimal("0.01")
@@ -62,7 +63,10 @@ def _resolve_components(raw_components: list[dict]) -> list[BundleComponent]:
             "A bundle must have at least one component.", code="empty_bundle"
         )
     ids = [raw["component_variant_id"] for raw in raw_components if raw.get("component_variant_id")]
-    variants = {str(variant.id): variant for variant in get_variants_by_ids(ids)}
+    variants = {
+        str(variant.id): variant
+        for variant in get_variants_by_ids(ids).select_related("product__category")
+    }
     resolved: list[BundleComponent] = []
     for raw in raw_components:
         quantity = int(raw.get("quantity") or 0)
@@ -74,6 +78,11 @@ def _resolve_components(raw_components: list[dict]) -> list[BundleComponent]:
         if variant is None:
             raise BusinessRuleViolationError(
                 "Bundle component not found.", code="component_not_found"
+            )
+        if is_preorder_category(variant.product.category):
+            raise BusinessRuleViolationError(
+                "A bundle takes stock items only; a pre-order item cannot be a component.",
+                code="bundle_stock_only",
             )
         resolved.append(BundleComponent(component_variant=variant, quantity=quantity))
     return resolved
@@ -139,6 +148,10 @@ def create_bundle(
     actor=None,
 ) -> ProductVariant:
     require_feature(ModuleKey.CATALOG, "bundles")
+    if is_preorder_category(category):
+        raise BusinessRuleViolationError(
+            "A bundle belongs in a stock category.", code="bundle_stock_only"
+        )
     resolved = _resolve_components(components)
     if price is None:
         price = _components_total(resolved, attr="price")
