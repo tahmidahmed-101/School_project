@@ -24,7 +24,14 @@ from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import CapturePaymentSerializer
 from apps.common.utils.export import CsvRenderer, csv_response
 from apps.logistics.selectors.rates import get_carrier_by_id
-from apps.orders.models import Payment, ReturnRMA, ReturnRMALine, SalesOrder, StockReservation
+from apps.orders.models import (
+    Payment,
+    PreorderStage,
+    ReturnRMA,
+    ReturnRMALine,
+    SalesOrder,
+    StockReservation,
+)
 from apps.orders.selectors.payments import get_payment_by_id, payments_list
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
@@ -57,6 +64,7 @@ from apps.orders.services.orders import (
     update_order_line,
 )
 from apps.orders.services.payments import capture_payment, refund_payment
+from apps.orders.services.preorder import set_preorder_stage
 from apps.orders.services.reservations import release_stock_reservation
 from apps.orders.services.returns import (
     approve_rma,
@@ -81,6 +89,7 @@ from .serializers import (
     AdminOrderStatusSerializer,
     AdminOrderUpdateSerializer,
     AdminPaymentSerializer,
+    AdminPreorderStageSerializer,
     AdminRMASerializer,
     AdminSalesOrderSerializer,
     CreateRMASerializer,
@@ -133,6 +142,7 @@ class OrderQuerysetMixin:
         return orders_list(
             customer=customer,
             status=get_choice(params, "status", SalesOrder.Status.values),
+            preorder_stage=get_choice(params, "preorder_stage", PreorderStage.values),
             start=start,
             end=end,
         )
@@ -318,6 +328,39 @@ class AdminOrderStatusView(APIView):
 
 
 @extend_schema(tags=["Orders"])
+class AdminOrderPreorderStageView(APIView):
+    """Staff record where a pre-order is on its way. Tracking only: the order
+    status, stock and payments are not touched."""
+
+    serializer_class = AdminPreorderStageSerializer
+    permission_classes: ClassVar[list] = [OrdersManagePermission]
+
+    @extend_schema(request=AdminPreorderStageSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, order_id) -> Response:
+        order = get_order_by_id(order_id)
+        if order is None:
+            return not_found("order_not_found", "Order not found.")
+        serializer = AdminPreorderStageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            set_preorder_stage(
+                order=order,
+                stage=serializer.validated_data["stage"],
+                note=serializer.validated_data.get("note", ""),
+                actor=request.user,
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        # Re-read: the prefetched stage history predates the new event.
+        return Response(
+            {
+                "data": AdminSalesOrderSerializer(get_order_by_id(order_id)).data,
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Orders"])
 class AdminOrderLineDetailView(APIView):
     serializer_class = AdminOrderLineUpdateSerializer
     permission_classes: ClassVar[list] = [OrdersManagePermission]
@@ -441,6 +484,7 @@ class AdminCustomerCartListView(GenericListAPIView):
     # contact_phone: a guest cart has no customer to search by.
     search_fields = (
         "contact_phone",
+        "contact_name",
         "customer__email",
         "customer__phone",
         "customer__first_name",

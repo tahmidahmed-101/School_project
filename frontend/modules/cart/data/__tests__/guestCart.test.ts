@@ -180,3 +180,39 @@ describe("logged-in customer", () => {
     expect(calls()).toEqual(["POST /cart/", "POST /cart/lines/"]);
   });
 });
+
+describe("saveCartContact", () => {
+  it("does nothing for a guest who has no server cart yet", async () => {
+    const { saveCartContact } = await load();
+    await saveCartContact({ phone: "01711223344", name: "Rahim" });
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("sends the name and phone to the guest's own cart", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
+      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 1 }]))
+      .mockResolvedValueOnce({ contact_phone: "01711223344", contact_name: "Rahim" });
+    const { saveCartContact, syncGuestCart, GUEST_CART_TOKEN_HEADER } = await load();
+    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
+
+    await saveCartContact({ phone: "01711223344", name: "Rahim" });
+
+    expect(calls().at(-1)).toBe("PATCH /cart/contact/");
+    expect(apiRequest.mock.calls.at(-1)?.[1]).toMatchObject({
+      body: { phone: "01711223344", name: "Rahim" },
+      headers: { [GUEST_CART_TOKEN_HEADER]: "tok" },
+    });
+  });
+
+  it("never throws when the backend refuses", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
+      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 1 }]))
+      .mockRejectedValueOnce(new ApiError({ status: 400, code: "invalid_phone", message: "bad" }));
+    const { saveCartContact, syncGuestCart } = await load();
+    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
+
+    await expect(saveCartContact({ phone: "01711223344", name: "" })).resolves.toBeUndefined();
+  });
+});

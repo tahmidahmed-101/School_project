@@ -57,7 +57,7 @@ export function buildCheckoutRequest(
  * True for a Bangladeshi mobile number, the same rule the backend applies (apps/common/utils/phone.py):
  * 01[3-9] followed by eight digits, written with or without the +880 country code, spaces or dashes.
  */
-function isBdMobile(raw: string): boolean {
+export function isBdMobile(raw: string): boolean {
   let digits = raw.replace(/\D/g, "");
   if (digits.startsWith("880")) digits = digits.slice(3);
   if (digits.length === 10 && digits.startsWith("1")) digits = `0${digits}`;

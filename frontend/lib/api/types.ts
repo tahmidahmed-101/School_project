@@ -349,4 +349,7 @@ export interface ApiTrackOrder {
     country: string;
   } | null;
   tracking_timeline: { status: string; timestamp: string; description: string; tracking_number?: string }[];
+  /** Blank on stock orders and until staff record the first pre-order stage. */
+  preorder_stage: string;
+  preorder_timeline: { stage: string; at: string }[];
 }

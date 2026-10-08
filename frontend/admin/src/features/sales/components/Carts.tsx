@@ -45,6 +45,8 @@ const cartOwner = (cart: CustomerCart) => cart.customer_name || cart.customer_em
 
 const GuestBadge = () => <Badge variant="secondary">Guest</Badge>
 
+const ReachedCheckoutBadge = () => <Badge variant="warning">Left at checkout</Badge>
+
 function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | null; onClose: () => void }) {
   // Keeps the last cart on screen while the dialog fades out.
   const cart = useLastValue(selected)
@@ -57,13 +59,13 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              {cart.is_guest_cart ? "Guest cart" : cartOwner(cart)}
+              {cart.is_guest_cart && !cart.customer_name ? "Guest cart" : cartOwner(cart)}
               {cart.is_guest_cart && <GuestBadge />}
+              {cart.reached_checkout && <ReachedCheckoutBadge />}
             </DialogTitle>
             <DialogDescription>
-              {cart.is_guest_cart
-                ? "An anonymous visitor who hasn't checked out yet."
-                : [cart.customer_email, cart.customer_phone].filter(Boolean).join(" · ") || "No contact details"}
+              {[cart.customer_email, cart.customer_phone].filter(Boolean).join(" · ") ||
+                (cart.is_guest_cart ? "An anonymous visitor who hasn't reached checkout yet." : "No contact details")}
             </DialogDescription>
           </DialogHeader>
 
@@ -136,7 +138,13 @@ const Carts = () => {
       header: "CUSTOMER",
       cell: ({ row }) =>
         row.original.is_guest_cart ? (
-          <GuestBadge />
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {row.original.customer_name && (
+              <span className="truncate text-sm font-medium text-foreground">{row.original.customer_name}</span>
+            )}
+            <GuestBadge />
+            {row.original.reached_checkout && <ReachedCheckoutBadge />}
+          </div>
         ) : (
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{row.original.customer_name || "—"}</p>

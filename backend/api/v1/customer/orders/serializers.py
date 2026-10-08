@@ -83,14 +83,17 @@ class UpdateLineSerializer(serializers.Serializer):
 
 
 class CartContactSerializer(serializers.Serializer):
-    """The phone typed at checkout, saved on the cart before it is placed.
-    Checked as a Bangladeshi mobile number by `set_cart_contact_phone`."""
+    """The phone, and optionally the name, typed at checkout, saved on the
+    cart before it is placed. The phone is checked as a Bangladeshi mobile
+    number by `set_cart_contact_phone`."""
 
     phone = serializers.CharField(max_length=32)
+    name = serializers.CharField(max_length=120, required=False, allow_blank=True)
 
 
 class CartContactResponseSerializer(serializers.Serializer):
     contact_phone = serializers.CharField(read_only=True)
+    contact_name = serializers.CharField(read_only=True)
 
 
 class ApplyCouponSerializer(serializers.Serializer):

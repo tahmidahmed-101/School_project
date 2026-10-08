@@ -6,6 +6,7 @@ import { ContactButtons } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { ApiError } from "@/lib/api/client";
 import { trackOrder } from "../data/mutations";
+import { preorderStageLabel } from "../domain/preorder-stages";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -29,7 +30,7 @@ const STAGES = [
 ] as const satisfies readonly { status: ApiTrackStatus; labelKey: string; icon: unknown }[];
 
 export function TrackOrderView() {
-  const { ui, n } = useLang();
+  const { t, ui, n } = useLang();
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -133,6 +134,21 @@ export function TrackOrderView() {
                 </span>
               </div>
             </div>
+
+            {result.preorder_stage && (
+              <section className="rounded-xl bg-surface p-4">
+                <h2 className="text-2xs font-semibold text-fg-subtle">{ui("trackPreorderTitle")}</h2>
+                <p className="mt-0.5 text-sm font-bold text-gold-800">{t(preorderStageLabel(result.preorder_stage))}</p>
+                <ol className="mt-3 space-y-1.5 border-t border-line pt-3">
+                  {result.preorder_timeline.map((step) => (
+                    <li key={`${step.stage}-${step.at}`} className="flex items-baseline justify-between gap-3 text-2xs">
+                      <span className="font-semibold text-fg">{t(preorderStageLabel(step.stage))}</span>
+                      <span className="shrink-0 text-fg-subtle">{formatDate(step.at)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
 
             {isCancelled ? (
               <div className="flex items-center gap-3 rounded-xl border border-danger-line bg-danger-surface p-4 text-sm font-bold text-danger">

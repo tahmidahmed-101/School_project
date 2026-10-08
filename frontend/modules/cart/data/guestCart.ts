@@ -250,6 +250,29 @@ export async function syncedGuestCartToken(items: CartItem[]): Promise<string | 
   return inSync ? readToken() : null;
 }
 
+/**
+ * Saves what the shopper has typed at checkout on their open server cart, so the store can call back someone who
+ * leaves before placing the order. Best effort and silent: checkout sends the same details again with the order.
+ */
+export async function saveCartContact(contact: { phone: string; name: string }): Promise<void> {
+  try {
+    if (customerRequest) {
+      await customerRequest("/orders/cart/contact/", { method: "PATCH", body: contact, timeoutMs: TIMEOUT_MS });
+      return;
+    }
+    const token = readToken();
+    if (!token) return;
+    await apiRequest("/cart/contact/", {
+      method: "PATCH",
+      body: contact,
+      headers: withToken(token),
+      timeoutMs: TIMEOUT_MS,
+    });
+  } catch {
+    return;
+  }
+}
+
 /** Drops the token once its cart has become an order; the next add-to-cart starts a new cart. */
 export function forgetGuestCart(): void {
   writeToken(null);

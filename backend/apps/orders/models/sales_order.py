@@ -8,6 +8,8 @@ from django.db import models
 
 from apps.common.models import FullAuditModel, TimeStampedModel
 
+from .preorder_stage import PreorderStage
+
 
 class SalesOrder(FullAuditModel):
     """Lifecycle: `pending` (still an editable cart) -> `awaiting_payment`
@@ -61,6 +63,13 @@ class SalesOrder(FullAuditModel):
     # correcting a typo on one order must not rewrite the customer's profile.
     contact_email = models.EmailField(blank=True, default="")
     contact_phone = models.CharField(max_length=32, blank=True, default="")
+    # Typed at checkout before the order is placed, so an abandoned checkout
+    # still says who to call back.
+    contact_name = models.CharField(max_length=120, blank=True, default="")
+    # Blank on stock orders and until staff set the first stage.
+    preorder_stage = models.CharField(
+        max_length=40, choices=PreorderStage.choices, blank=True, default="", db_index=True
+    )
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     shipping_total = models.DecimalField(

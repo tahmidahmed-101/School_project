@@ -11,6 +11,7 @@ from .views import (
     AdminOrderInvoicePdfView,
     AdminOrderLineDetailView,
     AdminOrderListView,
+    AdminOrderPreorderStageView,
     AdminOrderRMACreateView,
     AdminOrderShipmentCreateView,
     AdminOrderStatusView,
@@ -42,6 +43,11 @@ urlpatterns = [
         "<uuid:order_id>/invoice/",
         AdminOrderInvoicePdfView.as_view(),
         name="order-invoice-pdf",
+    ),
+    path(
+        "<uuid:order_id>/preorder-stage/",
+        AdminOrderPreorderStageView.as_view(),
+        name="order-preorder-stage",
     ),
     path(
         "<uuid:order_id>/status/",

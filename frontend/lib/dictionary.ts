@@ -493,6 +493,7 @@ export const DICT = {
     en: "Check the order number and the phone number used when ordering, then try again.",
     bn: "অর্ডার নম্বর এবং অর্ডারের সময় দেওয়া মোবাইল নম্বরটি মিলিয়ে আবার চেষ্টা করুন।",
   },
+  trackPreorderTitle: { en: "Where your pre-order is", bn: "প্রি-অর্ডার এখন কোথায়" },
   trackOrderTimeline: { en: "Order timeline", bn: "অর্ডারের ধাপ" },
   trackOrderShipment: { en: "Shipment", bn: "শিপমেন্ট" },
   trackOrderTrackingNo: { en: "Tracking no.", bn: "ট্র্যাকিং নম্বর" },

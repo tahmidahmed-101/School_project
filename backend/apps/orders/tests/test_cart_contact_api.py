@@ -65,7 +65,7 @@ def test_guest_saves_and_replaces_the_phone_before_checkout(api_client):
     saved = _save_guest(api_client, token, " 01711223344 ")
 
     assert saved.status_code == 200, saved.data
-    assert saved.data["data"] == {"contact_phone": "01711223344"}
+    assert saved.data["data"] == {"contact_phone": "01711223344", "contact_name": ""}
     cart.refresh_from_db()
     assert cart.contact_phone == "01711223344"
     assert cart.status == SalesOrder.Status.PENDING
@@ -202,7 +202,7 @@ def test_customer_saves_a_cart_phone_without_changing_their_profile(api_client):
     response = api_client.patch(CUSTOMER_CONTACT_URL, {"phone": "01899887766"}, format="json")
 
     assert response.status_code == 200, response.data
-    assert response.data["data"] == {"contact_phone": "01899887766"}
+    assert response.data["data"] == {"contact_phone": "01899887766", "contact_name": ""}
     assert _contact_phone(cart) == "01899887766"
     customer.refresh_from_db()
     assert customer.phone == "01733333333"
@@ -277,3 +277,21 @@ def test_service_refuses_an_order_that_is_past_pending():
 
     assert raised.value.code == "not_pending"
     assert _contact_phone(order) == ""
+
+
+def test_guest_name_is_saved_with_the_phone_and_a_blank_name_keeps_it(api_client):
+    cart, token = _guest_cart()
+
+    saved = api_client.patch(
+        GUEST_CONTACT_URL,
+        {"phone": "01711223344", "name": "  Rahim   Uddin "},
+        format="json",
+        **_headers(token),
+    )
+    again = _save_guest(api_client, token, "01811223344")
+
+    assert saved.status_code == 200, saved.data
+    assert saved.data["data"] == {"contact_phone": "01711223344", "contact_name": "Rahim Uddin"}
+    assert again.data["data"] == {"contact_phone": "01811223344", "contact_name": "Rahim Uddin"}
+    cart.refresh_from_db()
+    assert cart.contact_name == "Rahim Uddin"

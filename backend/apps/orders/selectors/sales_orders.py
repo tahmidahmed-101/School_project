@@ -67,6 +67,7 @@ def _orders_with_related() -> QuerySet[SalesOrder]:
         "shipments__carrier",
         "shipments__lines",
         "rmas__lines",
+        "preorder_stage_events__changed_by",
     )
 
 
@@ -74,6 +75,7 @@ def orders_list(
     *,
     customer=None,
     status: str | None = None,
+    preorder_stage: str | None = None,
     search: str | None = None,
     start: date | None = None,
     end: date | None = None,
@@ -83,6 +85,8 @@ def orders_list(
         queryset = queryset.filter(customer=customer)
     if status:
         queryset = queryset.filter(status=status)
+    if preorder_stage:
+        queryset = queryset.filter(preorder_stage=preorder_stage)
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:

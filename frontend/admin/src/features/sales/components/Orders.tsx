@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
-import { ORDER_STATUS_OPTIONS, type Order } from "@/features/sales/types"
+import { ORDER_STATUS_OPTIONS, PREORDER_STAGE_OPTIONS, type Order } from "@/features/sales/types"
 import { paymentMethodLabel } from "@/features/payments/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { downloadFile } from "@/lib/download"
@@ -48,6 +48,7 @@ const Orders = () => {
   const customerId = searchParams.get("customer_id") ?? ""
 
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
+  const [stageFilter, setStageFilter] = useState<Option | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
 
@@ -60,6 +61,7 @@ const Orders = () => {
     state: ordersState,
     params: {
       status: statusFilter?.value,
+      preorder_stage: stageFilter?.value,
       start: from ? toISODate(from) : undefined,
       end: to ? toISODate(to) : undefined,
       customer_id: customerId,
@@ -158,6 +160,16 @@ const Orders = () => {
                 placeholder="Status"
                 value={statusFilter}
                 onValueChange={setStatusFilter}
+              />
+            ),
+          },
+          {
+            component: (
+              <Combobox
+                options={PREORDER_STAGE_OPTIONS}
+                placeholder="Pre-order stage"
+                value={stageFilter}
+                onValueChange={setStageFilter}
               />
             ),
           },
