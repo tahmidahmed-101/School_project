@@ -215,9 +215,10 @@ class AdminBulkStockAdjustmentView(APIView):
         serializer = BulkStockAdjustmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         items = [dict(item) for item in serializer.validated_data["adjustments"]]
+        kind = serializer.validated_data.get("kind")
 
         try:
-            results = post_bulk_adjustments(items=items, actor=request.user)
+            results = post_bulk_adjustments(items=items, actor=request.user, kind=kind)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(
@@ -288,7 +289,10 @@ class AdminStockLookupView(APIView):
             return error_from_exception(
                 DomainError("Provide a SKU or barcode to look up.", code="missing_query")
             )
+        kind = get_kind(request.query_params)
         variant = get_variant_by_sku_or_barcode(identifier)
+        if variant is not None and kind and variant.product.category.category_type != kind:
+            variant = None
         if variant is None:
             return Response({"data": {"found": False, "query": identifier}, "message": "Success"})
         data = StockLookupVariantSerializer(

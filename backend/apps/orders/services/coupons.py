@@ -8,11 +8,14 @@ from django.utils import timezone
 
 from apps.audit.services.audit import log_action
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
+from apps.common.params import KIND_PREORDER
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.orders.models import Coupon, SalesOrder
 from apps.orders.selectors.coupons import get_active_coupon_by_code
-from apps.orders.services.carts import _ensure_pending
+from apps.orders.services.carts import _ensure_pending, lines_of_kind
 from apps.orders.services.orders import lock_order
+
+COUPON_STOCK_ONLY_MESSAGE = "Coupons work on stock orders only, not on a pre-order."
 
 
 @transaction.atomic
@@ -71,11 +74,13 @@ def _check_coupon_eligible(coupon: Coupon, subtotal: Decimal) -> None:
         )
 
 
-def preview_coupon(*, code: str, subtotal: Decimal) -> dict:
+def preview_coupon(*, code: str, subtotal: Decimal, holds_preorder: bool = False) -> dict:
     """Read-only eligibility check against a prospective subtotal, for a
     storefront to validate a code before it commits to an order. Does not
     lock the row or touch `times_used` — `apply_coupon` re-checks for real
     once there is an order to attach the coupon to."""
+    if holds_preorder:
+        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
     coupon = get_active_coupon_by_code(code)
     if coupon is None:
         raise DomainError("Coupon not found.", code="invalid_coupon")
@@ -98,10 +103,8 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
     # ends up attached) and losing whichever change lost the race.
     lock_order(order)
     _ensure_pending(order)
-    if order.lines.filter(is_preorder=True).exists():
-        raise BusinessRuleViolationError(
-            "Coupons work on stock orders only, not on a pre-order.", code="coupon_stock_only"
-        )
+    if lines_of_kind(order.lines, KIND_PREORDER).exists():
+        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
     # Locks the row for the rest of the transaction so two concurrent applies
     # against a usage-limited coupon can't both read the same times_used and
     # both pass the limit check.

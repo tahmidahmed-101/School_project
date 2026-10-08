@@ -221,7 +221,8 @@ def _render_totals(pdf: DocumentPDF, context: dict[str, Any], currency: str) -> 
     )
 
     if context.get("paid") is not None and Decimal(str(context.get("paid"))) > 0:
-        _render_summary_row(pdf, summary_x, "Amount Paid:", context.get("paid"), currency)
+        label = f"{context['paid_label']}:" if context.get("is_preorder") else "Amount Paid:"
+        _render_summary_row(pdf, summary_x, label, context.get("paid"), currency)
     if context.get("balance") is not None:
         _render_summary_row(
             pdf, summary_x, "Balance Due:", context.get("balance"), currency, is_bold=True

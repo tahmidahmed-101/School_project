@@ -27,6 +27,7 @@ class FraudCaseSerializer(serializers.Serializer):
     case_number = serializers.CharField(read_only=True)
     status = serializers.ChoiceField(choices=FraudCase.Status.choices)
     order_id = serializers.UUIDField(read_only=True, allow_null=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True, allow_null=True)
     customer_id = serializers.UUIDField(read_only=True, allow_null=True)
     description = serializers.CharField()
     resolution = serializers.CharField(allow_blank=True)

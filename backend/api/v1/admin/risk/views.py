@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from apps.accounts.constants import StaffPermissionCode
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_search
+from apps.common.params import get_kind, get_search
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.orders.selectors.sales_orders import get_order_by_id
@@ -69,7 +69,9 @@ class AdminFraudCaseListView(RiskPermissionMixin, GenericListAPIView):
         params = self.request.query_params
         # ?search= matches case/order number, customer or order email
         # (case-insensitive) and the order's, address's or customer's phone.
-        return fraud_cases_list(status=params.get("status"), search=get_search(params))
+        return fraud_cases_list(
+            status=params.get("status"), search=get_search(params), kind=get_kind(params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)

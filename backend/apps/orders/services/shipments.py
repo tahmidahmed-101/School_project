@@ -27,7 +27,7 @@ from apps.orders.models import (
     StockReservation,
 )
 from apps.orders.selectors.shipments import order_shipments_complete
-from apps.orders.services.notifications import notify_order
+from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.orders import lock_order
 from apps.orders.services.reservations import release_line_reservations
 
@@ -178,7 +178,7 @@ CUSTOMER_NOTIFIED_SHIPMENT_STATUSES = (
 
 def _notify_shipment_status(shipment: Shipment) -> None:
     order = shipment.order
-    notify_order(order, f"Order {order.order_number}: {shipment.get_status_display().lower()}.")
+    notify_order(order, f"{order_label(order)}: {shipment.get_status_display().lower()}.")
 
 
 def can_advance_shipment_status(current: str, new: str) -> bool:

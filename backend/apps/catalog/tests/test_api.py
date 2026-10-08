@@ -84,7 +84,7 @@ def test_public_product_list_preorder_only_filter(api_client):
 
     now = timezone.now()
 
-    preorder_product = ProductFactory(is_active=True)
+    preorder_product = ProductFactory(is_active=True, category__category_type="preorder")
     ProductVariantFactory(
         product=preorder_product,
         is_preorder_enabled=True,
@@ -300,7 +300,9 @@ def test_admin_product_list_preorder_only_filter(api_client):
     api_client.force_authenticate(user=admin)
     now = timezone.now()
 
-    preorder_product = ProductFactory(name="Preorder Filter Product", is_active=True)
+    preorder_product = ProductFactory(
+        name="Preorder Filter Product", is_active=True, category__category_type="preorder"
+    )
     ProductVariantFactory(
         product=preorder_product,
         is_preorder_enabled=True,
@@ -333,6 +335,7 @@ def test_admin_product_list_filters_inactive_preorder_products(api_client):
     inactive_preorder_product = ProductFactory(
         name="Inactive Preorder Filter Product",
         is_active=True,
+        category__category_type="preorder",
     )
     ProductVariantFactory(
         product=inactive_preorder_product,

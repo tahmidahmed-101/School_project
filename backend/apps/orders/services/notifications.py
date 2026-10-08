@@ -5,6 +5,11 @@ from apps.accounts.services.notifications import notify
 from apps.orders.models import ReturnRMA, SalesOrder
 
 
+def order_label(order: SalesOrder) -> str:
+    noun = "Pre-order" if order.order_type == SalesOrder.OrderType.PREORDER else "Order"
+    return f"{noun} {order.order_number}"
+
+
 def notify_order(order: SalesOrder, title: str) -> None:
     notify(user=order.customer, kind=Notification.Kind.ORDER, title=title, object_id=order.id)
 

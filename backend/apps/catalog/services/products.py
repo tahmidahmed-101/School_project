@@ -15,7 +15,7 @@ from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_sku_for, unique_slug_for
 
-from .kind_rules import check_variant_kind
+from .kind_rules import check_variant_kind, is_preorder_category
 
 
 def product_variations_in_use() -> str | None:
@@ -111,9 +111,7 @@ def _check_preorder_rules(*, product: Product, enabled: bool, start_date, end_da
 
 
 def _check_category_keeps_kind(product: Product, category: Category) -> None:
-    if category.category_type == product.category.category_type:
-        return
-    if product.variants.filter(deleted_at__isnull=True).exists():
+    if category.category_type != product.category.category_type:
         raise BusinessRuleViolationError(
             "A product cannot move between a stock category and a pre-order category.",
             code="category_kind_mismatch",
@@ -156,6 +154,7 @@ def update_product(*, product: Product, data: dict) -> Product:
     # fans out to every live variant of the product.
     price_updates = {f: data[f] for f in ("price", "cost_price", "discount_price") if f in data}
     if price_updates:
+        check_variant_kind(category=product.category, values=price_updates)
         variants = product.variants.filter(deleted_at__isnull=True)
         if variants.exists():
             for variant in variants:
@@ -207,6 +206,12 @@ def _ensure_no_stock(product: Product) -> None:
     shown = "; ".join(blockers[:MAX_STOCK_BLOCKERS_SHOWN])
     if len(blockers) > MAX_STOCK_BLOCKERS_SHOWN:
         shown += f"; and {len(blockers) - MAX_STOCK_BLOCKERS_SHOWN} more"
+    if is_preorder_category(product.category):
+        raise BusinessRuleViolationError(
+            f"{product.name} still has received goods ({shown}). Clear them and resolve the "
+            "pre-orders holding them before deleting the product.",
+            code="product_stock_in_use",
+        )
     raise BusinessRuleViolationError(
         f"{product.name} still has stock ({shown}). Write the stock off under Inventory and "
         "resolve the orders holding it before deleting the product.",
@@ -504,7 +509,13 @@ def create_quick_product(
     actor=None,
 ) -> ProductVariant:
     """Create a product plus its first variant in one atomic call — the Stock
-    App's "not found, create it" flow."""
+    App's "not found, create it" flow. Stock only: a pre-order product needs
+    its ordering window, which this flow does not take."""
+    if is_preorder_category(category):
+        raise BusinessRuleViolationError(
+            "A pre-order product is created under Pre-orders, not from stock intake.",
+            code="stock_kind_mismatch",
+        )
     product = create_product(category=category, name=name, description=description)
     return create_variant(
         product=product,

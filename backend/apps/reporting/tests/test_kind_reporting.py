@@ -98,12 +98,13 @@ def test_dashboard_for_one_kind_shows_only_that_kind(admin_client, sales, kind, 
     assert ("preorder" in data) == (kind == PREORDER)
     assert _kpi(data, "Orders") == 1
     assert _kpi(data, "Revenue") == float(order.grand_total)
-    assert _kpi(data, "Low Stock") == 1
+    low_stock = 1 if kind == STOCK else 0
+    assert _kpi(data, "Low Stock") == low_stock
     assert [row["name"] for row in data["categories"]] == [category]
     assert [row["sku"] for row in data["top_products"]] == [variant.sku]
-    assert [row["sku"] for row in data["inventory"]] == [variant.sku]
+    assert [row["sku"] for row in data["inventory"]] == [variant.sku][:low_stock]
     assert [row["id"] for row in data["orders"]] == [order.order_number]
-    assert data["low_stock"]["total"] == 1
+    assert data["low_stock"]["total"] == low_stock
 
 
 def test_sales_trend_by_kind(admin_client, sales):
@@ -119,11 +120,14 @@ def test_sales_trend_by_kind(admin_client, sales):
 
 
 def test_low_stock_by_kind(admin_client, sales):
-    assert len(_get(admin_client, "low-stock/")) == 2
-    for kind in (STOCK, PREORDER):
-        rows = _get(admin_client, "low-stock/", kind=kind)
-        assert [row["variant_sku"] for row in rows] == [sales[kind][0].sku]
-    assert _get(admin_client, "low-stock/", kind="preorder", count_only="1") == {"count": 1}
+    stock_sku = sales[STOCK][0].sku
+    assert [row["variant_sku"] for row in _get(admin_client, "low-stock/")] == [stock_sku]
+    assert [row["variant_sku"] for row in _get(admin_client, "low-stock/", kind=STOCK)] == [
+        stock_sku
+    ]
+    assert _get(admin_client, "low-stock/", kind=PREORDER) == []
+    assert _get(admin_client, "low-stock/", kind="stock", count_only="1") == {"count": 1}
+    assert _get(admin_client, "low-stock/", kind="preorder", count_only="1") == {"count": 0}
 
 
 def test_stock_turnover_takes_kind(admin_client, sales):

@@ -15,6 +15,7 @@ from apps.orders.services.carts import (
     MIXED_BASKET_MESSAGE,
     _check_preorder_stock_limit,
     compute_line_tax,
+    ensure_purchasable,
 )
 from apps.orders.services.coupons import (
     _compute_discount,
@@ -36,8 +37,7 @@ def order_weight(order: SalesOrder) -> Decimal:
 
 
 def _is_preorder_line(line) -> bool:
-    variant = line.variant
-    return variant.is_preorder_enabled and variant.is_preorder_active
+    return line.variant.is_preorder_kind
 
 
 def _reprice_lines(order: SalesOrder, lines) -> None:
@@ -110,12 +110,8 @@ def checkout(
 
     for line in lines:
         variant = line.variant
-        if variant.is_preorder_upcoming:
-            raise BusinessRuleViolationError(
-                f"{variant.product.name} ({variant.sku}) is not open for pre-order yet.",
-                code="preorder_not_active",
-            )
-        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+        ensure_purchasable(variant)
+        if variant.is_preorder_kind and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, line.quantity)
 
     _reprice_lines(order, lines)

@@ -10,6 +10,7 @@ from apps.accounting.selectors.tax_rates import get_default_tax_rate
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.common.utils.codes import generate_document_number, hash_code
 from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.orders.models import SalesOrder, SalesOrderLine
@@ -175,9 +176,31 @@ MIXED_BASKET_MESSAGE = (
 )
 
 
+def lines_of_kind(lines, kind: str):
+    """Lines whose product is of `kind`. The category decides, not the stored
+    line flag, which an older cart may carry from before the rule."""
+    return lines.filter(variant__product__category__category_type=kind)
+
+
 def ensure_single_kind(order: SalesOrder, *, is_preorder: bool) -> None:
-    if order.lines.filter(is_preorder=not is_preorder).exists():
+    other = KIND_STOCK if is_preorder else KIND_PREORDER
+    if lines_of_kind(order.lines, other).exists():
         raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")
+
+
+def ensure_purchasable(variant) -> None:
+    """A pre-order item is bought only inside its ordering window."""
+    if not variant.is_preorder_kind:
+        return
+    label = f"{variant.product.name} ({variant.sku})"
+    if variant.is_preorder_upcoming:
+        raise BusinessRuleViolationError(
+            f"{label} is not open for pre-order yet.", code="preorder_not_active"
+        )
+    if not variant.is_preorder_active:
+        raise BusinessRuleViolationError(
+            f"Pre-orders for {label} have closed.", code="preorder_closed"
+        )
 
 
 @transaction.atomic
@@ -191,16 +214,12 @@ def add_line(
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
-    # Validate pre-order availability
-    if variant.is_preorder_upcoming:
-        raise BusinessRuleViolationError(
-            "This product is not available for pre-order at this time.", code="preorder_not_active"
-        )
-    if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+    ensure_purchasable(variant)
+    is_preorder = variant.is_preorder_kind
+    if is_preorder and variant.preorder_stock_limit is not None:
         _check_preorder_stock_limit(variant, quantity)
 
     unit_price = variant.effective_price
-    is_preorder = variant.is_preorder_active
     ensure_single_kind(order, is_preorder=is_preorder)
     tax_amount = compute_line_tax(unit_price=unit_price, quantity=quantity)
     line, created = SalesOrderLine.objects.get_or_create(
@@ -216,8 +235,7 @@ def add_line(
         },
     )
     if not created:
-        # Check pre-order stock limit when increasing quantity
-        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+        if is_preorder and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, line.quantity + quantity)
         line.quantity += quantity
         line.tax_amount = compute_line_tax(unit_price=line.unit_price, quantity=line.quantity)
@@ -238,8 +256,7 @@ def update_line(*, line: SalesOrderLine, quantity: int) -> SalesOrderLine:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
     variant = line.variant
-    # Validate pre-order stock limit when updating quantity
-    if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+    if variant.is_preorder_kind and variant.preorder_stock_limit is not None:
         _check_preorder_stock_limit(variant, quantity)
 
     line.quantity = quantity

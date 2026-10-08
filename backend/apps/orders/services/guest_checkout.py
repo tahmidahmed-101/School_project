@@ -20,6 +20,7 @@ from apps.orders.services.carts import (
     _check_preorder_stock_limit,
     compute_line_tax,
     default_tax_percent,
+    ensure_purchasable,
 )
 from apps.orders.services.orders import lock_order
 
@@ -43,6 +44,14 @@ def weight_for_items(items: list[dict]) -> Decimal:
     return weight
 
 
+def items_hold_preorder(items: list[dict]) -> bool:
+    ids = [item["variant_id"] for item in items]
+    return any(
+        variant.is_preorder_kind
+        for variant in get_variants_by_ids(ids).select_related("product__category")
+    )
+
+
 def subtotal_for_items(items: list[dict]) -> Decimal:
     """Order subtotal for a raw item list — same per-line price `guest_checkout`
     would charge, used to preview a coupon before an order exists."""
@@ -54,11 +63,6 @@ def subtotal_for_items(items: list[dict]) -> Decimal:
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
         subtotal += variant.effective_price * item["quantity"]
     return subtotal
-
-
-def _is_preorder_line(line: SalesOrderLine) -> bool:
-    variant = line.variant
-    return variant.is_preorder_enabled and variant.is_preorder_active
 
 
 def _guest_identity(*, phone: str, first_name: str, last_name: str) -> User:
@@ -261,17 +265,16 @@ def _order_from_items(
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
 
-        if variant.is_preorder_upcoming:
+        try:
+            ensure_purchasable(variant)
+        except BusinessRuleViolationError:
             order.delete()
-            raise BusinessRuleViolationError(
-                "This product is not available for pre-order at this time.",
-                code="preorder_not_active",
-            )
-        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+            raise
+        is_preorder = variant.is_preorder_kind
+        if is_preorder and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, quantity)
 
         unit_price = variant.effective_price
-        is_preorder = variant.is_preorder_active
         tax_amount = compute_line_tax(
             unit_price=unit_price, quantity=quantity, tax_percent=tax_percent
         )

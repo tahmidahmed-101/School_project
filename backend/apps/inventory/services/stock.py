@@ -16,6 +16,18 @@ from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
 from apps.inventory.selectors.warehouse import get_default_warehouse, get_warehouse_by_id
 
 
+def ensure_variant_kind(variant, kind: str | None) -> None:
+    """Refuse a stock write made from one half's screens against the other
+    half's item. No `kind` means the caller did not say which half it is."""
+    if kind is None or variant.product.category.category_type == kind:
+        return
+    label = Category.CategoryType(kind).label.lower()
+    raise BusinessRuleViolationError(
+        f"{variant.product.name} ({variant.sku}) is not a {label} item.",
+        code="stock_kind_mismatch",
+    )
+
+
 def _get_warehouse(warehouse_id=None):
     if isinstance(warehouse_id, Warehouse):
         return warehouse_id
@@ -275,10 +287,12 @@ def post_adjustment(
     unit_cost: Decimal | None = None,
     notes: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """Cycle-count correction: positive delta posts ADJUSTMENT_IN, negative
     posts ADJUSTMENT_OUT, plus the matching journal entry so the GL's
     inventory asset stays equal to physical valuation."""
+    ensure_variant_kind(variant, kind)
     if quantity_delta == 0:
         raise BusinessRuleViolationError(
             "Adjustment quantity cannot be zero.", code="invalid_quantity"
@@ -301,7 +315,9 @@ def post_adjustment(
 
 
 @transaction.atomic
-def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
+def post_bulk_adjustments(
+    *, items: list[dict], actor=None, kind: str | None = None
+) -> list[dict]:
     """Apply many adjustments as one all-or-nothing batch.
 
     A partially applied cycle count is worse than a rejected one, so the first
@@ -309,7 +325,9 @@ def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
     """
     variants = {
         str(variant.id): variant
-        for variant in get_variants_by_ids([item["variant_id"] for item in items])
+        for variant in get_variants_by_ids(
+            [item["variant_id"] for item in items]
+        ).select_related("product__category")
     }
     results = []
     for index, item in enumerate(items):
@@ -326,6 +344,7 @@ def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
             unit_cost=item.get("unit_cost"),
             notes=item.get("notes", ""),
             actor=actor,
+            kind=kind,
         )
         results.append({"index": index, "entry": entry})
     return results
@@ -339,10 +358,12 @@ def stock_intake(
     unit_cost: Decimal | None = None,
     notes: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """The Stock App's intake action: receive newly stocked product. Posts a
     PURCHASE_IN movement so the ledger stays the single source of truth for
     on-hand quantities."""
+    ensure_variant_kind(variant, kind)
     return record_movement(
         variant=variant,
         warehouse=warehouse,
@@ -363,10 +384,12 @@ def write_off_stock(
     quantity: int,
     reason: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """Confirm a stock loss (damaged / expired / stolen) with a WRITE_OFF
     ledger entry plus the shrinkage journal posting (Dr Inventory Shrinkage
     / Cr Inventory Asset, blueprint §8)."""
+    ensure_variant_kind(variant, kind)
     entry = record_movement(
         variant=variant,
         warehouse=warehouse,

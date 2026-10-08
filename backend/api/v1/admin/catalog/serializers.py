@@ -31,9 +31,31 @@ def validate_discount_below_price(attrs: dict) -> dict:
     return attrs
 
 
+# What a row of one kind carries in the other kind's fields: nothing.
+PREORDER_FIELD_BLANKS = {
+    "is_preorder_enabled": False,
+    "preorder_price": None,
+    "preorder_start_date": None,
+    "preorder_end_date": None,
+    "release_date": None,
+    "preorder_stock_limit": None,
+    "is_preorder_active": False,
+    "can_preorder": False,
+    "is_preorder_price_applied": False,
+}
+STOCK_FIELD_BLANKS = {
+    "barcode": "",
+    "discount_price": None,
+    "wholesale_price": None,
+    "show_wholesale_price": False,
+    "is_low_stock": False,
+}
+
+
 class ProductVariantSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     product_id = serializers.UUIDField(read_only=True)
+    category_type = serializers.CharField(source="product.category.category_type", read_only=True)
     product_name = serializers.SerializerMethodField()
     sku = serializers.CharField()
     barcode = serializers.CharField(allow_blank=True)
@@ -71,21 +93,26 @@ class ProductVariantSerializer(serializers.Serializer):
     primary_image = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
 
+    def to_representation(self, instance) -> dict:
+        data = super().to_representation(instance)
+        data.update(STOCK_FIELD_BLANKS if instance.is_preorder_kind else PREORDER_FIELD_BLANKS)
+        return data
+
     def get_is_preorder_active(self, obj) -> bool:
         return obj.is_preorder_active
 
     def get_can_preorder(self, obj) -> bool:
+        if not obj.is_preorder_active:
+            return False
+        if obj.preorder_stock_limit is None:
+            return True
         # Use pre-fetched preordered quantities from context to avoid N+1 queries
         preordered_by_variant = self.context.get("preordered_by_variant")
         if preordered_by_variant is not None:
             preordered = preordered_by_variant.get(obj.id, 0)
         else:
             preordered = obj._get_preordered_quantity()
-        if not obj.is_preorder_active:
-            return False
-        if obj.preorder_stock_limit is not None:
-            return preordered < obj.preorder_stock_limit
-        return True
+        return preordered < obj.preorder_stock_limit
 
     def get_effective_price(self, obj) -> str:
         return str(obj.effective_price)
@@ -109,6 +136,8 @@ class ProductVariantSerializer(serializers.Serializer):
         return available_quantities_for_variants([obj.id]).get(obj.id, 0)
 
     def get_is_low_stock(self, obj) -> bool:
+        if obj.is_preorder_kind:
+            return False
         reorder_point_by_variant = self.context.get("reorder_point_by_variant")
         if reorder_point_by_variant is not None:
             reorder_point = reorder_point_by_variant.get(obj.id, 0)
@@ -297,6 +326,7 @@ class CategoryUpdateSerializer(serializers.Serializer):
 class ProductSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     category_id = serializers.UUIDField(read_only=True)
+    category_type = serializers.CharField(source="category.category_type", read_only=True)
     brand_id = serializers.UUIDField(read_only=True, allow_null=True)
     featured = serializers.BooleanField(read_only=True)
     name = serializers.CharField()
@@ -340,6 +370,8 @@ class ProductSerializer(serializers.Serializer):
     def get_discount_price(self, obj) -> str | None:
         variant = self._representative_variant(obj)
         if variant is None or variant.discount_price is None:
+            return None
+        if obj.category.category_type == Category.CategoryType.PREORDER:
             return None
         return str(variant.discount_price)
 
@@ -440,6 +472,7 @@ class ProductImageUpdateSerializer(serializers.Serializer):
 class ProductBulkStatusSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)
     is_active = serializers.BooleanField()
+    category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
 
 
 class BrandSerializer(serializers.Serializer):

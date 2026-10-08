@@ -49,6 +49,7 @@ def _cod_order(email: str = "cod-order@example.com"):
 def _preorder_variant(limit: int | None = 5, **fields):
     now = timezone.now()
     return ProductVariantFactory(
+        product__category__category_type="preorder",
         is_preorder_enabled=True,
         preorder_start_date=now - timedelta(days=1),
         preorder_end_date=now + timedelta(days=1),
