@@ -45,14 +45,15 @@ def _stocked_variant(quantity: int = 10, price: Decimal = Decimal("100.00"), wei
     return variant
 
 
-def _configured_delivery(keyword="dhaka", rate=Decimal("60.00")):
+def _configured_delivery(keyword="dhaka", rate=Decimal("60.00"), kind="stock"):
     """The root conftest wipes migration-seeded zones for every test, so
     anything that reaches `checkout()` needs its own zone/carrier/rate."""
-    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [])
+    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [], kind=kind)
     carrier = CarrierFactory()
     ShippingRateFactory(
         zone=zone,
         carrier=carrier,
+        kind=kind,
         base_weight=Decimal("50"),
         base_charge=rate,
         increment_weight=Decimal("1"),

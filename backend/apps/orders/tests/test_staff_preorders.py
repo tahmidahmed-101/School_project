@@ -61,7 +61,7 @@ def _admin(api_client, email):
 
 def test_staff_preorder_equals_the_one_a_customer_places():
     _set_deposit("30")
-    _zone, carrier = _configured_delivery()
+    _zone, carrier = _configured_delivery(kind="preorder")
     variant = _preorder_variant(limit=None, price=Decimal("1000.00"))
 
     shopper = CustomerUserFactory()
@@ -270,7 +270,7 @@ def test_a_preorder_line_cannot_grow_once_its_window_has_closed():
 
 def test_quote_matches_the_order_and_leaves_nothing_behind():
     _set_deposit("30")
-    _zone, carrier = _configured_delivery()
+    _zone, carrier = _configured_delivery(kind="preorder")
     variant = _preorder_variant(limit=2, price=Decimal("1000.00"))
     customer = CustomerUserFactory()
     address = _address(customer)
