@@ -2,7 +2,10 @@ import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope } from "@/lib/api/envelope"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
+import type { Kind } from "@/hooks/use-kind"
 import type {
+  PreorderAllocationResult,
+  PreorderReport,
   StockAdjustmentPayload,
   StockIntakePayload,
   StockLedgerEntry,
@@ -15,9 +18,9 @@ import type {
 
 const I = "/admin/inventory"
 
-export async function fetchStockStatus(): Promise<StockStatusSummary> {
+export async function fetchStockStatus(kind?: Kind): Promise<StockStatusSummary> {
   try {
-    const res = await api.get(`${I}/stock-status/`)
+    const res = await api.get(`${I}/stock-status/`, { params: { kind } })
     return unwrapEnvelope<StockStatusSummary>(res.data)
   } catch (err) {
     throw extractApiError(err)
@@ -59,6 +62,11 @@ export async function downloadLedgerExport(filters: Record<string, unknown>) {
     throw extractApiError(await blobErrorToJson(err))
   }
 }
+
+// ---- pre-order arrivals (orders app) ----
+export const fetchPreorderReport = () => apiCall<PreorderReport>(() => api.get("/admin/orders/preorder-report/"))
+export const allocatePreorderStock = () =>
+  apiCall<PreorderAllocationResult>(() => api.post("/admin/orders/preorder-allocation/"))
 
 // ---- reservations (orders app) ----
 export const releaseReservation = (id: string) =>

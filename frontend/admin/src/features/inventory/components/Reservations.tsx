@@ -26,6 +26,7 @@ import { releaseReservation } from "../api"
 import type { StockReservation } from "../types"
 
 const PAGE_SIZE = 25
+const STOCK_VARIANTS = { category_type: "stock" }
 
 const statusOptions: Option[] = [
   { label: "Active", value: "active" },
@@ -60,6 +61,7 @@ const Reservations = () => {
     state: reservationState,
     pageSize: PAGE_SIZE,
     params: {
+      kind: "stock",
       status: status?.value,
       expired: expired?.value,
       ordering: ordering?.value,
@@ -142,7 +144,12 @@ const Reservations = () => {
             wide: true,
             active: Boolean(variant),
             component: (
-              <VariantPicker value={variant} onChange={setVariant} placeholder="Filter by variant…" />
+              <VariantPicker
+                value={variant}
+                onChange={setVariant}
+                placeholder="Filter by variant…"
+                filters={STOCK_VARIANTS}
+              />
             ),
           },
           {

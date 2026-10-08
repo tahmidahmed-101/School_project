@@ -69,12 +69,11 @@ const StockOverview = () => {
   )
   const [bulkOpen, setBulkOpen] = useState(false)
 
-
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       try {
-        const s = await fetchStockStatus()
+        const s = await fetchStockStatus("stock")
         if (!cancelled) {
           setStatus(s)
           setStatusError(null)
@@ -97,6 +96,7 @@ const StockOverview = () => {
     pageSize: PAGE_SIZE,
     initialSearch: searchParams.get("search") ?? "",
     params: {
+      kind: "stock",
       warehouse_id: warehouse?.value,
       ordering: ordering?.value,
       low_stock_only: lowOnly || undefined,

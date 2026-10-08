@@ -138,3 +138,24 @@ export interface StockReservation {
   expires_at: string
   is_expired: boolean
 }
+
+/** One row of preorder_demand(): units open pre-orders still wait for, per variant. */
+export interface PreorderDemandRow {
+  variant_id: string
+  variant_sku: string
+  product_name: string
+  waiting: number
+  available: number
+  to_buy: number
+}
+
+/** AdminPreorderReportView (orders app) */
+export interface PreorderReport {
+  summary: { open_orders: number; order_value: string; deposits_held: string; balances_outstanding: string }
+  demand: PreorderDemandRow[]
+}
+
+/** AdminPreorderAllocationView (orders app) */
+export interface PreorderAllocationResult {
+  allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
+}
