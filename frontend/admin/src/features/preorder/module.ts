@@ -7,6 +7,7 @@ export const preorderModule: FeatureModule = {
     { path: "preorders", lazy: page(() => import("../sales/components/Orders")) },
     { path: "preorder_products", lazy: page(() => import("../catalog/components/Products")) },
     { path: "preorder_categories", lazy: page(() => import("../catalog/components/Categories")) },
+    { path: "preorder_brands", lazy: page(() => import("../catalog/components/Brands")) },
     { path: "preorder_arrivals", lazy: page(() => import("../inventory/components/PreorderArrivals")) },
     { path: "preorder_payments", lazy: page(() => import("../payments/components/Payments")) },
     { path: "preorder_shipments", lazy: page(() => import("../shipping/components/Shipments")) },
@@ -16,6 +17,7 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_reviews", lazy: page(() => import("../catalog/components/Reviews")) },
     { path: "preorder_questions", lazy: page(() => import("../catalog/components/Questions")) },
     { path: "preorder_price_reports", lazy: page(() => import("../catalog/components/PriceReports")) },
+    { path: "preorder_purchasing/suppliers", lazy: page(() => import("../procurement/components/Suppliers")) },
     { path: "preorder_purchasing/orders", lazy: page(() => import("../procurement/components/PurchaseOrders")) },
     {
       path: "preorder_purchasing/orders/new",
@@ -40,6 +42,7 @@ export const preorderModule: FeatureModule = {
         { title: "Orders", url: "/preorders", permission: ["orders.view", "orders.manage"] },
         { title: "Products", url: "/preorder_products", permission: ["catalog.view", "catalog.manage"] },
         { title: "Categories", url: "/preorder_categories", permission: ["catalog.view", "catalog.manage"] },
+        { title: "Brands", url: "/preorder_brands", permission: ["catalog.view", "catalog.manage"] },
         {
           title: "Arrivals",
           url: "/preorder_arrivals",
@@ -48,6 +51,11 @@ export const preorderModule: FeatureModule = {
         { title: "Payments", url: "/preorder_payments", permission: ["orders.view", "orders.manage"] },
         { title: "Shipments", url: "/preorder_shipments", permission: ["shipments.view", "shipments.update"] },
         { title: "Returns", url: "/preorder_returns", permission: "returns.manage" },
+        {
+          title: "Suppliers",
+          url: "/preorder_purchasing/suppliers",
+          permission: ["purchasing.view", "purchasing.manage"],
+        },
         {
           title: "Purchase orders",
           url: "/preorder_purchasing/orders",
