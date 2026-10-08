@@ -53,6 +53,17 @@ class PublicCategorySerializer(serializers.Serializer):
     slug = serializers.CharField()
     parent_id = serializers.UUIDField(allow_null=True)
     category_type = serializers.CharField(read_only=True)
+    product_count = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    def _summary(self, obj) -> dict:
+        return self.context.get("summaries", {}).get(obj.id, {})
+
+    def get_product_count(self, obj) -> int:
+        return self._summary(obj).get("product_count", 0)
+
+    def get_image(self, obj) -> str | None:
+        return self._summary(obj).get("image")
 
 
 class PublicBundleComponentSerializer(serializers.Serializer):

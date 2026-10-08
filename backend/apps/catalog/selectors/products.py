@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from django.db.models import Case, Prefetch, Q, QuerySet, Value, When
+from django.db.models import Case, Count, Prefetch, Q, QuerySet, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.catalog.models import Product, ProductImage, ProductVariant
@@ -158,6 +159,41 @@ def get_public_product_by_id(product_id: str | UUID) -> Product | None:
     """By-id counterpart to `get_product_by_slug`, for customer submissions
     (questions, price reports) that must only target what the storefront shows."""
     return _public_products().filter(id=product_id).first()
+
+
+def category_storefront_summaries() -> dict[UUID, dict]:
+    """Per category, what the storefront shows about it without loading every
+    product: how many products it lists, and the picture of the first of them
+    (by name) that has one. Two queries whatever the catalogue size."""
+    listed = products_list(is_active=True, sellable_only=True).order_by()
+    summaries: dict[UUID, dict] = {
+        category_id: {"product_count": count, "image": None}
+        for category_id, count in listed.values("category_id")
+        .annotate(count=Count("id", distinct=True))
+        .values_list("category_id", "count")
+    }
+    listed_ids = listed.values("id")
+    images = (
+        ProductImage.objects.filter(
+            Q(product_id__in=listed_ids)
+            | Q(
+                variant__product_id__in=listed_ids,
+                variant__is_active=True,
+                variant__deleted_at__isnull=True,
+            )
+        )
+        .annotate(
+            category_id=Coalesce("product__category_id", "variant__product__category_id"),
+            product_name=Coalesce("product__name", "variant__product__name"),
+        )
+        .order_by("product_name", "sort_order")
+        .values_list("category_id", "url")
+    )
+    for category_id, url in images:
+        summary = summaries.get(category_id)
+        if summary is not None and summary["image"] is None:
+            summary["image"] = url
+    return summaries
 
 
 RELATED_PRODUCTS_LIMIT = 8

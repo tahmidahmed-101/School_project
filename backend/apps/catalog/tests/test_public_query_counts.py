@@ -127,3 +127,37 @@ def test_product_list_query_count_is_unaffected_by_category_type_filter(api_clie
         assert response.status_code == 200
 
     assert len(filtered) == len(unfiltered)
+
+
+def test_category_list_carries_product_count_and_image_in_constant_queries(api_client):
+    from apps.catalog.models import ProductImage
+
+    category = CategoryFactory()
+    empty = CategoryFactory()
+
+    def add_product(name: str, image_url: str | None, *, sellable: bool = True) -> None:
+        product = ProductFactory(category=category, name=name)
+        if sellable:
+            ProductVariantFactory(product=product)
+        if image_url:
+            ProductImage.objects.create(product=product, url=image_url)
+
+    add_product("Bravo", "https://img.test/bravo.jpg")
+    add_product("Alpha", None)
+    add_product("Hidden", "https://img.test/hidden.jpg", sellable=False)
+
+    with CaptureQueriesContext(connection) as few:
+        response = api_client.get("/api/v1/public/catalog/categories/")
+    rows = {row["id"]: row for row in response.json()["data"]}
+
+    assert rows[str(category.id)]["product_count"] == 2
+    assert rows[str(category.id)]["image"] == "https://img.test/bravo.jpg"
+    assert rows[str(empty.id)]["product_count"] == 0
+    assert rows[str(empty.id)]["image"] is None
+
+    for index in range(4):
+        add_product(f"Extra {index}", f"https://img.test/extra-{index}.jpg")
+    with CaptureQueriesContext(connection) as many:
+        api_client.get("/api/v1/public/catalog/categories/")
+
+    assert len(many) == len(few)

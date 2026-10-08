@@ -18,6 +18,7 @@ from apps.catalog.selectors.categories import (
     get_category_by_slug,
 )
 from apps.catalog.selectors.products import (
+    category_storefront_summaries,
     MAX_RELATED_PRODUCTS,
     RELATED_PRODUCTS_LIMIT,
     get_product_by_slug,
@@ -54,7 +55,14 @@ class PublicCategoryListView(APIView):
         )
         categories = active_categories(category_type=category_type)
         return Response(
-            {"data": PublicCategorySerializer(categories, many=True).data, "message": "Success"}
+            {
+                "data": PublicCategorySerializer(
+                    categories,
+                    many=True,
+                    context={"summaries": category_storefront_summaries()},
+                ).data,
+                "message": "Success",
+            }
         )
 
 
@@ -68,7 +76,14 @@ class PublicCategoryDetailView(APIView):
         category = get_category_by_slug(slug)
         if category is None:
             return not_found("category_not_found", "Category not found.")
-        return Response({"data": PublicCategorySerializer(category).data, "message": "Success"})
+        return Response(
+            {
+                "data": PublicCategorySerializer(
+                    category, context={"summaries": category_storefront_summaries()}
+                ).data,
+                "message": "Success",
+            }
+        )
 
 
 @extend_schema(tags=["Public Catalog"])
@@ -82,9 +97,7 @@ class PublicProductListView(GenericListAPIView):
 
     def get_queryset(self):
         params = self.request.query_params
-        category = get_related(
-            params, "category_id", get_category_by_id, "Category not found."
-        )
+        category = get_related(params, "category_id", get_category_by_id, "Category not found.")
         category_type = get_choice(params, "category_type", Category.CategoryType.values)
         preorder_only = bool(get_bool(params, "preorder_only", default=False))
         featured = get_bool(params, "featured", default=None)

@@ -20,14 +20,10 @@ export const GRN_STATUS_LABEL: Record<string, string> = {
   qc_reject: "QC reject",
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100
-
-export const poOrderedTotal = (po: PurchaseOrder) =>
-  round2(po.lines.reduce((s, l) => s + Number(l.unit_cost) * l.quantity_ordered, 0))
+export const poOrderedTotal = (po: PurchaseOrder) => po.ordered_total
 
 /** Value of what has actually been received — what a vendor bill must match (3-way match). */
-export const poReceivedTotal = (po: PurchaseOrder) =>
-  round2(po.lines.reduce((s, l) => s + Number(l.unit_cost) * l.quantity_received, 0))
+export const poReceivedTotal = (po: PurchaseOrder) => po.received_total
 
 export const poUnitsOrdered = (po: PurchaseOrder) => po.lines.reduce((s, l) => s + l.quantity_ordered, 0)
 export const poUnitsReceived = (po: PurchaseOrder) => po.lines.reduce((s, l) => s + l.quantity_received, 0)

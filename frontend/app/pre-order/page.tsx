@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PreOrderSections } from "@/modules/storefront";
 import { JsonLd } from "@/modules/seo";
-import { ProductsProvider } from "@/modules/catalog";
+import { ProductsProvider, forListing } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { getVouchers } from "@/modules/marketing/server";
 import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
@@ -22,7 +22,7 @@ export default async function KullMartPreOrderPage() {
           { name: "Pre-order Collection", path: "/pre-order" },
         ])}
       />
-      <ProductsProvider products={products.filter((product) => product.isPreOrder)}>
+      <ProductsProvider products={products.filter((product) => product.isPreOrder).map(forListing)}>
         <PreOrderSections vouchers={vouchers} />
       </ProductsProvider>
     </>

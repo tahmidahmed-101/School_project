@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { LangProvider } from "@/lib/i18n";
 import { LANG_COOKIE, toLang } from "@/lib/lang";
 import { CatalogProvider } from "@/modules/catalog";
-import { getCatalog } from "@/modules/catalog/server";
+import { getShellCatalog } from "@/modules/catalog/server";
 import { getBrand } from "@/modules/business/server";
 import { AuthProvider } from "@/modules/auth";
 import { CartProvider } from "@/modules/cart";
@@ -83,7 +83,7 @@ const takaFont = localFont({
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [catalog, brand, cookieStore] = await Promise.all([getCatalog(), getBrand(), cookies()]);
+  const [catalog, brand, cookieStore] = await Promise.all([getShellCatalog(), getBrand(), cookies()]);
   const lang = toLang(cookieStore.get(LANG_COOKIE)?.value);
 
   return (

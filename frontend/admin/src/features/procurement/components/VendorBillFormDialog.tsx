@@ -72,7 +72,7 @@ export function VendorBillFormDialog({
   useEffect(() => {
     if (!open) return
     reset({
-      amount: bill ? Number(bill.amount).toFixed(2) : expected !== null ? expected.toFixed(2) : "",
+      amount: bill ? Number(bill.amount).toFixed(2) : (expected ?? ""),
       due_date: bill?.due_date ?? format(addDays(new Date(), 30), "yyyy-MM-dd"),
     })
   }, [open, bill, expected, reset])

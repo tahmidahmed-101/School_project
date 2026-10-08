@@ -120,18 +120,21 @@ function toBadge(badge: string): T | undefined {
   return plain(label);
 }
 
-export function toCategoryInfo(category: ApiCategory, products: Product[]): CategoryInfo {
+export function toCategoryInfo(category: ApiCategory, products: Product[] = []): CategoryInfo {
   const inCategory = products.filter((p) => p.category === category.slug);
   const withImage = inCategory.find((p) => p.image !== PLACEHOLDER_IMAGE);
+  const counted = category.product_count !== undefined;
+  const apiImage = category.image ? normalizeImageUrl(category.image) : PLACEHOLDER_IMAGE;
   return {
     id: category.slug,
     apiId: category.id,
     slug: category.slug,
     name: plain(category.name),
-    // The API has no category description or picture: use the first product's photo, and no description.
+    // The API has no category description. Count and picture come from the API; an API deployed before those
+    // fields existed leaves them out, and the product list stands in.
     description: plain(""),
-    image: withImage?.image ?? PLACEHOLDER_IMAGE,
-    itemCount: inCategory.length,
+    image: counted ? apiImage : (withImage?.image ?? PLACEHOLDER_IMAGE),
+    itemCount: category.product_count ?? inCategory.length,
     type: category.category_type,
   };
 }

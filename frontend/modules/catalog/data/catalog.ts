@@ -36,6 +36,16 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
 });
 
 /**
+ * Categories for the shell (header, footer, menus) without loading every product. Falls back to the full
+ * catalogue when the API does not send per-category counts yet, or cannot be reached (same failure rules).
+ */
+export const getShellCatalog = cache(async (): Promise<Pick<Catalog, "categories" | "failed">> => {
+  const apiCategories = await listCategories().catch(() => null);
+  if (!apiCategories || apiCategories.some((category) => category.product_count === undefined)) return getCatalog();
+  return { categories: apiCategories.map((category) => toCategoryInfo(category)), failed: false };
+});
+
+/**
  * One product with its full description and review summary, or null when the slug does not exist (404).
  * Any other failure (network, 5xx) is thrown so the route's error boundary shows a retry instead of a false 404.
  */

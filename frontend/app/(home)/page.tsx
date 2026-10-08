@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HomeSections, homeProducts } from "@/modules/storefront";
-import { ProductsProvider } from "@/modules/catalog";
+import { ProductsProvider, forListing } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { getVouchers } from "@/modules/marketing/server";
 import { SITE_DESCRIPTION, pageMetadata } from "@/modules/seo";
@@ -11,7 +11,7 @@ export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, 
 export default async function KullMartHomePage() {
   const [{ products }, vouchers] = await Promise.all([getCatalog(), getVouchers()]);
   return (
-    <ProductsProvider products={homeProducts(products)}>
+    <ProductsProvider products={homeProducts(products).map(forListing)}>
       <HomeSections vouchers={vouchers} />
     </ProductsProvider>
   );
