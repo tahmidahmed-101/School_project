@@ -18,9 +18,9 @@ from apps.catalog.selectors.categories import (
     get_category_by_slug,
 )
 from apps.catalog.selectors.products import (
-    category_storefront_summaries,
     MAX_RELATED_PRODUCTS,
     RELATED_PRODUCTS_LIMIT,
+    category_storefront_summaries,
     get_product_by_slug,
     products_list,
     related_products,

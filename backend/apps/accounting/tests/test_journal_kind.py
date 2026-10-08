@@ -62,7 +62,7 @@ def _kinds(reference_type: str) -> set[str]:
 
 
 def _buy(variant, *, quantity: int, unit_cost: str, pay: bool = True):
-    supplier = SupplierFactory()
+    supplier = SupplierFactory(kind=variant.product.category.category_type)
     po = create_purchase_order(
         supplier=supplier,
         order_date=date.today(),
@@ -109,7 +109,7 @@ def _preorder_deposit(percent: str = "30") -> dict:
     profile = get_business_profile()
     profile.preorder_deposit_percent = Decimal(percent)
     profile.save(update_fields=["preorder_deposit_percent"])
-    variant = _preorder_variant(price=Decimal("1000.00"), product__category__category_type=PREORDER)
+    variant = _preorder_variant(price=Decimal("1000.00"))
     _buy(variant, quantity=5, unit_cost="100.00", pay=False)
     order = get_or_create_cart(create_user(email=f"pre-{uuid4().hex[:8]}@example.com"))
     add_line(order=order, variant=variant, quantity=2)

@@ -57,7 +57,7 @@ def test_a_product_takes_a_brand_of_its_own_kind(kind):
     assert update_product(product=product, data={"brand": None}).brand is None
 
 
-def test_a_product_cannot_take_its_brand_into_a_category_of_the_other_kind():
+def test_a_product_cannot_move_to_a_category_of_the_other_kind_even_without_its_brand():
     brand = create_brand(name="Stays")
     product = create_product(
         category=CategoryFactory(category_type=STOCK), name="Mover", brand=brand
@@ -65,9 +65,11 @@ def test_a_product_cannot_take_its_brand_into_a_category_of_the_other_kind():
     preorder_category = CategoryFactory(category_type=PREORDER)
 
     _refused(
-        "brand_kind_mismatch", update_product, product=product, data={"category": preorder_category}
+        "category_kind_mismatch",
+        update_product,
+        product=product,
+        data={"category": preorder_category, "brand": None},
     )
-    update_product(product=product, data={"category": preorder_category, "brand": None})
 
 
 def test_a_brand_in_use_keeps_its_kind():
