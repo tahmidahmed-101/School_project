@@ -53,7 +53,7 @@ export function CheckoutFields({
 
   return (
     <>
-      <div className="space-y-6 rounded-3xl border border-ink-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="space-y-6 rounded-3xl border border-ink-200 bg-canvas p-6 shadow-sm sm:p-8">
         <h3 className="border-b border-ink-200 pb-4 text-base font-bold text-fg">{ui("checkoutContactInfo")}</h3>
 
         <div className="space-y-4">
@@ -125,7 +125,7 @@ export function CheckoutFields({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
+      <div className="space-y-3 rounded-2xl border border-ink-200 bg-canvas p-5 shadow-sm">
         <h3 className="text-sm font-bold text-fg">{ui("checkoutPaymentMethod")}</h3>
         {/* Compact icon tiles instead of full-width description cards, so N methods don't turn into N*80px of scroll. */}
         <div

@@ -123,7 +123,7 @@ export function CheckoutView() {
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white py-20">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-canvas py-20">
         <div className="max-w-sm space-y-4 px-4 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold-50 ring-1 ring-gold-200">
             <ShoppingCart className="h-9 w-9 text-gold-700" strokeWidth={1.75} aria-hidden="true" />
@@ -139,7 +139,7 @@ export function CheckoutView() {
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container>
         <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("checkoutTitle")} />
 

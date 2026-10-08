@@ -15,7 +15,7 @@ interface AuthCardProps {
 /** Page frame and form card shared by the login and register screens. */
 export function AuthCard({ title, subtitle, onSubmit, footer, children }: AuthCardProps) {
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container width="narrow">
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: title }]} />}

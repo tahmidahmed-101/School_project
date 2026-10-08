@@ -73,7 +73,7 @@ export function ShopProductGrid({
     <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
       {/* Mobile control card */}
       <div className="w-full lg:hidden">
-        <div className="shadow-xs w-full space-y-2.5 rounded-2xl border border-ink-200/80 bg-white p-3.5">
+        <div className="shadow-xs w-full space-y-2.5 rounded-2xl border border-ink-200/80 bg-canvas p-3.5">
           <SearchField
             className="w-full"
             value={filters.searchQuery}
@@ -100,7 +100,7 @@ export function ShopProductGrid({
 
       {/* Desktop control bar */}
       <div className="hidden w-full lg:block">
-        <div className="shadow-xs flex w-full items-center justify-between gap-4 rounded-2xl border border-ink-200/80 bg-white p-4">
+        <div className="shadow-xs flex w-full items-center justify-between gap-4 rounded-2xl border border-ink-200/80 bg-canvas p-4">
           <SearchField
             className="max-w-lg flex-1"
             value={filters.searchQuery}

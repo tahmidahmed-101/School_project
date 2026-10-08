@@ -56,7 +56,7 @@ export function useHeaderSearch() {
 }
 
 export const HEADER_SEARCH_INPUT_CLASS =
-  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-white text-sm text-fg transition-all placeholder:text-fg-subtle focus:border-gold-500 focus:ring-gold-500/10";
+  "focus:outline-hidden focus:ring-3 h-11 w-full rounded-full border border-transparent bg-canvas text-sm text-fg transition-all placeholder:text-fg-subtle focus:border-gold-500 focus:ring-gold-500/10";
 
 interface SearchSuggestionsProps {
   id: string;
@@ -74,7 +74,7 @@ export function SearchSuggestions({ id, open, query, results, onNavigate }: Sear
   return (
     <div
       id={id}
-      className="animate-in fade-in slide-in-from-top-2 absolute left-0 right-0 top-full z-50 mt-2 divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-200 bg-white p-2 shadow-2xl"
+      className="animate-in fade-in slide-in-from-top-2 absolute left-0 right-0 top-full z-50 mt-2 divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-200 bg-canvas p-2 shadow-2xl"
     >
       <div className="px-3 py-2 text-2xs font-bold uppercase tracking-wider text-fg-muted">
         {ui("matchingProducts")} ({results.length})

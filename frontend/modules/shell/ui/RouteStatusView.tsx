@@ -18,7 +18,7 @@ function StatusLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[70vh] w-full flex-col items-center justify-center gap-5 bg-white px-4 text-center">
+    <div className="flex min-h-[70vh] w-full flex-col items-center justify-center gap-5 bg-canvas px-4 text-center">
       <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-4 border-gold-100">
         {icon}
       </div>

@@ -11,7 +11,7 @@ function LoadingLabel() {
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink-100 bg-white p-2 sm:p-2.5">
+    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink-100 bg-canvas p-2 sm:p-2.5">
       <Skeleton className="aspect-square w-full rounded-lg" />
       <Skeleton className="mt-1 h-3.5 w-3/4" />
       <Skeleton className="h-3 w-1/2" />
@@ -60,7 +60,7 @@ export function ShopSkeleton() {
 
 export function ProductDetailSkeleton() {
   return (
-    <div role="status" aria-live="polite" className="w-full bg-white pb-24 pt-8 sm:pt-12 lg:pb-12">
+    <div role="status" aria-live="polite" className="w-full bg-canvas pb-24 pt-8 sm:pt-12 lg:pb-12">
       <LoadingLabel />
       <Container>
         <div className="mb-8 border-b border-ink-100 pb-4">

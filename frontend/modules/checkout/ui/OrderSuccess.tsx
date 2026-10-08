@@ -22,7 +22,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
   );
 
   return (
-    <div className="min-h-screen bg-white py-12 sm:py-20">
+    <div className="min-h-screen bg-canvas py-12 sm:py-20">
       <Container width="compact" className="space-y-6 text-center">
         <div className="shadow-xs mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand-200 bg-brand-50 text-brand-600">
           <CheckCircle2 className="h-8 w-8" />

@@ -81,7 +81,7 @@ export function TrackOrderView() {
   const breadcrumbs = [{ label: ui("navTrackOrder") }];
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container width="compact">
         <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("trackOrderTitle")} />
 
@@ -116,7 +116,7 @@ export function TrackOrderView() {
         </form>
 
         {result && (
-          <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-white p-5">
+          <div className="shadow-xs mt-6 space-y-5 rounded-2xl border border-ink-200 bg-canvas p-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
               <div>
                 <span className="block text-2xs font-semibold text-fg-subtle">{ui("orderNumberLabel")}</span>
@@ -161,7 +161,7 @@ export function TrackOrderView() {
                         className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
                           isComplete
                             ? "border-brand-500 bg-brand-500 text-white"
-                            : "border-ink-200 bg-white text-ink-300"
+                            : "border-ink-200 bg-canvas text-ink-300"
                         }`}
                       >
                         <Icon className="h-4 w-4" />

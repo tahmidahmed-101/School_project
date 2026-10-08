@@ -35,7 +35,7 @@ export function NavCategoriesMenu() {
       </button>
 
       <div
-        className={`absolute left-0 top-full z-50 w-full origin-top overflow-hidden rounded-2xl border border-ink-200 bg-white py-3 shadow-2xl transition-all duration-200 ease-out ${
+        className={`absolute left-0 top-full z-50 w-full origin-top overflow-hidden rounded-2xl border border-ink-200 bg-canvas py-3 shadow-2xl transition-all duration-200 ease-out ${
           isOpen
             ? "pointer-events-auto translate-y-2 scale-y-100 opacity-100"
             : "pointer-events-none -translate-y-1 scale-y-95 opacity-0"

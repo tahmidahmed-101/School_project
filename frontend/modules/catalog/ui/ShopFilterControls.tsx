@@ -71,7 +71,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
             >
               <span
                 className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                  checked ? "border-gold-500 bg-accent text-white" : "border-ink-300 bg-white"
+                  checked ? "border-gold-500 bg-accent text-white" : "border-ink-300 bg-canvas"
                 }`}
               >
                 {checked && <Check className="h-3 w-3" strokeWidth={3} />}

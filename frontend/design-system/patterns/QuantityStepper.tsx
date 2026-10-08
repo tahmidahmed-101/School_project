@@ -37,7 +37,7 @@ export function QuantityStepper({ quantity, onChange, size = "sm", min, max }: Q
   const buttonClass = `relative flex cursor-pointer items-center justify-center text-fg-muted transition-colors hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 ${s.button}`;
 
   return (
-    <div className={`inline-flex items-center border border-ink-200 bg-white ${s.wrap}`}>
+    <div className={`inline-flex items-center border border-ink-200 bg-canvas ${s.wrap}`}>
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}

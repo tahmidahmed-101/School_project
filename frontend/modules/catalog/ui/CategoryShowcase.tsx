@@ -120,7 +120,7 @@ function CategoryTrack({
               className={`py-4.5 group relative flex h-full w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition-all duration-300 sm:rounded-2xl sm:px-3.5 sm:py-5 ${
                 isActive
                   ? "border-gold-500 bg-gold-50/70 shadow-sm ring-1 ring-gold-400/30"
-                  : "shadow-2xs border-ink-200/90 bg-white hover:-translate-y-0.5 hover:border-gold-500 hover:bg-gold-50/70 hover:shadow-md hover:shadow-gold-500/10"
+                  : "shadow-2xs border-ink-200/90 bg-canvas hover:-translate-y-0.5 hover:border-gold-500 hover:bg-gold-50/70 hover:shadow-md hover:shadow-gold-500/10"
               }`}
               aria-label={`${cat.name[lang] || cat.name.en} - ${countText}`}
             >
@@ -180,10 +180,10 @@ export function CategoryShowcase() {
   };
 
   const arrowClass =
-    "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-white text-ink-700 shadow-2xs transition-colors hover:border-gold-500 hover:bg-gold-50 hover:text-gold-700 disabled:cursor-default disabled:opacity-40 disabled:hover:border-ink-200 disabled:hover:bg-white disabled:hover:text-ink-700";
+    "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-canvas text-ink-700 shadow-2xs transition-colors hover:border-gold-500 hover:bg-gold-50 hover:text-gold-700 disabled:cursor-default disabled:opacity-40 disabled:hover:border-ink-200 disabled:hover:bg-canvas disabled:hover:text-ink-700";
 
   return (
-    <section aria-label={ui("categoriesTitle")} className="border-b border-ink-100 bg-white py-6 sm:py-7 lg:py-8">
+    <section aria-label={ui("categoriesTitle")} className="border-b border-ink-100 bg-canvas py-6 sm:py-7 lg:py-8">
       <Container>
         <ScrollReveal>
           <SectionHeading

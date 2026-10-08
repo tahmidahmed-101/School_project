@@ -42,7 +42,7 @@ export function EmptyState({ icon, title, onReset, action, variant = "panel" }: 
 
   return (
     <ScrollReveal y={20} duration={0.6}>
-      <div className="shadow-xs my-4 rounded-2xl border border-ink-200/80 bg-white p-12 text-center sm:p-16">
+      <div className="shadow-xs my-4 rounded-2xl border border-ink-200/80 bg-canvas p-12 text-center sm:p-16">
         {icon}
         <h4 className="ts-display mb-2 text-lg font-bold text-fg sm:text-xl">{title}</h4>
         {onReset && (

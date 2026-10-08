@@ -25,7 +25,7 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
   ];
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <div className={containerClass()}>
         <Breadcrumbs className="mb-5" items={[{ label: ui("navProfile") }]} />
 

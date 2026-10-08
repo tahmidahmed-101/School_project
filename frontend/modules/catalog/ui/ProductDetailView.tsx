@@ -48,7 +48,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
 
   return (
-    <div className="w-full bg-white pb-24 pt-8 sm:pt-12 lg:pb-12">
+    <div className="w-full bg-canvas pb-24 pt-8 sm:pt-12 lg:pb-12">
       <Container>
         <div className="mb-8 border-b border-ink-100 pb-4">
           <Breadcrumbs items={[{ label: ui("navShop"), href: "/shop" }, { label: t(product.name) }]} />

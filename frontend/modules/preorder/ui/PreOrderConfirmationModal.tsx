@@ -23,7 +23,7 @@ export function PreOrderConfirmationModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="preorder-modal-title"
-        className="relative z-10 w-full max-w-md translate-y-4 scale-95 rounded-2xl border border-ink-200 bg-white p-6 opacity-0 shadow-2xl transition duration-200 ease-out group-data-[shown=true]:translate-y-0 group-data-[shown=true]:scale-100 group-data-[shown=true]:opacity-100"
+        className="relative z-10 w-full max-w-md translate-y-4 scale-95 rounded-2xl border border-ink-200 bg-canvas p-6 opacity-0 shadow-2xl transition duration-200 ease-out group-data-[shown=true]:translate-y-0 group-data-[shown=true]:scale-100 group-data-[shown=true]:opacity-100"
       >
         {/* Close Button */}
         <button
@@ -47,7 +47,7 @@ export function PreOrderConfirmationModal() {
 
         {/* Product Card Row */}
         <div className="mt-4 flex gap-3.5 rounded-xl border border-ink-200/80 bg-surface p-3">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-white">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-canvas">
             <Image src={photo(product.image)} alt={t(product.name)} fill sizes="64px" className="object-cover" />
           </div>
 

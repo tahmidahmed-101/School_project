@@ -17,7 +17,7 @@ export function PolicyView({ policy }: PolicyViewProps) {
   const BRAND_INFO = useBrand();
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
+    <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container>
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}

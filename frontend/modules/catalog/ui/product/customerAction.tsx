@@ -58,7 +58,7 @@ export function LoginPrompt({ slug, label }: { slug: string; label: string }) {
       href={loginHref(`/product/${slug}`)}
       // The page a guest returns to is this one, so there is nothing to prefetch for a link most never click.
       prefetch={false}
-      className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3.5 py-2 text-xs font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800"
+      className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-canvas px-3.5 py-2 text-xs font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800"
     >
       <LogIn className="h-3.5 w-3.5" />
       {label}

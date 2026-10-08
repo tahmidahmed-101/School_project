@@ -27,7 +27,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
   const sourceProducts = products ?? stockProducts.slice(0, 10);
 
   return (
-    <section className="border-b border-ink-200 bg-white py-8 sm:py-14">
+    <section className="border-b border-ink-200 bg-canvas py-8 sm:py-14">
       <Container>
         <ScrollReveal className={filters ? "mb-1.5 sm:mb-2" : "mb-6 sm:mb-8"}>
           <SectionHeading

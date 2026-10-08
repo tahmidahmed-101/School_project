@@ -31,7 +31,7 @@ export function VariantPicker({ variants, selected, onSelect }: VariantPickerPro
                 className={`h-11 min-w-[44px] cursor-pointer rounded-full border px-3 text-xs font-bold transition-all ${
                   selected[v.name.en] === opt.value
                     ? "shadow-xs border-brand-700 bg-action text-white"
-                    : "border-ink-200 bg-white text-ink-700 hover:border-ink-400"
+                    : "border-ink-200 bg-canvas text-ink-700 hover:border-ink-400"
                 } ${opt.inStock === false ? "line-through opacity-50" : ""}`}
               >
                 {t(opt.label)}

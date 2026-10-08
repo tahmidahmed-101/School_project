@@ -116,7 +116,7 @@ export function Hero({
 
                 <Link
                   href={shopLink}
-                  className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-accent-hover hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
+                  className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-canvas px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-accent-hover hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
                 >
                   <span>{HERO_CTA_TEXT[lang]}</span>
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
@@ -128,7 +128,7 @@ export function Hero({
                   type="button"
                   onClick={() => go(index - 1)}
                   aria-label={ui("previousSlide")}
-                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-fg shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-fg shadow-md backdrop-blur-sm transition hover:bg-canvas sm:flex"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -141,7 +141,7 @@ export function Hero({
                       aria-label={`${ui("slide")} ${n(i + 1)}`}
                       aria-current={i === index}
                       className={`relative h-2 cursor-pointer rounded-full transition-all before:absolute before:-inset-2 before:content-[''] ${
-                        i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
+                        i === index ? "w-6 bg-canvas" : "w-2 bg-white/50 hover:bg-white/80"
                       }`}
                     />
                   ))}
@@ -150,7 +150,7 @@ export function Hero({
                   type="button"
                   onClick={() => go(index + 1)}
                   aria-label={ui("nextSlide")}
-                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-fg shadow-md backdrop-blur-sm transition hover:bg-white sm:flex"
+                  className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/80 text-fg shadow-md backdrop-blur-sm transition hover:bg-canvas sm:flex"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
