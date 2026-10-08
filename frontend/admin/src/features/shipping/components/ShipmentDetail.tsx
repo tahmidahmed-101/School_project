@@ -1,8 +1,7 @@
-import { useCallback, useEffect } from "react"
 import { Link, useParams } from "react-router-dom"
 import { Boxes, Truck } from "lucide-react"
 
-import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { useAppSelector } from "@/app/hooks"
 import { fetchShipment } from "@/features/shipping/slices/shipmentSlice"
 import type { Shipment } from "@/features/shipping/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +10,7 @@ import { DetailRow } from "@/components/common/DetailRow"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { ReturnOutcome } from "./ReturnOutcome"
+import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -18,18 +18,13 @@ import { ShipmentActions } from "./ShipmentActions"
 
 const ShipmentDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const dispatch = useAppDispatch()
 
   const { singleData, singleStatus, singleError } = useAppSelector((state) => state.shipments)
   const shipment = singleData && (singleData as Shipment).id === id ? (singleData as Shipment) : null
 
   useDocumentTitle(shipment?.tracking_number ? `${shipment.tracking_number} — Shipment` : "Shipment Details")
 
-  const load = useCallback(() => (id ? dispatch(fetchShipment(id)) : undefined), [dispatch, id])
-  useEffect(() => {
-    const request = load()
-    return () => request?.abort()
-  }, [load])
+  const load = useDetailLoad(fetchShipment, id)
 
   const pageState = resolveDetailState(singleStatus, singleError, !!shipment)
   if (pageState || !shipment) {
@@ -40,9 +35,7 @@ const ShipmentDetail = () => {
         backTo="/shipments"
         backLabel="Back to Shipments"
         error={singleError}
-        onRetry={() => {
-          load()
-        }}
+        onRetry={load}
       />
     )
   }
