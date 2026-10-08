@@ -9,18 +9,16 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { TableActions } from "@/components/common/TableActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
+import { TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { TextField } from "@/components/common/form-fields"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useListPage } from "@/hooks/use-list-page"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 
 import { deleteData, fetchAll, patchData, postData, restoreSupplier } from "../slices/supplierSlice"
 import type { Supplier, SupplierPayload } from "../types"
@@ -134,29 +132,24 @@ const Suppliers = () => {
   const state = useProcurementSelector((state) => state.suppliers)
   const canManage = useCanManagePurchasing()
 
-  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Supplier | null>(null)
-
-  const setActive = (rows: Supplier[], is_active: boolean) =>
-    Promise.all(
-      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<Supplier> })).unwrap())
-    )
-
-  const handleDelete = async (supplier: Supplier) => {
-    try {
-      await dispatch(deleteData(supplier.id)).unwrap()
-      toast.success("Supplier deleted")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete supplier"))
-    }
-  }
-
 
   const openForm = (supplier: Supplier | null) => {
     setEditing(supplier)
     setFormOpen(true)
   }
+
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<Supplier>({
+    fetch: (p) => dispatch(fetchAll(p)),
+    state,
+    noun: "supplier",
+    canUpdate: canManage,
+    remove: (id) => dispatch(deleteData(id)).unwrap(),
+    setActive: (id, is_active) => dispatch(patchData({ id, payload: { is_active } as Partial<Supplier> })).unwrap(),
+    onEdit: openForm,
+    onDeleted: () => toast.success("Supplier deleted"),
+  })
 
   const columns: ColumnDef<Supplier>[] = [
     {
@@ -190,26 +183,8 @@ const Suppliers = () => {
       header: "TERMS",
       cell: ({ row }) => <TextCell value={row.original.payment_terms} muted />,
     },
-    {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
-    },
-    {
-      id: "actions",
-      header: "ACTIONS",
-      cell: ({ row }) => {
-        const supplier = row.original
-        if (!canManage) return null
-        return (
-          <TableActions
-            itemName={supplier.name}
-            onEdit={() => openForm(supplier)}
-            onDelete={() => handleDelete(supplier)}
-          />
-        )
-      },
-    },
+    statusColumn,
+    actionsColumn,
   ]
 
   return (
@@ -248,19 +223,7 @@ const Suppliers = () => {
 
       <DataTable
         columns={columns}
-        bulk={
-          canManage
-            ? {
-                noun: "supplier",
-                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
-                activate: (rows) => setActive(rows, true),
-                deactivate: (rows) => setActive(rows, false),
-                onDone: () => {
-                  list.reload()
-                },
-              }
-            : undefined
-        }
+        bulk={bulk}
         data={state.data}
         {...list.tableProps}
         onRowClick={canManage ? (s) => !s.deleted_at && openForm(s) : undefined}

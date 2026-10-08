@@ -12,22 +12,20 @@ import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/fie
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
-import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { ActiveStatusBadge, TextCell } from "@/components/common/cells"
+import { TextCell } from "@/components/common/cells"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { SelectField, TextField } from "@/components/common/form-fields"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { humanize } from "@/lib/format"
 import type { Option } from "@/lib/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useListPage } from "@/hooks/use-list-page"
+import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 
 import { deleteData, fetchAll, patchData, postData, restoreAccount } from "../slices/accountSlice"
 import type { Account, AccountPayload, AccountType } from "../types"
@@ -178,11 +176,26 @@ const ChartOfAccounts = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
 
-  const list = useListPage({
+  const openForm = (account: Account | null) => {
+    setEditing(account)
+    setFormOpen(true)
+  }
+
+  const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<Account>({
     fetch: (params) => dispatch(fetchAll(params)),
     state: listState,
     params: { type: type?.value },
     pageSize: PAGE_SIZE,
+    noun: "account",
+    canUpdate: canPost,
+    remove: (id) => dispatch(deleteData(id)).unwrap(),
+    setActive: (id, is_active) => dispatch(patchData({ id, payload: { is_active } as Partial<Account> })).unwrap(),
+    onEdit: openForm,
+    itemName: (acc) => `${acc.code} ${acc.name}`,
+    onDeleted: () => {
+      toast.success("Account deleted")
+      reloadLookup()
+    },
   })
 
   const { accountLookup } = useFinanceImportLookups()
@@ -201,22 +214,6 @@ const ChartOfAccounts = () => {
     ],
     [accountLookup]
   )
-
-  const setActive = (rows: Account[], is_active: boolean) =>
-    Promise.all(
-      rows.map((r) => dispatch(patchData({ id: r.id, payload: { is_active } as Partial<Account> })).unwrap())
-    )
-
-  const handleDelete = async (account: Account) => {
-    try {
-      await dispatch(deleteData(account.id)).unwrap()
-      toast.success("Account deleted")
-      reloadLookup()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete account"))
-    }
-  }
-
 
   const columns: ColumnDef<Account>[] = [
     {
@@ -244,29 +241,8 @@ const ChartOfAccounts = () => {
         />
       ),
     },
-    {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
-    },
-    {
-      id: "actions",
-      header: "ACTIONS",
-      cell: ({ row }) => {
-        const acc = row.original
-        if (!canPost) return null
-        return (
-          <TableActions
-            itemName={`${acc.code} ${acc.name}`}
-            onEdit={() => {
-              setEditing(acc)
-              setFormOpen(true)
-            }}
-            onDelete={() => handleDelete(acc)}
-          />
-        )
-      },
-    },
+    statusColumn,
+    actionsColumn,
   ]
 
   return (
@@ -302,13 +278,7 @@ const ChartOfAccounts = () => {
                   list.reload()
                 }}
               />
-              <Button
-                size="action"
-                onClick={() => {
-                  setEditing(null)
-                  setFormOpen(true)
-                }}
-              >
+              <Button size="action" onClick={() => openForm(null)}>
                 <Plus className="size-5" /> New Account
               </Button>
             </>
@@ -337,18 +307,13 @@ const ChartOfAccounts = () => {
       <DataTable
         columns={columns}
         bulk={
-          canPost
-            ? {
-                noun: "account",
-                deleteRow: (r) => dispatch(deleteData(r.id)).unwrap(),
-                activate: (rows) => setActive(rows, true),
-                deactivate: (rows) => setActive(rows, false),
-                onDone: () => {
-                  reloadLookup()
-                  list.reload()
-                },
-              }
-            : undefined
+          bulk && {
+            ...bulk,
+            onDone: () => {
+              reloadLookup()
+              list.reload()
+            },
+          }
         }
         data={listState.data}
         {...list.tableProps}
