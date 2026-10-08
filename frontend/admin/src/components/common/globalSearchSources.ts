@@ -5,6 +5,7 @@ import { api } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency, humanize } from "@/lib/format"
 import { getNavGroups, hasPermission } from "@/app/modules"
+import { NAV_GROUP_LABELS } from "@/app/moduleTypes"
 import { customerDetailPath } from "@/features/users/paths"
 import { withKind, type Kind } from "@/hooks/use-kind"
 
@@ -27,11 +28,11 @@ export function useNavDestinations(permissions: readonly string[] | undefined): 
           section.items.map((item) => ({
             id: `nav-${item.url}`,
             title: item.title,
-            subtitle: `${section.label} page`,
+            subtitle: `${NAV_GROUP_LABELS[group.label]} · ${section.label}`,
             section: "Navigation",
             url: item.url,
             icon: section.icon,
-            keywords: [item.title, section.label, group.label].map((k) => k.toLowerCase()),
+            keywords: [item.title, section.label, NAV_GROUP_LABELS[group.label]].map((k) => k.toLowerCase()),
           }))
         )
       ),

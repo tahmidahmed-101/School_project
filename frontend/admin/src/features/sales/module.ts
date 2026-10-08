@@ -1,4 +1,3 @@
-import { ShoppingCart, Truck } from "lucide-react"
 import { page, type FeatureModule } from "@/app/moduleTypes"
 
 export const salesModule: FeatureModule = {
@@ -16,32 +15,5 @@ export const salesModule: FeatureModule = {
     { path: "carriers", lazy: page(() => import("../shipping/components/Carriers")) },
     { path: "shipping_zones", lazy: page(() => import("../shipping/components/ShippingZones")) },
     { path: "shipping_rates", lazy: page(() => import("../shipping/components/ShippingRates")) },
-  ],
-  nav: [
-    {
-      label: "Sales",
-      icon: ShoppingCart,
-      group: "MAIN",
-      order: 10,
-      items: [
-        { title: "Orders", url: "/orders", permission: ["orders.view", "orders.manage"] },
-        { title: "Carts", url: "/carts", permission: ["orders.view", "orders.manage"] },
-        { title: "Payments", url: "/payments", permission: ["orders.view", "orders.manage"] },
-        // The RMA endpoints require returns.manage even for reading.
-        { title: "Returns", url: "/returns", permission: "returns.manage" },
-      ],
-    },
-    {
-      label: "Logistics",
-      icon: Truck,
-      group: "OPERATIONS",
-      order: 20,
-      items: [
-        { title: "Shipments", url: "/shipments", permission: ["shipments.view", "shipments.update"] },
-        { title: "Carriers", url: "/carriers", permission: ["shipments.view", "shipments.update"] },
-        { title: "Delivery Zones", url: "/shipping_zones", permission: ["shipments.view", "shipments.update"] },
-        { title: "Shipping Rates", url: "/shipping_rates", permission: ["shipments.view", "shipments.update"] },
-      ],
-    },
   ],
 }

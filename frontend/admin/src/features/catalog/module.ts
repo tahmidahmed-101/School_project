@@ -1,4 +1,3 @@
-import { Boxes } from "lucide-react"
 import { page, type FeatureModule } from "@/app/moduleTypes"
 
 export const catalogModule: FeatureModule = {
@@ -15,23 +14,5 @@ export const catalogModule: FeatureModule = {
     { path: "reviews", lazy: page(() => import("./components/Reviews")) },
     { path: "questions", lazy: page(() => import("./components/Questions")) },
     { path: "price_reports", lazy: page(() => import("./components/PriceReports")) },
-  ],
-  nav: [
-    {
-      label: "Catalog",
-      icon: Boxes,
-      group: "MAIN",
-      order: 20,
-      items: [
-        { title: "Products", url: "/products", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Variants", url: "/variants", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Bundles", url: "/bundles", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Categories", url: "/categories", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Brands", url: "/brands", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Reviews", url: "/reviews", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Questions", url: "/questions", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Price Reports", url: "/price_reports", permission: ["catalog.view", "catalog.manage"] },
-      ],
-    },
   ],
 }

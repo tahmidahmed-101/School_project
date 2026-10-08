@@ -1,8 +1,8 @@
-import { featureModules } from "@/app/modules"
+import { navSections } from "@/app/nav"
 import type { Kind } from "@/hooks/use-kind"
 
 const navEntries = () =>
-  featureModules.flatMap((m) => m.nav).flatMap((section) => section.items.map((item) => ({ section, item })))
+  navSections.flatMap((section) => section.items.map((item) => ({ section, item })))
 
 const isUnder = (path: string, url: string) => path === url || path.startsWith(`${url}/`)
 

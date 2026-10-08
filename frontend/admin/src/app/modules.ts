@@ -1,4 +1,5 @@
 import { NAV_GROUPS, type FeatureModule, type NavGroup, type NavSection } from "./moduleTypes"
+import { navSections } from "./nav"
 import { dashboardModule } from "@/features/dashboard/module"
 import { catalogModule } from "@/features/catalog/module"
 import { inventoryModule } from "@/features/inventory/module"
@@ -43,12 +44,11 @@ export function hasPermission(
   return required.some((code) => permissions.includes(code))
 }
 
-/** Sidebar sections grouped and ordered, with links the user can't access removed. */
+/** Sidebar sections by group, with links the user can't access removed. */
 export function getNavGroups(
   permissions: readonly string[] | undefined
 ): { label: NavGroup; sections: NavSection[] }[] {
-  const sections = featureModules
-    .flatMap((m) => m.nav)
+  const sections = navSections
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => hasPermission(permissions, item.permission)),
@@ -57,6 +57,6 @@ export function getNavGroups(
 
   return NAV_GROUPS.map((label) => ({
     label,
-    sections: sections.filter((s) => s.group === label).sort((a, b) => a.order - b.order),
+    sections: sections.filter((s) => s.group === label),
   })).filter((group) => group.sections.length > 0)
 }

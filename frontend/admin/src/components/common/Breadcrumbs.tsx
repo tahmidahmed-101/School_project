@@ -25,6 +25,7 @@ export function Breadcrumbs({ title, backTo }: { title: ReactNode; backTo?: stri
 
   const crumbs: Crumb[] = []
   if (entry) {
+    if (entry.section.group === "PREORDER") crumbs.push({ label: "Pre-order", to: "/preorder_overview" })
     // The dashboard's own section ("Home") would only repeat the first crumb.
     if (!entry.section.items.some((item) => item.url === "/")) crumbs.push({ label: entry.section.label })
     crumbs.push(onListPage ? { label: entry.item.title } : { label: entry.item.title, to: entry.item.url })

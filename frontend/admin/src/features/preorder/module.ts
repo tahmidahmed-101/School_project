@@ -1,6 +1,4 @@
-import { CalendarClock } from "lucide-react"
 import { page, type FeatureModule } from "@/app/moduleTypes"
-import { ADMIN_ONLY } from "@/features/system/permissions"
 
 // Every route of the pre-order half starts with "preorder" (see hooks/use-kind).
 export const preorderModule: FeatureModule = {
@@ -42,65 +40,5 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_fraud_cases", lazy: page(() => import("../risk/components/FraudCases")) },
     { path: "preorder_fraud_cases/:id", lazy: page(() => import("../risk/components/FraudCaseDetail")) },
     { path: "preorder_settings", lazy: page(() => import("../system/components/PreorderSettings")) },
-  ],
-  nav: [
-    {
-      label: "Pre-orders",
-      icon: CalendarClock,
-      group: "MAIN",
-      order: 11,
-      items: [
-        { title: "Overview", url: "/preorder_overview" },
-        { title: "Orders", url: "/preorders", permission: ["orders.view", "orders.manage"] },
-        { title: "Products", url: "/preorder_products", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Categories", url: "/preorder_categories", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Brands", url: "/preorder_brands", permission: ["catalog.view", "catalog.manage"] },
-        {
-          title: "Arrivals",
-          url: "/preorder_arrivals",
-          permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
-        },
-        {
-          title: "Warehouses",
-          url: "/preorder_warehouses",
-          permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
-        },
-        { title: "Payments", url: "/preorder_payments", permission: ["orders.view", "orders.manage"] },
-        { title: "Shipments", url: "/preorder_shipments", permission: ["shipments.view", "shipments.update"] },
-        { title: "Delivery zones", url: "/preorder_shipping_zones", permission: ["shipments.view", "shipments.update"] },
-        { title: "Shipping rates", url: "/preorder_shipping_rates", permission: ["shipments.view", "shipments.update"] },
-        { title: "Returns", url: "/preorder_returns", permission: "returns.manage" },
-        {
-          title: "Suppliers",
-          url: "/preorder_purchasing/suppliers",
-          permission: ["purchasing.view", "purchasing.manage"],
-        },
-        {
-          title: "Purchase orders",
-          url: "/preorder_purchasing/orders",
-          permission: ["purchasing.view", "purchasing.manage"],
-        },
-        {
-          title: "Goods receipts",
-          url: "/preorder_purchasing/receipts",
-          permission: ["purchasing.view", "purchasing.manage"],
-        },
-        { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: ["accounting.view", "accounting.post", "invoices.manage"] },
-        { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: ["accounting.view", "accounting.post", "invoices.manage"] },
-        { title: "Carts", url: "/preorder_carts", permission: ["orders.view", "orders.manage"] },
-        {
-          title: "Goods movements",
-          url: "/preorder_movements",
-          permission: ["inventory.view", "inventory.manage", "inventory.adjust"],
-        },
-        { title: "Reviews", url: "/preorder_reviews", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Questions", url: "/preorder_questions", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Price reports", url: "/preorder_price_reports", permission: ["catalog.view", "catalog.manage"] },
-        { title: "Customers", url: "/preorder_customers", permission: ADMIN_ONLY },
-        { title: "Fraud cases", url: "/preorder_fraud_cases", permission: "risk.view" },
-        { title: "Analytics", url: "/preorder_analytics", permission: "reports.view" },
-        { title: "Settings", url: "/preorder_settings", permission: "settings.view" },
-      ],
-    },
   ],
 }
