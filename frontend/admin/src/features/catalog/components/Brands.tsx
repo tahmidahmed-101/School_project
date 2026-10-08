@@ -12,7 +12,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
+import { ActiveStatusBadge, ProductCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
@@ -76,13 +76,7 @@ const Brands = () => {
       header: "BRAND",
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
-            {row.original.image ? (
-              <img loading="lazy" decoding="async" src={row.original.image} alt="" className="size-full object-cover" />
-            ) : (
-              <ImageIcon className="size-4 text-muted-foreground" />
-            )}
-          </div>
+          <Thumbnail src={row.original.image} icon={ImageIcon} />
           <ProductCell name={row.original.name} sub={row.original.slug} />
         </div>
       ),

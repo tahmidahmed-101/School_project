@@ -27,6 +27,7 @@ import { moneySchema, reportFormError } from "@/lib/forms"
 import type { Option } from "@/lib/types"
 
 import { fetchSingle } from "../slices/productSlice"
+import { PricingFields } from "./PricingFields"
 import {
   createProduct,
   createVariant,
@@ -510,28 +511,7 @@ const ProductForm = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MoneyField
-              label="Price"
-              showCurrency
-              id="price"
-              placeholder="0.00"
-              error={errors.price}
-              {...register("price")}
-            />
-            <MoneyField
-              label="Discount price"
-              id="discount_price"
-              placeholder="Optional"
-              error={errors.discount_price}
-              {...register("discount_price")}
-            />
-            <MoneyField
-              label="Cost price"
-              id="cost_price"
-              placeholder="0.00"
-              error={errors.cost_price}
-              {...register("cost_price")}
-            />
+            <PricingFields register={register} errors={errors} />
             {!isEditing && !hasQueuedVariants && (
               <TextField
                 label="SKU"

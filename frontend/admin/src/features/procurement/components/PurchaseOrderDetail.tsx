@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { FormDialog } from "@/components/common/FormDialog"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { Thumbnail } from "@/components/common/cells"
 import { DateField, TextField, TextareaField } from "@/components/common/form-fields"
 import { TableActions } from "@/components/common/TableActions"
 import { resolveDetailState } from "@/lib/detailState"
@@ -343,13 +344,7 @@ const PurchaseOrderDetail = () => {
       header: "PRODUCT",
       cell: ({ row: { original: line } }) => (
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-            {line.product_image ? (
-              <img src={line.product_image} alt="" className="size-full object-cover" loading="lazy" />
-            ) : (
-              <ImageOff className="size-4 text-muted-foreground" />
-            )}
-          </div>
+          <Thumbnail src={line.product_image} icon={ImageOff} className="size-10 rounded" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{line.product_name}</p>
             <p className="font-mono text-xs text-muted-foreground">{line.variant_sku}</p>

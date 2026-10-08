@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { ChevronsUpDown, ImageOff, Loader2, Package, Search, X } from "lucide-react"
+import { ChevronsUpDown, ImageOff, Loader2, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -8,6 +8,7 @@ import { api } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { Thumbnail } from "./cells"
 
 export interface PickedVariant {
   id: string
@@ -174,13 +175,7 @@ function InlineVariantPicker({
                       setQuery("")
                     }}
                   >
-                    <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-                      {v.primary_image ? (
-                        <img loading="lazy" decoding="async" src={v.primary_image} alt="" className="size-full object-cover" />
-                      ) : (
-                        <Package className="size-4 text-muted-foreground" />
-                      )}
-                    </div>
+                    <Thumbnail src={v.primary_image} className="size-8 rounded" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">
                         {v.product_name}
@@ -270,13 +265,7 @@ function ComboboxVariantPicker({ value, onChange, invalid, id }: ComboboxProps) 
                   value?.id === v.id && "bg-accent"
                 )}
               >
-                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-                  {v.primary_image ? (
-                    <img src={v.primary_image} alt="" className="size-full object-cover" loading="lazy" />
-                  ) : (
-                    <ImageOff className="size-4 text-muted-foreground" />
-                  )}
-                </div>
+                <Thumbnail src={v.primary_image} icon={ImageOff} className="rounded" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{variantLabel(v)}</p>
                   <p className="text-xs text-muted-foreground font-mono">

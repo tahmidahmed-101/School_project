@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Check, PackageCheck, RotateCcw, X } from "lucide-react"
@@ -19,6 +19,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ProductCell } from "@/components/common/cells"
 import { useCan } from "@/hooks/use-can"
+import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -43,11 +44,7 @@ const ReturnDetail = () => {
   const [order, setOrder] = useState<Order | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(() => (id ? dispatch(fetchReturn(id)) : undefined), [dispatch, id])
-  useEffect(() => {
-    const request = load()
-    return () => request?.abort()
-  }, [load])
+  const load = useDetailLoad(fetchReturn, id)
 
   const orderId = rma?.order_id
   useEffect(() => {
@@ -69,9 +66,7 @@ const ReturnDetail = () => {
         backTo="/returns"
         backLabel="Back to Returns"
         error={singleError}
-        onRetry={() => {
-          load()
-        }}
+        onRetry={load}
       />
     )
   }

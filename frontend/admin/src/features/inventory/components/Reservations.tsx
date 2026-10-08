@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Lock, Unlock } from "lucide-react"
@@ -12,7 +11,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SortSelect } from "@/components/common/SortSelect"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { DateCell, ProductCell } from "@/components/common/cells"
+import { DateCell, LinkCell, ProductCell } from "@/components/common/cells"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
@@ -89,9 +88,7 @@ const Reservations = () => {
       id: "order",
       header: "ORDER",
       cell: ({ row }) => (
-        <Link to={`/order_detail/${row.original.order_id}`} className="text-sm text-primary hover:underline">
-          {row.original.order_number}
-        </Link>
+        <LinkCell to={`/order_detail/${row.original.order_id}`}>{row.original.order_number}</LinkCell>
       ),
     },
     { accessorKey: "quantity", header: "QTY" },

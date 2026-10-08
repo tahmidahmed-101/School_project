@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { DownloadIcon, Layers, Loader2, Package, UploadIcon, PlusIcon } from "lucide-react"
+import { DownloadIcon, Layers, Loader2, UploadIcon, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -13,7 +13,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { MoneyCell, ProductCell, TextCell } from "@/components/common/cells"
+import { MoneyCell, ProductCell, Thumbnail } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { DialogActions } from "@/components/common/FormDialog"
 import { TextField } from "@/components/common/form-fields"
@@ -29,6 +29,7 @@ import { useLastValue } from "@/hooks/use-dialog-presence"
 import { fetchAll } from "../slices/variantSlice"
 import { deleteVariant, downloadVariantsExport, importVariants, updateVariant } from "../api"
 import { ProductPickerDialog } from "./ProductPickerDialog"
+import { VariantOptionsCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
 import type { Product, ProductVariant, VariantImportResult } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
@@ -112,13 +113,7 @@ const Variants = () => {
       header: "VARIANT",
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
-            {row.original.primary_image ? (
-              <img loading="lazy" decoding="async" src={row.original.primary_image} alt="" className="size-full object-cover" />
-            ) : (
-              <Package className="size-4 text-muted-foreground" />
-            )}
-          </div>
+          <Thumbnail src={row.original.primary_image} />
           <ProductCell name={row.original.product_name} sku={row.original.sku} />
         </div>
       ),
@@ -126,9 +121,7 @@ const Variants = () => {
     {
       id: "options",
       header: "OPTIONS",
-      cell: ({ row }) => (
-        <TextCell value={[row.original.color, row.original.size].filter(Boolean).join(" / ")} />
-      ),
+      cell: ({ row }) => <VariantOptionsCell variant={row.original} />,
     },
     {
       accessorKey: "barcode",
@@ -143,19 +136,7 @@ const Variants = () => {
     {
       accessorKey: "stock",
       header: "AVAILABLE",
-      cell: ({ row }) => (
-        <span
-          className={
-            row.original.stock <= 0
-              ? "text-sm font-medium text-destructive"
-              : row.original.is_low_stock
-                ? "text-sm font-medium text-amber-600 dark:text-amber-400"
-                : "text-sm"
-          }
-        >
-          {row.original.stock}
-        </span>
-      ),
+      cell: ({ row }) => <VariantStockCell variant={row.original} />,
     },
     {
       id: "status",

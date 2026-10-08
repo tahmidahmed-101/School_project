@@ -1,25 +1,21 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { BadgeCheck, MessageSquareText, Star } from "lucide-react"
 
-import { Combobox } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
-import { SortSelect } from "@/components/common/SortSelect"
 import { TableActions } from "@/components/common/TableActions"
-import { DateCell } from "@/components/common/cells"
+import { DateCell, LinkCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 import { deleteData, fetchAll } from "../slices/reviewSlice"
+import { useModerationList } from "../lib/useModerationList"
 import type { ProductReview } from "../types"
 
 const RATING_OPTIONS: Option[] = [5, 4, 3, 2, 1].map((n) => ({ label: `${n} star${n === 1 ? "" : "s"}`, value: String(n) }))
@@ -52,13 +48,11 @@ const Reviews = () => {
   const canManage = useCan("catalog.manage")
   const reviewState = useAppSelector((s) => s.catalogReviews)
 
-  const [rating, setRating] = useState<Option | null>(null)
-  const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
-
-  const list = useListPage({
+  const { list, filters } = useModerationList({
     fetch: (p) => dispatch(fetchAll(p)),
     state: reviewState,
-    params: { rating: rating?.value, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    filter: { param: "rating", placeholder: "Rating", options: RATING_OPTIONS },
+    orderingOptions: ORDERING_OPTIONS,
   })
 
   const handleDelete = async (review: ProductReview) => {
@@ -75,12 +69,9 @@ const Reviews = () => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <Link
-          to={`/product_detail/${row.original.product_id}`}
-          className="block truncate text-sm font-medium text-primary hover:underline"
-        >
+        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
           {row.original.product_name}
-        </Link>
+        </LinkCell>
       ),
     },
     {
@@ -143,12 +134,7 @@ const Reviews = () => {
         searchPlaceholder="Search review text or product…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
-        filters={[
-          {
-            component: <Combobox placeholder="Rating" options={RATING_OPTIONS} value={rating} onValueChange={setRating} />,
-          },
-          { component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} /> },
-        ]}
+        filters={filters}
       />
 
       <DataTable

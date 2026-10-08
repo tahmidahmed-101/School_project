@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { MoneyCell, TextCell } from "@/components/common/cells"
+import { MoneyCell } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
@@ -17,6 +17,7 @@ import { splitList } from "@/lib/importLookup"
 
 import { deleteVariant, generateVariants, listProductVariants, updateVariant } from "../api"
 import type { ProductVariant } from "../types"
+import { VariantOptionsCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
 
 const PAGE_SIZE = 25
@@ -88,9 +89,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
     {
       id: "options",
       header: "OPTIONS",
-      cell: ({ row }) => (
-        <TextCell value={[row.original.color, row.original.size].filter(Boolean).join(" / ")} />
-      ),
+      cell: ({ row }) => <VariantOptionsCell variant={row.original} />,
     },
     {
       id: "price",
@@ -114,20 +113,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
     {
       accessorKey: "stock",
       header: "AVAILABLE",
-      cell: ({ row }) => (
-        <span
-          className={
-            row.original.stock <= 0
-              ? "text-sm font-medium text-destructive"
-              : row.original.is_low_stock
-                ? "text-sm font-medium text-amber-600 dark:text-amber-400"
-                : "text-sm"
-          }
-        >
-          {row.original.stock}
-          {row.original.is_low_stock && row.original.stock > 0 && " (low)"}
-        </span>
-      ),
+      cell: ({ row }) => <VariantStockCell variant={row.original} showLow />,
     },
     {
       id: "status",

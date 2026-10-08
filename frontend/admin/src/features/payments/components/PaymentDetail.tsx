@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { CreditCard, Undo2 } from "lucide-react"
@@ -15,6 +15,7 @@ import { DetailRow } from "@/components/common/DetailRow"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TextField } from "@/components/common/form-fields"
 import { useCan } from "@/hooks/use-can"
+import { useDetailLoad } from "@/hooks/use-detail-load"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
@@ -34,11 +35,7 @@ const PaymentDetail = () => {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState("")
 
-  const load = useCallback(() => (id ? dispatch(fetchPayment(id)) : undefined), [dispatch, id])
-  useEffect(() => {
-    const request = load()
-    return () => request?.abort()
-  }, [load])
+  const load = useDetailLoad(fetchPayment, id)
 
   const pageState = resolveDetailState(singleStatus, singleError, !!payment)
   if (pageState || !payment) {
@@ -49,9 +46,7 @@ const PaymentDetail = () => {
         backTo="/payments"
         backLabel="Back to Payments"
         error={singleError}
-        onRetry={() => {
-          load()
-        }}
+        onRetry={load}
       />
     )
   }
