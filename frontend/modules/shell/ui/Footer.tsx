@@ -164,7 +164,6 @@ export async function Footer() {
           <p>
             © {new Date().getFullYear()} {BRAND_INFO.name}. {ui("footerRights")}
           </p>
-          <p className="max-w-lg text-center text-white/60 sm:text-right">{ui("footerCopyrightNotice")}</p>
         </div>
       </div>
     </footer>

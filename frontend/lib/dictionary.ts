@@ -420,10 +420,6 @@ export const DICT = {
   footerRefundPolicy: { en: "Refund policy", bn: "রিফান্ড নীতি" },
   footerHours: { en: "Always open for online orders", bn: "অনলাইন অর্ডারের জন্য সবসময় খোলা" },
   footerRights: { en: "All rights reserved.", bn: "সর্বস্বত্ব সংরক্ষিত।" },
-  footerCopyrightNotice: {
-    en: "The Kull Mart name, logo, product photographs and the content of this site are the property of Kull Mart. They may not be copied or reused without written permission.",
-    bn: "কুল মার্টের নাম, লোগো, পণ্যের ছবি ও এই সাইটের সব লেখা কুল মার্টের নিজস্ব সম্পত্তি। লিখিত অনুমতি ছাড়া এগুলো কপি বা অন্য কোথাও ব্যবহার করা যাবে না।",
-  },
   // API errors and states
   errNetwork: {
     en: "We couldn't reach the store server. Please check your connection and try again.",
