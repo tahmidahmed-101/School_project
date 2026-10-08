@@ -126,10 +126,10 @@ class ProductVariant(FullAuditModel):
     @property
     def effective_price(self) -> Decimal:
         """What the customer actually pays: the lowest of list price, discount
-        price and, while pre-order is open, pre-order price. A discount at or
-        above list price is ignored, so a typo can't raise the charged amount."""
+        price (stock items only) and, while pre-order is open, pre-order price. A
+        discount at or above list price is ignored, so a typo can't raise the charged amount."""
         candidates = [self.price]
-        if self.discount_price is not None:
+        if self.discount_price is not None and not self.is_preorder_kind:
             candidates.append(self.discount_price)
         if self.is_preorder_active and self.preorder_price is not None:
             candidates.append(self.preorder_price)

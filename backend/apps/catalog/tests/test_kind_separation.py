@@ -311,3 +311,13 @@ def test_public_variant_tells_the_storefront_a_closed_preorder_is_not_in_stock(a
     assert row["is_preorder_closed"] is True
     assert row["is_preorder_active"] is False
     assert row["in_stock"] is False
+
+
+def test_a_leftover_discount_price_is_not_charged_on_a_preorder_item():
+    variant = ProductVariantFactory(
+        product__category__category_type="preorder", price=Decimal("100.00")
+    )
+    type(variant).objects.filter(pk=variant.pk).update(discount_price=Decimal("60.00"))
+    variant.refresh_from_db()
+
+    assert variant.effective_price == Decimal("100.00")
