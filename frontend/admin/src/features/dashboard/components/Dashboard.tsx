@@ -7,7 +7,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
 import { isForbidden } from "@/lib/api/client"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
-import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hooks"
+import { REPORT_PERMISSIONS, useDashboardReport, usePreorderSummary } from "@/features/analytics/hooks"
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
 import { KpiCards } from "@/features/analytics/components/KpiCards"
 import { RevenueComparisonChart } from "@/features/analytics/components/RevenueComparisonChart"
@@ -15,6 +15,7 @@ import { CategoryBreakdown } from "@/features/analytics/components/CategoryBreak
 import { TopProductsTable } from "@/features/analytics/components/TopProductsTable"
 import { LowStockAlerts } from "@/features/analytics/components/LowStockAlerts"
 import { FulfillmentStatus } from "@/features/analytics/components/FulfillmentStatus"
+import { PreorderSummaryCard } from "@/features/analytics/components/PreorderSummaryCard"
 import { RecentOrders } from "@/features/analytics/components/RecentOrders"
 import { ReportsUnavailable } from "@/features/analytics/components/ReportsUnavailable"
 
@@ -24,7 +25,8 @@ const Dashboard = () => {
   const canView = useCan(...REPORT_PERMISSIONS)
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
-  const report = useDashboardReport(range, canView)
+  const report = useDashboardReport(range, "stock", canView)
+  const preorder = usePreorderSummary(range, canView)
   const blocked = !canView || isForbidden(report.error)
 
   // Where to send a user who can't see metrics: the first few pages they *can* open.
@@ -45,6 +47,7 @@ const Dashboard = () => {
     <div className="section-container flex flex-col gap-5">
       <PageHeader
         title="Overview"
+        description={blocked ? undefined : "Stock figures. Pre-orders are counted apart, in their own card."}
         actions={
           !blocked && (
             <DateRangeControl
@@ -64,9 +67,11 @@ const Dashboard = () => {
         <>
           <KpiCards kpis={d?.kpis} {...state} />
 
+          {preorder.data?.summary && <PreorderSummaryCard summary={preorder.data.summary} />}
+
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <RevenueComparisonChart points={d?.revenue} {...state} className="xl:col-span-2" />
-            <CategoryBreakdown categories={d?.categories} {...state} />
+            <CategoryBreakdown kind="stock" categories={d?.categories} {...state} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">

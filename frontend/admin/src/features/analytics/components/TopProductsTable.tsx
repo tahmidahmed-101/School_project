@@ -69,8 +69,8 @@ export function TopProductsTable({ products, isLoading, error, onRetry, classNam
 
   return (
     <ReportWidget
-      title="Top products"
-      description="Best sellers by units in this period"
+      title="Top stock products"
+      description="Best-selling stock items by units in this period"
       link={{ to: "/products", label: "Catalog" }}
       isLoading={isLoading}
       error={error}

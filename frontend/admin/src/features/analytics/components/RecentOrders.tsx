@@ -94,15 +94,15 @@ export function RecentOrders({ orders, isLoading, error, onRetry, className }: P
 
   return (
     <ReportWidget
-      title="Recent orders"
-      description="Latest orders placed in this period"
+      title="Recent stock orders"
+      description="Latest stock orders placed in this period"
       link={canOpenOrders ? { to: "/orders", label: "View all" } : undefined}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
       isEmpty={!orders?.length}
       emptyIcon={ShoppingBag}
-      emptyTitle="No orders in this period"
+      emptyTitle="No stock orders in this period"
       emptyDescription="New orders will show up here."
       skeleton={
         <div className="flex flex-col gap-3">

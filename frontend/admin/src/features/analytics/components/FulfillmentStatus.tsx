@@ -17,8 +17,8 @@ export function FulfillmentStatus({ metrics, isLoading, error, onRetry, classNam
   return (
     <ReportWidget
       title="Fulfillment"
-      description="Orders created in this period, by where they are now"
-      link={{ to: "/orders", label: "Orders" }}
+      description="Stock orders created in this period, by where they are now"
+      link={{ to: "/orders", label: "Stock orders" }}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}

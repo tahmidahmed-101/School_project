@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,24 +12,32 @@ import { DataTable } from "@/components/common/data-table"
 import { TableActions } from "@/components/common/TableActions"
 import { ProductCell, TextCell } from "@/components/common/cells"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
-import { SelectField, TextField } from "@/components/common/form-fields"
+import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deletePromoLine, fetchPromoLines, savePromoLine } from "@/features/system/slices/businessSettingsSlice"
-import type { HeroSlidePlacement, PromoLine } from "@/features/system/types"
+import type { PromoLine, ShopPlacement } from "@/features/system/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
-import type { Option } from "@/lib/types"
+import { onShop, SHARED_EDIT_NOTE } from "./placement"
+import { SharedCell } from "./SharedCell"
 
-const PLACEMENT_LABEL: Record<HeroSlidePlacement, string> = {
-  home: "Home",
-  preorder: "Pre-order",
-  both: "Both",
+const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
+  home: {
+    title: "Promo Lines",
+    description:
+      "The short messages in the strip above the storefront header. The storefront shows its built-in lines until at least one active line exists.",
+  },
+  preorder: {
+    title: "Pre-order Promo Lines",
+    description:
+      "The short messages in the strip above the header of the pre-order shop. It shows its built-in lines until at least one active line exists.",
+  },
 }
-const placementOptions: Option[] = Object.entries(PLACEMENT_LABEL).map(([value, label]) => ({ value, label }))
 
-export function PromoLinesCard({ canManage }: { canManage: boolean }) {
+export function PromoLinesCard({ canManage, placement }: { canManage: boolean; placement: ShopPlacement }) {
   const dispatch = useAppDispatch()
-  const { data, status, error } = useAppSelector((state) => state.businessSettings.promoLines)
+  const { data: allLines, status, error } = useAppSelector((state) => state.businessSettings.promoLines)
+  const data = useMemo(() => onShop(allLines, placement), [allLines, placement])
   const [saving, setSaving] = useState<string | null>(null)
   const [editing, setEditing] = useState<PromoLine | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -64,9 +72,9 @@ export function PromoLinesCard({ canManage }: { canManage: boolean }) {
       ),
     },
     {
-      accessorKey: "placement",
-      header: "PAGE",
-      cell: ({ row }) => <TextCell value={PLACEMENT_LABEL[row.original.placement] ?? row.original.placement} />,
+      id: "shared",
+      header: "SHARED",
+      cell: ({ row }) => <SharedCell placement={row.original.placement} />,
     },
     {
       accessorKey: "sort_order",
@@ -108,11 +116,8 @@ export function PromoLinesCard({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Promo Lines</CardTitle>
-        <CardDescription>
-          The short messages in the strip above the storefront header, per page. A page shows its built-in lines until
-          at least one active line is placed on it.
-        </CardDescription>
+        <CardTitle>{CARD_COPY[placement].title}</CardTitle>
+        <CardDescription>{CARD_COPY[placement].description}</CardDescription>
         {canManage && (
           <CardAction>
             <Button
@@ -140,9 +145,9 @@ export function PromoLinesCard({ canManage }: { canManage: boolean }) {
           onRetry={() => dispatch(fetchPromoLines())}
           emptyIcon={Megaphone}
           emptyTitle="No promo lines"
-          emptyDescription="The storefront is showing its built-in lines."
-          minWidth="620px"
-          columnWidths={["auto", "110px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
+          emptyDescription="The built-in lines are showing."
+          minWidth="700px"
+          columnWidths={["auto", "190px", "90px", "90px", ...(canManage ? ["80px"] : [])]}
           unlabelledColumns={["actions"]}
         />
       </CardContent>
@@ -152,6 +157,7 @@ export function PromoLinesCard({ canManage }: { canManage: boolean }) {
           open={formOpen}
           onOpenChange={setFormOpen}
           line={editing}
+          placement={placement}
           nextSortOrder={data.length ? Math.max(...data.map((l) => l.sort_order)) + 1 : 0}
         />
       )}
@@ -162,7 +168,6 @@ export function PromoLinesCard({ canManage }: { canManage: boolean }) {
 const schema = z.object({
   text_en: z.string().trim().min(1, "English text is required"),
   text_bn: z.string().trim(),
-  placement: z.enum(["home", "preorder", "both"]),
   sort_order: z.string().trim().regex(/^\d+$/, "Enter a whole number"),
   is_active: z.boolean(),
 })
@@ -172,11 +177,13 @@ function PromoLineFormDialog({
   open,
   onOpenChange,
   line,
+  placement,
   nextSortOrder,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   line: PromoLine | null
+  placement: ShopPlacement
   nextSortOrder: number
 }) {
   const dispatch = useAppDispatch()
@@ -189,7 +196,7 @@ function PromoLineFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { text_en: "", text_bn: "", placement: "both", sort_order: "0", is_active: true },
+    defaultValues: { text_en: "", text_bn: "", sort_order: "0", is_active: true },
   })
 
   useEffect(() => {
@@ -197,7 +204,6 @@ function PromoLineFormDialog({
     reset({
       text_en: line?.text_en ?? "",
       text_bn: line?.text_bn ?? "",
-      placement: line?.placement ?? "both",
       sort_order: String(line?.sort_order ?? nextSortOrder),
       is_active: line?.is_active ?? true,
     })
@@ -206,7 +212,7 @@ function PromoLineFormDialog({
   const onSubmit = async (values: FormValues) => {
     try {
       await dispatch(
-        savePromoLine({ id: line?.id, values: { ...values, sort_order: Number(values.sort_order) } })
+        savePromoLine({ id: line?.id, values: { ...values, placement, sort_order: Number(values.sort_order) } })
       ).unwrap()
       toast.success(`Promo line ${line ? "updated" : "added"}`)
       onOpenChange(false)
@@ -220,13 +226,13 @@ function PromoLineFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={line ? "Edit promo line" : "Add promo line"}
+      description={line?.placement === "both" ? SHARED_EDIT_NOTE : undefined}
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={line ? "Save line" : "Add line"}
     >
       <TextField label="Text (English)" id="promo-text-en" error={errors.text_en} {...register("text_en")} />
       <TextField label="Text (Bangla)" id="promo-text-bn" lang="bn" error={errors.text_bn} {...register("text_bn")} />
-      <SelectField control={control} name="placement" label="Page" id="promo-placement" options={placementOptions} />
       <TextField
         label="Sort order"
         id="promo-sort-order"

@@ -6,6 +6,8 @@ import type {
   DashboardData,
   DateRangeParams,
   LowStockItem,
+  PreorderSummary,
+  ReportQuery,
   SalesTrendPoint,
   StockTurnover,
 } from "../types"
@@ -36,6 +38,7 @@ interface ReportingState {
   salesTrend: Resource<SalesTrendPoint[]>
   stockTurnover: Resource<TurnoverComparison>
   lowStock: Resource<LowStockItem[]>
+  preorderSummary: Resource<{ summary: PreorderSummary | null }>
 }
 
 const empty = <T>(): Resource<T> => ({
@@ -51,14 +54,28 @@ const initialState: ReportingState = {
   salesTrend: empty(),
   stockTurnover: empty(),
   lowStock: empty(),
+  preorderSummary: empty(),
 }
 
 export const fetchDashboard = createAsyncThunk(
   "reporting/fetchDashboard",
+  async (query: ReportQuery, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get("/admin/reporting/dashboard/", { params: query, signal })
+      return unwrapEnvelope<DashboardData>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+/** The dashboard's `preorder` block comes only on a request without `kind`; nothing else of that answer is kept. */
+export const fetchPreorderSummary = createAsyncThunk(
+  "reporting/fetchPreorderSummary",
   async (range: DateRangeParams, { rejectWithValue, signal }) => {
     try {
       const res = await api.get("/admin/reporting/dashboard/", { params: range, signal })
-      return unwrapEnvelope<DashboardData>(res.data)
+      return { summary: unwrapEnvelope<DashboardData>(res.data).preorder ?? null }
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
@@ -67,9 +84,9 @@ export const fetchDashboard = createAsyncThunk(
 
 export const fetchSalesTrend = createAsyncThunk(
   "reporting/fetchSalesTrend",
-  async (range: DateRangeParams, { rejectWithValue, signal }) => {
+  async (query: ReportQuery, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get("/admin/reporting/sales-trend/", { params: range, signal })
+      const res = await api.get("/admin/reporting/sales-trend/", { params: query, signal })
       return unwrapEnvelope<SalesTrendPoint[]>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
@@ -80,10 +97,10 @@ export const fetchSalesTrend = createAsyncThunk(
 /** Turnover for the window and for the equally long window right before it. */
 export const fetchStockTurnover = createAsyncThunk(
   "reporting/fetchStockTurnover",
-  async (range: DateRangeParams, { rejectWithValue, signal }) => {
+  async (query: ReportQuery, { rejectWithValue, signal }) => {
     try {
       const [current, previous] = await Promise.all(
-        [range, previousWindow(range)].map((params) =>
+        [query, { ...previousWindow(query), kind: query.kind }].map((params) =>
           api.get("/admin/reporting/stock-turnover/", { params, signal })
         )
       )
@@ -101,7 +118,7 @@ export const fetchLowStock = createAsyncThunk(
   "reporting/fetchLowStock",
   async (_: void, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get("/admin/reporting/low-stock/", { signal })
+      const res = await api.get("/admin/reporting/low-stock/", { params: { kind: "stock" }, signal })
       return unwrapEnvelope<LowStockItem[]>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
@@ -109,8 +126,8 @@ export const fetchLowStock = createAsyncThunk(
   }
 )
 
-function keyOf(arg: DateRangeParams | void): string {
-  return arg ? rangeKey(arg) : ""
+export function reportKey(query: ReportQuery): string {
+  return `${query.kind}:${rangeKey(query)}`
 }
 
 // Resource<unknown> accepts every concrete Resource<T> draft (properties are covariant).
@@ -151,25 +168,31 @@ const reportingSlice = createSlice({
     builder
       .addCase(fetchDashboard.pending, (s, a) => onPending(s.dashboard, a.meta.requestId))
       .addCase(fetchDashboard.fulfilled, (s, a) =>
-        onFulfilled(s.dashboard, a.meta.requestId, a.payload, keyOf(a.meta.arg))
+        onFulfilled(s.dashboard, a.meta.requestId, a.payload, reportKey(a.meta.arg))
       )
       .addCase(fetchDashboard.rejected, (s, a) => onRejected(s.dashboard, a))
 
       .addCase(fetchSalesTrend.pending, (s, a) => onPending(s.salesTrend, a.meta.requestId))
       .addCase(fetchSalesTrend.fulfilled, (s, a) =>
-        onFulfilled(s.salesTrend, a.meta.requestId, a.payload, keyOf(a.meta.arg))
+        onFulfilled(s.salesTrend, a.meta.requestId, a.payload, reportKey(a.meta.arg))
       )
       .addCase(fetchSalesTrend.rejected, (s, a) => onRejected(s.salesTrend, a))
 
       .addCase(fetchStockTurnover.pending, (s, a) => onPending(s.stockTurnover, a.meta.requestId))
       .addCase(fetchStockTurnover.fulfilled, (s, a) =>
-        onFulfilled(s.stockTurnover, a.meta.requestId, a.payload, keyOf(a.meta.arg))
+        onFulfilled(s.stockTurnover, a.meta.requestId, a.payload, reportKey(a.meta.arg))
       )
       .addCase(fetchStockTurnover.rejected, (s, a) => onRejected(s.stockTurnover, a))
 
       .addCase(fetchLowStock.pending, (s, a) => onPending(s.lowStock, a.meta.requestId))
       .addCase(fetchLowStock.fulfilled, (s, a) => onFulfilled(s.lowStock, a.meta.requestId, a.payload, ""))
       .addCase(fetchLowStock.rejected, (s, a) => onRejected(s.lowStock, a))
+
+      .addCase(fetchPreorderSummary.pending, (s, a) => onPending(s.preorderSummary, a.meta.requestId))
+      .addCase(fetchPreorderSummary.fulfilled, (s, a) =>
+        onFulfilled(s.preorderSummary, a.meta.requestId, a.payload, rangeKey(a.meta.arg))
+      )
+      .addCase(fetchPreorderSummary.rejected, (s, a) => onRejected(s.preorderSummary, a))
   },
 })
 

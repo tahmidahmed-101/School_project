@@ -14,6 +14,8 @@ import { formatCurrency, formatDate, toISODate, todayLocalISODate } from "@/lib/
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import type { Kind } from "@/hooks/use-kind"
+import { KindSwitch } from "@/features/analytics/components/KindSwitch"
 import type { BalanceSheetReport, CashFlowReport, InventoryValuationReport, ProfitAndLossReport } from "../types"
 
 const REPORTS = "/admin/accounting/reports/"
@@ -331,29 +333,52 @@ function CashFlow() {
   )
 }
 
-function InventoryValuation() {
-  const { data, error, isLoading, reload } = useReport<InventoryValuationReport>("inventory-valuation/", {})
-  const asOf = todayLocalISODate()
-  const ledger = useReport<BalanceSheetReport>("balance-sheet/", { as_of: asOf })
-  const difference = data && ledger.data ? data.inventory_value - ledger.data.inventory_asset : null
-
+function KindValuation({ kind }: { kind: Kind }) {
+  const { data, error, isLoading, reload } = useReport<InventoryValuationReport>("inventory-valuation/", { kind })
   return (
-    <ReportCard title="Inventory Valuation" description="Stock on hand valued at moving average cost, right now.">
-      <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
-        {data && (
-          <>
-            <StatementLine label="Stock on hand × average cost" value={data.inventory_value} variant="subtotal" />
-            {ledger.data && (
-              <>
-                <StatementLine label="Inventory asset per ledger" value={ledger.data.inventory_asset} hint={`Balance as of ${formatDate(asOf)}`} />
-                {difference !== null && (
-                  <StatementLine label="Difference" value={difference} variant="total" hint="Should be zero when stock and ledger agree" />
-                )}
-              </>
-            )}
-          </>
-        )}
-      </ReportBody>
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <StatementLine
+          label={kind === "preorder" ? "Pre-order items on hand × average cost" : "Stock items on hand × average cost"}
+          value={data.inventory_value}
+          variant="subtotal"
+        />
+      )}
+    </ReportBody>
+  )
+}
+
+/** The ledger keeps one inventory account for both halves, so this check can only be made on the whole. */
+function LedgerInventoryCheck() {
+  const asOf = todayLocalISODate()
+  const counted = useReport<InventoryValuationReport>("inventory-valuation/", {})
+  const ledger = useReport<BalanceSheetReport>("balance-sheet/", { as_of: asOf })
+  if (!counted.data || !ledger.data) return null
+  return (
+    <>
+      <SectionHeading>Ledger check (all inventory)</SectionHeading>
+      <StatementLine label="On hand × average cost" value={counted.data.inventory_value} />
+      <StatementLine label="Inventory asset per ledger" value={ledger.data.inventory_asset} hint={`Balance as of ${formatDate(asOf)}`} />
+      <StatementLine
+        label="Difference"
+        value={counted.data.inventory_value - ledger.data.inventory_asset}
+        variant="total"
+        hint="Should be zero when stock and ledger agree"
+      />
+    </>
+  )
+}
+
+function InventoryValuation() {
+  const [kind, setKind] = useState<Kind>("stock")
+  return (
+    <ReportCard
+      title="Inventory Valuation"
+      description="Goods on hand valued at moving average cost, right now."
+      controls={<KindSwitch value={kind} onChange={setKind} />}
+    >
+      <KindValuation key={kind} kind={kind} />
+      <LedgerInventoryCheck />
     </ReportCard>
   )
 }
@@ -363,6 +388,10 @@ const FinancialReports = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeading title="Financial Reports" />
+      <p className="max-w-3xl text-sm text-muted-foreground">
+        Profit &amp; Loss, Balance Sheet and Cash Flow come from the ledger and cover the whole business. A pre-order
+        deposit is money held, not a sale: revenue is recorded when the goods are shipped.
+      </p>
       <Tabs defaultValue="pnl" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
