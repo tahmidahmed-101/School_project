@@ -42,11 +42,24 @@ export function MoneyCell({
   )
 }
 
-/** Product name over its SKU (and optional variant/extra line). */
-export function ProductCell({ name, sku, sub }: { name: ReactNode; sku?: string | null; sub?: ReactNode }) {
+/** Product name over its SKU (and optional variant/extra line). `wrapName` lets the name
+ * run to two lines before the ellipsis instead of one. */
+export function ProductCell({
+  name,
+  sku,
+  sub,
+  wrapName = false,
+}: {
+  name: ReactNode
+  sku?: string | null
+  sub?: ReactNode
+  wrapName?: boolean
+}) {
   return (
     <div className="min-w-0">
-      <div className="truncate text-sm font-medium">{name}</div>
+      <div className={cn("text-sm font-medium", wrapName ? "line-clamp-2 whitespace-normal break-words" : "truncate")}>
+        {name}
+      </div>
       {sub && <div className="truncate text-xs text-muted-foreground">{sub}</div>}
       {sku && <div className="truncate font-mono text-xs text-muted-foreground">{sku}</div>}
     </div>

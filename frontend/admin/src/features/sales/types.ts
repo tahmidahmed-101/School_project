@@ -75,6 +75,8 @@ export interface OrderLine {
   product_image: string | null
   quantity: number
   shipped_quantity: number
+  /** Units in DELIVERED consignments (selectors/shipments.py delivered_quantity_sum). */
+  delivered_quantity: number
   returned_quantity: number
   shippable_quantity: number
   returnable_quantity: number
