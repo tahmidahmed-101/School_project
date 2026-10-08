@@ -22,6 +22,8 @@ export interface Payment {
   method: PaymentMethod
   status: PaymentStatus
   gateway_reference: string
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
 }
 
 export const PAYMENT_STATUS_OPTIONS: { label: string; value: PaymentStatus }[] = [

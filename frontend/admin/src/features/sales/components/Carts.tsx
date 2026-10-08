@@ -24,6 +24,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -91,11 +92,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
           <ul className="max-h-64 divide-y divide-border overflow-y-auto">
             {cart.items.map((item) => (
               <li key={item.id} className="flex items-center justify-between gap-4 py-2">
-                <ProductCell
-                  name={item.product_name}
-                  sku={item.sku}
-                  sub={item.is_preorder ? "Pre-order" : undefined}
-                />
+                <ProductCell name={item.product_name} sku={item.sku} />
                 <span className="shrink-0 text-sm tabular-nums whitespace-nowrap">
                   {item.quantity} × {formatCurrency(item.unit_price)}
                 </span>
@@ -129,6 +126,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
 const Carts = () => {
   useDocumentTitle("Customer Carts")
   const dispatch = useAppDispatch()
+  const kind = useKind()
   const cartsState = useAppSelector((state) => state.customerCarts)
 
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
@@ -137,7 +135,7 @@ const Carts = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: cartsState,
-    params: { ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    params: { kind, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
   })
 
   const columns: ColumnDef<CustomerCart>[] = [

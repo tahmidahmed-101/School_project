@@ -1,30 +1,18 @@
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
+import { usePreorderReport } from "@/features/sales/hooks/usePreorderReport"
 import { formatCurrency } from "@/lib/format"
-import type { PreorderAllocationResult, PreorderReport } from "@/features/sales/types"
+import type { PreorderAllocationResult } from "@/features/sales/types"
 
-/** GET /admin/orders/preorder-report/ and POST /admin/orders/preorder-allocation/. */
+/** The open pre-order book, with POST /admin/orders/preorder-allocation/ behind its button. */
 export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; onAllocated: () => void }) {
-  const [report, setReport] = useState<PreorderReport | null>(null)
+  const { report, reload } = usePreorderReport()
   const [allocating, setAllocating] = useState(false)
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api.get("/admin/orders/preorder-report/")
-      setReport(unwrapItem<PreorderReport>(res.data))
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't load the pre-order report"))
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
 
   const allocate = async () => {
     setAllocating(true)
@@ -37,7 +25,7 @@ export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; o
           ? `${units} unit(s) set aside for ${new Set(allocated.map((row) => row.order_id)).size} order(s)`
           : "No arrived stock to hand out"
       )
-      await load()
+      reload()
       onAllocated()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Couldn't allocate arrived stock"))

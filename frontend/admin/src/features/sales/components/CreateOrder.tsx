@@ -104,7 +104,7 @@ const CreateOrder = () => {
   const [submitting, setSubmitting] = useState(false)
 
   const customerSearch = useSearch<CustomerHit>("/admin/users/", customer ? "" : customerQuery, { role: "customer" })
-  const variantSearch = useSearch<VariantHit>("/admin/catalog/variants/", variantQuery)
+  const variantSearch = useSearch<VariantHit>("/admin/catalog/variants/", variantQuery, { category_type: "stock" })
 
   useEffect(() => {
     const request = dispatch(fetchCarrierOptions())

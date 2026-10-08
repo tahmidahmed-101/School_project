@@ -1,11 +1,14 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { CreditCard, Undo2 } from "lucide-react"
+import { CreditCard, Undo2, Wallet } from "lucide-react"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPayment, refundPayment } from "@/features/payments/slices/paymentSlice"
 import { paymentMethodLabel, type Payment } from "@/features/payments/types"
+import { fetchOrderById } from "@/features/sales/slices/orderSlice"
+import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
+import type { Order } from "@/features/sales/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { DetailPageState } from "@/components/common/DetailPageState"
@@ -36,6 +39,20 @@ const PaymentDetail = () => {
   const [amount, setAmount] = useState("")
 
   const load = useDetailLoad(fetchPayment, id)
+
+  const kind = payment?.order_type ?? "stock"
+  // Only a pre-order has a deposit and a balance; they live on the order, not on the payment.
+  const preorderId = kind === "preorder" ? payment?.order_id : undefined
+  const [order, setOrder] = useState<Order | null>(null)
+  useEffect(() => {
+    if (!preorderId) return
+    const request = dispatch(fetchOrderById(preorderId))
+    request
+      .unwrap()
+      .then(setOrder)
+      .catch(() => setOrder(null))
+    return () => request.abort()
+  }, [dispatch, preorderId])
 
   const pageState = resolveDetailState(singleStatus, singleError, !!payment)
   if (pageState || !payment) {
@@ -78,12 +95,15 @@ const PaymentDetail = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{ to: "/payments", label: "Back to payments" }}
+        back={{
+          to: KIND_PATHS[kind].payments,
+          label: kind === "preorder" ? "Back to pre-order payments" : "Back to payments",
+        }}
         title={formatCurrency(payment.amount)}
         badges={<StatusBadge status={payment.status} />}
         description={
           <>
-            Payment for{" "}
+            Payment for {orderNoun(kind)}{" "}
             <Link to={`/order_detail/${payment.order_id}`} className="text-primary hover:underline">
               {payment.order_number}
             </Link>
@@ -115,13 +135,31 @@ const PaymentDetail = () => {
           <DetailRow label="Reference">
             <span className="font-mono text-xs">{payment.gateway_reference || "—"}</span>
           </DetailRow>
-          <DetailRow label="Order">
+          <DetailRow label={kind === "preorder" ? "Pre-order" : "Order"}>
             <Link to={`/order_detail/${payment.order_id}`} className="text-primary hover:underline">
               {payment.order_number}
             </Link>
           </DetailRow>
         </CardContent>
       </Card>
+
+      {order && order.id === preorderId && (
+        <Card className="max-w-2xl shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              Deposit and balance
+            </CardTitle>
+            <CardDescription>All payments on pre-order {order.order_number} together.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DetailRow label="Pre-order total">{formatCurrency(order.grand_total)}</DetailRow>
+            <DetailRow label="Deposit needed to confirm">{formatCurrency(order.deposit_due)}</DetailRow>
+            <DetailRow label="Received so far">{formatCurrency(order.paid_total)}</DetailRow>
+            <DetailRow label="Balance still owed">{formatCurrency(order.balance_due)}</DetailRow>
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmDialog
         open={open}

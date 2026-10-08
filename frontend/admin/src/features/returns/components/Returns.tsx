@@ -13,11 +13,15 @@ import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { RMA_STATUS_OPTIONS, type Rma } from "@/features/returns/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 
-const Returns = () => {
-  useDocumentTitle("Returns")
+const ReturnsList = () => {
+  const kind = useKind()
+  const isPreorder = kind === "preorder"
+  const title = isPreorder ? "Pre-order returns" : "Returns"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -28,7 +32,7 @@ const Returns = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAllReturns(p)),
     state: returnsState,
-    params: { status: statusFilter?.value },
+    params: { kind, status: statusFilter?.value },
   })
 
   const columns: ColumnDef<Rma>[] = [
@@ -39,9 +43,9 @@ const Returns = () => {
     },
     {
       id: "order",
-      header: "ORDER",
+      header: isPreorder ? "PRE-ORDER" : "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/order_detail/${row.original.order_id}`}>View order</LinkCell>
+        <LinkCell to={`/order_detail/${row.original.order_id}`}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
       ),
     },
     {
@@ -74,7 +78,7 @@ const Returns = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Returns" />
+      <PageHeader title={title} />
 
       <FilterToolbar
         searchPlaceholder="Search RMA number..."
@@ -96,11 +100,15 @@ const Returns = () => {
 
       <DataTable
         columns={columns}
-        data={returnsState.data}
+        data={returnsState.data.filter((row) => (row.order_type ?? kind) === kind)}
         {...list.tableProps}
         onRowClick={(rma) => navigate(`/return_detail/${rma.id}`)}
         emptyTitle="No returns found"
-        emptyDescription="Returns are opened from an order's detail page or by customers."
+        emptyDescription={
+          isPreorder
+            ? "Returns are opened from a pre-order's page or by customers."
+            : "Returns are opened from an order's detail page or by customers."
+        }
         minWidth="900px"
         columnWidths={["150px", "120px", "150px", "280px", "120px", "80px"]}
       />
@@ -108,4 +116,7 @@ const Returns = () => {
   )
 }
 
-export default Returns
+// Both halves render this component on different routes; the key gives each half its own filters and page.
+const ReturnsPage = () => <ReturnsList key={useKind()} />
+
+export default ReturnsPage

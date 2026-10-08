@@ -33,6 +33,8 @@ export interface Shipment {
   unresolved_damaged_quantity: number
   /** Only on the detail endpoint and the responses of shipment actions. */
   lines?: ShipmentLine[]
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
 }
 
 /** ShipmentLineSerializer */

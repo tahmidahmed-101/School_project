@@ -15,6 +15,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { ShipmentActions } from "./ShipmentActions"
+import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
 
 const ShipmentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -40,6 +41,8 @@ const ShipmentDetail = () => {
     )
   }
 
+  const kind = shipment.order_type ?? "stock"
+
   return (
     <div className="section-container space-y-6">
       <PageHeader
@@ -52,10 +55,13 @@ const ShipmentDetail = () => {
         }
         description={
           <Link to={`/order_detail/${shipment.order_id}`} className="text-primary hover:underline">
-            View order
+            {kind === "preorder" ? "View pre-order" : "View order"}
           </Link>
         }
-        back={{ to: "/shipments", label: "Back to shipments" }}
+        back={{
+          to: KIND_PATHS[kind].shipments,
+          label: kind === "preorder" ? "Back to pre-order shipments" : "Back to shipments",
+        }}
         actions={<ShipmentActions shipment={shipment} size="default" />}
       />
 

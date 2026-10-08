@@ -19,7 +19,6 @@ const shippable = (line: OrderLine) => line.shippable_quantity
 
 // Cash still to collect is whatever has not been received yet.
 const initialCod = (order: Order) => order.balance_due
-// Pre-order goods may not have arrived, so those lines start at 0 and are typed in on purpose.
 const initialQuantities = (order: Order) =>
   Object.fromEntries(order.lines.map((l) => [l.id, String(l.shippable_quantity)]))
 
@@ -99,7 +98,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
       title="Create shipment"
       description={
         order.order_type === "preorder"
-          ? "Ship units that have arrived stock set aside. Use Allocate arrived stock on the Orders page after goods come in."
+          ? "Ship the units already set aside for this pre-order. After goods come in, use Allocate arrived stock on the pre-order Orders page."
           : "Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
       }
       onSubmit={handleSubmit}
