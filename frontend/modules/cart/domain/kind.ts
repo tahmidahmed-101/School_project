@@ -16,6 +16,12 @@ export function acceptsProduct(items: CartItem[], product: Product): boolean {
   return kind === null || kind === productKind(product);
 }
 
+export function itemCountByKind(items: CartItem[]): Record<ProductKind, number> {
+  const byKind = splitByKind(items, lineKind);
+  const units = (lines: CartItem[]) => lines.reduce((sum, item) => sum + item.quantity, 0);
+  return { stock: units(byKind.stock), preorder: units(byKind.preorder) };
+}
+
 export interface BasketGroup {
   kind: ProductKind;
   items: CartItem[];

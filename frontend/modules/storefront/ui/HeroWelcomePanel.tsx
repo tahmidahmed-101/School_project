@@ -17,7 +17,7 @@ const QUICK_LINKS = [
   },
   {
     id: "preorder",
-    href: { stock: "/pre-order", preorder: shopListing("preorder") },
+    href: { stock: null, preorder: shopListing("preorder") },
     icon: Clock,
     titleKey: "heroPreorderTitle",
     subtitleKey: "heroPreorderSubtitle",
@@ -35,10 +35,13 @@ const QUICK_LINKS = [
   },
 ] as const;
 
-/** Welcome card + quick-link stack on the right of the hero on desktop; on the pre-order page every tile stays in the pre-order shop. */
+/** Welcome card + quick-link stack on the right of the hero on desktop; every tile stays in the page's own shop. */
 export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind: ProductKind }) {
   const { ui } = useLang();
-  const links = hasOffers ? QUICK_LINKS : QUICK_LINKS.filter((link) => link.id !== "promotion");
+  const links = QUICK_LINKS.flatMap((link) => {
+    const to = link.href[kind];
+    return to && (hasOffers || link.id !== "promotion") ? [{ ...link, to }] : [];
+  });
 
   return (
     <div className="flex h-full flex-col gap-2.5 sm:gap-3">
@@ -67,10 +70,10 @@ export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind
       </div>
 
       <div className="flex flex-1 flex-col gap-2">
-        {links.map(({ id, href, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
+        {links.map(({ id, to, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
           <Link
             key={id}
-            href={href[kind]}
+            href={to}
             className={`group flex flex-1 items-center gap-2 rounded-xl ${tint} p-2.5 shadow-sm transition-all duration-200 hover:shadow-md sm:rounded-2xl sm:p-3`}
           >
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTint}`}>

@@ -15,7 +15,7 @@ import { PreorderReturnsCard } from "./settings/PreorderReturnsCard"
 import { PromoLinesCard } from "./settings/PromoLinesCard"
 
 const PreorderSettings = () => {
-  useDocumentTitle("Pre-order Settings")
+  useDocumentTitle("Pre-order settings")
   const dispatch = useAppDispatch()
   const canManage = useCan("settings.manage")
 
@@ -32,7 +32,7 @@ const PreorderSettings = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        title="Pre-order Settings"
+        title="Pre-order settings"
         description={
           canManage
             ? undefined

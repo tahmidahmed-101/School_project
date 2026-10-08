@@ -24,6 +24,7 @@ from apps.logistics.selectors.rates import (
 )
 from apps.logistics.services.rates import shipping_options, try_quote_shipping
 from apps.orders.models import SalesOrder, SalesOrderLine
+from apps.orders.selectors.payments import deposit_percent_context
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
     get_cart,
@@ -371,7 +372,9 @@ class OrderHistoryListView(APIView):
         )
         if order_type:
             orders = orders.filter(order_type=order_type)
-        return list_response(request, orders, OrderHistorySerializer, view=self)
+        return list_response(
+            request, orders, OrderHistorySerializer, view=self, context_fn=deposit_percent_context
+        )
 
 
 @extend_schema(tags=["Orders"])

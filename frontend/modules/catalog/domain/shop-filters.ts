@@ -52,12 +52,16 @@ export const DEFAULT_FILTERS: FilterState = {
 /** "In stock only" is a stock-shop filter; a pre-order is never in stock. */
 const appliesInStockOnly = (filters: FilterState) => filters.inStockOnly && filters.stockType === "normal";
 
+/** Discounts are stock only, so the "sale" collection is not a pre-order filter either. */
+export const appliesCollection = (filters: FilterState, collection: string) =>
+  filters.collection === collection && (collection !== "sale" || filters.stockType === "normal");
+
 /** How many filters (search, category, collection, price cap, stock) narrow the catalogue. */
 export function countActiveFilters(filters: FilterState): number {
   return [
     Boolean(filters.searchQuery),
     filters.category !== "all",
-    filters.collection !== "all",
+    filters.collection !== "all" && appliesCollection(filters, filters.collection),
     Number.isFinite(filters.maxPrice),
     appliesInStockOnly(filters),
   ].filter(Boolean).length;
@@ -89,9 +93,9 @@ function matchesFilters(product: Product, filters: FilterState): boolean {
   if (filters.stockType === "normal" && isPreOrderShopProduct(product)) return false;
   if (filters.stockType === "preorder" && !isPreOrderShopProduct(product)) return false;
 
-  if (filters.collection === "trending" && !product.trending) return false;
-  if (filters.collection === "sale" && getDiscountPercent(product) === null) return false;
-  if (filters.collection === "new" && !product.newArrival) return false;
+  if (appliesCollection(filters, "trending") && !product.trending) return false;
+  if (appliesCollection(filters, "sale") && getDiscountPercent(product) === null) return false;
+  if (appliesCollection(filters, "new") && !product.newArrival) return false;
 
   if (product.price > filters.maxPrice) return false;
   if (appliesInStockOnly(filters) && !product.inStock) return false;

@@ -9,11 +9,12 @@ import { Home, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { UserAvatar, firstName, useAuth } from "@/modules/auth";
 import { useWishlist } from "@/modules/wishlist";
+import { WithShopCounts } from "./WithShopCounts";
 
-function MobileBottomBarInner() {
+function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
   const pathname = usePathname();
   const { ui, n } = useLang();
-  const { openWishlist, isWishlistOpen, totalWishlistItems } = useWishlist();
+  const { openWishlist, isWishlistOpen } = useWishlist();
   const { user } = useAuth();
 
   // Active tab index (-1 = none: the shop, product and pre-order pages have no tab of their own):
@@ -52,7 +53,7 @@ function MobileBottomBarInner() {
       label: ui("navWishlist"),
       href: undefined,
       icon: Heart,
-      badge: totalWishlistItems,
+      badge: wishlistCount,
       onClick: openWishlist,
     },
     {
@@ -161,7 +162,7 @@ function MobileBottomBarInner() {
 export function MobileBottomBar() {
   return (
     <Suspense fallback={null}>
-      <MobileBottomBarInner />
+      <WithShopCounts>{(counts) => <MobileBottomBarInner wishlistCount={counts.wishlist} />}</WithShopCounts>
     </Suspense>
   );
 }

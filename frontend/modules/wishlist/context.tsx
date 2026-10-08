@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { productKind, splitByKind, type ProductKind } from "@/lib/product";
 import type { Product } from "@/lib/types";
 import { usePersistedState } from "@/lib/usePersistedState";
 
@@ -15,7 +16,7 @@ interface WishlistContextType {
   openWishlist: () => void;
   closeWishlist: () => void;
   toggleWishlist: () => void;
-  totalWishlistItems: number;
+  countByKind: Record<ProductKind, number>;
 }
 
 const WishlistContext = createContext<WishlistContextType | null>(null);
@@ -69,6 +70,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const closeWishlist = useCallback(() => setIsWishlistOpen(false), []);
   const toggleWishlist = useCallback(() => setIsWishlistOpen((prev) => !prev), []);
 
+  const countByKind = useMemo(() => {
+    const byKind = splitByKind(items, productKind);
+    return { stock: byKind.stock.length, preorder: byKind.preorder.length };
+  }, [items]);
+
   const value = useMemo(
     () => ({
       items,
@@ -81,7 +87,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       openWishlist,
       closeWishlist,
       toggleWishlist,
-      totalWishlistItems: items.length,
+      countByKind,
     }),
     [
       items,
@@ -94,6 +100,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       openWishlist,
       closeWishlist,
       toggleWishlist,
+      countByKind,
     ],
   );
 

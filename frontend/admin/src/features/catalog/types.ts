@@ -134,7 +134,8 @@ export interface Product {
   images: ProductImage[]
   image: string | null
   primary_image: string | null
-  total_stock: number
+  /** Null on a pre-order product: its arrived goods are per variant, on the Arrivals page. */
+  total_stock: number | null
   price: string | null
   cost_price: string | null
   discount_price: string | null

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CartItem, Product } from "@/lib/types";
 import { makeProduct } from "@/tests/fixtures";
-import { acceptsProduct, basketGroups, basketKind } from "../kind";
+import { acceptsProduct, basketGroups, basketKind, itemCountByKind } from "../kind";
 
 const line = (overrides: Partial<Product>, quantity = 1): CartItem => ({
   product: makeProduct(overrides),
@@ -54,5 +54,13 @@ describe("basketGroups", () => {
   it("has one group for a single-kind basket and none when empty", () => {
     expect(basketGroups([stock]).map((group) => group.kind)).toEqual(["stock"]);
     expect(basketGroups([])).toEqual([]);
+  });
+});
+
+describe("itemCountByKind", () => {
+  it("counts the units of each shop apart", () => {
+    expect(itemCountByKind([stock, preorder])).toEqual({ stock: 2, preorder: 3 });
+    expect(itemCountByKind([preorder])).toEqual({ stock: 0, preorder: 3 });
+    expect(itemCountByKind([])).toEqual({ stock: 0, preorder: 0 });
   });
 });

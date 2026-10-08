@@ -7,7 +7,7 @@ import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
 import { MIXED_BASKET_CODE, cartRefusalCode, setCartCustomer, syncGuestCart } from "./data/guestCart";
-import { acceptsProduct, basketGroups, basketKind, type BasketGroup } from "./domain/kind";
+import { acceptsProduct, basketGroups, basketKind, itemCountByKind, type BasketGroup } from "./domain/kind";
 import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
@@ -27,7 +27,7 @@ interface CartContextType {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  totalItems: number;
+  itemCountByKind: Record<ProductKind, number>;
   /** Sum of the SKU prices in the cart. An estimate: the backend prices the order at checkout. */
   subtotal: number;
   kind: ProductKind | "mixed" | null;
@@ -231,7 +231,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
 
-  const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const countByKind = useMemo(() => itemCountByKind(items), [items]);
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [items]);
   const kind = useMemo(() => basketKind(items), [items]);
@@ -248,7 +248,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openDrawer,
       closeDrawer,
       toggleDrawer,
-      totalItems,
+      itemCountByKind: countByKind,
       subtotal,
       kind,
       groups,
@@ -265,7 +265,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openDrawer,
       closeDrawer,
       toggleDrawer,
-      totalItems,
+      countByKind,
       subtotal,
       kind,
       groups,

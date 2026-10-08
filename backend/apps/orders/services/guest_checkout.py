@@ -176,7 +176,6 @@ def guest_checkout(
                 "coupon_expired",
                 "coupon_usage_limit_reached",
                 "coupon_minimum_not_met",
-                "coupon_stock_only",
             ):
                 raise
 

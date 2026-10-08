@@ -8,6 +8,7 @@ export { ProductGrid } from "./ui/ProductGrid";
 export { ShopCatalog } from "./ui/ShopCatalog";
 export { TrendingSection } from "./ui/TrendingSection";
 export { WithActiveCategory } from "./ui/WithActiveCategory";
+export { WithPageKind } from "./ui/WithPageKind";
 export { ProductDetailSkeleton, ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";
 export { ContactButtons } from "./ui/ContactButtons";
 export { forListing, relatedForProduct } from "./domain/listing";

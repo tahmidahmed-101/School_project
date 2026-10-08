@@ -390,7 +390,9 @@ class ProductSerializer(serializers.Serializer):
                     break
         return image.url if image else None
 
-    def get_total_stock(self, obj) -> int:
+    def get_total_stock(self, obj) -> int | None:
+        if obj.category.category_type == Category.CategoryType.PREORDER:
+            return None
         stock_by_variant = self.context.get("stock_by_variant")
         variant_ids = [v.id for v in obj.active_variants]
         if stock_by_variant is not None:

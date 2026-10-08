@@ -272,6 +272,22 @@ def test_product_rows_carry_category_type_and_no_discount_for_a_preorder(admin_c
     assert (preorder_row["category_type"], preorder_row["discount_price"]) == (PREORDER, None)
 
 
+def test_a_preorder_product_row_carries_no_stock_total(admin_client):
+    stock = _variant(STOCK)
+    preorder = _variant(PREORDER, **_window())
+    StockItemFactory(variant=stock, quantity_on_hand=4)
+    StockItemFactory(variant=preorder, quantity_on_hand=4)
+
+    stock_row = admin_client.get(f"{BASE}products/{stock.product_id}/").data["data"]
+    preorder_row = admin_client.get(f"{BASE}products/{preorder.product_id}/").data["data"]
+    listed = admin_client.get(f"{BASE}products/", {"category_type": PREORDER}).data["data"]
+
+    assert stock_row["total_stock"] == 4
+    assert preorder_row["total_stock"] is None
+    assert [row["total_stock"] for row in listed["results"]] == [None]
+    assert preorder_row["variants"][0]["stock"] == 4
+
+
 def test_deleting_a_preorder_product_with_goods_does_not_talk_about_stock_screens():
     variant = _variant(PREORDER, **_window())
     StockItemFactory(variant=variant, quantity_on_hand=2)

@@ -6,5 +6,5 @@ export const purchasingTitle = (kind: Kind, text: string) =>
   kind === "preorder" ? `Pre-order ${text.toLowerCase()}` : text
 
 /** The stock half says "vendor", the pre-order half "supplier": one term per half, the same as its menu. */
-export const billsTitle = (kind: Kind) => (kind === "preorder" ? "Supplier bills" : "Vendor Bills")
-export const paymentsTitle = (kind: Kind) => (kind === "preorder" ? "Supplier payments" : "Vendor Payments")
+export const billsTitle = (kind: Kind) => (kind === "preorder" ? "Pre-order supplier bills" : "Vendor Bills")
+export const paymentsTitle = (kind: Kind) => (kind === "preorder" ? "Pre-order supplier payments" : "Vendor Payments")
