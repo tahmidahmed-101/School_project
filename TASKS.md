@@ -63,8 +63,8 @@
 - [x] Pre-order stages: owner's 24 stages on the order, admin sets and filters them, each change logged, customer sees them on track-order
 
 ## Phase H: storefront content from the dashboard (owner go-ahead 2026-10-08, after the hardcoded-content audit)
-- [ ] Backend: hero slides + promo lines (models, migration, admin CRUD, public `storefront-content/`), `about` on the business profile
-- [ ] Admin: Storefront content screen (hero slides, promo lines), About fields on the business profile form
-- [ ] Storefront home: hero slides and promo strip read the API (static fallback), false "free delivery over ৳2,000" line removed, Trending shelf uses the `trending` flag, Promotion tile hidden with no discounts
-- [ ] Storefront wiring: store name, legal name, opening hours, about from the profile; policy effective date; shipping-policy page; policy links only when published; all socials in structured data; coupon expiry; carrier on track-order
-- [ ] Merge the four branches, run checks once, local browser pass
+- [x] Backend: hero slides + promo lines (models, migration, admin CRUD, public `storefront-content/`), `about` on the business profile
+- [x] Admin: Storefront content screen (hero slides, promo lines), About fields on the business profile form
+- [x] Storefront home: hero slides and promo strip read the API (static fallback), false "free delivery over ৳2,000" line removed, Trending shelf uses the `trending` flag, Promotion tile hidden with no discounts
+- [x] Storefront wiring: store name, legal name, opening hours, about from the profile; policy effective date; shipping-policy page; policy links only when published; all socials in structured data; coupon expiry; carrier on track-order
+- [x] Merge the four branches, run checks once, local browser pass
