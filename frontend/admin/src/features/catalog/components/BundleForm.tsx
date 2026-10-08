@@ -330,7 +330,8 @@ const BundleForm = () => {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <MoneyField
-              label="Price (BDT)"
+              label="Price"
+              showCurrency
               id="price"
               placeholder={componentTotal ? componentTotal.toFixed(2) : "0.00"}
               error={errors.price}

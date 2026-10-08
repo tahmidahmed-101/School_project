@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
 import { DateField, TextField } from "@/components/common/form-fields"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, getDefaultCurrency } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
@@ -153,7 +153,7 @@ export function VendorBillFormDialog({
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TextField
-          label="Amount (BDT) *"
+          label={`Amount (${getDefaultCurrency()}) *`}
           id="bill-amount"
           type="number"
           step="0.01"

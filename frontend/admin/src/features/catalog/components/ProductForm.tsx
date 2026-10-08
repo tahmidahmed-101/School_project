@@ -511,7 +511,8 @@ const ProductForm = () => {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MoneyField
-              label="Price (BDT)"
+              label="Price"
+              showCurrency
               id="price"
               placeholder="0.00"
               error={errors.price}

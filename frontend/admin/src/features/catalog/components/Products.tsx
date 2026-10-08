@@ -20,7 +20,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 
@@ -68,10 +68,10 @@ const Products = () => {
         example: "Panjabi & Kurta",
         resolve: categoryLookup.resolve,
       },
-      { key: "price", label: "Price (BDT)", required: true, type: "number", aliases: ["price", "selling price", "mrp"], example: "2450" },
+      { key: "price", label: `Price (${getDefaultCurrency()})`, required: true, type: "number", aliases: ["price", "selling price", "mrp"], example: "2450" },
       { key: "sku", label: "SKU", aliases: ["product code"], example: "PJ-NAVY-001" },
-      { key: "cost_price", label: "Cost price (BDT)", type: "number", aliases: ["cost price", "cost", "purchase price"], example: "1600" },
-      { key: "discount_price", label: "Discount price (BDT)", type: "number", aliases: ["discount price", "sale price", "offer price"], example: "2200" },
+      { key: "cost_price", label: `Cost price (${getDefaultCurrency()})`, type: "number", aliases: ["cost price", "cost", "purchase price"], example: "1600" },
+      { key: "discount_price", label: `Discount price (${getDefaultCurrency()})`, type: "number", aliases: ["discount price", "sale price", "offer price"], example: "2200" },
       { key: "description", label: "Description", example: "Soft cotton panjabi with embroidered placket, ideal for Eid." },
       {
         key: "highlights",

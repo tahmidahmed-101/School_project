@@ -350,7 +350,8 @@ function GenerateVariantsDialog({
       />
       <div className="grid grid-cols-2 gap-4">
         <MoneyField
-          label="Price (BDT)"
+          label="Price"
+          showCurrency
           id="gen-price"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
