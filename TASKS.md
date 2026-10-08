@@ -20,17 +20,20 @@
 - [ ] Pre-order and shop pages send slim product data; single-language strings not doubled
 - [ ] Cart / wishlist context values memoised; drawer state split out
 - [ ] Payment methods fetched on the server
-- [ ] Bell low-stock count from a count endpoint (API)
+- [x] Bell low-stock count from a count endpoint (API)
 
 ## Phase C: admin shared pieces
-- [ ] `useSoftDeleteList` promoted; six reference-list pages migrated
-- [ ] One `VariantPicker`
+- [x] `useSoftDeleteList` promoted; four reference-list pages migrated (Warehouses and Brands differ too much, left as they are)
+- [x] One `VariantPicker` and one debounced-search hook (CreateOrder's search behaves differently, left)
 - [ ] Catalog pairs: pricing fields, variant columns, moderation list
 - [ ] One loading / error / content wrapper; one fetch hook
 - [ ] `StatCard`, `Thumbnail`, `RefCell` / `LinkCell`
-- [ ] Reference lists cached, pages fetched in parallel
-- [ ] Money arithmetic through one module
-- [ ] Currency label from business profile, not "(BDT)"
+- [x] Reference lists cached, pages fetched in parallel
+- [ ] Reference-list cache has no max age: another staff member's edit shows only after a reload
+- [x] Money arithmetic through one module (4 of 5 sites)
+- [ ] Purchase-order totals still on floats: unit cost has 4 decimals, the money module needs an exact multiply first (also PurchaseOrderCreate.tsx:66)
+- [x] Currency label from business profile, not "(BDT)"
+- [ ] Bell offers low-stock to inventory-only staff, but the endpoint needs reports permission (403, shows nothing)
 
 ## Phase D: admin consistency
 - [ ] Success / warning tokens (needs colour approval)

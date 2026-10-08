@@ -100,16 +100,6 @@ export const deleteVariant = (id: string) => apiCall<unknown>(() => api.delete(`
 export const generateVariants = (productId: string, payload: VariantGeneratePayload) =>
   apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
 
-/** Search variants across the catalog (for pickers). */
-export async function searchVariants(search: string, extra: Record<string, unknown> = {}) {
-  try {
-    const res = await api.get(`${C}/variants/`, { params: { page: 1, page_size: 20, search, ...extra } })
-    return unwrapList<ProductVariant>(res.data, 1, 20).items
-  } catch (err) {
-    throw extractApiError(err)
-  }
-}
-
 /** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
 export async function downloadVariantsExport(
   fileFormat: "csv" | "xlsx",

@@ -2,7 +2,7 @@ import { toast } from "sonner"
 import { extractApiError, getApiErrorMessage } from "@/lib/api/client"
 import { openFileInTab } from "@/lib/download"
 import type { StatusTone } from "@/components/common/status-tones"
-import type { PurchaseOrder, VariantOption } from "./types"
+import type { PurchaseOrder } from "./types"
 
 export const PO_STATUS_TONE: Record<string, StatusTone> = {
   draft: "secondary",
@@ -45,6 +45,3 @@ export const poUnitsReceived = (po: PurchaseOrder) => po.lines.reduce((s, l) => 
 /** Opens a backend-rendered PDF in a new tab, toasting on failure. */
 export const openPdf = (url: string) =>
   openFileInTab(url).catch((err) => toast.error(getApiErrorMessage(extractApiError(err), "Couldn't load the PDF")))
-
-export const variantLabel = (v: Pick<VariantOption, "product_name" | "color" | "size">) =>
-  [v.product_name, [v.color, v.size].filter(Boolean).join(" / ")].filter(Boolean).join(" — ")
