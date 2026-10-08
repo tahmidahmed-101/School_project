@@ -143,6 +143,7 @@ class ExpenseSerializer(serializers.Serializer):
     category_id = serializers.UUIDField(read_only=True, allow_null=True)
     payment_account_id = serializers.UUIDField(read_only=True)
     reference_number = serializers.CharField(allow_blank=True)
+    kind = serializers.CharField(allow_blank=True)
     journal_entry_id = serializers.UUIDField(read_only=True, allow_null=True)
     deleted_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
@@ -156,12 +157,18 @@ class ExpenseCreateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField(required=False, allow_null=True)
     payment_account_id = serializers.UUIDField()
     reference_number = serializers.CharField(required=False, allow_blank=True, default="")
+    kind = serializers.ChoiceField(
+        choices=JournalEntry.Kind.choices, required=False, allow_blank=True, default=""
+    )
 
 
 class ExpenseUpdateSerializer(serializers.Serializer):
     payee = serializers.CharField(required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     reference_number = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(
+        choices=JournalEntry.Kind.choices, required=False, allow_blank=True
+    )
 
 
 class AsOfSerializer(serializers.Serializer):

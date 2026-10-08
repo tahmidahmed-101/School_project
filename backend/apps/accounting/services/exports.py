@@ -9,7 +9,7 @@ REPORT_COLUMNS = ("line_item", "amount")
 
 def _rows(report: dict) -> list[list[str]]:
     return [
-        [key, ", ".join(value) if isinstance(value, list) else str(value)]
+        [key, ", ".join(value) if isinstance(value, list) else "" if value is None else str(value)]
         for key, value in report.items()
     ]
 

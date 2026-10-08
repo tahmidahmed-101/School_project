@@ -279,6 +279,7 @@ class ExpenseQuerysetMixin(IncludeDeletedMixin):
             account_id=account_id,
             start=start,
             end=end,
+            kind=get_choice(params, "kind", [*KINDS, COMPANY]),
             include_deleted=self.include_deleted(),
         )
 
@@ -343,6 +344,7 @@ EXPENSE_EXPORT_COLUMNS = (
     "payment_account",
     "amount",
     "reference_number",
+    "kind",
 )
 
 
@@ -366,6 +368,7 @@ class AdminExpenseExportView(ExpenseQuerysetMixin, AccountingPermissionMixin, Ge
                 expense.payment_account.name,
                 expense.amount,
                 expense.reference_number,
+                expense.kind,
             ]
             for expense in expenses
         )
@@ -388,7 +391,10 @@ class AdminExpenseDetailView(AccountingPermissionMixin, APIView):
             return not_found("expense_not_found", "Expense not found.")
         serializer = ExpenseUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        expense = update_expense(expense=expense, data=dict(serializer.validated_data))
+        try:
+            expense = update_expense(expense=expense, data=dict(serializer.validated_data))
+        except BusinessRuleViolationError as exc:
+            return error_from_exception(exc)
         return Response({"data": ExpenseSerializer(expense).data, "message": "Success"})
 
     def delete(self, request, expense_id) -> Response:

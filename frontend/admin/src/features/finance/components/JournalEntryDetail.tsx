@@ -24,7 +24,7 @@ import { useCan } from "@/hooks/use-can"
 import { fetchSingle, reverseJournalEntry } from "../slices/journalEntrySlice"
 import type { JournalEntry } from "../types"
 import { accountLabel, useAccounts } from "../hooks/useFinanceHelpers"
-import { entryTotal } from "../utils"
+import { belongsToLabel, entryTotal } from "../utils"
 
 const JournalEntryDetail = () => {
   const { id = "" } = useParams<{ id: string }>()
@@ -175,9 +175,7 @@ const JournalEntryDetail = () => {
               <StatusBadge status={entry.status} tone={entry.status === "posted" ? "success" : "secondary"} />
             </DetailRow>
             <DetailRow label="Entry date">{formatDate(entry.entry_date)}</DetailRow>
-            <DetailRow label="Belongs to">
-              {entry.kind === "stock" ? "Stock" : entry.kind === "preorder" ? "Pre-order" : "Whole business"}
-            </DetailRow>
+            <DetailRow label="Belongs to">{belongsToLabel(entry.kind)}</DetailRow>
             <DetailRow label="Source">{entry.reference_type ? humanize(entry.reference_type) : "Manual entry"}</DetailRow>
             {entry.reference_id && (
               <DetailRow label="Reference id">

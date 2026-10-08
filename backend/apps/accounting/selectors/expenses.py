@@ -6,6 +6,7 @@ from uuid import UUID
 from django.db.models import QuerySet
 
 from apps.accounting.models import Expense
+from apps.accounting.selectors.kind import COMPANY
 
 
 def expenses_list(
@@ -14,6 +15,7 @@ def expenses_list(
     account_id: str | UUID | None = None,
     start: date | None = None,
     end: date | None = None,
+    kind: str | None = None,
     include_deleted: bool = False,
 ) -> QuerySet[Expense]:
     queryset = Expense.objects.all()
@@ -27,6 +29,8 @@ def expenses_list(
         queryset = queryset.filter(expense_date__gte=start)
     if end:
         queryset = queryset.filter(expense_date__lte=end)
+    if kind:
+        queryset = queryset.filter(kind="" if kind == COMPANY else kind)
     return queryset.order_by("-expense_date")
 
 

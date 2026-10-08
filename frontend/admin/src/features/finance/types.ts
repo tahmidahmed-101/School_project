@@ -114,6 +114,7 @@ export interface Expense {
   category_id: string | null
   payment_account_id: string
   reference_number: string
+  kind: JournalEntryKind
   journal_entry_id: string | null
   deleted_at: string | null
 }
@@ -128,13 +129,15 @@ export interface ExpenseCreatePayload {
   category_id?: string | null
   payment_account_id: string
   reference_number?: string
+  kind?: JournalEntryKind
 }
 
-/** ExpenseUpdateSerializer — amount/date/accounts are frozen once posted. */
+/** ExpenseUpdateSerializer — amount/date/accounts are frozen once posted; a new `kind` re-posts the entry. */
 export interface ExpenseUpdatePayload {
   payee?: string
   description?: string
   reference_number?: string
+  kind?: JournalEntryKind
 }
 
 // Reports (apps/accounting/selectors/reports.py) — amounts are JSON numbers.
@@ -146,19 +149,23 @@ export interface ProfitAndLossReport {
   revenue: number
   cost_of_goods_sold: number
   gross_profit: number
+  gross_margin_percent: number | null
   operating_expenses: number
   net_income: number
   unassigned_revenue: number
   unassigned_cost_of_goods_sold: number
 }
 
-/** One half; `company_wide_left_out` names what is not split. */
+/** One half. Whole-business expenses are not taken off; `company_wide_left_out` names them. */
 export interface KindProfitAndLossReport {
   kind: ReportKind
   revenue: number
   cost_of_goods_sold: number
   gross_profit: number
-  other_costs: number
+  gross_margin_percent: number | null
+  goods_written_off: number
+  operating_expenses: number
+  profit_before_company_costs: number
   company_wide_left_out: string[]
 }
 
@@ -169,6 +176,9 @@ export interface BalanceSheetReport {
   retained_earnings: number
   equity: number
   inventory_asset: number
+  other_assets: number
+  liabilities_and_equity: number
+  out_of_balance: number
 }
 
 export interface KindBalanceSheetReport {
@@ -192,6 +202,7 @@ export interface KindCashFlowReport {
   customer_receipts: number
   customer_refunds: number
   supplier_payments: number
+  expenses_paid: number
   other: number
   net_change_in_cash: number
   company_wide_left_out: string[]

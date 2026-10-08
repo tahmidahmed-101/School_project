@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.accounting.models import Account, Expense, ExpenseCategory, JournalEntry
-from apps.accounting.services.journal import post_journal_entry
+from apps.accounting.services.journal import is_reversed, post_journal_entry, reverse_journal_entry
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.business.services.modules import require_feature
@@ -63,6 +63,7 @@ def create_expense(
     category: ExpenseCategory | None = None,
     description: str = "",
     reference_number: str = "",
+    kind: str = "",
 ) -> Expense:
     expense_account = resolve_expense_account(expense_account=expense_account, category=category)
     expense = Expense.objects.create(
@@ -74,20 +75,42 @@ def create_expense(
         category=category,
         payment_account=payment_account,
         reference_number=reference_number,
+        kind=kind,
     )
-    entry = post_journal_entry(
-        entry_date=expense_date,
-        reference_type="expense",
-        reference_id=expense.id,
-        description=f"Expense: {payee}" + (f" ({reference_number})" if reference_number else ""),
-        lines=[
-            {"account": expense_account, "debit": amount, "credit": Decimal("0")},
-            {"account": payment_account, "debit": Decimal("0"), "credit": amount},
-        ],
-    )
-    expense.journal_entry = entry
+    expense.journal_entry = _post_expense(expense)
     expense.save(update_fields=["journal_entry"])
     return expense
+
+
+def _post_expense(expense: Expense) -> JournalEntry:
+    reference = f" ({expense.reference_number})" if expense.reference_number else ""
+    return post_journal_entry(
+        entry_date=expense.expense_date,
+        reference_type="expense",
+        reference_id=expense.id,
+        description=f"Expense: {expense.payee}{reference}",
+        kind=expense.kind,
+        lines=[
+            {"account": expense.expense_account, "debit": expense.amount, "credit": Decimal("0")},
+            {"account": expense.payment_account, "debit": Decimal("0"), "credit": expense.amount},
+        ],
+    )
+
+
+def _move_expense_to_kind(expense: Expense, kind: str) -> None:
+    """A posted entry is never edited, so the old one is reversed on its own date
+    (each half's report nets to zero in that period) and a new one posted."""
+    entry = expense.journal_entry if expense.journal_entry_id is not None else None
+    expense.kind = kind
+    if entry is None:
+        return
+    if is_reversed(entry):
+        raise BusinessRuleViolationError(
+            "This expense's journal entry was reversed; record a new expense instead.",
+            code="expense_reversed",
+        )
+    reverse_journal_entry(entry, entry_date=entry.entry_date, reason="moved to another half")
+    expense.journal_entry = _post_expense(expense)
 
 
 @transaction.atomic
@@ -98,6 +121,9 @@ def update_expense(*, expense: Expense, data: dict) -> Expense:
     update_fields = [field for field in data if field in allowed_fields]
     for field in update_fields:
         setattr(expense, field, data[field])
+    if "kind" in data and data["kind"] != expense.kind:
+        _move_expense_to_kind(expense, data["kind"])
+        update_fields += ["kind", "journal_entry"]
     if update_fields:
         expense.save(update_fields=update_fields)
     return expense
