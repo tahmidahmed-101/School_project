@@ -16,6 +16,7 @@ import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { errorKey } from "@/lib/api/errors";
 import { ApiError } from "@/lib/api/client";
 import type { AppliedCoupon, ShippingQuoteState } from "./useCheckoutPricing";
+import { cardClass } from "@/design-system/ui/Card";
 
 interface CheckoutSummaryProps {
   items: CartItem[];
@@ -56,7 +57,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
   const hasMixed = hasPreOrder && items.some((i) => !i.product.isPreOrder);
 
   return (
-    <div className="space-y-4 rounded-2xl border border-ink-200 bg-canvas p-5 shadow-sm">
+    <div className={cardClass("canvas", "space-y-4 p-5 shadow-sm")}>
       <h3 className="border-b border-ink-200 pb-3 text-sm font-bold text-fg">
         {ui("checkoutOrderSummary")} ({n(items.length)})
       </h3>

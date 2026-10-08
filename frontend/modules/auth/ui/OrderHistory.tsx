@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { Loader } from "@/design-system/patterns/Loader";
 import { useAuth } from "../context";
 import { humanizeStatus, orderStatusKey, orderStatusTone, variantLabel } from "../domain/orders";
+import { cardClass } from "@/design-system/ui/Card";
 
 const PAGE_SIZE = 5;
 
@@ -71,7 +72,7 @@ export function OrderHistory() {
           {orders.map((order) => {
             const statusKey = orderStatusKey(order.status);
             return (
-              <li key={order.id} className="shadow-xs flex flex-col rounded-2xl border border-ink-200 bg-surface p-4">
+              <li key={order.id} className={cardClass("surface", "shadow-xs flex flex-col p-4")}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-bold text-fg">{order.order_number}</p>
                   <span

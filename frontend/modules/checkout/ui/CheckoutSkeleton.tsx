@@ -3,6 +3,7 @@
 import { useLang } from "@/lib/i18n";
 import { Container } from "@/design-system/ui/Container";
 import { Skeleton } from "@/design-system/patterns/Skeleton";
+import { cardClass } from "@/design-system/ui/Card";
 
 export function CheckoutSkeleton() {
   const { ui } = useLang();
@@ -23,7 +24,7 @@ export function CheckoutSkeleton() {
               </div>
             ))}
           </div>
-          <div className="space-y-4 rounded-2xl border border-ink-200 bg-canvas p-5 lg:col-span-5">
+          <div className={cardClass("canvas", "space-y-4 p-5 lg:col-span-5")}>
             <Skeleton className="h-4 w-32" />
             {Array.from({ length: 2 }, (_, i) => (
               <div key={i} className="flex gap-3">

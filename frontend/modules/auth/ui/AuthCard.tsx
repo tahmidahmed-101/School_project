@@ -2,6 +2,7 @@ import type { FormEventHandler, ReactNode } from "react";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
+import { cardClass } from "@/design-system/ui/Card";
 
 interface AuthCardProps {
   title: string;
@@ -23,11 +24,7 @@ export function AuthCard({ title, subtitle, onSubmit, footer, children }: AuthCa
           subtitle={subtitle}
         />
 
-        <form
-          onSubmit={onSubmit}
-          noValidate
-          className="shadow-xs space-y-4 rounded-2xl border border-ink-200 bg-surface p-5"
-        >
+        <form onSubmit={onSubmit} noValidate className={cardClass("surface", "shadow-xs space-y-4 p-5")}>
           {children}
         </form>
 
