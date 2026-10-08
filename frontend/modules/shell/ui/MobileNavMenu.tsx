@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, Store, Globe, Truck, Sparkles } from "lucide-react";
+import { X, Store, Globe, Truck, Sparkles } from "lucide-react";
 import { useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
@@ -10,6 +10,7 @@ import { WithActiveCategory } from "@/modules/catalog";
 import { SLIDE_EASE, usePresence } from "@/design-system/patterns/usePresence";
 
 const SHOP_PATH = "/shop";
+const READY_STOCK_PATH = "/shop?type=normal";
 
 const POLICY_LINKS = [
   { href: "/return-policy", key: "footerReturnPolicy" },
@@ -21,7 +22,7 @@ interface MobileNavMenuProps {
   onClose: () => void;
 }
 
-/** Left-hand slide-in menu with Home / Shop / categories and the language toggle, mobile only. */
+/** Left-hand slide-in menu with ready stock, pre-order, categories and the language toggle, mobile only. */
 export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
   const pathname = usePathname();
   const { lang, setLang, t, ui } = useLang();
@@ -61,22 +62,11 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
               </div>
 
               <nav className="mt-3 flex-1 space-y-1 overflow-y-auto">
-                <Link
-                  href="/"
-                  onClick={onClose}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                    pathname === "/" ? "bg-white/10 text-gold-300" : "text-white/80 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Home className="h-4 w-4 shrink-0" />
-                  <span>{ui("navHome")}</span>
-                </Link>
-
                 <WithActiveCategory>
                   {(activeCategory) => (
                     <>
                       <Link
-                        href={SHOP_PATH}
+                        href={READY_STOCK_PATH}
                         onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                           pathname === SHOP_PATH && !activeCategory
@@ -85,7 +75,7 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
                         }`}
                       >
                         <Store className="h-4 w-4 shrink-0" />
-                        <span>{ui("navShop")}</span>
+                        <span>{ui("navReadyStock")}</span>
                       </Link>
 
                       <Link
