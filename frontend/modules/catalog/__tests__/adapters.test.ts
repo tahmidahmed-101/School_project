@@ -34,7 +34,7 @@ describe("toCategoryInfo", () => {
     const info = toCategoryInfo({ ...category, product_count: 0, image: null });
 
     expect(info.itemCount).toBe(0);
-    expect(info.image).toBe("brand/logo-mark.png");
+    expect(info.image).toBe("brand/category-placeholder.png");
   });
 
   it("counts nothing when an older API sends no count and no products are given", () => {

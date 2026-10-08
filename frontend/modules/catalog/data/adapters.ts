@@ -15,6 +15,8 @@ const plain = (value: string): T => ({ en: value, bn: "" });
 
 /** Shown when a product has no photo, so the card layout never breaks. */
 const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
+/** Shown for a category with no picture of its own and no product picture to borrow. */
+const CATEGORY_PLACEHOLDER_IMAGE = "brand/category-placeholder.png";
 
 /**
  * Photos come back as `/media/...` or as absolute URLs. Media paths are made absolute on the API origin: the Cloudflare
@@ -125,7 +127,7 @@ export function toCategoryInfo(category: ApiCategory, products: Product[] = []):
   const inCategory = products.filter((p) => p.category === category.slug);
   const withImage = inCategory.find((p) => p.image !== PLACEHOLDER_IMAGE);
   const counted = category.product_count !== undefined;
-  const apiImage = category.image ? normalizeImageUrl(category.image) : PLACEHOLDER_IMAGE;
+  const apiImage = category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE;
   return {
     id: category.slug,
     apiId: category.id,
@@ -134,7 +136,7 @@ export function toCategoryInfo(category: ApiCategory, products: Product[] = []):
     // The API has no category description. Count and picture come from the API; an API deployed before those
     // fields existed leaves them out, and the product list stands in.
     description: plain(""),
-    image: counted ? apiImage : (withImage?.image ?? PLACEHOLDER_IMAGE),
+    image: counted ? apiImage : (withImage?.image ?? CATEGORY_PLACEHOLDER_IMAGE),
     itemCount: category.product_count ?? inCategory.length,
     type: category.category_type,
   };

@@ -63,6 +63,10 @@ class PublicCategorySerializer(serializers.Serializer):
         return self._summary(obj).get("product_count", 0)
 
     def get_image(self, obj) -> str | None:
+        # The picture uploaded on the category wins; without one, the first
+        # listed product's picture stands in, so an empty category has none.
+        if obj.image:
+            return obj.image.url
         return self._summary(obj).get("image")
 
 

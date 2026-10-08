@@ -161,3 +161,22 @@ def test_category_list_carries_product_count_and_image_in_constant_queries(api_c
         api_client.get("/api/v1/public/catalog/categories/")
 
     assert len(many) == len(few)
+
+
+def test_category_list_prefers_the_picture_uploaded_on_the_category(api_client):
+    from apps.catalog.models import ProductImage
+
+    with_product = CategoryFactory()
+    empty = CategoryFactory()
+    product = ProductFactory(category=with_product)
+    ProductVariantFactory(product=product)
+    ProductImage.objects.create(product=product, url="https://img.test/product.jpg")
+    # Only the stored path matters here, so no file is written.
+    Category.objects.filter(id=with_product.id).update(image="categories/own.jpg")
+    Category.objects.filter(id=empty.id).update(image="categories/empty.jpg")
+
+    response = api_client.get("/api/v1/public/catalog/categories/")
+    rows = {row["id"]: row for row in response.json()["data"]}
+
+    assert rows[str(with_product.id)]["image"] == "/media/categories/own.jpg"
+    assert rows[str(empty.id)]["image"] == "/media/categories/empty.jpg"
