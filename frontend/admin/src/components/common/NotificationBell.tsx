@@ -99,7 +99,7 @@ const SOURCES: Source[] = [
     to: "/inventory",
     permission: ["reports.view", "accounting.view"],
     count: async () => {
-      const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1 } });
+      const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1, kind: "stock" } });
       const data = res.data?.data;
       // An API deployed before count_only existed ignores it and sends the rows.
       return Array.isArray(data) ? data.length : Number(data?.count) || 0;

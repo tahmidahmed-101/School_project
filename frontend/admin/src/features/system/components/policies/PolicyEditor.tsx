@@ -539,7 +539,7 @@ function NonReturnableCategories({
   error?: { message?: string }
   disabled: boolean
 }) {
-  const { options, isLoading } = useCategoryOptions()
+  const { options, isLoading } = useCategoryOptions("stock")
   // A saved category that has since been deleted is no longer an option; list it so it can be unticked.
   const known = new Set(options.map((o) => o.value))
   const rows = [

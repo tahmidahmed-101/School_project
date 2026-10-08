@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, MoneyCell, ProductCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
@@ -23,14 +24,15 @@ import { movementTypeLabel, movementTypeOptions, type StockLedgerEntry } from ".
 import { useWarehouses } from "../lib/useWarehouses"
 
 const PAGE_SIZE = 25
-const STOCK_VARIANTS = { category_type: "stock" }
 const ORDERING_OPTIONS: Option[] = [
   { label: "Newest first", value: "-created_at" },
   { label: "Oldest first", value: "created_at" },
 ]
 
 const StockLedger = () => {
-  useDocumentTitle("Stock Ledger")
+  const kind = useKind()
+  const title = kind === "preorder" ? "Pre-order goods movements" : "Stock Ledger"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const ledgerState = useAppSelector((s) => s.inventoryLedger)
   const { warehouses } = useWarehouses()
@@ -52,7 +54,7 @@ const StockLedger = () => {
     state: ledgerState,
     pageSize: PAGE_SIZE,
     params: {
-      kind: "stock",
+      kind,
       variant_id: variantId,
       warehouse_id: warehouse?.value,
       movement_type: movement?.value,
@@ -138,7 +140,7 @@ const StockLedger = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Stock Ledger"
+        title={title}
         actions={<ExportButton onExport={() => downloadLedgerExport(list.query)} />}
       />
 
@@ -153,7 +155,7 @@ const StockLedger = () => {
                 value={variant}
                 onChange={setVariant}
                 placeholder="Filter by variant…"
-                filters={STOCK_VARIANTS}
+                filters={{ category_type: kind }}
               />
             ),
           },

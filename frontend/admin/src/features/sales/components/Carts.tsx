@@ -124,9 +124,10 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
 }
 
 const Carts = () => {
-  useDocumentTitle("Customer Carts")
   const dispatch = useAppDispatch()
   const kind = useKind()
+  const title = kind === "preorder" ? "Pre-order carts" : "Customer Carts"
+  useDocumentTitle(title)
   const cartsState = useAppSelector((state) => state.customerCarts)
 
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
@@ -208,7 +209,7 @@ const Carts = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Customer Carts" />
+      <PageHeader title={title} />
 
       <FilterToolbar
         searchPlaceholder="Search customer name, email or phone..."
