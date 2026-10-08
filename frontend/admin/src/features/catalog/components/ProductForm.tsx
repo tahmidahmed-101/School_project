@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { CalendarClock, Layers, Plus, Trash2 } from "lucide-react"
 
@@ -158,7 +158,13 @@ const ProductForm = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
-  const { options: categoryOptions } = useCategoryOptions()
+  const { options: allCategoryOptions } = useCategoryOptions()
+  // "Add product" on a stock or pre-order list only offers that kind's categories.
+  const listKind = useSearchParams()[0].get("kind")
+  const categoryOptions = useMemo(
+    () => (listKind ? allCategoryOptions.filter((o) => o.category.category_type === listKind) : allCategoryOptions),
+    [allCategoryOptions, listKind]
+  )
 
   // Brands for the searchable picker. A failed load just leaves the list empty: brand is optional.
   const [brandOptions, setBrandOptions] = useState<Option[]>([])
@@ -186,6 +192,7 @@ const ProductForm = () => {
     reset,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<FormValues>({
     resolver: formResolver,
@@ -216,6 +223,15 @@ const ProductForm = () => {
   const variantRows = useFieldArray({ control, name: "variants" })
   const productType = useWatch({ control, name: "product_type" })
   const isPreorder = useWatch({ control, name: "is_preorder" })
+  const categoryId = useWatch({ control, name: "category_id" })
+  const categoryKind = allCategoryOptions.find((o) => o.value === categoryId)?.category.category_type
+
+  // The category decides the kind; there is no separate pre-order switch to disagree with it.
+  useEffect(() => {
+    if (categoryKind && isPreorder !== (categoryKind === "preorder")) {
+      setValue("is_preorder", categoryKind === "preorder", { shouldDirty: true })
+    }
+  }, [categoryKind, isPreorder, setValue])
 
   // Create only: images picked before the product exists, uploaded right after it is created.
   const staged = useStagedImages()
@@ -390,7 +406,7 @@ const ProductForm = () => {
 
   const hasQueuedVariants = !isEditing && productType === "variant" && variantRows.fields.length > 0
 
-  const backTo = isEditing ? `/product_detail/${id}` : "/products"
+  const backTo = isEditing ? `/product_detail/${id}` : listKind === "preorder" ? "/preorder_products" : "/products"
 
   return (
     <div className="section-container">
@@ -554,21 +570,18 @@ const ProductForm = () => {
           </div>
         )}
 
-        {(!isEditing || (product?.variants.length ?? 0) > 0) && (
+        {isPreorder && (!isEditing || (product?.variants.length ?? 0) > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarClock className="size-4" /> Pre-order
               </CardTitle>
               <CardDescription>
-                {isEditing
-                  ? "Let customers order before stock arrives. Saving applies these settings to every variant of this product."
-                  : "Let customers order before stock arrives. Applies to every variant created with this product."}
+                This product is in a pre-order category, so customers order it before stock arrives. These settings
+                apply to every variant.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <SwitchField control={control} name="is_preorder" label="Sell this product as a pre-order" />
-              {isPreorder && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   <DateField
                     withTime
@@ -602,7 +615,6 @@ const ProductForm = () => {
                     {...register("preorder_stock_limit")}
                   />
                 </div>
-              )}
             </CardContent>
           </Card>
         )}

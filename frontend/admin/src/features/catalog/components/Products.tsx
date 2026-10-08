@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Boxes, Package, PlusIcon } from "lucide-react"
@@ -13,7 +13,6 @@ import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { StatusBadge } from "@/components/common/StatusBadge"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -26,7 +25,7 @@ import type { Option } from "@/lib/types"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
-import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
+import { productTypeOptions, type Product, type ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { isBlockedByStock, stockLevelsPath } from "../deleteGuard"
 
@@ -43,14 +42,20 @@ const orderingOptions: Option[] = [
 ]
 
 const Products = () => {
-  useDocumentTitle("Products")
+  // One list per kind: /products is stock, /preorder_products is pre-order.
+  const kind = useLocation().pathname.startsWith("/preorder_products") ? "preorder" : "stock"
+  const title = kind === "preorder" ? "Pre-order products" : "Products"
+  useDocumentTitle(title)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
-  const { categories, options: categoryOptions, nameById } = useCategoryOptions()
-  const categoryTypeById = useMemo(() => new Map(categories.map((c) => [c.id, c.category_type])), [categories])
+  const { options: allCategoryOptions, nameById } = useCategoryOptions()
+  const categoryOptions = useMemo(
+    () => allCategoryOptions.filter((o) => o.category.category_type === kind),
+    [allCategoryOptions, kind]
+  )
 
   // CSV import: simple products only (one variant created from price/SKU in the same call).
   const categoryLookup = useMemo(
@@ -88,7 +93,6 @@ const Products = () => {
 
   const [category, setCategory] = useState<Option | null>(null)
   const [productType, setProductType] = useState<Option | null>(null)
-  const [categoryType, setCategoryType] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
 
@@ -98,7 +102,7 @@ const Products = () => {
     params: {
       category_id: category?.value,
       product_type: productType?.value,
-      category_type: categoryType?.value,
+      category_type: kind,
       is_active: status?.value,
       ordering: ordering?.value,
     },
@@ -187,16 +191,6 @@ const Products = () => {
       ),
     },
     {
-      id: "product_type",
-      header: "PRODUCT TYPE",
-      cell: ({ row }) =>
-        categoryTypeById.get(row.original.category_id) === "preorder" ? (
-          <StatusBadge status="pre-order" tone="info" />
-        ) : (
-          <span className="text-sm">Stock</span>
-        ),
-    },
-    {
       id: "status",
       header: "STATUS",
       cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
@@ -224,7 +218,6 @@ const Products = () => {
     "150px",
     "140px",
     "80px",
-    "130px",
     "110px",
     "80px",
   ]
@@ -232,7 +225,7 @@ const Products = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Products"
+        title={title}
         actions={
           canManage && (
             <>
@@ -244,19 +237,23 @@ const Products = () => {
                 image={(item) => item.primary_image}
                 onRestored={list.reload}
               />
-              <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
-                <Boxes className="size-5" /> New Bundle
-              </Button>
-              <CsvImportButton
-                entityName="products"
-                fields={importFields}
-                createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
-                onComplete={() => {
-                  categoryLookup.reset()
-                  list.reload()
-                }}
-              />
-              <Button size="action" onClick={() => navigate("/product_form/new")}>
+              {kind === "stock" && (
+                <>
+                  <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
+                    <Boxes className="size-5" /> New Bundle
+                  </Button>
+                  <CsvImportButton
+                    entityName="products"
+                    fields={importFields}
+                    createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
+                    onComplete={() => {
+                      categoryLookup.reset()
+                      list.reload()
+                    }}
+                  />
+                </>
+              )}
+              <Button size="action" onClick={() => navigate(`/product_form/new?kind=${kind}`)}>
                 <PlusIcon className="size-5" /> Add Product
               </Button>
             </>
@@ -276,16 +273,6 @@ const Products = () => {
                 options={categoryOptions.map((o) => ({ label: `${"— ".repeat(o.depth)}${o.label}`, value: o.value }))}
                 value={category}
                 onValueChange={setCategory}
-              />
-            ),
-          },
-          {
-            component: (
-              <Combobox
-                placeholder="Product type"
-                options={categoryTypeOptions}
-                value={categoryType}
-                onValueChange={setCategoryType}
               />
             ),
           },

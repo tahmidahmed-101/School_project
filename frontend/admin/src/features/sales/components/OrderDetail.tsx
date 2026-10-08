@@ -252,7 +252,7 @@ const OrderDetail = () => {
     try {
       await dispatch(deleteData(order.id)).unwrap()
       toast.success(`Order ${order.order_number} deleted`)
-      navigate("/orders")
+      navigate(order.order_type === "preorder" ? "/preorders" : "/orders")
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete order"))
     }
@@ -296,7 +296,11 @@ const OrderDetail = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{ to: "/orders", label: "Back to orders" }}
+        back={
+          order.order_type === "preorder"
+            ? { to: "/preorders", label: "Back to pre-order orders" }
+            : { to: "/orders", label: "Back to orders" }
+        }
         title={order.order_number}
         badges={<StatusBadge status={order.status} />}
         description={`Placed on ${formatDateTime(order.created_at)}`}

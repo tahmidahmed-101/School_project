@@ -99,3 +99,9 @@
 - [x] K5 Phase 4: pre-order arrival allocated to waiting orders, ship from stock, returns one rule, demand view
 - [x] K6 Phase 5: reports (open pre-order book, deposits held, balances); SMS needs provider approval
 
+
+## Phase L: dashboard keeps stock and pre-order apart (change request, owner "go with you suggested way" 2026-10-09)
+- [x] A Pre-orders menu with its own orders list (book and allocation on top) and products list; stock lists show stock only
+- [x] B Category decides the kind: no pre-order switch on product form or variant dialog
+- [x] C Stage filter only on pre-order orders; back links return to the right list
+- [ ] D Cut the 23 pre-order stages to the ones in use (needs owner's list)

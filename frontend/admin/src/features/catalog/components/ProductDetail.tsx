@@ -42,7 +42,7 @@ const ProductDetail = () => {
   const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
-  const { nameById } = useCategoryOptions()
+  const { nameById, categories } = useCategoryOptions()
 
   useDocumentTitle(product?.name ? `${product.name} — Product` : "Product Details")
 
@@ -104,7 +104,11 @@ const ProductDetail = () => {
       <PageHeader
         title={product.name}
         description={product.slug}
-        back={{ to: "/products", label: "Back to products" }}
+        back={
+          categories.find((c) => c.id === product.category_id)?.category_type === "preorder"
+            ? { to: "/preorder_products", label: "Back to pre-order products" }
+            : { to: "/products", label: "Back to products" }
+        }
         actions={
           canManage &&
           (product.deleted_at ? (
@@ -199,6 +203,7 @@ const ProductDetail = () => {
           ) : (
             <ProductVariantsSection
               productId={product.id}
+              categoryId={product.category_id}
               productType={product.product_type}
               canManage={canManage}
               canViewInventory={canViewInventory}

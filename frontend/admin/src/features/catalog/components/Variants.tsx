@@ -292,6 +292,7 @@ const Variants = () => {
           open={Boolean(addingTo)}
           onOpenChange={(open) => !open && setAddingTo(null)}
           productId={addingShown.id}
+          categoryId={addingShown.category_id}
           onSaved={list.reload}
         />
       )}

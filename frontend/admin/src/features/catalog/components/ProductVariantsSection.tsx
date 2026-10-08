@@ -24,6 +24,7 @@ const PAGE_SIZE = 25
 
 interface Props {
   productId: string
+  categoryId: string
   productType: string
   canManage: boolean
   canViewInventory: boolean
@@ -31,7 +32,7 @@ interface Props {
   onChanged: () => void
 }
 
-export function ProductVariantsSection({ productId, productType, canManage, canViewInventory, onChanged }: Props) {
+export function ProductVariantsSection({ productId, categoryId, productType, canManage, canViewInventory, onChanged }: Props) {
   const [variants, setVariants] = useState<ProductVariant[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -243,6 +244,7 @@ export function ProductVariantsSection({ productId, productType, canManage, canV
         open={formOpen}
         onOpenChange={setFormOpen}
         productId={productId}
+        categoryId={categoryId}
         variant={editing}
         onSaved={afterChange}
       />

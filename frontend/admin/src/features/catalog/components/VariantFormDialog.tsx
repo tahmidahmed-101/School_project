@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm, useWatch } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/fo
 import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
+import { useCategoryOptions } from "../lib/useCategoryOptions"
 import type { ProductVariant, ProductVariantPayload } from "../types"
 
 const schema = z
@@ -66,12 +67,14 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   productId: string
+  /** The product's category: a pre-order category makes the variant a pre-order, a stock one never does. */
+  categoryId?: string | null
   /** The variant being edited; null/undefined creates a new one. */
   variant?: ProductVariant | null
   onSaved: () => void
 }
 
-export function VariantFormDialog({ open, onOpenChange, productId, variant, onSaved }: Props) {
+export function VariantFormDialog({ open, onOpenChange, productId, categoryId, variant, onSaved }: Props) {
   const isEditing = Boolean(variant)
   const {
     control,
@@ -86,7 +89,11 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
     if (open) reset(toValues(variant))
   }, [open, variant, reset])
 
-  const preorder = useWatch({ control, name: "is_preorder_enabled" })
+  const { categories } = useCategoryOptions()
+  // The variants list does not carry the category, so an edit there keeps the variant's own kind.
+  const preorder = categoryId
+    ? categories.find((c) => c.id === categoryId)?.category_type === "preorder"
+    : Boolean(variant?.is_preorder_enabled)
 
   const onSubmit = async (values: FormValues) => {
     const payload: ProductVariantPayload = {
@@ -97,7 +104,7 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
       weight: values.weight || null,
       wholesale_price: values.wholesale_price || null,
       show_wholesale_price: values.show_wholesale_price,
-      is_preorder_enabled: values.is_preorder_enabled,
+      is_preorder_enabled: preorder,
       preorder_price: values.preorder_price || null,
       preorder_start_date: fromDatetimeLocal(values.preorder_start_date),
       preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
@@ -164,14 +171,9 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
         {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
       </div>
 
-      <div className="space-y-4 rounded-lg border border-border p-4">
-        <SwitchField
-          control={control}
-          name="is_preorder_enabled"
-          label="Pre-order"
-          description="Allow customers to order before stock arrives."
-        />
-        {preorder && (
+      {preorder && (
+        <div className="space-y-4 rounded-lg border border-border p-4">
+          <p className="text-sm font-medium">Pre-order</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
             {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
@@ -179,8 +181,8 @@ export function VariantFormDialog({ open, onOpenChange, productId, variant, onSa
             {text("preorder_end_date", "Ends", { withTime: true })}
             {text("release_date", "Release date", { withTime: true })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </FormDialog>
   )
 }

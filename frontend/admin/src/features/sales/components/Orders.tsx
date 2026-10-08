@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { DateRange } from "react-day-picker"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { PlusIcon, XIcon } from "lucide-react"
 
 import { DatePicker } from "@/components/common/DatePicker"
@@ -36,14 +36,11 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Lowest total", value: "grand_total" },
 ]
 
-// Sent as `order_type` (selectors/sales_orders.py orders_list).
-const ORDER_KIND_OPTIONS: Option[] = [
-  { value: "preorder", label: "Pre-order" },
-  { value: "stock", label: "Stock" },
-]
-
 const Orders = () => {
-  useDocumentTitle("Orders")
+  // One list per kind: /orders is stock, /preorders is pre-order. They never share a screen.
+  const isPreorder = useLocation().pathname.startsWith("/preorders")
+  const title = isPreorder ? "Pre-order orders" : "Orders"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -56,7 +53,6 @@ const Orders = () => {
 
   const [statusFilter, setStatusFilter] = useState<Option | null>(null)
   const [stageFilter, setStageFilter] = useState<Option | null>(null)
-  const [kindFilter, setKindFilter] = useState<Option | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
 
@@ -69,8 +65,8 @@ const Orders = () => {
     state: ordersState,
     params: {
       status: statusFilter?.value,
-      preorder_stage: stageFilter?.value,
-      order_type: kindFilter?.value,
+      preorder_stage: isPreorder ? stageFilter?.value : undefined,
+      order_type: isPreorder ? "preorder" : "stock",
       start: from ? toISODate(from) : undefined,
       end: to ? toISODate(to) : undefined,
       customer_id: customerId,
@@ -89,10 +85,7 @@ const Orders = () => {
       accessorKey: "order_number",
       header: "ORDER #",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <span className="font-inter text-sm font-medium text-primary">{row.original.order_number}</span>
-          {row.original.order_type === "preorder" && <Badge variant="secondary">Pre-order</Badge>}
-        </div>
+        <span className="font-inter text-sm font-medium text-primary">{row.original.order_number}</span>
       ),
     },
     {
@@ -146,7 +139,7 @@ const Orders = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Orders"
+        title={title}
         actions={
           <>
             <ExportButton onExport={() => downloadFile("/admin/orders/export/", "orders.csv", list.query)} />
@@ -159,7 +152,7 @@ const Orders = () => {
         }
       />
 
-      {kindFilter?.value === "preorder" && <PreorderBook canManage={canManage} onAllocated={list.reload} />}
+      {isPreorder && <PreorderBook canManage={canManage} onAllocated={list.reload} />}
 
       <FilterToolbar
         searchPlaceholder="Search order # or email..."
@@ -177,26 +170,20 @@ const Orders = () => {
               />
             ),
           },
-          {
-            component: (
-              <Combobox
-                options={ORDER_KIND_OPTIONS}
-                placeholder="Order type"
-                value={kindFilter}
-                onValueChange={setKindFilter}
-              />
-            ),
-          },
-          {
-            component: (
-              <Combobox
-                options={PREORDER_STAGE_OPTIONS}
-                placeholder="Pre-order stage"
-                value={stageFilter}
-                onValueChange={setStageFilter}
-              />
-            ),
-          },
+          ...(isPreorder
+            ? [
+                {
+                  component: (
+                    <Combobox
+                      options={PREORDER_STAGE_OPTIONS}
+                      placeholder="Stage"
+                      value={stageFilter}
+                      onValueChange={setStageFilter}
+                    />
+                  ),
+                },
+              ]
+            : []),
           {
             component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} />,
           },
