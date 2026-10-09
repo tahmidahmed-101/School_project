@@ -108,7 +108,10 @@ export const navSections: NavSection[] = [
     label: "Marketing",
     icon: Megaphone,
     group: "STOCK",
-    items: [{ title: "Coupons", url: "/coupons", permission: ORDERS }],
+    items: [
+      { title: "Sales", url: "/sales", permission: ORDERS },
+      { title: "Coupons", url: "/coupons", permission: ORDERS },
+    ],
   },
   {
     label: "Settings",

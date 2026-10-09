@@ -32,11 +32,13 @@ const ORDERING_OPTIONS: Option[] = [
 const formatCouponValue = (coupon: Pick<Coupon, "discount_type" | "value">) =>
   coupon.discount_type === "percentage" ? `${Number(coupon.value)}%` : formatCurrency(coupon.value)
 
-function couponState(coupon: Coupon): { status: string; tone: "success" | "destructive" | "secondary" | "warning"; label: string } {
+function couponState(coupon: Coupon): { status: string; tone: "success" | "destructive" | "secondary" | "warning" | "info"; label: string } {
   if (coupon.deleted_at) return { status: "deleted", tone: "destructive", label: "Deleted" }
   if (!coupon.is_active) return { status: "inactive", tone: "secondary", label: "Inactive" }
   if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
     return { status: "expired", tone: "destructive", label: "Expired" }
+  if (coupon.starts_at && new Date(coupon.starts_at).getTime() > Date.now())
+    return { status: "scheduled", tone: "info", label: "Scheduled" }
   if (coupon.usage_limit != null && coupon.times_used >= coupon.usage_limit)
     return { status: "used_up", tone: "warning", label: "Used up" }
   return { status: "active", tone: "success", label: "Active" }
@@ -112,6 +114,16 @@ const Coupons = () => {
           <span className="text-muted-foreground"> / {row.original.usage_limit ?? "∞"}</span>
         </span>
       ),
+    },
+    {
+      accessorKey: "starts_at",
+      header: "STARTS",
+      cell: ({ row }) =>
+        row.original.starts_at ? (
+          <DateCell value={row.original.starts_at} className="text-muted-foreground" />
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        ),
     },
     {
       accessorKey: "expires_at",
@@ -191,8 +203,8 @@ const Coupons = () => {
         emptyTitle="No coupons yet"
         emptyDescription="Create a discount code to reward customers or run a promotion."
         {...(canManage ? { emptyActionLabel: "Add Coupon", onEmptyAction: () => navigate("/coupon_form/new") } : {})}
-        minWidth="960px"
-        columnWidths={["160px", "140px", "130px", "100px", "140px", "110px", "80px"]}
+        minWidth="1090px"
+        columnWidths={["160px", "140px", "130px", "100px", "130px", "140px", "110px", "80px"]}
       />
     </div>
   )

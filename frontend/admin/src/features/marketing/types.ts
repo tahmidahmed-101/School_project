@@ -2,6 +2,11 @@
 
 export type DiscountType = "percentage" | "fixed"
 
+export interface NamedRef {
+  id: string
+  name: string
+}
+
 /** CouponSerializer (read). Decimals arrive as strings. */
 export interface Coupon {
   id: string
@@ -10,8 +15,13 @@ export interface Coupon {
   value: string
   min_order_amount: string
   usage_limit: number | null
+  per_customer_limit: number | null
+  max_discount_amount: string | null
   times_used: number
+  starts_at: string | null
   expires_at: string | null
+  categories: NamedRef[]
+  brands: NamedRef[]
   is_active: boolean
   show_on_storefront: boolean
   created_at: string
@@ -25,12 +35,46 @@ export interface CouponCreatePayload {
   value: string
   min_order_amount?: string
   usage_limit?: number | null
+  per_customer_limit?: number | null
+  max_discount_amount?: string | null
+  starts_at?: string | null
   expires_at?: string | null
+  category_ids?: string[]
+  brand_ids?: string[]
   show_on_storefront?: boolean
 }
 
 /** CouponUpdateSerializer (PATCH, all optional). */
 export type CouponUpdatePayload = Partial<CouponCreatePayload> & { is_active?: boolean }
+
+export type SaleTarget = "all" | "categories" | "brands" | "products"
+export type SaleStatus = "scheduled" | "running" | "ended" | "off"
+
+export interface Sale {
+  id: string
+  name: string
+  percent_off: string
+  starts_at: string
+  ends_at: string | null
+  is_active: boolean
+  applies_to: SaleTarget
+  status: SaleStatus
+  categories: NamedRef[]
+  brands: NamedRef[]
+  products: NamedRef[]
+}
+
+export interface SalePayload {
+  name: string
+  percent_off: string
+  starts_at: string | null
+  ends_at: string | null
+  is_active: boolean
+  applies_to: SaleTarget
+  category_ids: string[]
+  brand_ids: string[]
+  product_ids: string[]
+}
 
 /** AdminNewsletterSubscriberSerializer */
 export interface NewsletterSubscriber {
