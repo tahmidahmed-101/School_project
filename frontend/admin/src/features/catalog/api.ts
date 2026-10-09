@@ -13,10 +13,15 @@ import type {
   Category,
   CategoryPayload,
   Product,
+  Combination,
+  OptionSuggestions,
   ProductImage,
+  ProductOptionsPayload,
+  ProductOptionsResult,
   ProductPayload,
   ProductVariant,
   ProductVariantPayload,
+  VariantBulkUpdatePayload,
   VariantGeneratePayload,
   VariantGenerateResult,
   VariantImportResult,
@@ -72,29 +77,27 @@ export async function listProductImages(productId: string): Promise<ProductImage
 }
 export const createProductImage = (
   productId: string,
-  payload: { url: string; alt_text?: string; sort_order?: number; variant_id?: string | null }
+  payload: { url: string; alt_text?: string; sort_order?: number; option_value_id?: string | null }
 ) => apiCall<ProductImage>(() => api.post(`${C}/products/${productId}/images/`, payload))
 export const updateProductImage = (
   id: string,
-  payload: { url?: string; alt_text?: string; sort_order?: number }
+  payload: { url?: string; alt_text?: string; sort_order?: number; option_value_id?: string | null }
 ) => apiCall<ProductImage>(() => api.patch(`${C}/images/${id}/`, payload))
 export const deleteProductImage = (id: string) => apiCall<unknown>(() => api.delete(`${C}/images/${id}/`))
 
+// ---- options ----
+export const saveProductOptions = (productId: string, payload: ProductOptionsPayload) =>
+  apiCall<ProductOptionsResult>(() => api.put(`${C}/products/${productId}/options/`, payload))
+export const listCombinations = (productId: string) =>
+  apiCall<{ combinations: Combination[] }>(() => api.get(`${C}/products/${productId}/combinations/`))
+/** Option names used in the shop and, with `name`, the values used under it; most used first. */
+export const fetchOptionSuggestions = (name?: string) =>
+  apiCall<OptionSuggestions>(() => api.get(`${C}/option-suggestions/`, { params: name ? { name } : {} }))
+
 // ---- variants ----
-export async function listProductVariants(
-  productId: string,
-  params: { page?: number; page_size?: number; search?: string } = {}
-) {
-  const { page = 1, page_size = 50, ...rest } = params
-  try {
-    const res = await api.get(`${C}/products/${productId}/variants/`, {
-      params: { page, page_size, ...rest },
-    })
-    return unwrapList<ProductVariant>(res.data, page, page_size)
-  } catch (err) {
-    throw extractApiError(err)
-  }
-}
+/** Every variant of one product (all pages). */
+export const fetchAllProductVariants = (productId: string) =>
+  fetchAllPages<ProductVariant>(`${C}/products/${productId}/variants/`)
 export const createVariant = (productId: string, payload: ProductVariantPayload) =>
   apiCall<ProductVariant>(() => api.post(`${C}/products/${productId}/variants/`, payload))
 export const updateVariant = (id: string, payload: ProductVariantPayload) =>
@@ -102,6 +105,8 @@ export const updateVariant = (id: string, payload: ProductVariantPayload) =>
 export const deleteVariant = (id: string) => apiCall<unknown>(() => api.delete(`${C}/variants/${id}/`))
 export const generateVariants = (productId: string, payload: VariantGeneratePayload) =>
   apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
+export const bulkUpdateVariants = (productId: string, payload: VariantBulkUpdatePayload) =>
+  apiCall<unknown>(() => api.post(`${C}/products/${productId}/variants/bulk-update/`, payload))
 
 /** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
 export async function downloadVariantsExport(

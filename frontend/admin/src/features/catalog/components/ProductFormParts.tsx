@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEventHandler, type ReactNode } from "react"
 import { Controller, useFieldArray, useFormContext } from "react-hook-form"
-import { Link, useNavigate } from "react-router-dom"
-import { Layers, Plus, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { ChevronDown, ChevronUp, ListChecks, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +10,7 @@ import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/fie
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
 import { FormActions } from "@/components/common/FormActions"
-import { FormField, SelectField, TextField, TextareaField } from "@/components/common/form-fields"
+import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
 import { Combobox } from "@/components/common/ComboBox"
 import { useAppDispatch } from "@/app/hooks"
 import type { Kind } from "@/hooks/use-kind"
@@ -130,28 +130,6 @@ export function BasicsCard({
           </FieldContent>
         </Field>
 
-        <SelectField
-          control={control}
-          name="product_type"
-          label="Product type"
-          id="product_type"
-          description={
-            kind === "stock" ? (
-              <>
-                Bundles are created from{" "}
-                <Link to="/bundles/new" className="text-primary underline">
-                  Bundles
-                </Link>
-                .
-              </>
-            ) : undefined
-          }
-          options={[
-            { label: "Simple — one sellable SKU", value: "simple" },
-            { label: "Variant — colours / sizes", value: "variant" },
-          ]}
-        />
-
         <FormField label="Brand" htmlFor="brand_id" description="Optional. Type to search.">
           <Controller
             control={control}
@@ -216,39 +194,52 @@ export function BasicsCard({
 /** The Pricing card: the form's own money fields as children, then the SKU of a new product's first variant. */
 export function PricingCard({
   isEditing,
-  hasQueuedVariants,
+  withOptions,
+  perVariant,
   simpleHint,
   children,
 }: {
   isEditing: boolean
-  hasQueuedVariants: boolean
-  /** Shown on a new simple product, where the price is required. */
+  /** The options switch is on. */
+  withOptions: boolean
+  /** A saved product with options: each variant has its own prices, so there is nothing to enter here. */
+  perVariant: boolean
+  /** Shown on a new product without options, where the price is required. */
   simpleHint: string
   children: ReactNode
 }) {
   const {
     register,
-    watch,
     formState: { errors },
   } = useFormContext<BaseValues>()
-  const productType = watch("product_type")
+  if (perVariant) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Pricing</CardTitle>
+          <CardDescription>
+            Each variant of this product has its own price. Change one, or set a price for all of them, under Variants
+            on the product page.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
   return (
     <Card>
       <CardHeader>
         <CardTitle>Pricing</CardTitle>
         <CardDescription>
           {isEditing
-            ? "Price changes apply to every live variant of this product."
-            : hasQueuedVariants
-              ? "Applies to every variant below unless a variant sets its own price."
-              : productType === "variant"
-                ? "Optional for a variant product: add its colours and sizes below, or generate them from the product page."
-                : simpleHint}
+            ? "The price of this product."
+            : withOptions
+              ? "Required. Every variant starts at this price; change single prices on the product page afterwards."
+              : simpleHint}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {children}
-        {!isEditing && !hasQueuedVariants && (
+        {!isEditing && !withOptions && (
           <TextField label="SKU" id="sku" placeholder="Auto-generated if blank" error={errors.sku} {...register("sku")} />
         )}
       </CardContent>
@@ -289,6 +280,7 @@ export function ProductFormImages({
     >
       <ProductImagesSection
         productId={product.id}
+        options={product.options ?? []}
         variants={product.variants}
         canManage
         onChanged={() => dispatch(fetchSingle(product.id))}
@@ -297,76 +289,69 @@ export function ProductFormImages({
   )
 }
 
-/** Create only: one row per colour / size combination of a variant product. */
-export function QueuedVariantsCard() {
+/** Name + value rows shown on the storefront product page, in this order. */
+export function SpecsCard() {
   const {
     control,
     register,
     formState: { errors },
   } = useFormContext<BaseValues>()
-  const rows = useFieldArray({ control, name: "variants" })
+  const rows = useFieldArray({ control, name: "specs" })
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Layers className="size-4" /> Variants
+          <ListChecks className="size-4" /> Specifications
         </CardTitle>
         <CardDescription>
-          One row per colour / size combination. Leave SKU blank to auto-generate it, and price blank to use the
-          price above.
+          Facts about the product, like Material: Cotton. Customers see them in this order. Leave empty if there are
+          none.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {rows.fields.map((row, i) => (
-          <div key={row.id} className="grid grid-cols-2 items-start gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+          <div key={row.id} className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_1fr_auto] sm:gap-3">
             <Field>
               <FieldContent>
-                <Input aria-label="Colour" placeholder="Colour" {...register(`variants.${i}.color`)} />
-                <FieldError errors={[errors.variants?.[i]?.color]} />
+                <Input aria-label="Specification name" placeholder="Name, e.g. Material" {...register(`specs.${i}.name`)} />
+                <FieldError errors={[errors.specs?.[i]?.name]} />
               </FieldContent>
             </Field>
             <Field>
               <FieldContent>
-                <Input aria-label="Size" placeholder="Size" {...register(`variants.${i}.size`)} />
-                <FieldError errors={[errors.variants?.[i]?.size]} />
+                <Input aria-label="Specification value" placeholder="Value, e.g. Cotton" {...register(`specs.${i}.value`)} />
+                <FieldError errors={[errors.specs?.[i]?.value]} />
               </FieldContent>
             </Field>
-            <Field>
-              <FieldContent>
-                <Input aria-label="SKU" placeholder="SKU (auto)" {...register(`variants.${i}.sku`)} />
-                <FieldError errors={[errors.variants?.[i]?.sku]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldContent>
-                <Input
-                  aria-label="Price"
-                  inputMode="decimal"
-                  placeholder="Price (optional)"
-                  {...register(`variants.${i}.price`)}
-                />
-                <FieldError errors={[errors.variants?.[i]?.price]} />
-              </FieldContent>
-            </Field>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Remove variant"
-              className="col-span-2 justify-self-end md:col-span-1"
-              onClick={() => rows.remove(i)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            <div className="flex justify-end gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Move up"
+                disabled={i === 0}
+                onClick={() => rows.move(i, i - 1)}
+              >
+                <ChevronUp className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Move down"
+                disabled={i === rows.fields.length - 1}
+                onClick={() => rows.move(i, i + 1)}
+              >
+                <ChevronDown className="size-4" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" aria-label="Remove row" onClick={() => rows.remove(i)}>
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
           </div>
         ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => rows.append({ color: "", size: "", sku: "", price: "" })}
-        >
-          <Plus className="size-4" /> Add variant
+        <Button type="button" variant="outline" size="sm" onClick={() => rows.append({ name: "", value: "" })}>
+          <Plus className="size-4" /> Add a row
         </Button>
       </CardContent>
     </Card>

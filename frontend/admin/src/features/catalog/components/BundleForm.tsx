@@ -312,6 +312,7 @@ const BundleForm = () => {
           >
             <ProductImagesSection
               productId={bundle.product_id}
+              options={[]}
               variants={[]}
               canManage={canManage}
               onChanged={() => dispatch(fetchSingle(bundle.id))}

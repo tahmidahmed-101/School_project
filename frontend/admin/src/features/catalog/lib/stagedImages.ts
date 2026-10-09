@@ -51,7 +51,6 @@ export async function uploadStagedImages(productId: string, images: StagedImage[
         url,
         alt_text: file.name.replace(/\.[^/.]+$/, ""),
         sort_order: i,
-        variant_id: null,
       })
     } catch (err) {
       failed += 1

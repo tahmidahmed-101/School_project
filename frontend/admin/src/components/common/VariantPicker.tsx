@@ -15,7 +15,7 @@ export interface PickedVariant {
   id: string
   sku: string
   product_name: string
-  /** Product name with colour / size. */
+  /** Product name with the variant's options, e.g. "Tee — Red / M". */
   label?: string
   price?: string
   cost_price?: string | null
@@ -27,8 +27,8 @@ interface VariantHit {
   id: string
   sku: string
   product_name: string
-  color: string
-  size: string
+  /** "Red / M"; "" on a product without options. */
+  title?: string
   price: string
   cost_price: string | null
   stock: number
@@ -57,7 +57,7 @@ interface ComboboxProps {
 }
 
 const variantLabel = (v: VariantHit) =>
-  [v.product_name, [v.color, v.size].filter(Boolean).join(" / ")].filter(Boolean).join(" — ")
+  [v.product_name, v.title].filter(Boolean).join(" — ")
 
 const toPicked = (v: VariantHit): PickedVariant => ({
   id: v.id,
@@ -191,12 +191,7 @@ function InlineVariantPicker({
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">
                         {v.product_name}
-                        {(v.color || v.size) && (
-                          <span className="text-muted-foreground font-normal">
-                            {" "}
-                            · {[v.color, v.size].filter(Boolean).join(" / ")}
-                          </span>
-                        )}
+                        {v.title && <span className="text-muted-foreground font-normal"> · {v.title}</span>}
                       </div>
                       <div className="truncate font-mono text-xs text-muted-foreground">{v.sku}</div>
                     </div>

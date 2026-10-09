@@ -68,7 +68,7 @@ export function ProductPickerDialog({ open, onOpenChange, kind, title, descripti
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{product.name}</span>
                   <span className="block text-xs capitalize text-muted-foreground">
-                    {product.product_type} · {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
+                    {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
                   </span>
                 </span>
               </button>

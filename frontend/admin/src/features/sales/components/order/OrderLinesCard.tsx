@@ -112,7 +112,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           ) : (
             <div className="h-10 w-10 shrink-0 rounded-md border bg-muted" />
           )}
-          <ProductCell name={line.product_name || "—"} sku={line.variant_sku} wrapName />
+          <ProductCell name={line.product_name || "—"} sub={line.variant_title} sku={line.variant_sku} wrapName />
         </div>
       ),
     },

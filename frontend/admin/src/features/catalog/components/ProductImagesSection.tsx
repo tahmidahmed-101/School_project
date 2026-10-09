@@ -4,22 +4,52 @@ import { ImageIcon, Loader2, Trash2 } from "lucide-react"
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { DeleteModal } from "@/components/common/DeleteModal"
 import { ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 import { createProductImage, deleteProductImage, listProductImages, updateProductImage, uploadMedia } from "../api"
-import type { ProductImage, ProductVariant } from "../types"
+import type { ProductImage, ProductOption, ProductVariant } from "../types"
+import { refusalMessage } from "../lib/options"
 import { ImageDropzone } from "./ImageDropzone"
 
-const PRODUCT_LEVEL = "product"
+const EVERY_CHOICE = "all"
 
 interface Props {
   productId: string
+  /** The product's options; an image can be set to show for one value of one of them. */
+  options: ProductOption[]
   variants: ProductVariant[]
   canManage: boolean
   onChanged: () => void
+}
+
+/** The grouped "Shows for" choices: every choice, or one value of one option. */
+function ShowsForItems({ options }: { options: ProductOption[] }) {
+  return (
+    <>
+      <SelectItem value={EVERY_CHOICE}>Every choice</SelectItem>
+      {options.map((option) => (
+        <SelectGroup key={option.id}>
+          <SelectLabel>{option.name}</SelectLabel>
+          {option.values.map((value) => (
+            <SelectItem key={value.id} value={value.id}>
+              {value.value}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      ))}
+    </>
+  )
 }
 
 /**
@@ -27,12 +57,12 @@ interface Props {
  * (those come back on each variant's `images`). Files are uploaded to /admin/media/uploads/
  * first; the returned URL is then attached as an image record.
  */
-export function ProductImagesSection({ productId, variants, canManage, onChanged }: Props) {
+export function ProductImagesSection({ productId, options, variants, canManage, onChanged }: Props) {
   const [images, setImages] = useState<ProductImage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [reordering, setReordering] = useState(false)
-  const [target, setTarget] = useState<string>(PRODUCT_LEVEL)
+  const [target, setTarget] = useState<string>(EVERY_CHOICE)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -58,6 +88,7 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     onChanged()
   }
 
+  const valueLabel = new Map(options.flatMap((o) => o.values.map((v) => [v.id, `${o.name}: ${v.value}`] as const)))
   const byOrder = (a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order
   const gallery = [...images].sort(byOrder)
   // Each variant's images are ordered among themselves, like the gallery.
@@ -69,15 +100,15 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     if (!files.length || uploading) return
     setUploading(true)
     let ok = 0
-    const base = target === PRODUCT_LEVEL ? images.length : (variants.find((v) => v.id === target)?.images.length ?? 0)
+    const showsFor = options.some((o) => o.values.some((v) => v.id === target)) ? target : null
     for (const [i, file] of files.entries()) {
       try {
         const url = await uploadMedia(file)
         await createProductImage(productId, {
           url,
           alt_text: file.name.replace(/\.[^/.]+$/, ""),
-          sort_order: base + i,
-          variant_id: target === PRODUCT_LEVEL ? null : target,
+          sort_order: images.length + i,
+          option_value_id: showsFor,
         })
         ok += 1
       } catch (err) {
@@ -115,13 +146,13 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
     }
   }
 
-  const saveField = async (img: ProductImage, payload: { alt_text?: string }) => {
+  const saveField = async (img: ProductImage, payload: { alt_text?: string; option_value_id?: string | null }) => {
     try {
       await updateProductImage(img.id, payload)
       toast.success("Image updated")
       refresh()
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to update image"))
+      toast.error(refusalMessage(err, "Failed to update image"))
     }
   }
 
@@ -168,17 +199,39 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
       }
     >
       {canManage ? (
-        <Input
-          aria-label="Alt text"
-          defaultValue={img.alt_text}
-          placeholder="Alt text"
-          title="Alt text (click to edit)"
-          // Looks like the plain caption on the add page; the field outline only appears while editing.
-          className="h-6 truncate border-transparent bg-transparent px-1 py-0 text-center text-xs text-muted-foreground shadow-none dark:bg-transparent"
-          onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
-        />
+        <div className="space-y-1">
+          <Input
+            aria-label="Alt text"
+            defaultValue={img.alt_text}
+            placeholder="Alt text"
+            title="Alt text (click to edit)"
+            // Looks like the plain caption on the add page; the field outline only appears while editing.
+            className="h-6 truncate border-transparent bg-transparent px-1 py-0 text-center text-xs text-muted-foreground shadow-none dark:bg-transparent"
+            onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
+          />
+          {options.length > 0 && (
+            <Select
+              value={img.option_value_id ?? EVERY_CHOICE}
+              onValueChange={(v) => void saveField(img, { option_value_id: v === EVERY_CHOICE ? null : v })}
+            >
+              <SelectTrigger className="h-7 w-full text-xs" aria-label="Shows for" title="Shows for">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <ShowsForItems options={options} />
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       ) : (
-        img.alt_text && <p className="truncate text-center text-xs text-muted-foreground">{img.alt_text}</p>
+        <>
+          {img.alt_text && <p className="truncate text-center text-xs text-muted-foreground">{img.alt_text}</p>}
+          {valueLabel.get(img.option_value_id ?? "") && (
+            <p className="truncate text-center text-xs text-muted-foreground">
+              Shows for {valueLabel.get(img.option_value_id ?? "")}
+            </p>
+          )}
+        </>
       )}
     </ImageOrderTile>
   )
@@ -191,22 +244,19 @@ export function ProductImagesSection({ productId, variants, canManage, onChanged
         </CardTitle>
         <CardDescription>
           {canManage
-            ? "The first image is the main one. Use the arrows to change the order."
+            ? options.length > 0
+              ? "The first image is the main one. Use the arrows to change the order. Under each image, choose the value it shows for, like Colour: Red."
+              : "The first image is the main one. Use the arrows to change the order."
             : "The first image is the main one."}
         </CardDescription>
-        {canManage && variants.length > 1 && (
+        {canManage && options.length > 0 && (
           <CardAction>
             <Select value={target} onValueChange={setTarget}>
-              <SelectTrigger className="h-7 w-44 text-xs" aria-label="Attach uploads to">
+              <SelectTrigger className="h-7 w-44 text-xs" aria-label="New uploads show for" title="New uploads show for">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={PRODUCT_LEVEL}>Product gallery</SelectItem>
-                {variants.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.sku}
-                  </SelectItem>
-                ))}
+                <ShowsForItems options={options} />
               </SelectContent>
             </Select>
           </CardAction>

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { DownloadIcon, Layers, Loader2, UploadIcon, PlusIcon } from "lucide-react"
+import { DownloadIcon, Layers, Loader2, UploadIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,10 +29,10 @@ import { useLastValue } from "@/hooks/use-dialog-presence"
 
 import { fetchAll } from "../slices/variantSlice"
 import { deleteVariant, downloadVariantsExport, importVariants, updateVariant } from "../api"
-import { ProductPickerDialog } from "./ProductPickerDialog"
 import { VariantOptionsCell, VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
-import type { Product, ProductVariant, VariantImportResult } from "../types"
+import type { ProductVariant, VariantImportResult } from "../types"
+import { refusalMessage } from "../lib/options"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 
 const PAGE_SIZE = 25
@@ -79,10 +79,6 @@ const Variants = ({ kind }: { kind: Kind }) => {
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [exporting, setExporting] = useState(false)
   const [editing, setEditing] = useState<ProductVariant | null>(null)
-  // Creating a variant: first pick the product it belongs to, then fill in the variant form.
-  const [pickingProduct, setPickingProduct] = useState(false)
-  const [addingTo, setAddingTo] = useState<Product | null>(null)
-  const addingShown = useLastValue(addingTo)
   const editingShown = useLastValue(editing)
   const [importOpen, setImportOpen] = useState(false)
 
@@ -129,7 +125,7 @@ const Variants = ({ kind }: { kind: Kind }) => {
     },
     {
       id: "options",
-      header: "OPTIONS",
+      header: "VARIANT OPTIONS",
       cell: ({ row }) => <VariantOptionsCell variant={row.original} />,
     },
     ...(isStock ? [barcodeColumn] : []),
@@ -167,10 +163,10 @@ const Variants = ({ kind }: { kind: Kind }) => {
               ? async () => {
                   try {
                     await deleteVariant(row.original.id)
-                    toast.success(`${row.original.sku} deactivated`)
+                    toast.success(`${row.original.sku} deleted`)
                     list.reload()
                   } catch (err) {
-                    toast.error(getApiErrorMessage(err, "Failed to delete variant"))
+                    toast.error(refusalMessage(err, "The variant could not be deleted"))
                   }
                 }
               : undefined
@@ -184,6 +180,7 @@ const Variants = ({ kind }: { kind: Kind }) => {
     <div className="section-container">
       <PageHeader
         title={title}
+        description="Variants are made on the product page, from the product's options."
         actions={
           <>
             {isStock && (
@@ -202,11 +199,6 @@ const Variants = ({ kind }: { kind: Kind }) => {
             {isStock && canManage && (
               <Button variant="outline" size="action" onClick={() => setImportOpen(true)}>
                 <UploadIcon className="size-5" /> Import
-              </Button>
-            )}
-            {canManage && (
-              <Button size="action" onClick={() => setPickingProduct(true)}>
-                <PlusIcon className="size-5" /> Add Variant
               </Button>
             )}
           </>
@@ -285,30 +277,7 @@ const Variants = ({ kind }: { kind: Kind }) => {
       />
 
       {isStock && canManage && <ImportDialog open={importOpen} onOpenChange={setImportOpen} onDone={list.reload} />}
-      {canManage && (
-        <ProductPickerDialog
-          open={pickingProduct}
-          onOpenChange={setPickingProduct}
-          kind={kind}
-          title="Add variant"
-          description="Choose the product this variant belongs to."
-          onPick={(product) => {
-            setPickingProduct(false)
-            setAddingTo(product)
-          }}
-        />
-      )}
-      {/* Mounted on the last picked record, so the dialog can animate shut after it is cleared. */}
-      {canManage && addingShown && (
-        <VariantFormDialog
-          open={Boolean(addingTo)}
-          onOpenChange={(open) => !open && setAddingTo(null)}
-          kind={kind}
-          productId={addingShown.id}
-          sibling={addingShown.variants[0]}
-          onSaved={list.reload}
-        />
-      )}
+      {/* Mounted on the last edited record, so the dialog can animate shut after it is cleared. */}
       {canManage && editingShown && (
         <VariantFormDialog
           open={Boolean(editing)}
@@ -367,7 +336,8 @@ function ImportDialog({
           <DialogTitle>Import variants</DialogTitle>
           <DialogDescription>
             Upload a file in the same layout as the export. Rows are matched by SKU: existing SKUs are updated, new
-            ones created.
+            ones created. A variant's options go in the columns option1_name, option1_value, up to option3_name,
+            option3_value.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo } from "react"
-import { FormProvider, useForm, useWatch } from "react-hook-form"
+import { FormProvider, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate } from "react-router-dom"
@@ -12,26 +12,24 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { moneySchema, reportFormError } from "@/lib/forms"
 
-import { createProduct, updateProduct, updateVariant } from "../api"
+import { createProduct, createVariant, updateProduct, updateVariant } from "../api"
 import type { Product, ProductVariantPayload } from "../types"
 import {
-  addVariantsAndImages,
   baseDefaults,
   basePayload,
   baseShape,
   baseValuesOf,
-  checkQueuedVariants,
-  type QueuedVariant,
+  checkSpecs,
+  optionsCreatePayload,
+  optionsReady,
+  reportedRefusal,
+  saveOptionsIfChanged,
 } from "../lib/productFormBase"
-import { useStagedImages } from "../lib/stagedImages"
+import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
 import type { CategoryOption } from "../lib/useCategoryOptions"
-import {
-  BasicsCard,
-  PricingCard,
-  ProductFormImages,
-  ProductFormShell,
-  QueuedVariantsCard,
-} from "./ProductFormParts"
+import { useOptionDrafts } from "../lib/useOptionDrafts"
+import { BasicsCard, PricingCard, ProductFormImages, ProductFormShell, SpecsCard } from "./ProductFormParts"
+import { NewCombinationsCard, ProductOptionsCard } from "./ProductOptionsCard"
 
 const SETTINGS_FIELDS = [
   "preorder_price",
@@ -51,11 +49,11 @@ const fields = z.object({
 })
 type FormValues = z.infer<typeof fields>
 
-const schema = fields
-  .superRefine((v, ctx) => {
+/** `priceRequired` is off on a saved product with options, where each variant has its own price. */
+const windowSchema = (priceRequired: boolean) =>
+  fields.superRefine(checkSpecs).superRefine((v, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message })
-    const queuedPrices = v.product_type === "variant" && v.variants.length > 0 && v.variants.every((r) => r.price)
-    if (!v.price && !queuedPrices) issue("price", "A pre-order product needs a price")
+    if (priceRequired && !v.price) issue("price", "A pre-order product needs a price")
     // The storefront only takes pre-orders inside the open / close window, so both are required.
     if (!v.preorder_start_date) issue("preorder_start_date", "Choose when pre-orders open")
     if (!v.preorder_end_date) issue("preorder_end_date", "Choose when pre-orders close")
@@ -69,7 +67,6 @@ const schema = fields
       issue("preorder_price", "Must be lower than the price")
     }
   })
-  .superRefine(checkQueuedVariants)
 
 const settingsDefaults = {
   preorder_price: "",
@@ -112,25 +109,23 @@ export function PreorderProductForm({
   const navigate = useNavigate()
   const formId = useId()
   const staged = useStagedImages()
+  const options = useOptionDrafts(product)
 
   // A saved product with no variant has nowhere to keep the settings, so they are not asked for.
   const noVariants = isEditing && product?.variants.length === 0
+  const priceRequired = !options.hadOptions
   const resolver = useMemo(
-    () => zodResolver(noVariants ? fields.superRefine(checkQueuedVariants) : schema),
-    [noVariants]
+    () => zodResolver(noVariants ? fields.superRefine(checkSpecs) : windowSchema(priceRequired)),
+    [noVariants, priceRequired]
   )
   const form = useForm<FormValues>({ resolver, defaultValues: { ...baseDefaults, ...settingsDefaults } })
   const {
-    control,
     register,
     reset,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting, dirtyFields },
   } = form
-  const productType = useWatch({ control, name: "product_type" })
-  const queuedCount = useWatch({ control, name: "variants" }).length
-  const hasQueuedVariants = !isEditing && productType === "variant" && queuedCount > 0
 
   useEffect(() => {
     // The product is refetched whenever an image changes; keepDirtyValues keeps unsaved edits.
@@ -138,12 +133,15 @@ export function PreorderProductForm({
   }, [product, reset])
 
   const onSubmit = async (values: FormValues) => {
+    if (!optionsReady(options, isEditing)) return
     const payload = basePayload(values)
     try {
       if (product) {
-        // Pricing fans out to every variant server-side — only send what was changed.
-        if (values.price && dirtyFields.price) payload.price = values.price
-        if (values.cost_price && dirtyFields.cost_price) payload.cost_price = values.cost_price
+        // With options the prices are per variant; without, only what was changed is sent.
+        if (!options.hadOptions) {
+          if (values.price && dirtyFields.price) payload.price = values.price
+          if (values.cost_price && dirtyFields.cost_price) payload.cost_price = values.cost_price
+        }
         payload.is_active = values.is_active
         await updateProduct(product.id, payload)
         if (SETTINGS_FIELDS.some((f) => dirtyFields[f])) {
@@ -156,34 +154,47 @@ export function PreorderProductForm({
             return
           }
         }
+        if (!(await saveOptionsIfChanged(product.id, options))) return
         toast.success(`${values.name} updated`)
         navigate(`/product_detail/${product.id}`)
         return
       }
-      // The product endpoint cannot set pre-order settings on the variant it creates from a
-      // price, so every variant (the single default one too) is created here instead.
-      const queued: QueuedVariant[] =
-        values.product_type === "variant" && values.variants.length
-          ? values.variants
-          : [{ color: "", size: "", sku: values.sku, price: "" }]
-      const created = await createProduct(payload)
-      const failures = await addVariantsAndImages(
-        created.id,
-        queued,
-        (row) => ({
-          color: row.color,
-          size: row.size,
-          price: row.price || values.price,
-          ...(row.sku ? { sku: row.sku } : {}),
-          ...(values.cost_price ? { cost_price: values.cost_price } : {}),
-          ...settingsPayload(values),
-        }),
-        staged.images
-      )
-      if (failures) toast.warning(`${values.name} created, but ${failures} could not be added`)
+      const pricing = { price: values.price, ...(values.cost_price ? { cost_price: values.cost_price } : {}) }
+      const failed: string[] = []
+      let created: Product
+      if (options.active.length > 0) {
+        created = await createProduct({ ...payload, ...pricing, ...optionsCreatePayload(options) })
+        // The product endpoint makes the variants; the ordering window is then set on each of them.
+        const results = await Promise.allSettled(
+          created.variants.map((v) => updateVariant(v.id, settingsPayload(values)))
+        )
+        const rejected = results.filter((r) => r.status === "rejected")
+        if (rejected.length) {
+          failed.push(`the ordering window of ${rejected.length} variant${rejected.length === 1 ? "" : "s"}`)
+          toast.error(getApiErrorMessage(rejected[0].reason, "Pre-order settings could not be saved on every variant"))
+        }
+      } else {
+        // The product endpoint cannot set pre-order settings on the variant it creates from a
+        // price, so the single variant is created here instead.
+        created = await createProduct(payload)
+        try {
+          await createVariant(created.id, {
+            ...pricing,
+            ...(values.sku ? { sku: values.sku } : {}),
+            ...settingsPayload(values),
+          })
+        } catch (err) {
+          failed.push("its price and ordering window")
+          toast.error(getApiErrorMessage(err, "The variant could not be created"))
+        }
+      }
+      const failedImages = await uploadStagedImages(created.id, staged.images)
+      if (failedImages) failed.push(`${failedImages} image${failedImages === 1 ? "" : "s"}`)
+      if (failed.length) toast.warning(`${values.name} created, but ${failed.join(" and ")} could not be added`)
       else toast.success(`${values.name} created`)
       navigate(`/product_detail/${created.id}`)
     } catch (err) {
+      if (reportedRefusal(err)) return
       reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save product" })
     }
   }
@@ -198,9 +209,11 @@ export function PreorderProductForm({
         submitting={isSubmitting}
       >
         <BasicsCard kind="preorder" isEditing={isEditing} categoryOptions={categoryOptions} />
+        <ProductOptionsCard state={options} kind="preorder" />
         <PricingCard
           isEditing={isEditing}
-          hasQueuedVariants={hasQueuedVariants}
+          withOptions={options.enabled}
+          perVariant={options.hadOptions}
           simpleHint="Required. The price creates the product's first variant, so it can be ordered and shown on the storefront."
         >
           <MoneyField label="Price" showCurrency id="price" placeholder="0.00" error={errors.price} {...register("price")} />
@@ -212,7 +225,7 @@ export function PreorderProductForm({
             {...register("cost_price")}
           />
         </PricingCard>
-        <ProductFormImages product={product} staged={staged} />
+        {!isEditing && <NewCombinationsCard state={options} />}
 
         {noVariants ? (
           <Card>
@@ -262,7 +275,8 @@ export function PreorderProductForm({
           </Card>
         )}
 
-        {!isEditing && productType === "variant" && <QueuedVariantsCard />}
+        <SpecsCard />
+        <ProductFormImages product={product} staged={staged} />
       </ProductFormShell>
     </FormProvider>
   )
