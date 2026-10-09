@@ -502,6 +502,16 @@ export const DICT = {
     bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",
   },
   checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
+  couponInvalid: { en: "This coupon code is not valid.", bn: "কুপন কোডটা ঠিক নয়।" },
+  couponExpired: { en: "This coupon has expired.", bn: "কুপনটার মেয়াদ শেষ।" },
+  couponUsageLimitReached: {
+    en: "This coupon has been fully used.",
+    bn: "কুপনটার ব্যবহারের সীমা শেষ।",
+  },
+  couponMinimumNotMet: {
+    en: "Your order is below the minimum spend for this coupon.",
+    bn: "এই কুপন ব্যবহার করতে আরও বেশি টাকার অর্ডার লাগবে।",
+  },
   couponNotStarted: { en: "This coupon is not active yet.", bn: "কুপনটা এখনো চালু হয়নি।" },
   couponNotApplicable: {
     en: "This coupon does not apply to the items in your cart.",

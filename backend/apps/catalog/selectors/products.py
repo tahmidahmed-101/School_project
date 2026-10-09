@@ -57,7 +57,7 @@ def _filter_basic_product_fields(
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
     if category is not None:
-        queryset = queryset.filter(category=category)
+        queryset = queryset.filter(Q(category=category) | Q(category__parent=category))
     if category_type:
         queryset = queryset.filter(category__category_type=category_type)
     if featured is not None:

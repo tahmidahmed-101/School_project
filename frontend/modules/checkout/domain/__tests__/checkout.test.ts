@@ -156,10 +156,14 @@ describe("couponErrorKey", () => {
     expect(couponErrorKey("coupon_not_applicable")).toBe("couponNotApplicable");
     expect(couponErrorKey("coupon_customer_limit_reached")).toBe("couponCustomerLimitReached");
     expect(couponErrorKey("coupon_stock_only")).toBe("checkoutCouponStockOnly");
+    expect(couponErrorKey("invalid_coupon")).toBe("couponInvalid");
+    expect(couponErrorKey("coupon_expired")).toBe("couponExpired");
+    expect(couponErrorKey("coupon_usage_limit_reached")).toBe("couponUsageLimitReached");
+    expect(couponErrorKey("coupon_minimum_not_met")).toBe("couponMinimumNotMet");
   });
 
   it("leaves every other code to the API's message", () => {
-    expect(couponErrorKey("coupon_expired")).toBeUndefined();
+    expect(couponErrorKey("some_new_code")).toBeUndefined();
     expect(couponErrorKey("toString")).toBeUndefined();
   });
 });

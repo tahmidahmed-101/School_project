@@ -11,7 +11,7 @@ from apps.orders.models import SalesOrder
 from apps.orders.selectors.payments import order_deposit_due
 from apps.orders.services.carts import create_guest_cart, create_order
 from apps.orders.services.checkout import checkout
-from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE
+from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, apply_coupon
 from apps.orders.services.orders import add_staff_order_lines
 from apps.orders.services.payments import capture_payment, record_payment_due
 
@@ -31,9 +31,19 @@ def _refuse_preorder_price_cuts(*, kind: str, coupon_code: str, discount: Decima
 
 
 def _checked_out(
-    order: SalesOrder, *, lines: list[tuple], kind: str, shipping_address, carrier
+    order: SalesOrder,
+    *,
+    lines: list[tuple],
+    kind: str,
+    shipping_address,
+    carrier,
+    coupon_code: str = "",
+    actor=None,
 ) -> SalesOrder:
     add_staff_order_lines(order=order, lines=lines, kind=kind)
+    if coupon_code.strip():
+        order.recalculate_totals()
+        apply_coupon(order=order, code=coupon_code.strip(), actor=actor)
     return checkout(order=order, shipping_address=shipping_address, carrier=carrier)
 
 
@@ -55,12 +65,18 @@ def place_staff_order(
     checkout and payment steps. A pre-order is never paid here: it waits for
     its deposit exactly as one placed on the storefront does."""
     _refuse_preorder_price_cuts(kind=kind, coupon_code=coupon_code, discount=discount)
+    if discount:
+        raise BusinessRuleViolationError(
+            "A hand-typed discount is not taken. Use a coupon.", code="manual_discount_unsupported"
+        )
     order = _checked_out(
         create_order(customer=customer, created_by=actor),
         lines=lines,
         kind=kind,
         shipping_address=shipping_address,
         carrier=carrier,
+        coupon_code=coupon_code or "",
+        actor=actor,
     )
     method = payment_method or PaymentMethodKey.MANUAL
     if kind == PREORDER or method == PaymentMethodKey.COD:

@@ -15,6 +15,7 @@ from apps.accounts.factories import AddressFactory, CustomerUserFactory
 from apps.accounts.tests.helpers import create_user
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.orders.constants import PaymentMethodKey
+from apps.orders.factories import CouponFactory
 from apps.orders.models import Payment, SalesOrder, StockReservation
 from apps.orders.selectors.payments import order_balance_due, order_deposit_due
 from apps.orders.services.carts import add_line, get_or_create_cart
@@ -361,3 +362,20 @@ def test_quote_endpoint_returns_the_deposit(api_client):
     assert response.data["data"]["grand_total"] == "800.00"
     assert response.data["data"]["deposit_due"] == "200.00"
     assert not SalesOrder.objects.exists()
+
+
+def test_a_staff_stock_order_takes_a_coupon_and_refuses_a_typed_discount():
+    variant = _stocked_variant()
+    customer = CustomerUserFactory()
+    coupon = CouponFactory(code="STAFF10", discount_type="percentage", value=Decimal("10.00"))
+
+    order = place_staff_order(
+        customer=customer, lines=[(variant, 2)], coupon_code="staff10", capture=False
+    )
+
+    assert order.coupon_id == coupon.id
+    assert order.discount_total == (order.subtotal * Decimal("0.10")).quantize(Decimal("0.01"))
+    assert order.grand_total < order.subtotal + order.tax_total + order.shipping_total
+    with pytest.raises(BusinessRuleViolationError) as error:
+        place_staff_order(customer=customer, lines=[(variant, 1)], discount=Decimal("50.00"))
+    assert error.value.code == "manual_discount_unsupported"

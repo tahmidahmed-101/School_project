@@ -316,3 +316,14 @@ def test_public_product_carries_the_sale_and_each_variant_its_sale_price(api_cli
 
     detail = api_client.get(f"{PRODUCTS_URL}{on_sale.product.slug}/").data["data"]
     assert detail["sale"]["name"] == "Eid offer"
+
+
+def test_a_parent_category_page_lists_the_products_of_its_child_categories(api_client):
+    parent = CategoryFactory()
+    child = CategoryFactory(parent=parent)
+    ProductVariantFactory(product=ProductFactory(category=child, name="In the child"))
+    ProductVariantFactory(product=ProductFactory(name="Elsewhere"))
+
+    response = api_client.get(f"/api/v1/public/catalog/products/?category_id={parent.id}")
+
+    assert [row["name"] for row in response.json()["data"]["results"]] == ["In the child"]

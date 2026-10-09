@@ -115,6 +115,10 @@ export const NO_SHIPPING_CODES = new Set(["no_shipping_zone", "no_shipping_rate"
 const COUPON_ERROR_KEYS: Record<string, UiKey> = {
   [COUPON_STOCK_ONLY_CODE]: "checkoutCouponStockOnly",
   coupon_not_started: "couponNotStarted",
+  invalid_coupon: "couponInvalid",
+  coupon_expired: "couponExpired",
+  coupon_usage_limit_reached: "couponUsageLimitReached",
+  coupon_minimum_not_met: "couponMinimumNotMet",
   coupon_not_applicable: "couponNotApplicable",
   coupon_customer_limit_reached: "couponCustomerLimitReached",
 };
