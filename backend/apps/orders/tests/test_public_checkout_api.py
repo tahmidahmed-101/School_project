@@ -22,7 +22,7 @@ from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
 from apps.logistics.factories import CarrierFactory, ShippingRateFactory, ShippingZoneFactory
 from apps.orders.factories import CouponFactory
-from apps.orders.models import Payment, SalesOrder
+from apps.orders.models import SalesOrder
 from apps.orders.services.payment_methods import set_payment_method_enabled
 
 pytestmark = pytest.mark.django_db
@@ -45,14 +45,15 @@ def _stocked_variant(quantity: int = 10, price: Decimal = Decimal("100.00"), wei
     return variant
 
 
-def _configured_delivery(keyword="dhaka", rate=Decimal("60.00")):
+def _configured_delivery(keyword="dhaka", rate=Decimal("60.00"), kind="stock"):
     """The root conftest wipes migration-seeded zones for every test, so
     anything that reaches `checkout()` needs its own zone/carrier/rate."""
-    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [])
+    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [], kind=kind)
     carrier = CarrierFactory()
     ShippingRateFactory(
         zone=zone,
         carrier=carrier,
+        kind=kind,
         base_weight=Decimal("50"),
         base_charge=rate,
         increment_weight=Decimal("1"),
@@ -89,20 +90,6 @@ def test_guest_checkout_requires_payment_method(api_client):
     response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
 
     assert response.status_code == 400
-
-
-def test_guest_checkout_with_cod_confirms_the_order_immediately(api_client):
-    variant = _stocked_variant()
-    _configured_delivery()
-
-    response = api_client.post(GUEST_CHECKOUT_URL, _guest_payload(variant), format="json")
-
-    assert response.status_code == 201
-    assert response.data["data"]["status"] == SalesOrder.Status.CONFIRMED
-    order = SalesOrder.objects.get(id=response.data["data"]["id"])
-    payment = Payment.objects.get(order=order)
-    assert payment.method == "cod"
-    assert payment.status == Payment.Status.CAPTURED
 
 
 def _dhaka_delivery():
@@ -357,6 +344,7 @@ def test_guest_checkout_combines_duplicate_variants_before_preorder_limit_check(
     preorder_stock_limit."""
     now = timezone.now()
     variant = ProductVariantFactory(
+        product__category__category_type="preorder",
         is_preorder_enabled=True,
         preorder_start_date=now - timedelta(days=1),
         preorder_end_date=now + timedelta(days=1),

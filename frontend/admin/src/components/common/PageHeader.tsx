@@ -1,4 +1,4 @@
-import { Children, Fragment, isValidElement, useState, type ReactNode } from "react"
+import { Children, Fragment, cloneElement, isValidElement, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronDown, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -77,7 +77,10 @@ function flattenActions(node: ReactNode): ReactNode[] {
 function HeaderActions({ children }: { children: ReactNode }) {
   const isPhone = useMediaQuery("(max-width: 639px)")
   const [open, setOpen] = useState(false)
-  const items = flattenActions(children)
+  // Nested fragments repeat React's own child keys (".0"), so each flattened action gets its position as key.
+  const items = flattenActions(children).map((item, index) =>
+    isValidElement(item) ? cloneElement(item, { key: index }) : item
+  )
   if (items.length === 0) return null
 
   if (!isPhone || items.length < 3) {

@@ -28,8 +28,13 @@ class ProductVariant(FullAuditModel):
     weight = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )
+    # Legacy text, read only by the transition rule in selectors/options.py.
     color = models.CharField(max_length=50, blank=True)
     size = models.CharField(max_length=50, blank=True)
+    option_values = models.ManyToManyField(
+        "catalog.ProductOptionValue", blank=True, related_name="variants"
+    )
+    title = models.CharField(max_length=160, blank=True, default="")
 
     # Wholesale fields
     wholesale_price = models.DecimalField(
@@ -66,17 +71,16 @@ class ProductVariant(FullAuditModel):
                 name="variant_preorder_dates_idx"
             ),
         ]
-        constraints: ClassVar[list] = [
-            models.UniqueConstraint(
-                fields=["product", "color", "size"],
-                condition=models.Q(deleted_at__isnull=True),
-                name="unique_live_variant_combo",
-            )
-        ]
+
+    @property
+    def is_preorder_kind(self) -> bool:
+        category = self.product.category
+        return category.category_type == category.CategoryType.PREORDER
 
     @property
     def is_preorder_active(self) -> bool:
-        if not self.is_preorder_enabled:
+        """Open for ordering now. Only a variant in a pre-order category can be."""
+        if not self.is_preorder_enabled or not self.is_preorder_kind:
             return False
         if self.preorder_start_date is None or self.preorder_end_date is None:
             return False
@@ -97,20 +101,67 @@ class ProductVariant(FullAuditModel):
         return True
 
     @property
+    def is_preorder_upcoming(self) -> bool:
+        """A pre-order variant that is not open yet, or has no window set up."""
+        if not self.is_preorder_kind:
+            return False
+        if not self.is_preorder_enabled:
+            return True
+        if self.preorder_start_date is None or self.preorder_end_date is None:
+            return True
+        return timezone.now() < self.preorder_start_date
+
+    @property
+    def is_preorder_closed(self) -> bool:
+        """A pre-order variant whose ordering window has ended. It stays a
+        pre-order item and cannot be bought."""
+        return (
+            self.is_preorder_kind
+            and not self.is_preorder_active
+            and not self.is_preorder_upcoming
+        )
+
+    def _sale_offer(self) -> tuple:
+        """(sale, sale price) when a running sale undercuts list and discount
+        price, else (None, None). Stock items only."""
+        from apps.catalog.selectors.sales import PRIMED_SALES_ATTR, best_sale_for
+
+        if self.is_preorder_kind:
+            return None, None
+        sale = best_sale_for(self.product, getattr(self, PRIMED_SALES_ATTR, None))
+        if sale is None:
+            return None, None
+        sale_price = sale.price_for(self.price)
+        other_prices = [self.price]
+        if self.discount_price is not None:
+            other_prices.append(self.discount_price)
+        if sale_price >= min(other_prices):
+            return None, None
+        return sale, sale_price
+
+    @property
+    def applied_sale(self):
+        return self._sale_offer()[0]
+
+    @property
+    def sale_price(self) -> Decimal | None:
+        return self._sale_offer()[1]
+
+    @property
     def effective_price(self) -> Decimal:
-        """What the customer actually pays. A discount at or above list price is
-        ignored rather than honoured, so a typo can't raise the charged amount."""
-        # If pre-order is active, use preorder_price (if set and lower than price)
-        if (
-            self.is_preorder_active
-            and self.preorder_price is not None
-            and self.preorder_price < self.price
-        ):
-            return self.preorder_price
-        # Otherwise fall back to normal discount logic
-        if self.discount_price is not None and self.discount_price < self.price:
-            return self.discount_price
-        return self.price
+        """What the customer actually pays: the lowest of list price, discount
+        price and running sale price (stock items only) and, while pre-order is
+        open, pre-order price. A discount at or above list price is ignored, so
+        a typo can't raise the charged amount."""
+        candidates = [self.price]
+        if self.discount_price is not None and not self.is_preorder_kind:
+            candidates.append(self.discount_price)
+        sale_price = self.sale_price
+        if sale_price is not None:
+            candidates.append(sale_price)
+        if self.is_preorder_active and self.preorder_price is not None:
+            candidates.append(self.preorder_price)
+        return min(candidates)
 
     @property
     def display_price(self) -> Decimal:
@@ -123,6 +174,7 @@ class ProductVariant(FullAuditModel):
             self.is_preorder_active
             and self.preorder_price is not None
             and self.preorder_price < self.price
+            and self.preorder_price == self.effective_price
         )
 
     def clean(self) -> None:

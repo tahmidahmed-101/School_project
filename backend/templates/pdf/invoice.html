@@ -43,6 +43,7 @@
       <tr>
         <td>
           <div class="cell__title">{{ line.name }}</div>
+          {% if line.variant_title %}<div class="cell__sub">{{ line.variant_title }}</div>{% endif %}
           <div class="cell__sub">{{ line.sku }}</div>
         </td>
         <td class="num">{{ line.quantity }}</td>
@@ -81,17 +82,28 @@
         <td class="k">Total</td>
         <td class="num">{{ grand_total|money }}</td>
       </tr>
+      {% if is_preorder %}
+      <tr class="rule">
+        <td class="k">Deposit required</td>
+        <td class="num">{{ deposit_due|money }}</td>
+      </tr>
+      <tr>
+        <td class="k">{{ paid_label }}</td>
+        <td class="num">{{ paid|money }}</td>
+      </tr>
+      {% else %}
       <tr class="rule">
         <td class="k">Paid</td>
         <td class="num">{{ paid|money }}</td>
       </tr>
+      {% endif %}
       {% if refunded %}
       <tr>
         <td class="k">Refunded</td>
         <td class="num">{{ refunded|money }}</td>
       </tr>
       {% endif %}
-      {% if not is_settled %}
+      {% if is_preorder or not is_settled %}
       <tr class="due">
         <td class="k">Balance due</td>
         <td class="num">{{ balance|money }}</td>
@@ -112,5 +124,5 @@
 {% endblock %}
 
 {% block closing %}
-<div>{% if is_settled %}Paid in full — thank you for your order.{% else %}Balance of {{ balance|money }} is payable on this invoice.{% endif %}</div>
+<div>{% if is_preorder %}{% if is_settled %}Paid in full — thank you for your pre-order.{% else %}Balance of {{ balance|money }} is due on this pre-order.{% endif %}{% elif is_settled %}Paid in full — thank you for your order.{% else %}Balance of {{ balance|money }} is payable on this invoice.{% endif %}</div>
 {% endblock %}

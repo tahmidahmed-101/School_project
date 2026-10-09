@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, MoneyCell, ProductCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
@@ -28,11 +29,13 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Oldest first", value: "created_at" },
 ]
 
-const StockLedger = () => {
-  useDocumentTitle("Stock Ledger")
+const StockLedgerList = () => {
+  const kind = useKind()
+  const title = kind === "preorder" ? "Pre-order goods movements" : "Stock Ledger"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const ledgerState = useAppSelector((s) => s.inventoryLedger)
-  const { warehouses } = useWarehouses()
+  const { warehouses } = useWarehouses(kind)
   const [searchParams, setSearchParams] = useSearchParams()
   const variantId = searchParams.get("variant_id")
   const variantSku = searchParams.get("sku")
@@ -51,6 +54,7 @@ const StockLedger = () => {
     state: ledgerState,
     pageSize: PAGE_SIZE,
     params: {
+      kind,
       variant_id: variantId,
       warehouse_id: warehouse?.value,
       movement_type: movement?.value,
@@ -136,7 +140,7 @@ const StockLedger = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Stock Ledger"
+        title={title}
         actions={<ExportButton onExport={() => downloadLedgerExport(list.query)} />}
       />
 
@@ -146,7 +150,14 @@ const StockLedger = () => {
           {
             wide: true,
             active: Boolean(variant),
-            component: <VariantPicker value={variant} onChange={setVariant} placeholder="Filter by variant…" />,
+            component: (
+              <VariantPicker
+                value={variant}
+                onChange={setVariant}
+                placeholder="Filter by variant…"
+                filters={{ category_type: kind }}
+              />
+            ),
           },
           {
             component: (
@@ -187,5 +198,7 @@ const StockLedger = () => {
     </div>
   )
 }
+
+const StockLedger = () => <StockLedgerList key={useKind()} />
 
 export default StockLedger

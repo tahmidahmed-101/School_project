@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { rangeKey } from "./dateRange"
+import type { Kind } from "@/hooks/use-kind"
 import {
   fetchDashboard,
   fetchLowStock,
   fetchSalesTrend,
   fetchStockTurnover,
+  reportKey,
   type Resource,
 } from "./slices/reportingSlice"
 import type { DateRangeParams } from "./types"
@@ -51,30 +52,34 @@ function useRequest(enabled: boolean, key: string, start: () => { abort: () => v
   return useCallback(() => setAttempt((n) => n + 1), [])
 }
 
-export function useDashboardReport(range: DateRangeParams, enabled = true) {
+export function useDashboardReport(range: DateRangeParams, kind: Kind, enabled = true) {
   const dispatch = useAppDispatch()
-  const key = rangeKey(range)
+  const query = { ...range, kind }
+  const key = reportKey(query)
   const res = useAppSelector((state) => state.reporting.dashboard)
-  const retry = useRequest(enabled, key, () => dispatch(fetchDashboard(range)))
+  const retry = useRequest(enabled, key, () => dispatch(fetchDashboard(query)))
   return view(res, key, retry)
 }
 
-export function useSalesTrendReport(range: DateRangeParams, enabled = true) {
+export function useSalesTrendReport(range: DateRangeParams, kind: Kind, enabled = true) {
   const dispatch = useAppDispatch()
-  const key = rangeKey(range)
+  const query = { ...range, kind }
+  const key = reportKey(query)
   const res = useAppSelector((state) => state.reporting.salesTrend)
-  const retry = useRequest(enabled, key, () => dispatch(fetchSalesTrend(range)))
+  const retry = useRequest(enabled, key, () => dispatch(fetchSalesTrend(query)))
   return view(res, key, retry)
 }
 
-export function useStockTurnoverReport(range: DateRangeParams, enabled = true) {
+export function useStockTurnoverReport(range: DateRangeParams, kind: Kind, enabled = true) {
   const dispatch = useAppDispatch()
-  const key = rangeKey(range)
+  const query = { ...range, kind }
+  const key = reportKey(query)
   const res = useAppSelector((state) => state.reporting.stockTurnover)
-  const retry = useRequest(enabled, key, () => dispatch(fetchStockTurnover(range)))
+  const retry = useRequest(enabled, key, () => dispatch(fetchStockTurnover(query)))
   return view(res, key, retry)
 }
 
+/** Low stock is a shop-stock figure: pre-order items carry no reorder point. */
 export function useLowStockReport(enabled = true) {
   const dispatch = useAppDispatch()
   const res = useAppSelector((state) => state.reporting.lowStock)

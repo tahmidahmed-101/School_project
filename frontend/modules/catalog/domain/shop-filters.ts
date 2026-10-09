@@ -1,5 +1,5 @@
 import type { Product } from "@/lib/types";
-import { getDiscountPercent, matchesQuery } from "@/lib/product";
+import { getDiscountPercent, isPreOrderShopProduct, matchesQuery } from "@/lib/product";
 
 export interface FilterState {
   category: string;
@@ -17,6 +17,11 @@ export type StockType = "normal" | "preorder";
 export function parseStockType(value: string | null): StockType {
   // The shop hides pre-order items unless a type is explicitly requested.
   return value === "preorder" ? value : "normal";
+}
+
+/** Which shop a `/shop` URL shows: its `?type=`, unless it names a category, which belongs to one shop only. */
+export function shopKindFor(type: unknown, category?: { type: "stock" | "preorder" }): "stock" | "preorder" {
+  return category?.type ?? (type === "preorder" ? "preorder" : "stock");
 }
 
 export type FilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
@@ -44,14 +49,21 @@ export const DEFAULT_FILTERS: FilterState = {
   stockType: "normal",
 };
 
+/** "In stock only" is a stock-shop filter; a pre-order is never in stock. */
+const appliesInStockOnly = (filters: FilterState) => filters.inStockOnly && filters.stockType === "normal";
+
+/** Discounts are stock only, so the "sale" collection is not a pre-order filter either. */
+export const appliesCollection = (filters: FilterState, collection: string) =>
+  filters.collection === collection && (collection !== "sale" || filters.stockType === "normal");
+
 /** How many filters (search, category, collection, price cap, stock) narrow the catalogue. */
 export function countActiveFilters(filters: FilterState): number {
   return [
     Boolean(filters.searchQuery),
     filters.category !== "all",
-    filters.collection !== "all",
+    filters.collection !== "all" && appliesCollection(filters, filters.collection),
     Number.isFinite(filters.maxPrice),
-    filters.inStockOnly,
+    appliesInStockOnly(filters),
   ].filter(Boolean).length;
 }
 
@@ -78,15 +90,15 @@ function matchesFilters(product: Product, filters: FilterState): boolean {
     return false;
   }
 
-  if (filters.stockType === "normal" && product.isPreOrder) return false;
-  if (filters.stockType === "preorder" && !product.isPreOrder) return false;
+  if (filters.stockType === "normal" && isPreOrderShopProduct(product)) return false;
+  if (filters.stockType === "preorder" && !isPreOrderShopProduct(product)) return false;
 
-  if (filters.collection === "trending" && !product.trending) return false;
-  if (filters.collection === "sale" && getDiscountPercent(product) === null) return false;
-  if (filters.collection === "new" && !product.newArrival) return false;
+  if (appliesCollection(filters, "trending") && !product.trending) return false;
+  if (appliesCollection(filters, "sale") && getDiscountPercent(product) === null) return false;
+  if (appliesCollection(filters, "new") && !product.newArrival) return false;
 
   if (product.price > filters.maxPrice) return false;
-  if (filters.inStockOnly && !product.inStock) return false;
+  if (appliesInStockOnly(filters) && !product.inStock) return false;
 
   return true;
 }

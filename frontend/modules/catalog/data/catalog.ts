@@ -22,7 +22,7 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
   try {
     const [apiCategories, apiProducts] = await Promise.all([listCategories(), listAllProducts()]);
     const products = apiProducts.map((p) => toProduct(p, apiCategories));
-    const categories = apiCategories.map((c) => toCategoryInfo(c, products));
+    const categories = apiCategories.map((c) => toCategoryInfo(c));
     return { products, categories, failed: false };
   } catch (error) {
     console.error("[catalog] LaunchCart API unavailable:", error instanceof Error ? error.message : error);

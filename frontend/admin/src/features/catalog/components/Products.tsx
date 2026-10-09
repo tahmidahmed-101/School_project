@@ -13,20 +13,20 @@ import { TableActions } from "@/components/common/TableActions"
 import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
-import { StatusBadge } from "@/components/common/StatusBadge"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency, getDefaultCurrency } from "@/lib/format"
+import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
-import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
+import { productTypeOptions, type Product, type ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { isBlockedByStock, stockLevelsPath } from "../deleteGuard"
 
@@ -42,19 +42,76 @@ const orderingOptions: Option[] = [
   { label: "Name Z–A", value: "-name" },
 ]
 
-const Products = () => {
-  useDocumentTitle("Products")
+const preorderTypeOptions = productTypeOptions.filter((o) => o.value !== "bundle")
+
+const noPrice = <span className="text-sm text-muted-foreground">No price</span>
+
+const stockPriceColumn: ColumnDef<Product> = {
+  id: "price",
+  header: "PRICE",
+  cell: ({ row }) =>
+    row.original.price === null ? (
+      noPrice
+    ) : (
+      <div className="flex flex-col text-sm">
+        <span className="font-semibold">{formatCurrency(row.original.discount_price ?? row.original.price)}</span>
+        {row.original.discount_price && (
+          <span className="text-xs text-muted-foreground line-through">{formatCurrency(row.original.price)}</span>
+        )}
+      </div>
+    ),
+}
+
+const stockColumn: ColumnDef<Product> = {
+  accessorKey: "total_stock",
+  header: "STOCK",
+  cell: ({ row }) => (
+    <span className={(row.original.total_stock ?? 0) <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+      {row.original.total_stock ?? 0}
+    </span>
+  ),
+}
+
+const preorderPriceColumn: ColumnDef<Product> = {
+  id: "price",
+  header: "PRICE",
+  cell: ({ row }) =>
+    row.original.price === null ? (
+      noPrice
+    ) : (
+      <span className="text-sm font-semibold">{formatCurrency(row.original.price)}</span>
+    ),
+}
+
+const orderingColumn: ColumnDef<Product> = {
+  id: "ordering",
+  header: "ORDERING",
+  cell: ({ row }) => {
+    const variants = row.original.variants
+    const closes = variants.find((v) => v.preorder_end_date)?.preorder_end_date
+    return (
+      <div className="flex flex-col text-sm">
+        <span>{variants.some((v) => v.is_preorder_active) ? "Open" : "Closed"}</span>
+        <span className="text-xs text-muted-foreground">{closes ? `Until ${formatDate(closes)}` : "No dates set"}</span>
+      </div>
+    )
+  },
+}
+
+const Products = ({ kind }: { kind: Kind }) => {
+  const isStock = kind === "stock"
+  const title = kind === "preorder" ? "Pre-order products" : "Products"
+  useDocumentTitle(title)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
-  const { categories, options: categoryOptions, nameById } = useCategoryOptions()
-  const categoryTypeById = useMemo(() => new Map(categories.map((c) => [c.id, c.category_type])), [categories])
+  const { options: categoryOptions, nameById } = useCategoryOptions(kind)
 
-  // CSV import: simple products only (one variant created from price/SKU in the same call).
+  // CSV import (stock page only): simple products, one variant created from price/SKU in the same call.
   const categoryLookup = useMemo(
-    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
+    () => createImportLookup("Category", () => fetchAllCategories("stock"), (c) => [c.name, c.slug]),
     []
   )
   const importFields = useMemo<ImportField[]>(
@@ -88,7 +145,6 @@ const Products = () => {
 
   const [category, setCategory] = useState<Option | null>(null)
   const [productType, setProductType] = useState<Option | null>(null)
-  const [categoryType, setCategoryType] = useState<Option | null>(null)
   const [status, setStatus] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
 
@@ -98,7 +154,7 @@ const Products = () => {
     params: {
       category_id: category?.value,
       product_type: productType?.value,
-      category_type: categoryType?.value,
+      category_type: kind,
       is_active: status?.value,
       ordering: ordering?.value,
     },
@@ -110,7 +166,7 @@ const Products = () => {
       await dispatch(deleteData(product.id)).unwrap()
       toast.success(`${product.name} deleted`)
     } catch (err) {
-      if (isBlockedByStock(err)) {
+      if (isStock && isBlockedByStock(err)) {
         // Stock has to be cleared through the existing write-off flow first.
         toast.error(getApiErrorMessage(err, "This product still has stock"), {
           duration: 15000,
@@ -158,44 +214,8 @@ const Products = () => {
         <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-    {
-      id: "price",
-      header: "PRICE",
-      cell: ({ row }) =>
-        row.original.price === null ? (
-          <span className="text-sm text-muted-foreground">No price</span>
-        ) : (
-          <div className="flex flex-col text-sm">
-            <span className="font-semibold">
-              {formatCurrency(row.original.discount_price ?? row.original.price)}
-            </span>
-            {row.original.discount_price && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatCurrency(row.original.price)}
-              </span>
-            )}
-          </div>
-        ),
-    },
-    {
-      accessorKey: "total_stock",
-      header: "STOCK",
-      cell: ({ row }) => (
-        <span className={row.original.total_stock <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
-          {row.original.total_stock}
-        </span>
-      ),
-    },
-    {
-      id: "product_type",
-      header: "PRODUCT TYPE",
-      cell: ({ row }) =>
-        categoryTypeById.get(row.original.category_id) === "preorder" ? (
-          <StatusBadge status="pre-order" tone="info" />
-        ) : (
-          <span className="text-sm">Stock</span>
-        ),
-    },
+    isStock ? stockPriceColumn : preorderPriceColumn,
+    isStock ? stockColumn : orderingColumn,
     {
       id: "status",
       header: "STATUS",
@@ -209,8 +229,8 @@ const Products = () => {
         return (
           <TableActions
             itemName={product.name}
-            viewUrl={`/product_detail/${product.id}`}
-            editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
+            viewUrl={withKind(`/product_detail/${product.id}`, kind)}
+            editUrl={canManage && product.product_type !== "bundle" ? withKind(`/product_form/${product.id}`, kind) : undefined}
             onDelete={canManage ? () => handleDelete(product) : undefined}
           />
         )
@@ -223,8 +243,7 @@ const Products = () => {
     "240px",
     "150px",
     "140px",
-    "80px",
-    "130px",
+    isStock ? "80px" : "140px",
     "110px",
     "80px",
   ]
@@ -232,31 +251,36 @@ const Products = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Products"
+        title={title}
         actions={
           canManage && (
             <>
               <RestoreDeletedButton<Product>
                 noun="products"
                 endpoint="/admin/catalog/products/"
+                params={{ category_type: kind }}
                 restore={(item) => restoreProduct(item.id)}
                 label={(item) => item.name}
                 image={(item) => item.primary_image}
                 onRestored={list.reload}
               />
-              <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
-                <Boxes className="size-5" /> New Bundle
-              </Button>
-              <CsvImportButton
-                entityName="products"
-                fields={importFields}
-                createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
-                onComplete={() => {
-                  categoryLookup.reset()
-                  list.reload()
-                }}
-              />
-              <Button size="action" onClick={() => navigate("/product_form/new")}>
+              {isStock && (
+                <>
+                  <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
+                    <Boxes className="size-5" /> New Bundle
+                  </Button>
+                  <CsvImportButton
+                    entityName="products"
+                    fields={importFields}
+                    createRow={(payload) => createProduct(payload as ProductPayload)}
+                    onComplete={() => {
+                      categoryLookup.reset()
+                      list.reload()
+                    }}
+                  />
+                </>
+              )}
+              <Button size="action" onClick={() => navigate(`/product_form/new?kind=${kind}`)}>
                 <PlusIcon className="size-5" /> Add Product
               </Button>
             </>
@@ -282,18 +306,8 @@ const Products = () => {
           {
             component: (
               <Combobox
-                placeholder="Product type"
-                options={categoryTypeOptions}
-                value={categoryType}
-                onValueChange={setCategoryType}
-              />
-            ),
-          },
-          {
-            component: (
-              <Combobox
                 placeholder="Type"
-                options={productTypeOptions}
+                options={isStock ? productTypeOptions : preorderTypeOptions}
                 value={productType}
                 onValueChange={setProductType}
               />
@@ -328,7 +342,7 @@ const Products = () => {
         }
         data={products}
         {...list.tableProps}
-        getRowLink={(p) => `/product_detail/${p.id}`}
+        getRowLink={(p) => withKind(`/product_detail/${p.id}`, kind)}
         unlabelledColumns={["image"]}
         emptyIcon={Package}
         emptyTitle="No products found"
@@ -340,4 +354,9 @@ const Products = () => {
   )
 }
 
-export default Products
+const ProductsPage = () => {
+  const kind = useKind()
+  return <Products key={kind} kind={kind} />
+}
+
+export default ProductsPage

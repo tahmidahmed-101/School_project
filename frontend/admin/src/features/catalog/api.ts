@@ -3,6 +3,7 @@ import { unwrapList } from "@/lib/api/envelope"
 import { fetchAllPages } from "@/lib/api/fetchAll"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
+import type { Kind } from "@/hooks/use-kind"
 import type {
   Brand,
   BrandPayload,
@@ -12,10 +13,15 @@ import type {
   Category,
   CategoryPayload,
   Product,
+  Combination,
+  OptionSuggestions,
   ProductImage,
+  ProductOptionsPayload,
+  ProductOptionsResult,
   ProductPayload,
   ProductVariant,
   ProductVariantPayload,
+  VariantBulkUpdatePayload,
   VariantGeneratePayload,
   VariantGenerateResult,
   VariantImportResult,
@@ -48,10 +54,12 @@ export const restoreProduct = (id: string) =>
 export const bulkProductStatus = (ids: string[], is_active: boolean) =>
   apiCall<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
 
-/** Search products by name (for pickers). */
-export async function searchProducts(search: string) {
+/** Search products of one kind by name (for pickers). */
+export async function searchProducts(search: string, kind: Kind) {
   try {
-    const res = await api.get(`${C}/products/`, { params: { page: 1, page_size: 20, search } })
+    const res = await api.get(`${C}/products/`, {
+      params: { page: 1, page_size: 20, search, category_type: kind },
+    })
     return unwrapList<Product>(res.data, 1, 20).items
   } catch (err) {
     throw extractApiError(err)
@@ -69,29 +77,27 @@ export async function listProductImages(productId: string): Promise<ProductImage
 }
 export const createProductImage = (
   productId: string,
-  payload: { url: string; alt_text?: string; sort_order?: number; variant_id?: string | null }
+  payload: { url: string; alt_text?: string; sort_order?: number; option_value_id?: string | null }
 ) => apiCall<ProductImage>(() => api.post(`${C}/products/${productId}/images/`, payload))
 export const updateProductImage = (
   id: string,
-  payload: { url?: string; alt_text?: string; sort_order?: number }
+  payload: { url?: string; alt_text?: string; sort_order?: number; option_value_id?: string | null }
 ) => apiCall<ProductImage>(() => api.patch(`${C}/images/${id}/`, payload))
 export const deleteProductImage = (id: string) => apiCall<unknown>(() => api.delete(`${C}/images/${id}/`))
 
+// ---- options ----
+export const saveProductOptions = (productId: string, payload: ProductOptionsPayload) =>
+  apiCall<ProductOptionsResult>(() => api.put(`${C}/products/${productId}/options/`, payload))
+export const listCombinations = (productId: string) =>
+  apiCall<{ combinations: Combination[] }>(() => api.get(`${C}/products/${productId}/combinations/`))
+/** Option names used in the shop and, with `name`, the values used under it; most used first. */
+export const fetchOptionSuggestions = (name?: string) =>
+  apiCall<OptionSuggestions>(() => api.get(`${C}/option-suggestions/`, { params: name ? { name } : {} }))
+
 // ---- variants ----
-export async function listProductVariants(
-  productId: string,
-  params: { page?: number; page_size?: number; search?: string } = {}
-) {
-  const { page = 1, page_size = 50, ...rest } = params
-  try {
-    const res = await api.get(`${C}/products/${productId}/variants/`, {
-      params: { page, page_size, ...rest },
-    })
-    return unwrapList<ProductVariant>(res.data, page, page_size)
-  } catch (err) {
-    throw extractApiError(err)
-  }
-}
+/** Every variant of one product (all pages). */
+export const fetchAllProductVariants = (productId: string) =>
+  fetchAllPages<ProductVariant>(`${C}/products/${productId}/variants/`)
 export const createVariant = (productId: string, payload: ProductVariantPayload) =>
   apiCall<ProductVariant>(() => api.post(`${C}/products/${productId}/variants/`, payload))
 export const updateVariant = (id: string, payload: ProductVariantPayload) =>
@@ -99,18 +105,20 @@ export const updateVariant = (id: string, payload: ProductVariantPayload) =>
 export const deleteVariant = (id: string) => apiCall<unknown>(() => api.delete(`${C}/variants/${id}/`))
 export const generateVariants = (productId: string, payload: VariantGeneratePayload) =>
   apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
+export const bulkUpdateVariants = (productId: string, payload: VariantBulkUpdatePayload) =>
+  apiCall<unknown>(() => api.post(`${C}/products/${productId}/variants/bulk-update/`, payload))
 
 /** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
 export async function downloadVariantsExport(
   fileFormat: "csv" | "xlsx",
-  filters: { search?: string; product_id?: string; category_id?: string } = {}
+  filters: { search?: string; product_id?: string; category_id?: string; category_type?: Kind } = {}
 ) {
   try {
     const res = await api.get(`${C}/variants/export/`, {
       params: { file_format: fileFormat, ...filters },
       responseType: "blob",
     })
-    saveBlob(res.data as Blob, `variants.${fileFormat}`)
+    saveBlob(res.data as Blob, `${filters.category_type === "preorder" ? "pre-order" : "stock"}-variants.${fileFormat}`)
   } catch (err) {
     throw extractApiError(await blobErrorToJson(err))
   }
@@ -125,18 +133,18 @@ export async function importVariants(file: File, fileFormat: "csv" | "xlsx") {
 }
 
 // ---- categories ----
-/** Every category (all pages; page_size is capped at 100 server-side). */
 export const CATEGORIES_ENDPOINT = `${C}/categories/`
-export const categoryListParams = (includeDeleted = false) => ({
+export const categoryListParams = (kind?: Kind) => ({
   ordering: "name",
-  ...(includeDeleted ? { include_deleted: true } : {}),
+  ...(kind ? { category_type: kind } : {}),
 })
 const categoriesChanged = <R>(res: R) => {
   invalidateAllPages(CATEGORIES_ENDPOINT)
   return res
 }
-export const fetchAllCategories = (params: { include_deleted?: boolean } = {}) =>
-  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(params.include_deleted))
+/** Every category of one kind, or of both when no kind is given (all pages; page_size is capped at 100 server-side). */
+export const fetchAllCategories = (kind?: Kind) =>
+  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(kind))
 export const createCategory = (payload: CategoryPayload) =>
   apiCall<Category>(() => api.post(`${C}/categories/`, payload).then(categoriesChanged))
 export const updateCategory = (id: string, payload: CategoryPayload) =>
@@ -152,8 +160,8 @@ export const restoreCategory = (id: string) =>
   apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`).then(categoriesChanged))
 
 // ---- brands ----
-/** Every active brand (for pickers). */
-export const fetchAllBrands = () => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true })
+/** Every active brand of one kind (for pickers). */
+export const fetchAllBrands = (kind: Kind) => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true, kind })
 /** One brand by id, active or not. */
 export const fetchBrand = (id: string) => apiCall<Brand>(() => api.get(`${C}/brands/${id}/`))
 export const createBrand = (payload: BrandPayload) => apiCall<Brand>(() => api.post(`${C}/brands/`, payload))

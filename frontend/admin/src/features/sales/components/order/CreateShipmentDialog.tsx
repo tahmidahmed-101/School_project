@@ -17,8 +17,8 @@ import { LineQuantityTable } from "./LineQuantityTable"
 const AUTO = "__auto__"
 const shippable = (line: OrderLine) => line.shippable_quantity
 
-// Cash still to collect: nothing when a captured payment already covers the order.
-const initialCod = (order: Order) => (order.payments.some((p) => p.status === "captured") ? "0" : order.grand_total)
+// Cash still to collect is whatever has not been received yet.
+const initialCod = (order: Order) => order.balance_due
 const initialQuantities = (order: Order) =>
   Object.fromEntries(order.lines.map((l) => [l.id, String(l.shippable_quantity)]))
 
@@ -96,7 +96,11 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
       open={open}
       onOpenChange={onOpenChange}
       title="Create shipment"
-      description="Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
+      description={
+        order.order_type === "preorder"
+          ? 'Ship the units already set aside for this pre-order. After goods arrive, use "Set aside for orders" on the pre-order Orders page.'
+          : "Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
+      }
       onSubmit={handleSubmit}
       submitting={submitting}
       submitLabel="Create shipment"

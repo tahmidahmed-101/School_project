@@ -1,13 +1,5 @@
-import type { Product, SkuVariant } from "@/lib/types";
-
-/**
- * Bridge between the storefront's option-group model (Colour / Size pickers, `selectedVariant` records)
- * and the backend's SKU variants (one row per colour/size combination, with its own price and stock).
- */
-
-/** English group names double as the keys of `selectedVariant` records. */
-export const COLOUR_GROUP = "Colour";
-export const SIZE_GROUP = "Size";
+import { isPreOrderSoldOut } from "@/lib/product";
+import type { Product, ProductOption, SkuVariant } from "@/lib/types";
 
 /**
  * The API exposes only an in-stock flag, not a quantity. This is the per-line ceiling the cart and stepper allow;
@@ -15,34 +7,90 @@ export const SIZE_GROUP = "Size";
  */
 export const ORDER_QUANTITY_CAP = 99;
 
-/** The option-group selection that identifies a SKU, e.g. { Colour: "Black", Size: "M" }. */
-export function selectionFor(variant: SkuVariant): Record<string, string> {
-  const selection: Record<string, string> = {};
-  if (variant.color) selection[COLOUR_GROUP] = variant.color;
-  if (variant.size) selection[SIZE_GROUP] = variant.size;
+/** option id -> picked value id */
+export type OptionSelection = Record<string, string>;
+
+/** Can be ordered right now: in stock, or an open pre-order that still has room. */
+export function isSellable(variant: SkuVariant): boolean {
+  return variant.inStock && !isPreOrderSoldOut(variant);
+}
+
+export function variantById(product: Product, variantId: string): SkuVariant | undefined {
+  return product.skuVariants?.find((v) => v.id === variantId);
+}
+
+/** The one SKU of a product that has nothing to choose; undefined as soon as there is a choice to make. */
+export function soleVariant(product: Product): SkuVariant | undefined {
+  const variants = product.skuVariants ?? [];
+  return !product.options?.length && variants.length === 1 ? variants[0] : undefined;
+}
+
+function agrees(variant: SkuVariant, options: ProductOption[], selection: OptionSelection, except?: string): boolean {
+  return options.every((option) => {
+    const picked = selection[option.id];
+    return option.id === except || !picked || variant.optionValueIds.includes(picked);
+  });
+}
+
+export function isValueAvailable(
+  product: Product,
+  selection: OptionSelection,
+  optionId: string,
+  valueId: string,
+): boolean {
+  const options = product.options ?? [];
+  return (product.skuVariants ?? []).some(
+    (v) => isSellable(v) && v.optionValueIds.includes(valueId) && agrees(v, options, selection, optionId),
+  );
+}
+
+export function missingOption(product: Product, selection: OptionSelection): ProductOption | undefined {
+  return product.options?.find((option) => !selection[option.id]);
+}
+
+/** Only a complete pick has a SKU: an unfinished or never-made combination is undefined, never a neighbouring SKU. */
+export function resolveVariant(product: Product, selection: OptionSelection = {}): SkuVariant | undefined {
+  const options = product.options ?? [];
+  if (options.length === 0) return soleVariant(product);
+  if (missingOption(product, selection)) return undefined;
+  return (product.skuVariants ?? []).find(
+    (v) => v.optionValueIds.length === options.length && agrees(v, options, selection),
+  );
+}
+
+/** The only sellable SKU when there is exactly one; otherwise just the single-value options, which show as text. */
+export function initialSelection(product: Product): OptionSelection {
+  const sellable = (product.skuVariants ?? []).filter(isSellable);
+  const only = sellable.length === 1 ? sellable[0] : undefined;
+  const selection: OptionSelection = {};
+  for (const option of product.options ?? []) {
+    const value = only
+      ? option.values.find((v) => only.optionValueIds.includes(v.id))
+      : option.values.length === 1
+        ? option.values[0]
+        : undefined;
+    if (value) selection[option.id] = value.id;
+  }
   return selection;
 }
 
-export function defaultVariant(product: Product): SkuVariant | undefined {
-  const variants = product.skuVariants ?? [];
-  return variants.find((v) => v.id === product.defaultVariantId) ?? variants[0];
+/** A tap on a value: picked again it is cleared, an unavailable value changes nothing. */
+export function selectValue(
+  product: Product,
+  selection: OptionSelection,
+  optionId: string,
+  valueId: string,
+): OptionSelection {
+  if (selection[optionId] === valueId) {
+    return Object.fromEntries(Object.entries(selection).filter(([id]) => id !== optionId));
+  }
+  if (!isValueAvailable(product, selection, optionId, valueId)) return selection;
+  return { ...selection, [optionId]: valueId };
 }
 
-/**
- * The SKU a selection points at. With no selection it is the default SKU. If the chosen combination does not
- * exist (e.g. Black + XL was never made) it falls back to the first SKU that shares the colour, then the default.
- */
-export function resolveVariant(product: Product, selected?: Record<string, string>): SkuVariant | undefined {
-  const variants = product.skuVariants ?? [];
-  if (variants.length === 0) return undefined;
-  if (!selected || Object.keys(selected).length === 0) return defaultVariant(product);
-
-  const color = selected[COLOUR_GROUP];
-  const size = selected[SIZE_GROUP];
-  const matches = (v: SkuVariant, useSize: boolean) =>
-    (color === undefined || v.color === color) && (!useSize || size === undefined || v.size === size);
-
-  return variants.find((v) => matches(v, true)) ?? variants.find((v) => matches(v, false)) ?? defaultVariant(product);
+export function galleryFor(product: Product, selection: OptionSelection): string[] {
+  const own = (product.options ?? []).flatMap((option) => product.galleryByValue?.[selection[option.id] ?? ""] ?? []);
+  return [...new Set([...own, ...product.gallery])];
 }
 
 /** The product as it looks with one SKU chosen: that SKU's price, availability and pre-order state. */
@@ -53,6 +101,7 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     sku: variant.sku,
     price: variant.price,
     compareAtPrice: variant.compareAtPrice,
+    salePrice: variant.salePrice,
     inStock: variant.inStock,
     stockCount: variant.inStock ? ORDER_QUANTITY_CAP : 0,
     isPreOrder: variant.isPreOrder,
@@ -63,19 +112,4 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     currentPreorderQuantity: variant.currentPreorderQuantity,
     preorderStatus: variant.preorderStatus,
   };
-}
-
-const LETTER_SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"];
-const SIZE_ALIASES: Record<string, string> = { "2XL": "XXL", "3XL": "XXXL", "4XL": "XXXXL" };
-
-function letterRank(size: string): number {
-  const key = size.trim().toUpperCase();
-  return LETTER_SIZES.indexOf(SIZE_ALIASES[key] ?? key);
-}
-
-/** XS..XXL in wearing order, numeric sizes ascending; anything mixed or unknown keeps the API's order. */
-export function sortSizes(sizes: string[]): string[] {
-  if (sizes.every((s) => letterRank(s) >= 0)) return [...sizes].sort((a, b) => letterRank(a) - letterRank(b));
-  if (sizes.every((s) => /^\d+(\.\d+)?$/.test(s.trim()))) return [...sizes].sort((a, b) => Number(a) - Number(b));
-  return sizes;
 }

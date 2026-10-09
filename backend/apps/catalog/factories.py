@@ -11,6 +11,8 @@ from apps.catalog.models import (
     PriceIssueReport,
     Product,
     ProductImage,
+    ProductOption,
+    ProductOptionValue,
     ProductQuestion,
     ProductReview,
     ProductVariant,
@@ -49,8 +51,29 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
     price = Decimal("19.99")
     cost_price = Decimal("8.00")
     weight = None
-    color = ""
-    size = ""
+
+
+def make_options(product, options: dict[str, list[str]]) -> dict[str, ProductOptionValue]:
+    """Options written straight to the tables, in the order given. Returns the
+    values keyed by their text."""
+    values = {}
+    for position, (name, texts) in enumerate(options.items()):
+        option = ProductOption.objects.create(product=product, name=name, position=position)
+        for value_position, text in enumerate(texts):
+            values[text] = ProductOptionValue.objects.create(
+                option=option, value=text, position=value_position
+            )
+    return values
+
+
+def make_variant(product, values: list, **kwargs) -> ProductVariant:
+    """A variant on one combination, with the title the service would store."""
+    ordered = sorted(values, key=lambda value: value.option.position)
+    variant = ProductVariantFactory(
+        product=product, title=" / ".join(value.value for value in ordered), **kwargs
+    )
+    variant.option_values.set(ordered)
+    return variant
 
 
 class ProductImageFactory(factory.django.DjangoModelFactory):

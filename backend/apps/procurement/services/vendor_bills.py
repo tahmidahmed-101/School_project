@@ -12,6 +12,7 @@ from apps.accounting.services.postings import post_vendor_bill, post_vendor_paym
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
 from apps.procurement.models import PurchaseOrder, VendorBill, VendorPayment
+from apps.procurement.selectors.kind import purchase_order_kind
 
 BILL_MATCH_TOLERANCE = Decimal("0.01")
 
@@ -52,6 +53,11 @@ def _reverse_bill_postings(vendor_bill: VendorBill, *, reason: str) -> None:
 def create_vendor_bill(
     *, purchase_order: PurchaseOrder, supplier, amount: Decimal, due_date
 ) -> VendorBill:
+    if supplier.kind != purchase_order_kind(purchase_order):
+        raise BusinessRuleViolationError(
+            "Pick a supplier from the same side as the purchase order: stock or pre-order.",
+            code="supplier_kind_mismatch",
+        )
     _ensure_three_way_match(purchase_order, amount)
 
     bill_number = generate_document_number("BILL")

@@ -58,3 +58,14 @@ def _isolate_seeded_shipping_zones(db):  # noqa: ARG001 -- needed only to enable
     from apps.logistics.models import ShippingZone
 
     ShippingZone.objects.all().delete()
+
+
+@pytest.fixture(autouse=True)
+def _forget_live_sales():
+    """The test cache outlives a test's rolled-back database, so a sale one
+    test made would still be priced in by the next."""
+    from apps.catalog.selectors.sales import clear_live_sales_cache
+
+    clear_live_sales_cache()
+    yield
+    clear_live_sales_cache()

@@ -27,10 +27,26 @@ export const DICT = {
     bn: "অনুগ্রহ করে ইমেইল এবং পাসওয়ার্ড দিন।",
   },
   loginInvalid: { en: "Wrong email or password.", bn: "ইমেইল বা পাসওয়ার্ড ভুল।" },
-  loginForgot: {
-    en: "Forgot your password? Message us and we will help you reset it.",
-    bn: "পাসওয়ার্ড ভুলে গেছেন? আমাদের মেসেজ করুন, রিসেট করতে সাহায্য করব।",
+  loginForgot: { en: "Forgot your password?", bn: "পাসওয়ার্ড ভুলে গেছেন?" },
+  forgotTitle: { en: "Reset password", bn: "পাসওয়ার্ড রিসেট" },
+  forgotSubtitle: { en: "We will email you a 6-digit code.", bn: "ইমেইলে ৬ সংখ্যার একটা কোড পাঠাব।" },
+  forgotEmailRequired: { en: "Please enter your email.", bn: "ইমেইল দিন।" },
+  forgotSend: { en: "Send code", bn: "কোড পাঠান" },
+  forgotCodeSent: {
+    en: "If this email has an account, a code is on its way. Check your inbox and spam folder.",
+    bn: "এই ইমেইলে অ্যাকাউন্ট থাকলে কোড চলে গেছে। ইনবক্স আর স্প্যাম ফোল্ডার দেখুন।",
   },
+  forgotCodeLabel: { en: "Reset code", bn: "রিসেট কোড" },
+  forgotNewPasswordLabel: { en: "New password", bn: "নতুন পাসওয়ার্ড" },
+  forgotFieldsRequired: { en: "Enter the code and a new password.", bn: "কোড আর নতুন পাসওয়ার্ড দিন।" },
+  forgotSubmit: { en: "Change password", bn: "পাসওয়ার্ড বদলান" },
+  forgotCodeInvalid: { en: "The code is wrong or has expired.", bn: "কোড ভুল, নয়তো মেয়াদ শেষ।" },
+  forgotResend: { en: "Send a new code", bn: "নতুন কোড পাঠান" },
+  forgotDone: {
+    en: "Password changed. Log in with the new one.",
+    bn: "পাসওয়ার্ড বদলে গেছে। নতুন পাসওয়ার্ড দিয়ে লগ ইন করুন।",
+  },
+  forgotBackToLogin: { en: "Back to log in", bn: "লগ ইন পাতায় ফিরুন" },
   accountWelcome: { en: "Welcome back", bn: "আবার স্বাগতম" },
   accountLogout: { en: "Log out", bn: "লগ আউট" },
   ordersTitle: { en: "My orders", bn: "আমার অর্ডার" },
@@ -40,6 +56,15 @@ export const DICT = {
   },
   ordersTotal: { en: "Total", bn: "মোট" },
   ordersTrack: { en: "Track order", bn: "অর্ডার ট্র্যাক করুন" },
+  ordersTabStock: { en: "Orders", bn: "অর্ডার" },
+  ordersTabPreorder: { en: "Pre-orders", bn: "প্রি-অর্ডার" },
+  ordersPreorderEmpty: {
+    en: "You have no pre-orders yet. Pre-orders you place while logged in will appear here.",
+    bn: "এখনও কোনো প্রি-অর্ডার নেই। লগ ইন অবস্থায় করা প্রি-অর্ডার এখানে দেখা যাবে।",
+  },
+  preorderAdvance: { en: "Advance", bn: "অগ্রিম" },
+  preorderPaid: { en: "Paid", bn: "পেমেন্ট হয়েছে" },
+  preorderBalanceDue: { en: "Balance due", bn: "বাকি আছে" },
   orderStatusAwaitingPayment: { en: "Awaiting payment", bn: "পেমেন্টের অপেক্ষায়" },
   orderStatusConfirmed: { en: "Confirmed", bn: "নিশ্চিত" },
   orderStatusShipped: { en: "Shipped", bn: "পাঠানো হয়েছে" },
@@ -82,6 +107,9 @@ export const DICT = {
   voucherMinSpend: { en: "Min. spend", bn: "সর্বনিম্ন খরচ" },
   voucherNoMinSpend: { en: "No minimum spend", bn: "সর্বনিম্ন খরচ নেই" },
   voucherCode: { en: "Code", bn: "কোড" },
+  voucherValidUntil: { en: "Valid until {date}", bn: "মেয়াদ {date} পর্যন্ত" },
+  voucherMaxDiscount: { en: "Up to {amount} off", bn: "সর্বোচ্চ {amount} ছাড়" },
+  saleEnds: { en: "Offer ends {date}", bn: "অফার চলবে {date} পর্যন্ত" },
   loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
@@ -90,6 +118,8 @@ export const DICT = {
   clearSearch: { en: "Clear search", bn: "লেখা মুছুন" },
   matchingProducts: { en: "Matching products", bn: "সম্পর্কিত পণ্যসমূহ" },
   viewAllResults: { en: "View all matching results", bn: "সব ফলাফল দেখুন" },
+  searchViewAllStock: { en: "View all stock results", bn: "স্টকের সব ফলাফল দেখুন" },
+  searchViewAllPreorder: { en: "View all pre-order results", bn: "প্রি-অর্ডারের সব ফলাফল দেখুন" },
 
   // Hero
   heroCategoriesTitle: { en: "Shop by Category", bn: "ক্যাটাগরি দেখুন" },
@@ -141,6 +171,9 @@ export const DICT = {
   // Product Card & Detail
   addToCart: { en: "Add to cart", bn: "কার্টে নিন" },
   buyNow: { en: "Buy now", bn: "অর্ডার করুন" },
+  chooseOptions: { en: "Choose options", bn: "অপশন বেছে নিন" },
+  optionChoose: { en: "Choose {option}", bn: "{option} বেছে নিন" },
+  optionUnavailable: { en: "Not available", bn: "পাওয়া যাচ্ছে না" },
   productCode: { en: "Code", bn: "কোড" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },
@@ -243,6 +276,7 @@ export const DICT = {
   policyReturnWindow: { en: "Returns are accepted within", bn: "রিটার্ন করা যাবে" },
   policyReturnWindowDays: { en: "days of delivery.", bn: "দিনের মধ্যে (ডেলিভারির পর থেকে)।" },
   policyReadFull: { en: "Read the full return policy", bn: "সম্পূর্ণ রিটার্ন নীতি পড়ুন" },
+  policyLastUpdated: { en: "Last updated", bn: "সর্বশেষ আপডেট" },
   // Pre-order system
   navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   navReadyStock: { en: "Stock Items", bn: "স্টক আইটেম" },
@@ -250,6 +284,8 @@ export const DICT = {
   preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
   preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
   preOrderSoldOut: { en: "Pre-order sold out", bn: "প্রি-অর্ডার স্টক শেষ" },
+  preOrderNotOpen: { en: "Pre-order not open yet", bn: "প্রি-অর্ডার এখনো শুরু হয়নি" },
+  preOrderClosed: { en: "Pre-order closed", bn: "প্রি-অর্ডার বন্ধ" },
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
   preOrderBadge: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   preOrderOpen: { en: "Pre-order open", bn: "প্রি-অর্ডার চলছে" },
@@ -296,6 +332,8 @@ export const DICT = {
   cartStartShopping: { en: "Start shopping", bn: "কেনাকাটা শুরু করুন" },
   cartSubtotal: { en: "Subtotal", bn: "উপমোট" },
   cartDeliveryFree: { en: "Free", bn: "ফ্রি" },
+  freeDeliveryAddMore: { en: "Add {amount} more for free delivery", bn: "আর {amount} কিনলেই ডেলিভারি ফ্রি" },
+  freeDeliveryReached: { en: "Free delivery", bn: "ফ্রি ডেলিভারি" },
   cartProceedToCheckout: { en: "Proceed to checkout", bn: "চেকআউটে এগিয়ে যান" },
   cartRemove: { en: "Remove", bn: "মুছুন" },
   cartPreOrderNotice: {
@@ -303,9 +341,19 @@ export const DICT = {
     bn: "এটি একটি প্রি-অর্ডার পণ্য এবং স্টক আসার সাথে সাথে পাঠানো হবে।",
   },
   cartMixedNotice: {
-    en: "Note: Your order contains pre-order items. Items may ship separately or together depending on availability.",
-    bn: "বিশেষ দ্রষ্টব্য: আপনার অর্ডারে প্রি-অর্ডার পণ্য রয়েছে। প্রাপ্যতা অনুযায়ী আইটেমগুলো একসাথে বা পৃথকভাবে পাঠানো হতে পারে।",
+    en: "Stock items and pre-order items are ordered separately. Remove one kind to continue.",
+    bn: "স্টকের পণ্য আর প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। এগোতে চাইলে যেকোনো এক ধরনের পণ্য সরিয়ে দিন।",
   },
+  cartHoldsStock: {
+    en: "Your cart has stock items. Pre-order items are ordered separately. Finish this order or remove these items first.",
+    bn: "কার্টে স্টকের পণ্য আছে। প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
+  },
+  cartHoldsPreorder: {
+    en: "Your cart has pre-order items. Stock items are ordered separately. Finish this order or remove these items first.",
+    bn: "কার্টে প্রি-অর্ডার পণ্য আছে। স্টকের পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
+  },
+  kindStockItems: { en: "Stock items", bn: "স্টকের পণ্য" },
+  kindPreorderItems: { en: "Pre-order items", bn: "প্রি-অর্ডার পণ্য" },
 
   // Wishlist Drawer
   wishlistTitle: { en: "My wishlist", bn: "আমার পছন্দের তালিকা" },
@@ -316,7 +364,8 @@ export const DICT = {
   },
   wishlistMoveToCart: { en: "Move to cart", bn: "কার্টে নিন" },
   wishlistClear: { en: "Clear all", bn: "সব মুছুন" },
-  wishlistMoveAllToCart: { en: "Move all to cart", bn: "সবগুলো কার্টে নিন" },
+  wishlistMoveStockToCart: { en: "Move stock items to cart", bn: "স্টকের পণ্যগুলো কার্টে নিন" },
+  wishlistMovePreorderToCart: { en: "Move pre-order items to cart", bn: "প্রি-অর্ডার পণ্যগুলো কার্টে নিন" },
 
   // Checkout Page
   checkoutTitle: { en: "Complete your order", bn: "অর্ডার সম্পন্ন করুন" },
@@ -336,6 +385,12 @@ export const DICT = {
     bn: "ডেলিভারিম্যানের জন্য কোনো নির্দেশনা থাকলে লিখুন...",
   },
   checkoutPaymentMethod: { en: "Payment method", bn: "পেমেন্ট মাধ্যম" },
+  checkoutNoPaymentMethod: {
+    en: "No payment method is open for this order right now. Please contact the store to place it.",
+    bn: "এই অর্ডারের জন্য এখন কোনো পেমেন্ট মাধ্যম চালু নেই। অর্ডার করতে দোকানে যোগাযোগ করুন।",
+  },
+  checkoutPayTo: { en: "Send payment to", bn: "টাকা পাঠাবেন এই নম্বরে" },
+  checkoutDepositDue: { en: "Advance to pay now", bn: "এখন অগ্রিম দিতে হবে" },
   checkoutCodLabel: { en: "Cash on delivery", bn: "ক্যাশ অন ডেলিভারি" },
   payCash: { en: "Cash", bn: "ক্যাশ" },
   payCard: { en: "Card", bn: "কার্ড" },
@@ -418,12 +473,9 @@ export const DICT = {
   footerContactUs: { en: "Store contact", bn: "যোগাযোগের ঠিকানা" },
   footerReturnPolicy: { en: "Return policy", bn: "রিটার্ন নীতি" },
   footerRefundPolicy: { en: "Refund policy", bn: "রিফান্ড নীতি" },
+  footerShippingPolicy: { en: "Shipping policy", bn: "ডেলিভারি নীতি" },
   footerHours: { en: "Always open for online orders", bn: "অনলাইন অর্ডারের জন্য সবসময় খোলা" },
   footerRights: { en: "All rights reserved.", bn: "সর্বস্বত্ব সংরক্ষিত।" },
-  footerCopyrightNotice: {
-    en: "The Kull Mart name, logo, product photographs and the content of this site are the property of Kull Mart. They may not be copied or reused without written permission.",
-    bn: "কুল মার্টের নাম, লোগো, পণ্যের ছবি ও এই সাইটের সব লেখা কুল মার্টের নিজস্ব সম্পত্তি। লিখিত অনুমতি ছাড়া এগুলো কপি বা অন্য কোথাও ব্যবহার করা যাবে না।",
-  },
   // API errors and states
   errNetwork: {
     en: "We couldn't reach the store server. Please check your connection and try again.",
@@ -448,7 +500,30 @@ export const DICT = {
   checkoutCouponApply: { en: "Apply", bn: "প্রয়োগ" },
   checkoutCouponRemove: { en: "Remove", bn: "বাদ দিন" },
   checkoutCouponApplied: { en: "Coupon applied", bn: "কুপন প্রয়োগ হয়েছে" },
+  checkoutCouponStockOnly: {
+    en: "Coupons work on stock orders only, not on a pre-order.",
+    bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",
+  },
   checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
+  couponInvalid: { en: "This coupon code is not valid.", bn: "কুপন কোডটা ঠিক নয়।" },
+  couponExpired: { en: "This coupon has expired.", bn: "কুপনটার মেয়াদ শেষ।" },
+  couponUsageLimitReached: {
+    en: "This coupon has been fully used.",
+    bn: "কুপনটার ব্যবহারের সীমা শেষ।",
+  },
+  couponMinimumNotMet: {
+    en: "Your order is below the minimum spend for this coupon.",
+    bn: "এই কুপন ব্যবহার করতে আরও বেশি টাকার অর্ডার লাগবে।",
+  },
+  couponNotStarted: { en: "This coupon is not active yet.", bn: "কুপনটা এখনো চালু হয়নি।" },
+  couponNotApplicable: {
+    en: "This coupon does not apply to the items in your cart.",
+    bn: "কার্টের পণ্যে এই কুপন চলবে না।",
+  },
+  couponCustomerLimitReached: {
+    en: "You have already used this coupon as many times as allowed.",
+    bn: "এই কুপন যতবার ব্যবহার করা যায়, ততবার করে ফেলেছেন।",
+  },
   checkoutShippingChecking: { en: "Calculating…", bn: "হিসাব হচ্ছে…" },
   checkoutShippingUnavailable: { en: "Not available for this address", bn: "এই ঠিকানায় ডেলিভারি নেই" },
   errNoShipping: {

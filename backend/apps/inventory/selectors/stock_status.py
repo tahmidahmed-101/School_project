@@ -9,7 +9,7 @@ from apps.orders.models import ReturnRMA, ReturnRMALine
 from apps.procurement.models import GRNLine
 
 
-def stock_status_summary() -> dict:
+def stock_status_summary(*, kind: str | None = None) -> dict:
     """Distribute stock across the six statuses of blueprint §6.
 
     Every bucket is derived from existing state — StockItem on-hand/reserved
@@ -17,6 +17,18 @@ def stock_status_summary() -> dict:
     nothing here is stored separately. Aggregated in the database rather than
     summed in Python so this scales with ledger size."""
     items = StockItem.objects.all()
+    ledger = StockLedgerEntry.objects.all()
+    grn_lines = GRNLine.objects.filter(condition=GRNLine.Condition.REJECTED)
+    rma_lines = ReturnRMALine.objects.filter(condition="", rma__status=ReturnRMA.Status.RECEIVED)
+    if kind:
+        items = items.filter(variant__product__category__category_type=kind)
+        ledger = ledger.filter(variant__product__category__category_type=kind)
+        grn_lines = grn_lines.filter(
+            purchase_order_line__variant__product__category__category_type=kind
+        )
+        rma_lines = rma_lines.filter(
+            order_line__variant__product__category__category_type=kind
+        )
 
     item_totals = items.aggregate(
         reserved=Sum("quantity_reserved"),
@@ -24,8 +36,6 @@ def stock_status_summary() -> dict:
     )
     reserved = item_totals["reserved"] or 0
     sellable = item_totals["sellable"] or 0
-
-    ledger = StockLedgerEntry.objects.all()
 
     movement_totals = (
         ledger.filter(
@@ -43,10 +53,8 @@ def stock_status_summary() -> dict:
     transfer_in = totals_by_type.get(MovementType.TRANSFER_IN, 0)
     written_off = totals_by_type.get(MovementType.WRITE_OFF, 0)
 
-    grn_lines = GRNLine.objects.filter(condition=GRNLine.Condition.REJECTED)
     quarantine = grn_lines.aggregate(total=Sum("quantity_received"))["total"] or 0
 
-    rma_lines = ReturnRMALine.objects.filter(condition="", rma__status=ReturnRMA.Status.RECEIVED)
     pending_return_inspection = rma_lines.aggregate(total=Sum("quantity"))["total"] or 0
 
     return {

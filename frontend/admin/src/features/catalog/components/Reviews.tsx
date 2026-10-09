@@ -10,6 +10,7 @@ import { DateCell, LinkCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -42,13 +43,15 @@ function Stars({ rating }: { rating: number }) {
 }
 
 /** Product reviews left by customers on the storefront; staff can read and remove them. */
-const Reviews = () => {
-  useDocumentTitle("Reviews")
+const Reviews = ({ kind }: { kind: Kind }) => {
+  const title = kind === "preorder" ? "Pre-order reviews" : "Reviews"
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const reviewState = useAppSelector((s) => s.catalogReviews)
 
   const { list, filters } = useModerationList({
+    kind,
     fetch: (p) => dispatch(fetchAll(p)),
     state: reviewState,
     filter: { param: "rating", placeholder: "Rating", options: RATING_OPTIONS },
@@ -69,7 +72,7 @@ const Reviews = () => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
+        <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
           {row.original.product_name}
         </LinkCell>
       ),
@@ -117,7 +120,7 @@ const Reviews = () => {
             cell: ({ row }) => (
               <TableActions
                 itemName={`the review by ${row.original.customer_name}`}
-                viewUrl={`/product_detail/${row.original.product_id}`}
+                viewUrl={withKind(`/product_detail/${row.original.product_id}`, kind)}
                 onDelete={() => handleDelete(row.original)}
               />
             ),
@@ -128,7 +131,7 @@ const Reviews = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Reviews" />
+      <PageHeader title={title} />
 
       <FilterToolbar
         searchPlaceholder="Search review text or product…"
@@ -157,4 +160,9 @@ const Reviews = () => {
   )
 }
 
-export default Reviews
+const ReviewsPage = () => {
+  const kind = useKind()
+  return <Reviews key={kind} kind={kind} />
+}
+
+export default ReviewsPage

@@ -187,10 +187,12 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
                 data["brand"] = _resolve_brand(data.pop("brand_id"))
             except DomainError as exc:
                 return error_from_exception(exc)
-        product = update_product(product=product, data=data)
+        update_product(product=product, data=data)
         return Response(
             {
-                "data": ProductSerializer(product, context={"request": request}).data,
+                "data": ProductSerializer(
+                    get_product_by_id(product_id), context={"request": request}
+                ).data,
                 "message": "Success",
             }
         )
@@ -225,9 +227,10 @@ class AdminProductBulkStatusView(BulkActionMixin, APIView):
         serializer = ProductBulkStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         is_active = serializer.validated_data["is_active"]
+        category_type = serializer.validated_data.get("category_type")
         return self.bulk_action(
             request,
-            queryset_fn=lambda: products_list(is_active=None),
+            queryset_fn=lambda: products_list(is_active=None, category_type=category_type),
             action_fn=lambda product: stage_product_status(product=product, is_active=is_active),
             update_fields=["is_active", "updated_at"],
         )

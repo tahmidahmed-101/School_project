@@ -7,25 +7,30 @@ from django.db import transaction
 from apps.accounts.models import Address, User
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import get_or_create_guest_customer
+from apps.catalog.selectors.options import variant_title
 from apps.catalog.selectors.products import get_variants_by_ids
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.utils.codes import generate_document_number
 from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.logistics.selectors.rates import (
     get_carrier_by_id,
 )
+from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.services.carts import (
     _check_preorder_stock_limit,
     compute_line_tax,
     default_tax_percent,
+    ensure_purchasable,
 )
 from apps.orders.services.orders import lock_order
 
 
 def _variants_by_id(items: list[dict]) -> dict:
     ids = [item["variant_id"] for item in items]
-    return {str(variant.id): variant for variant in get_variants_by_ids(ids)}
+    variants = get_variants_by_ids(ids).select_related("product__category")
+    return {str(variant.id): variant for variant in variants}
 
 
 def weight_for_items(items: list[dict]) -> Decimal:
@@ -42,22 +47,30 @@ def weight_for_items(items: list[dict]) -> Decimal:
     return weight
 
 
-def subtotal_for_items(items: list[dict]) -> Decimal:
-    """Order subtotal for a raw item list — same per-line price `guest_checkout`
-    would charge, used to preview a coupon before an order exists."""
+def items_hold_preorder(items: list[dict]) -> bool:
+    ids = [item["variant_id"] for item in items]
+    return any(
+        variant.is_preorder_kind
+        for variant in get_variants_by_ids(ids).select_related("product__category")
+    )
+
+
+def priced_lines_for_items(items: list[dict]) -> list[tuple]:
+    """(product, line total) for a raw item list, at the per-line price
+    `guest_checkout` would charge — for previews made before an order exists."""
     variants_by_id = _variants_by_id(items)
-    subtotal = Decimal("0")
+    prime_running_sales(variants_by_id.values())
+    priced = []
     for item in items:
         variant = variants_by_id.get(str(item["variant_id"]))
         if variant is None:
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
-        subtotal += variant.effective_price * item["quantity"]
-    return subtotal
+        priced.append((variant.product, variant.effective_price * item["quantity"]))
+    return priced
 
 
-def _is_preorder_line(line: SalesOrderLine) -> bool:
-    variant = line.variant
-    return variant.is_preorder_enabled and variant.is_preorder_active
+def subtotal_for_items(items: list[dict]) -> Decimal:
+    return sum((amount for _product, amount in priced_lines_for_items(items)), Decimal("0"))
 
 
 def _guest_identity(*, phone: str, first_name: str, last_name: str) -> User:
@@ -128,6 +141,10 @@ def guest_checkout(
     """`customer` is the authenticated requester, if any — the only way an
     order reaches a registered account from here. `cart` is a saved guest
     cart to check out instead of building an order from `items`."""
+    if payment_method not in STOREFRONT_PAYMENT_METHODS:
+        raise BusinessRuleViolationError(
+            "Choose cash on delivery, bKash or Nagad.", code="payment_method_not_offered"
+        )
     if customer is not None:
         user = customer
     else:
@@ -164,7 +181,10 @@ def guest_checkout(
             # these fall back to no discount rather than aborting checkout.
             if exc.code not in (
                 "invalid_coupon",
+                "coupon_not_started",
                 "coupon_expired",
+                "coupon_not_applicable",
+                "coupon_customer_limit_reached",
                 "coupon_usage_limit_reached",
                 "coupon_minimum_not_met",
             ):
@@ -181,9 +201,10 @@ def guest_checkout(
 
     order = checkout(order=order, shipping_address=address, carrier=carrier, ip_address=ip_address)
 
-    from apps.orders.services.payments import capture_payment
+    from apps.orders.services.payments import record_payment_due
 
-    capture_payment(order=order, amount=order.grand_total, method=payment_method)
+    # A storefront order never counts as paid: nobody has verified any money.
+    record_payment_due(order=order, method=payment_method)
     order.refresh_from_db()
     return order
 
@@ -192,8 +213,8 @@ def _claim_guest_cart(
     cart: SalesOrder, *, owner: User, email: str, phone: str, notes: str
 ) -> SalesOrder:
     """Give a saved guest cart its owner and contact details. Locked first,
-    so two checkouts of one cart can't both claim it; the lines and their
-    prices stay exactly as the guest's cart services left them."""
+    so two checkouts of one cart can't both claim it; the lines stay as the
+    guest's cart services left them and `checkout` re-prices them."""
     lock_order(cart)
     if cart.status != SalesOrder.Status.PENDING or cart.customer_id is not None:
         raise BusinessRuleViolationError(
@@ -244,7 +265,7 @@ def _order_from_items(
     # one tax-rate lookup for the whole order, rather than one of each per item.
     variants_by_id = {
         str(variant.id): variant
-        for variant in get_variants_by_ids(list(combined_items)).select_related("product")
+        for variant in get_variants_by_ids(list(combined_items)).select_related("product__category")
     }
     tax_percent = default_tax_percent()
 
@@ -254,17 +275,16 @@ def _order_from_items(
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
 
-        if variant.is_preorder_enabled and not variant.is_preorder_active:
+        try:
+            ensure_purchasable(variant)
+        except BusinessRuleViolationError:
             order.delete()
-            raise BusinessRuleViolationError(
-                "This product is not available for pre-order at this time.",
-                code="preorder_not_active",
-            )
-        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
+            raise
+        is_preorder = variant.is_preorder_kind
+        if is_preorder and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, quantity)
 
         unit_price = variant.effective_price
-        is_preorder = variant.is_preorder_active
         tax_amount = compute_line_tax(
             unit_price=unit_price, quantity=quantity, tax_percent=tax_percent
         )
@@ -277,6 +297,7 @@ def _order_from_items(
             tax_amount=tax_amount,
             product_name=variant.product.name,
             variant_sku=variant.sku,
+            variant_title=variant_title(variant),
             is_preorder=is_preorder,
         )
 

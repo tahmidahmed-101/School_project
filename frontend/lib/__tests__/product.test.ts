@@ -3,9 +3,15 @@ import { makeProduct } from "@/tests/fixtures";
 import {
   getDiscountPercent,
   getMaxOrderQuantity,
+  getSaleOffer,
   isPreOrderSoldOut,
   matchesQuery,
+  searchByKind,
   searchProducts,
+  shopHome,
+  shopListing,
+  productKind,
+  splitByKind,
   toSearchEntry,
 } from "../product";
 
@@ -19,6 +25,21 @@ describe("getDiscountPercent", () => {
     expect(getDiscountPercent(makeProduct({ price: 500 }))).toBeNull();
     expect(getDiscountPercent(makeProduct({ price: 500, compareAtPrice: 500 }))).toBeNull();
     expect(getDiscountPercent(makeProduct({ price: 500, compareAtPrice: 400 }))).toBeNull();
+  });
+});
+
+describe("getSaleOffer", () => {
+  const sale = { name: "Eid Sale", percentOff: 20 };
+
+  it("names the sale on a stock product whose SKU it covers", () => {
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400 }))).toBe(sale);
+  });
+
+  it("is null without a sale, for an uncovered SKU and for a pre-order", () => {
+    expect(getSaleOffer(makeProduct())).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale }))).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400, isPreOrder: true }))).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400, kind: "preorder" }))).toBeNull();
   });
 });
 
@@ -97,7 +118,60 @@ describe("toSearchEntry", () => {
   it("keeps only the fields the header search needs", () => {
     const entry = toSearchEntry(makeProduct({ description: { en: "long text", bn: "long text" } }));
     expect(Object.keys(entry).sort()).toEqual(
-      ["category", "categoryName", "id", "image", "name", "price", "slug", "tagline"].sort(),
+      ["category", "categoryName", "id", "image", "kind", "name", "price", "slug", "tagline"].sort(),
     );
+  });
+});
+
+describe("productKind", () => {
+  it("is the product's shop, read from the pre-order flag when an old saved product has none", () => {
+    expect(productKind(makeProduct())).toBe("stock");
+    expect(productKind(makeProduct({ kind: "preorder" }))).toBe("preorder");
+    expect(productKind({ isPreOrder: true })).toBe("preorder");
+    expect(productKind({})).toBe("stock");
+  });
+});
+
+describe("splitByKind", () => {
+  it("keeps a saved list as two lists, one per shop", () => {
+    const saved = [makeProduct({ id: "a" }), makeProduct({ id: "b", kind: "preorder" }), makeProduct({ id: "c" })];
+    const { stock, preorder } = splitByKind(saved, productKind);
+    expect(stock.map((p) => p.id)).toEqual(["a", "c"]);
+    expect(preorder.map((p) => p.id)).toEqual(["b"]);
+  });
+});
+
+describe("shop links", () => {
+  it("keeps every link inside its own shop", () => {
+    expect(shopHome("stock")).toBe("/shop");
+    expect(shopHome("preorder")).toBe("/pre-order");
+    expect(shopListing("stock")).toBe("/shop");
+    expect(shopListing("stock", { q: "bag" })).toBe("/shop?q=bag");
+    expect(shopListing("preorder")).toBe("/shop?type=preorder");
+    expect(shopListing("preorder", { q: "ear buds" })).toBe("/shop?type=preorder&q=ear+buds");
+  });
+});
+
+describe("searchByKind", () => {
+  const entries = [
+    makeProduct({ id: "1", name: { en: "Leather Bag", bn: "" } }),
+    makeProduct({ id: "2", name: { en: "Travel Bag", bn: "" }, kind: "preorder" }),
+    makeProduct({ id: "3", name: { en: "Tote Bag", bn: "" } }),
+    makeProduct({ id: "4", name: { en: "Gold Cuff", bn: "" }, kind: "preorder" }),
+  ].map(toSearchEntry);
+
+  it("carries the kind on each entry", () => {
+    expect(entries.map((e) => e.kind)).toEqual(["stock", "preorder", "stock", "preorder"]);
+  });
+
+  it("groups matches by shop and limits each group on its own", () => {
+    const found = searchByKind(entries, "bag", 1);
+    expect(found.stock.map((e) => e.id)).toEqual(["1"]);
+    expect(found.preorder.map((e) => e.id)).toEqual(["2"]);
+  });
+
+  it("leaves a shop's group empty when nothing of that kind matches", () => {
+    expect(searchByKind(entries, "cuff", 5)).toMatchObject({ stock: [], preorder: [{ id: "4" }] });
+    expect(searchByKind(entries, " ", 5)).toEqual({ stock: [], preorder: [] });
   });
 });

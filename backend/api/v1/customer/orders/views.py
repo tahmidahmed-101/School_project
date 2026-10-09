@@ -11,10 +11,9 @@ from apps.accounts.selectors.addresses import get_address_for_user
 from apps.catalog.selectors.products import get_variant_by_id
 from apps.common.exceptions import DomainError
 from apps.common.generics import list_response
-from apps.common.params import get_uuid
+from apps.common.params import get_choice, get_uuid
 from apps.common.permissions import IsCustomer
-from apps.common.responses import error_from_exception, not_found
-from apps.common.serializers import CapturePaymentSerializer
+from apps.common.responses import error_from_exception, error_response, not_found
 from apps.common.throttling import CouponRateThrottle
 from apps.logistics.selectors.rates import (
     address_zone_text,
@@ -23,12 +22,17 @@ from apps.logistics.selectors.rates import (
     get_zone_by_id,
     zones_list,
 )
-from apps.logistics.services.rates import shipping_options, try_quote_shipping
+from apps.logistics.services.rates import (
+    is_free_delivery,
+    shipping_options,
+    try_quote_shipping,
+)
 from apps.orders.models import SalesOrder, SalesOrderLine
+from apps.orders.selectors.basket_kind import kind_for_order
+from apps.orders.selectors.payments import deposit_percent_context
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
     get_cart,
-    get_checked_out_order,
     get_order_by_id,
     orders_for_customer,
 )
@@ -39,10 +43,9 @@ from apps.orders.services.carts import (
     set_cart_contact_phone,
     update_line,
 )
-from apps.orders.services.checkout import checkout, order_weight
+from apps.orders.services.checkout import checkout, order_subtotal_now, order_weight
 from apps.orders.services.coupons import apply_coupon, remove_coupon
 from apps.orders.services.orders import cancel_order
-from apps.orders.services.payments import capture_payment
 from apps.orders.services.returns import create_rma
 from apps.risk.request_ip import client_ip
 
@@ -231,14 +234,15 @@ class CheckoutView(APIView):
         return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
 
 
-def _resolve_zone(request, address_id, raw_text, zone_id=None):
-    """Returns (ShippingZone, error_response). `None, None` means neither an
+def _resolve_zone(request, address_id, raw_text, zone_id=None, *, kind):
+    """Returns (ShippingZone, error_response), looking only at zones of the
+    cart's own kind. `None, None` means neither an
     address, address text, nor zone id was given — callers decide how to report
     that. An explicit zone_id wins outright: the customer picked it, so no
     address-text guessing is needed or wanted. The address is looked up through
     the user's own queryset so someone else's address is a 404, never a 403."""
     if zone_id:
-        zone = get_zone_by_id(zone_id)
+        zone = get_zone_by_id(zone_id, kind=kind)
         if zone is None:
             return None, not_found("zone_not_found", "Delivery zone not found.")
         return zone, None
@@ -250,7 +254,7 @@ def _resolve_zone(request, address_id, raw_text, zone_id=None):
         text = address_zone_text(address)
     if not text:
         return None, None
-    zone = find_zone_by_address_text(text)
+    zone = find_zone_by_address_text(text, kind=kind)
     if zone is None:
         return None, error_from_exception(
             DomainError("Delivery is not available for this address yet.", code="zone_not_found")
@@ -268,8 +272,17 @@ class CartShippingQuoteView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        cart = get_or_create_cart(request.user)
+        try:
+            kind = kind_for_order(cart)
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone(
-            request, data.get("address_id"), data.get("address_text"), data.get("zone_id")
+            request,
+            data.get("address_id"),
+            data.get("address_text"),
+            data.get("zone_id"),
+            kind=kind,
         )
         if error is not None:
             return error
@@ -287,9 +300,11 @@ class CartShippingQuoteView(APIView):
             if carrier is None:
                 return not_found("carrier_not_found", "Carrier not found.")
 
-        cart = get_or_create_cart(request.user)
         weight = order_weight(cart)
-        quote = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
+        subtotal = order_subtotal_now(cart)
+        quote = try_quote_shipping(
+            zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+        )
         return Response(
             {
                 "data": {
@@ -297,6 +312,7 @@ class CartShippingQuoteView(APIView):
                     "weight": str(weight),
                     "carrier_id": str(carrier.id) if carrier else None,
                     "shipping_total": str(quote) if quote is not None else None,
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                 },
                 "message": "Success",
             }
@@ -310,11 +326,17 @@ class CartShippingOptionListView(APIView):
 
     def get(self, request) -> Response:
         params = request.query_params
+        cart = get_or_create_cart(request.user)
+        try:
+            kind = kind_for_order(cart)
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone(
             request,
             get_uuid(params, "address_id"),
             params.get("address_text"),
             get_uuid(params, "zone_id"),
+            kind=kind,
         )
         if error is not None:
             return error
@@ -326,17 +348,20 @@ class CartShippingOptionListView(APIView):
                 )
             )
 
-        cart = get_or_create_cart(request.user)
         weight = order_weight(cart)
+        subtotal = order_subtotal_now(cart)
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(zone=zone, weight=weight)
+            for option in shipping_options(
+                zone=zone, weight=weight, kind=kind, subtotal=subtotal
+            )
         ]
         return Response(
             {
                 "data": {
                     "zone": zone.name,
                     "weight": str(weight),
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                     "options": ShippingOptionSerializer(options, many=True).data,
                 },
                 "message": "Success",
@@ -354,33 +379,14 @@ class CartShippingZoneListView(APIView):
     permission_classes: ClassVar[list] = [IsCustomer]
 
     def get(self, request) -> Response:
-        zones = zones_list()
+        try:
+            kind = kind_for_order(get_or_create_cart(request.user))
+        except DomainError as exc:
+            return error_from_exception(exc)
+        zones = zones_list(kind=kind)
         return Response(
             {"data": ShippingZoneOptionSerializer(zones, many=True).data, "message": "Success"}
         )
-
-
-@extend_schema(tags=["Orders"])
-class PaymentCaptureView(APIView):
-    serializer_class = CapturePaymentSerializer
-    permission_classes: ClassVar[list] = [IsCustomer]
-
-    def post(self, request) -> Response:
-        order = get_checked_out_order(request.user)
-        if order is None:
-            return error_from_exception(
-                DomainError(
-                    "No checked-out order is awaiting payment.", code="no_order_awaiting_payment"
-                )
-            )
-        serializer = CapturePaymentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            capture_payment(order=order, **serializer.validated_data)
-        except DomainError as exc:
-            return error_from_exception(exc)
-        order.refresh_from_db()
-        return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])
@@ -389,8 +395,17 @@ class OrderHistoryListView(APIView):
     permission_classes: ClassVar[list] = [IsCustomer]
 
     def get(self, request) -> Response:
-        orders = orders_for_customer(request.user).exclude(status=SalesOrder.Status.PENDING)
-        return list_response(request, orders, OrderHistorySerializer, view=self)
+        order_type = get_choice(request.query_params, "order_type", SalesOrder.OrderType.values)
+        orders = (
+            orders_for_customer(request.user)
+            .exclude(status=SalesOrder.Status.PENDING)
+            .prefetch_related("payments")
+        )
+        if order_type:
+            orders = orders.filter(order_type=order_type)
+        return list_response(
+            request, orders, OrderHistorySerializer, view=self, context_fn=deposit_percent_context
+        )
 
 
 @extend_schema(tags=["Orders"])
@@ -414,6 +429,15 @@ class OrderCancelView(APIView):
         order = _own_order_or_404(request, order_id)
         if order is None:
             return not_found("order_not_found", "Order not found.")
+        if (
+            order.order_type == SalesOrder.OrderType.PREORDER
+            and order.status != SalesOrder.Status.PENDING
+        ):
+            return error_response(
+                "preorder_cancel_staff_only",
+                "Contact the shop to cancel a pre-order.",
+                status=409,
+            )
         try:
             cancel_order(order=order, actor=request.user)
         except DomainError as exc:

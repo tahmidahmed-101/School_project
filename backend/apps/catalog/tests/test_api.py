@@ -10,6 +10,8 @@ from apps.catalog.factories import (
     ProductFactory,
     ProductImageFactory,
     ProductVariantFactory,
+    make_options,
+    make_variant,
 )
 from apps.catalog.models import Brand, Product
 
@@ -84,7 +86,7 @@ def test_public_product_list_preorder_only_filter(api_client):
 
     now = timezone.now()
 
-    preorder_product = ProductFactory(is_active=True)
+    preorder_product = ProductFactory(is_active=True, category__category_type="preorder")
     ProductVariantFactory(
         product=preorder_product,
         is_preorder_enabled=True,
@@ -119,7 +121,9 @@ def test_public_product_detail_exposes_preorder_capacity(api_client):
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=10,
     )
-    SalesOrderLineFactory(variant=variant, quantity=4, is_preorder=True)
+    SalesOrderLineFactory(
+        variant=variant, quantity=4, is_preorder=True, order__status="confirmed"
+    )
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -146,7 +150,9 @@ def test_public_product_detail_preorder_remaining_is_null_when_unlimited(api_cli
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=None,
     )
-    SalesOrderLineFactory(variant=variant, quantity=3, is_preorder=True)
+    SalesOrderLineFactory(
+        variant=variant, quantity=3, is_preorder=True, order__status="confirmed"
+    )
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -207,21 +213,18 @@ def test_admin_can_generate_variants(api_client):
     admin = create_user(email="catalog-generate-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
     product = ProductFactory()
+    make_options(product, {"Colour": ["Red", "Blue"], "Size": ["M", "L"]})
 
     response = api_client.post(
         f"/api/v1/admin/catalog/products/{product.id}/variants/generate/",
-        {"colors": ["Red", "Blue"], "sizes": ["M", "L"], "price": "20.00"},
+        {"price": "20.00"},
         format="json",
     )
 
     assert response.status_code == 201
     created = response.data["data"]["created"]
-    assert {(item["color"], item["size"]) for item in created} == {
-        ("Red", "M"),
-        ("Red", "L"),
-        ("Blue", "M"),
-        ("Blue", "L"),
-    }
+    assert [item["title"] for item in created] == ["Red / M", "Red / L", "Blue / M", "Blue / L"]
+    assert {item["price"] for item in created} == {"20.00"}
 
 
 def test_global_variant_list_search_by_sku(api_client):
@@ -296,7 +299,9 @@ def test_admin_product_list_preorder_only_filter(api_client):
     api_client.force_authenticate(user=admin)
     now = timezone.now()
 
-    preorder_product = ProductFactory(name="Preorder Filter Product", is_active=True)
+    preorder_product = ProductFactory(
+        name="Preorder Filter Product", is_active=True, category__category_type="preorder"
+    )
     ProductVariantFactory(
         product=preorder_product,
         is_preorder_enabled=True,
@@ -329,6 +334,7 @@ def test_admin_product_list_filters_inactive_preorder_products(api_client):
     inactive_preorder_product = ProductFactory(
         name="Inactive Preorder Filter Product",
         is_active=True,
+        category__category_type="preorder",
     )
     ProductVariantFactory(
         product=inactive_preorder_product,
@@ -692,8 +698,9 @@ def test_public_product_exposes_variant_level_images(api_client):
 
 def test_public_product_detail_exposes_variant_colour_and_size(api_client):
     product = ProductFactory(product_type=Product.ProductType.VARIANT)
-    ProductVariantFactory(product=product, sku="PANJABI-NAVY-L", color="Navy", size="L")
-    ProductVariantFactory(product=product, sku="PANJABI-NAVY-XL", color="Navy", size="XL")
+    values = make_options(product, {"Colour": ["Navy"], "Size": ["L", "XL"]})
+    make_variant(product, [values["Navy"], values["L"]], sku="PANJABI-NAVY-L")
+    make_variant(product, [values["Navy"], values["XL"]], sku="PANJABI-NAVY-XL")
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -952,7 +959,16 @@ def test_admin_brand_has_only_the_form_fields(api_client):
 
     assert created.status_code == 201, created.data
     brand = created.data["data"]
-    assert set(brand) == {"id", "name", "slug", "description", "is_active", "image", "deleted_at"}
+    assert set(brand) == {
+        "id",
+        "name",
+        "slug",
+        "kind",
+        "description",
+        "is_active",
+        "image",
+        "deleted_at",
+    }
     assert brand["slug"] == "aarong"
     detail = api_client.get(f"/api/v1/admin/catalog/brands/{brand['id']}/")
     assert set(detail.data["data"]) == set(brand)

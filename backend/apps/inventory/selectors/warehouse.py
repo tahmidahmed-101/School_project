@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.db.models import QuerySet
 
+from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.inventory.models import Warehouse
 
 
@@ -24,17 +25,24 @@ def get_warehouse_by_id(
     return all_warehouses(include_deleted=include_deleted).filter(id=warehouse_id).first()
 
 
-def get_default_warehouse() -> Warehouse | None:
-    return active_warehouses().filter(is_default=True).first()
+def default_warehouse(kind: str = KIND_STOCK) -> Warehouse | None:
+    return active_warehouses().filter(is_default=True, kind=kind).first()
 
 
-def get_or_create_default_warehouse() -> Warehouse:
-    default = get_default_warehouse()
+def default_warehouse_ids() -> list[UUID]:
+    return list(active_warehouses().filter(is_default=True).values_list("id", flat=True))
+
+
+NEW_DEFAULT_WAREHOUSE = {
+    KIND_STOCK: {"name": "Main Warehouse", "code": "MAIN"},
+    KIND_PREORDER: {"name": "Pre-order Warehouse", "code": "PREORDER"},
+}
+
+
+def get_or_create_default_warehouse(kind: str = KIND_STOCK) -> Warehouse:
+    default = default_warehouse(kind)
     if default:
         return default
     return Warehouse.objects.create(
-        name="Main Warehouse",
-        code="MAIN",
-        is_default=True,
-        is_active=True,
+        kind=kind, is_default=True, is_active=True, **NEW_DEFAULT_WAREHOUSE[kind]
     )

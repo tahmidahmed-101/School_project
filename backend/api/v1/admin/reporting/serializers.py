@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from api.v1.admin.catalog.fields import VariantTitleField
+
 
 class SalesTrendPointSerializer(serializers.Serializer):
     date = serializers.DateField()
@@ -12,6 +14,7 @@ class LowStockItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     quantity_on_hand = serializers.IntegerField()
     quantity_reserved = serializers.IntegerField()
@@ -111,6 +114,12 @@ class TickerItemSerializer(serializers.Serializer):
     dir = serializers.ChoiceField(choices=TREND_DIRECTIONS)
 
 
+class PreorderBookSerializer(serializers.Serializer):
+    open_orders = serializers.IntegerField()
+    deposits_held = serializers.DecimalField(max_digits=14, decimal_places=2)
+    balances_outstanding = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
 class DashboardSerializer(serializers.Serializer):
     kpis = DashboardKpiSerializer(many=True)
     revenue = RevenuePointSerializer(many=True)
@@ -122,3 +131,4 @@ class DashboardSerializer(serializers.Serializer):
     segments = CustomerSegmentSerializer(many=True)
     fulfillment = FulfillmentMetricSerializer(many=True)
     ticker = TickerItemSerializer(many=True)
+    preorder = PreorderBookSerializer(required=False)

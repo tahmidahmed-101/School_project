@@ -20,7 +20,7 @@ export async function PolicyView({ policy }: PolicyViewProps) {
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}
           title={t(policy.title)}
-          subtitle={policy.updated && t(policy.updated)}
+          subtitle={policy.effectiveDate && `${ui("policyLastUpdated")}: ${t(policy.effectiveDate)}`}
         />
 
         <p className="max-w-3xl text-sm leading-relaxed text-ink-700 sm:text-base lg:max-w-4xl lg:text-lg">

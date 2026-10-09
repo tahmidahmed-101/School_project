@@ -2,20 +2,19 @@ import "server-only";
 import { apiRequest } from "@/lib/api/client";
 import type { ApiPaymentMethod } from "@/lib/api/types";
 import { CACHE_LIFE } from "@/lib/cache";
+import type { ProductKind } from "@/lib/product";
+import type { PaymentMethodsByKind } from "../domain/checkout";
 
-const COD_FALLBACK: ApiPaymentMethod[] = [{ key: "cod", label: "Cash on delivery", description: "" }];
+/** GET /payment-methods/?kind= — the methods switched on for one half of the shop. */
+export function getPaymentMethods(kind: ProductKind): Promise<ApiPaymentMethod[]> {
+  return apiRequest<ApiPaymentMethod[]>("/payment-methods/", {
+    query: { kind },
+    revalidate: CACHE_LIFE.paymentMethods,
+  });
+}
 
-/**
- * GET /payment-methods/ — enabled methods; the chosen `key` is sent as `payment_method` to POST /checkout/.
- * Falls back to cash on delivery if the list is empty or cannot be loaded, so checkout always has a method.
- */
-export async function getPaymentMethods(): Promise<ApiPaymentMethod[]> {
-  try {
-    const methods = await apiRequest<ApiPaymentMethod[]>("/payment-methods/", {
-      revalidate: CACHE_LIFE.paymentMethods,
-    });
-    return methods.length > 0 ? methods : COD_FALLBACK;
-  } catch {
-    return COD_FALLBACK;
-  }
+/** Both lists: the basket lives in the browser, so the page cannot know its kind while it renders on the server. */
+export async function getPaymentMethodsByKind(): Promise<PaymentMethodsByKind> {
+  const [stock, preorder] = await Promise.all([getPaymentMethods("stock"), getPaymentMethods("preorder")]);
+  return { stock, preorder };
 }

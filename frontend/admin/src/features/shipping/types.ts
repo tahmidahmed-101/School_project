@@ -4,6 +4,8 @@
 //  - api/v1/admin/logistics/serializers.py → Carrier*, ShippingZone*, ShippingRate*
 //  - apps/orders/models/shipment.py (Shipment.Status), apps/logistics/models/carrier.py (Carrier.Provider)
 
+import type { Kind } from "@/hooks/use-kind"
+
 export type ShipmentStatus =
   | "pending"
   | "shipped"
@@ -33,6 +35,8 @@ export interface Shipment {
   unresolved_damaged_quantity: number
   /** Only on the detail endpoint and the responses of shipment actions. */
   lines?: ShipmentLine[]
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
 }
 
 /** ShipmentLineSerializer */
@@ -146,6 +150,7 @@ export interface ShippingRate {
   id: string
   zone_id: string
   carrier_id: string
+  kind: Kind
   base_weight: string
   base_charge: string
   increment_weight: string
@@ -155,6 +160,7 @@ export interface ShippingRate {
 export interface ShippingZone {
   id: string
   name: string
+  kind: Kind
   /** Area keywords matched against the ship-to address (despite the name, not ISO codes). */
   country_codes: string[]
   is_active: boolean
@@ -164,6 +170,8 @@ export interface ShippingZone {
 
 export interface ShippingZonePayload {
   name?: string
+  /** Set on create only: the half of the shop the zone belongs to. */
+  kind?: Kind
   country_codes?: string[]
   is_active?: boolean
 }

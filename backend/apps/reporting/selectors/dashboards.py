@@ -18,7 +18,8 @@ from apps.catalog.models import ProductVariant
 from apps.common.utils.dates import day_after, day_start
 from apps.inventory.models import StockItem
 from apps.inventory.selectors.stock import stock_items_list
-from apps.orders.models import Payment, SalesOrder, SalesOrderLine
+from apps.orders.models import Payment, SalesOrder, SalesOrderLine, Shipment
+from apps.orders.selectors.preorder_demand import preorder_book_summary
 
 # Pure read layer — every function here reuses selectors/models from the
 # phases already built rather than introducing new tables.
@@ -34,7 +35,9 @@ NON_ORDER_STATUSES = [
 ]
 
 
-def real_orders(*, start: date | None = None, end: date | None = None) -> QuerySet[SalesOrder]:
+def real_orders(
+    *, start: date | None = None, end: date | None = None, kind: str | None = None
+) -> QuerySet[SalesOrder]:
     """The single definition of the order population behind revenue, order
     count and average order value — they must never drift apart."""
     orders = SalesOrder.objects.filter(deleted_at__isnull=True).exclude(
@@ -44,43 +47,72 @@ def real_orders(*, start: date | None = None, end: date | None = None) -> QueryS
         orders = orders.filter(created_at__gte=day_start(start))
     if end is not None:
         orders = orders.filter(created_at__lt=day_after(end))
+    if kind:
+        orders = orders.filter(order_type=kind)
     return orders
 
 
-def sales_trend(*, start: date, end: date) -> list[dict]:
+def _order_lines(*, start: date, end: date, kind: str | None = None) -> QuerySet[SalesOrderLine]:
+    lines = SalesOrderLine.objects.filter(
+        order__created_at__gte=day_start(start),
+        order__created_at__lt=day_after(end),
+        order__deleted_at__isnull=True,
+    ).exclude(order__status__in=NON_ORDER_STATUSES)
+    if kind:
+        lines = lines.filter(order__order_type=kind)
+    return lines
+
+
+def sales_trend(*, start: date, end: date, kind: str | None = None) -> list[dict]:
     return [
-        {"date": day, "total": total} for day, (total, _count) in _trend_by_day(start, end).items()
+        {"date": day, "total": total}
+        for day, (total, _count) in _trend_by_day(start, end, kind).items()
     ]
 
 
-def stock_turnover(*, start: date, end: date, _memo: dict | None = None) -> Decimal:
+def stock_turnover(
+    *, start: date, end: date, kind: str | None = None, _memo: dict | None = None
+) -> Decimal:
     """COGS posted in the period (from Accounting's journal, the single
     source of truth for cost) divided by current inventory valuation, as a
-    stand-in for a true daily-averaged inventory figure."""
+    stand-in for a true daily-averaged inventory figure.
+
+    For one kind, COGS is what that kind's shipments posted and the valuation
+    is that kind's stock; a COGS debit not tied to a shipment has no kind."""
     memo = {} if _memo is None else _memo
 
     def _cogs(window_start: date, window_end: date) -> Decimal:
-        return JournalEntryLine.objects.filter(
+        lines = JournalEntryLine.objects.filter(
             journal_entry__status=JournalEntry.Status.POSTED,
             journal_entry__entry_date__gte=window_start,
             journal_entry__entry_date__lte=window_end,
             account__code=ACCOUNT_CODES["cogs"],
-        ).aggregate(total=Sum("debit"))["total"] or Decimal("0")
+        )
+        if kind:
+            lines = lines.filter(
+                journal_entry__reference_type="shipment_cogs",
+                journal_entry__reference_id__in=Shipment.objects.filter(
+                    order__order_type=kind
+                ).values("id"),
+            )
+        return lines.aggregate(total=Sum("debit"))["total"] or Decimal("0")
 
-    cogs = _memoize(memo, ("cogs", start, end), lambda: _cogs(start, end))
+    cogs = _memoize(memo, ("cogs", start, end, kind), lambda: _cogs(start, end))
     # Valuation is a point-in-time figure (not per window); the dashboard
     # requests it for several windows at once, so compute it once.
-    average_inventory_value = _memoize(memo, "inventory_valuation", lambda: inventory_valuation())
+    average_inventory_value = _memoize(
+        memo, ("inventory_valuation", kind), lambda: inventory_valuation(kind=kind)
+    )
     if average_inventory_value == 0:
         return Decimal("0")
     return cogs / average_inventory_value
 
 
-def low_stock_summary() -> QuerySet[StockItem]:
+def low_stock_summary(*, kind: str | None = None) -> QuerySet[StockItem]:
     # select_related variant__product too: inventory_alerts()/kpis() read
     # item.variant.product.name for every row, which would otherwise issue
     # one extra query per distinct low-stock variant.
-    return stock_items_list(low_stock_only=True).select_related("variant__product")
+    return stock_items_list(low_stock_only=True, kind=kind).select_related("variant__product")
 
 
 def _previous_window(start: date, end: date) -> tuple[date, date]:
@@ -108,12 +140,12 @@ def _memoize(memo: dict, key: Any, factory) -> Any:
     return memo[key]
 
 
-def _trend_by_day(start: date, end: date) -> dict:
+def _trend_by_day(start: date, end: date, kind: str | None = None) -> dict:
     """Revenue total and order count per calendar day for the window, in one
     aggregate — the single source the revenue series, KPI sums and order-count
     sparks are all derived from, so they can never disagree."""
     rows = (
-        real_orders(start=start, end=end)
+        real_orders(start=start, end=end, kind=kind)
         .annotate(day=TruncDate("created_at"))
         .values("day")
         .annotate(total=Sum("grand_total"), order_count=Count("id"))
@@ -127,13 +159,17 @@ def _trend_by_day(start: date, end: date) -> dict:
     }
 
 
-def _window_trends(start: date, end: date, memo: dict) -> tuple[dict, dict]:
+def _window_trends(
+    start: date, end: date, memo: dict, kind: str | None = None
+) -> tuple[dict, dict]:
     # The dashboard's KPIs, revenue chart and ticker all need the same two
     # windows; `memo` lets `dashboard_data` compute each once per request.
     prev_start, prev_end = _previous_window(start, end)
-    current = _memoize(memo, ("trend", start, end), lambda: _trend_by_day(start, end))
+    current = _memoize(memo, ("trend", start, end, kind), lambda: _trend_by_day(start, end, kind))
     previous = _memoize(
-        memo, ("trend", prev_start, prev_end), lambda: _trend_by_day(prev_start, prev_end)
+        memo,
+        ("trend", prev_start, prev_end, kind),
+        lambda: _trend_by_day(prev_start, prev_end, kind),
     )
     return current, previous
 
@@ -146,11 +182,13 @@ def _sum_counts(trend: dict) -> int:
     return sum((count for _total, count in trend.values()))
 
 
-def revenue_series(*, start: date, end: date, _memo: dict | None = None) -> list[dict]:
+def revenue_series(
+    *, start: date, end: date, kind: str | None = None, _memo: dict | None = None
+) -> list[dict]:
     """Daily revenue for the current window with the matching day from the
     previous window, aligned per calendar day for the area chart."""
     memo = {} if _memo is None else _memo
-    current, previous = _window_trends(start, end, memo)
+    current, previous = _window_trends(start, end, memo, kind)
     span = (end - start).days + 1
     return [
         {
@@ -162,19 +200,21 @@ def revenue_series(*, start: date, end: date, _memo: dict | None = None) -> list
     ]
 
 
-def kpis(*, start: date, end: date, _memo: dict | None = None) -> list[dict]:
+def kpis(
+    *, start: date, end: date, kind: str | None = None, _memo: dict | None = None
+) -> list[dict]:
     memo = {} if _memo is None else _memo
     prev_start, prev_end = _previous_window(start, end)
-    current, previous = _window_trends(start, end, memo)
+    current, previous = _window_trends(start, end, memo, kind)
 
     current_revenue = _sum_totals(current)
     previous_revenue = _sum_totals(previous)
     current_orders = _sum_counts(current)
     previous_orders = _sum_counts(previous)
 
-    current_turnover = stock_turnover(start=start, end=end, _memo=memo)
-    previous_turnover = stock_turnover(start=prev_start, end=prev_end, _memo=memo)
-    low_stock_rows = low_stock_rollup(memo)
+    current_turnover = stock_turnover(start=start, end=end, kind=kind, _memo=memo)
+    previous_turnover = stock_turnover(start=prev_start, end=prev_end, kind=kind, _memo=memo)
+    low_stock_rows = low_stock_rollup(memo, kind)
 
     revenue_delta = _pct_change(current_revenue, previous_revenue)
     orders_delta = _pct_change(current_orders, previous_orders)
@@ -220,14 +260,9 @@ def kpis(*, start: date, end: date, _memo: dict | None = None) -> list[dict]:
     ]
 
 
-def category_revenue(*, start: date, end: date) -> list[dict]:
+def category_revenue(*, start: date, end: date, kind: str | None = None) -> list[dict]:
     rows = (
-        SalesOrderLine.objects.filter(
-            order__created_at__gte=day_start(start),
-            order__created_at__lt=day_after(end),
-            order__deleted_at__isnull=True,
-        )
-        .exclude(order__status__in=NON_ORDER_STATUSES)
+        _order_lines(start=start, end=end, kind=kind)
         .values(name=F("variant__product__category__name"))
         .annotate(total=Sum(F("quantity") * F("unit_price")))
         .order_by("-total")
@@ -256,13 +291,16 @@ _STATUS_BADGE: dict[str, str] = {
 }
 
 
-def recent_orders(*, start: date, end: date, limit: int = 8) -> list[dict]:
+def recent_orders(
+    *, start: date, end: date, limit: int = 8, kind: str | None = None
+) -> list[dict]:
+    window = SalesOrder.objects.filter(
+        created_at__gte=day_start(start), created_at__lt=day_after(end), deleted_at__isnull=True
+    )
+    if kind:
+        window = window.filter(order_type=kind)
     orders = list(
-        SalesOrder.objects.filter(
-            created_at__gte=day_start(start), created_at__lt=day_after(end), deleted_at__isnull=True
-        )
-        .select_related("customer", "shipping_address")
-        .order_by("-created_at")[:limit]
+        window.select_related("customer", "shipping_address").order_by("-created_at")[:limit]
     )
     order_ids = [order.id for order in orders]
     if not order_ids:
@@ -315,15 +353,12 @@ def recent_orders(*, start: date, end: date, limit: int = 8) -> list[dict]:
     return rows
 
 
-def _variant_daily_units(variant_ids: list, start: date, end: date) -> dict:
+def _variant_daily_units(
+    variant_ids: list, start: date, end: date, kind: str | None = None
+) -> dict:
     rows = (
-        SalesOrderLine.objects.filter(
-            variant_id__in=variant_ids,
-            order__created_at__gte=day_start(start),
-            order__created_at__lt=day_after(end),
-            order__deleted_at__isnull=True,
-        )
-        .exclude(order__status__in=NON_ORDER_STATUSES)
+        _order_lines(start=start, end=end, kind=kind)
+        .filter(variant_id__in=variant_ids)
         .annotate(day=TruncDate("order__created_at"))
         .values("variant_id", "day")
         .annotate(units=Sum("quantity"))
@@ -340,14 +375,11 @@ def _variant_daily_units(variant_ids: list, start: date, end: date) -> dict:
     }
 
 
-def top_products(*, start: date, end: date, limit: int = 6) -> list[dict]:
+def top_products(
+    *, start: date, end: date, limit: int = 6, kind: str | None = None
+) -> list[dict]:
     aggregates = (
-        SalesOrderLine.objects.filter(
-            order__created_at__gte=day_start(start),
-            order__created_at__lt=day_after(end),
-            order__deleted_at__isnull=True,
-        )
-        .exclude(order__status__in=NON_ORDER_STATUSES)
+        _order_lines(start=start, end=end, kind=kind)
         .values("variant_id")
         .annotate(units=Sum("quantity"), revenue=Sum(F("quantity") * F("unit_price")))
         .order_by("-units")[:limit]
@@ -368,7 +400,7 @@ def top_products(*, start: date, end: date, limit: int = 6) -> list[dict]:
     stock_by_variant = {
         row["variant_id"]: (row["on_hand"] or 0) - (row["reserved"] or 0) for row in stock_rows
     }
-    daily = _variant_daily_units(variant_ids, start, end)
+    daily = _variant_daily_units(variant_ids, start, end, kind)
 
     rows = []
     for rank, aggregate in enumerate(aggregates, start=1):
@@ -389,13 +421,15 @@ def top_products(*, start: date, end: date, limit: int = 6) -> list[dict]:
     return rows
 
 
-def low_stock_rollup(_memo: dict | None = None) -> list[dict]:
+def low_stock_rollup(_memo: dict | None = None, kind: str | None = None) -> list[dict]:
     """Low-stock rows keyed per variant, the granularity the dashboard's
     inventory table and KPI both use. `_memo` lets a single dashboard request
     resolve the (global, point-in-time) low-stock set once across the KPI,
     inventory list and ticker sections."""
     memo = {} if _memo is None else _memo
-    items = _memoize(memo, "low_stock_items", lambda: list(low_stock_summary()))
+    items = _memoize(
+        memo, ("low_stock_items", kind), lambda: list(low_stock_summary(kind=kind))
+    )
 
     aggregated: dict = {}
     for item in items:
@@ -423,16 +457,18 @@ def low_stock_rollup(_memo: dict | None = None) -> list[dict]:
     return rows
 
 
-def low_stock_counts(_memo: dict | None = None) -> dict:
-    rows = low_stock_rollup(_memo)
+def low_stock_counts(_memo: dict | None = None, kind: str | None = None) -> dict:
+    rows = low_stock_rollup(_memo, kind)
     return {
         "total": len(rows),
         "critical": sum(1 for row in rows if row["level"] == "critical"),
     }
 
 
-def inventory_alerts(*, limit: int = 8, _memo: dict | None = None) -> list[dict]:
-    return low_stock_rollup(_memo)[:limit]
+def inventory_alerts(
+    *, limit: int = 8, kind: str | None = None, _memo: dict | None = None
+) -> list[dict]:
+    return low_stock_rollup(_memo, kind)[:limit]
 
 
 _SEGMENT_CONFIG = [
@@ -442,7 +478,7 @@ _SEGMENT_CONFIG = [
 ]
 
 
-def customer_segments() -> list[dict]:
+def customer_segments(*, kind: str | None = None) -> list[dict]:
     customer_ids = list(
         User.objects.filter(
             role=UserRole.CUSTOMER, is_active=True, deleted_at__isnull=True
@@ -455,8 +491,8 @@ def customer_segments() -> list[dict]:
     order_counts = {
         row["customer_id"]: row["order_count"]
         for row in (
-            SalesOrder.objects.filter(customer_id__in=customer_ids, deleted_at__isnull=True)
-            .exclude(status__in=NON_ORDER_STATUSES)
+            real_orders(kind=kind)
+            .filter(customer_id__in=customer_ids)
             .values("customer_id")
             .annotate(order_count=Count("id"))
         )
@@ -483,19 +519,18 @@ def customer_segments() -> list[dict]:
     ]
 
 
-def fulfillment_summary(*, start: date, end: date) -> list[dict]:
+def fulfillment_summary(*, start: date, end: date, kind: str | None = None) -> list[dict]:
     prev_start, prev_end = _previous_window(start, end)
 
     def status_counts(window_start: date, window_end: date) -> dict:
-        rows = (
-            SalesOrder.objects.filter(
-                created_at__gte=day_start(window_start),
-                created_at__lt=day_after(window_end),
-                deleted_at__isnull=True,
-            )
-            .values("status")
-            .annotate(count=Count("id"))
+        window = SalesOrder.objects.filter(
+            created_at__gte=day_start(window_start),
+            created_at__lt=day_after(window_end),
+            deleted_at__isnull=True,
         )
+        if kind:
+            window = window.filter(order_type=kind)
+        rows = window.values("status").annotate(count=Count("id"))
         return {row["status"]: row["count"] for row in rows}
 
     current = status_counts(start, end)
@@ -535,22 +570,27 @@ def fulfillment_summary(*, start: date, end: date) -> list[dict]:
     ]
 
 
-def ticker_items(*, start: date, end: date, _memo: dict | None = None) -> list[dict]:
+def ticker_items(
+    *, start: date, end: date, kind: str | None = None, _memo: dict | None = None
+) -> list[dict]:
     memo = {} if _memo is None else _memo
     prev_start, prev_end = _previous_window(start, end)
-    current, previous = _window_trends(start, end, memo)
+    current, previous = _window_trends(start, end, memo, kind)
     prev_orders = _sum_counts(previous)
 
     current_revenue = _sum_totals(current)
     previous_revenue = _sum_totals(previous)
     orders_count = _sum_counts(current)
-    turnover = stock_turnover(start=start, end=end, _memo=memo)
-    previous_turnover = stock_turnover(start=prev_start, end=prev_end, _memo=memo)
-    low_stock_count = low_stock_counts(memo)["total"]
-    delivered_count = SalesOrder.objects.filter(
+    turnover = stock_turnover(start=start, end=end, kind=kind, _memo=memo)
+    previous_turnover = stock_turnover(start=prev_start, end=prev_end, kind=kind, _memo=memo)
+    low_stock_count = low_stock_counts(memo, kind)["total"]
+    delivered = SalesOrder.objects.filter(
         status__in=[SalesOrder.Status.DELIVERED, SalesOrder.Status.CLOSED],
         deleted_at__isnull=True,
-    ).count()
+    )
+    if kind:
+        delivered = delivered.filter(order_type=kind)
+    delivered_count = delivered.count()
 
     # Low stock is point-in-time and Delivered is all-time cumulative, so neither
     # has a previous window to compare against — never fabricate a direction.
@@ -582,8 +622,10 @@ _DASHBOARD_CACHE_KEY_PREFIX = "reporting:dashboard_data"
 _DASHBOARD_CACHE_TTL_SECONDS = 30
 
 
-def dashboard_data(*, start: date, end: date) -> dict:
-    """The full admin dashboard payload for a window.
+def dashboard_data(*, start: date, end: date, kind: str | None = None) -> dict:
+    """The full admin dashboard payload for a window, for one kind or, with no
+    kind, for the whole shop. The open pre-order book rides along unless the
+    answer is for stock only.
 
     Cached briefly per `(start, end)`: the section builders are re-runnable on
     every request otherwise (the previous window is recomputed for KPIs, the
@@ -591,7 +633,7 @@ def dashboard_data(*, start: date, end: date) -> dict:
     same short staleness the admin-index stats cache already accepts. The
     window is part of the key, so a different date range always re-aggregates.
     """
-    key = f"{_DASHBOARD_CACHE_KEY_PREFIX}:{start.isoformat()}:{end.isoformat()}"
+    key = f"{_DASHBOARD_CACHE_KEY_PREFIX}:{start.isoformat()}:{end.isoformat()}:{kind or 'all'}"
     payload = cache.get(key)
     if payload is not None:
         return payload
@@ -600,16 +642,18 @@ def dashboard_data(*, start: date, end: date) -> dict:
     # inventory valuation and low-stock set instead of each re-querying them.
     memo: dict = {}
     payload = {
-        "kpis": kpis(start=start, end=end, _memo=memo),
-        "revenue": revenue_series(start=start, end=end, _memo=memo),
-        "categories": category_revenue(start=start, end=end),
-        "orders": recent_orders(start=start, end=end),
-        "top_products": top_products(start=start, end=end),
-        "inventory": inventory_alerts(_memo=memo),
-        "low_stock": low_stock_counts(memo),
-        "segments": customer_segments(),
-        "fulfillment": fulfillment_summary(start=start, end=end),
-        "ticker": ticker_items(start=start, end=end, _memo=memo),
+        "kpis": kpis(start=start, end=end, kind=kind, _memo=memo),
+        "revenue": revenue_series(start=start, end=end, kind=kind, _memo=memo),
+        "categories": category_revenue(start=start, end=end, kind=kind),
+        "orders": recent_orders(start=start, end=end, kind=kind),
+        "top_products": top_products(start=start, end=end, kind=kind),
+        "inventory": inventory_alerts(kind=kind, _memo=memo),
+        "low_stock": low_stock_counts(memo, kind),
+        "segments": customer_segments(kind=kind),
+        "fulfillment": fulfillment_summary(start=start, end=end, kind=kind),
+        "ticker": ticker_items(start=start, end=end, kind=kind, _memo=memo),
     }
+    if kind != SalesOrder.OrderType.STOCK:
+        payload["preorder"] = preorder_book_summary()
     cache.set(key, payload, _DASHBOARD_CACHE_TTL_SECONDS)
     return payload

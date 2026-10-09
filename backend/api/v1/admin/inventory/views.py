@@ -20,12 +20,11 @@ from apps.catalog.services.products import create_quick_product
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_related
+from apps.common.params import get_bool, get_choice, get_kind, get_related
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.utils.export import CsvRenderer, csv_response
 from apps.inventory.constants import MovementType
-from apps.inventory.models import Warehouse
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     get_stock_item_by_id,
@@ -46,6 +45,7 @@ from apps.inventory.services.stock import (
     stock_intake,
     write_off_stock,
 )
+from apps.inventory.services.warehouses import create_warehouse, update_warehouse
 
 from .serializers import (
     BulkStockAdjustmentSerializer,
@@ -101,7 +101,12 @@ class AdminStockItemListView(GenericListAPIView):
         low_stock_only = get_bool(params, "low_stock_only", default=False)
         if warehouse is None:
             materialize_stock_items(variant=variant)
-        return stock_items_list(variant=variant, warehouse=warehouse, low_stock_only=low_stock_only)
+        return stock_items_list(
+            variant=variant,
+            warehouse=warehouse,
+            low_stock_only=low_stock_only,
+            kind=get_kind(params),
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -133,7 +138,9 @@ def _filtered_ledger_entries(params):
     variant = get_related(params, "variant_id", get_variant_by_id, "Variant not found.")
     warehouse = get_related(params, "warehouse_id", get_warehouse_by_id, "Warehouse not found.")
     movement_type = get_choice(params, "movement_type", MovementType.values)
-    return ledger_entries_list(variant=variant, warehouse=warehouse, movement_type=movement_type)
+    return ledger_entries_list(
+        variant=variant, warehouse=warehouse, movement_type=movement_type, kind=get_kind(params)
+    )
 
 
 class LedgerQuerysetMixin:
@@ -208,9 +215,10 @@ class AdminBulkStockAdjustmentView(APIView):
         serializer = BulkStockAdjustmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         items = [dict(item) for item in serializer.validated_data["adjustments"]]
+        kind = serializer.validated_data.get("kind")
 
         try:
-            results = post_bulk_adjustments(items=items, actor=request.user)
+            results = post_bulk_adjustments(items=items, actor=request.user, kind=kind)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(
@@ -263,7 +271,8 @@ class AdminStockStatusView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def get(self, request) -> Response:
-        return Response({"data": stock_status_summary(), "message": "Success"})
+        summary = stock_status_summary(kind=get_kind(request.query_params))
+        return Response({"data": summary, "message": "Success"})
 
 
 @extend_schema(tags=["Inventory"])
@@ -280,7 +289,10 @@ class AdminStockLookupView(APIView):
             return error_from_exception(
                 DomainError("Provide a SKU or barcode to look up.", code="missing_query")
             )
+        kind = get_kind(request.query_params)
         variant = get_variant_by_sku_or_barcode(identifier)
+        if variant is not None and kind and variant.product.category.category_type != kind:
+            variant = None
         if variant is None:
             return Response({"data": {"found": False, "query": identifier}, "message": "Success"})
         data = StockLookupVariantSerializer(
@@ -366,7 +378,8 @@ class AdminWarehouseListCreateView(InventoryPermissionMixin, GenericListAPIView)
         is_active = get_bool(self.request.query_params, "is_active")
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
-        return queryset
+        kind = get_kind(self.request.query_params)
+        return queryset.filter(kind=kind) if kind else queryset
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -374,16 +387,7 @@ class AdminWarehouseListCreateView(InventoryPermissionMixin, GenericListAPIView)
     def post(self, request) -> Response:
         serializer = WarehouseCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = dict(serializer.validated_data)
-
-        if data.get("is_default"):
-            Warehouse.objects.filter(is_default=True).update(is_default=False)
-
-        warehouse = Warehouse.objects.create(created_by=request.user, **data)
-        # Materialize once at creation so the new warehouse shows up (at 0 on
-        # hand) when the stock list is filtered to it — filtering no longer
-        # materializes on every read (see AdminStockItemListView.get_queryset).
-        materialize_stock_items(warehouse=warehouse)
+        warehouse = create_warehouse(data=dict(serializer.validated_data), actor=request.user)
         return Response(
             {"data": WarehouseSerializer(warehouse).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
@@ -412,16 +416,12 @@ class AdminWarehouseDetailView(InventoryPermissionMixin, APIView):
             return not_found("warehouse_not_found", "Warehouse not found.")
         serializer = WarehouseUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        data = dict(serializer.validated_data)
-
-        if data.get("is_default"):
-            Warehouse.objects.filter(is_default=True).exclude(pk=warehouse.pk).update(is_default=False)
-
-        for field, value in data.items():
-            setattr(warehouse, field, value)
-        warehouse.updated_by = request.user
-        update_fields = [*list(data.keys()), "updated_at", "updated_by"]
-        warehouse.save(update_fields=update_fields)
+        try:
+            warehouse = update_warehouse(
+                warehouse=warehouse, data=dict(serializer.validated_data), actor=request.user
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
         return Response({"data": WarehouseSerializer(warehouse).data, "message": "Success"})
 
     def delete(self, request, warehouse_id) -> Response:

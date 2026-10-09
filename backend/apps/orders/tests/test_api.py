@@ -50,7 +50,7 @@ def _reserved_order(customer_email: str, quantity: int = 3):
     return cart, variant
 
 
-def test_customer_can_add_to_cart_checkout_and_pay(api_client):
+def test_customer_can_add_to_cart_and_checkout_but_not_mark_it_paid(api_client):
     customer = create_user(email="order-customer@example.com")
     api_client.force_authenticate(user=customer)
     variant = _stocked_variant()
@@ -68,12 +68,14 @@ def test_customer_can_add_to_cart_checkout_and_pay(api_client):
     response = api_client.post("/api/v1/customer/orders/cart/checkout/")
     assert response.status_code == 200
 
+    assert response.data["data"]["status"] == "awaiting_payment"
+
+    # A customer cannot mark their own order paid: staff capture it.
     response = api_client.post(
         "/api/v1/customer/orders/cart/payment/",
         {"amount": "59.97", "method": "card", "reference": "TRX-CARD-0001"},
     )
-    assert response.status_code == 200
-    assert response.data["data"]["status"] == "confirmed"
+    assert response.status_code == 404
 
 
 def test_customer_cannot_supply_own_unit_price(api_client):
@@ -1229,6 +1231,8 @@ def test_admin_line_edit_on_another_order_is_404(api_client):
 
 def test_admin_can_set_order_status(api_client):
     order, _ = _admin_checked_out_order(api_client, "status")
+    # Closing skips nothing only once the order is paid for; unpaid orders are cancelled.
+    SalesOrder.objects.filter(pk=order.pk).update(status=SalesOrder.Status.CONFIRMED)
 
     response = api_client.post(
         f"/api/v1/admin/orders/{order.id}/status/", {"status": "closed"}, format="json"

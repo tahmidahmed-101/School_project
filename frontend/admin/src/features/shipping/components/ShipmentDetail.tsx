@@ -15,6 +15,8 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { ShipmentActions } from "./ShipmentActions"
+import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 
 const ShipmentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -25,6 +27,8 @@ const ShipmentDetail = () => {
   useDocumentTitle(shipment?.tracking_number ? `${shipment.tracking_number} — Shipment` : "Shipment Details")
 
   const load = useDetailLoad(fetchShipment, id)
+  const hint = useKindHint()
+  useRecordKind(shipment ? (shipment.order_type ?? "stock") : undefined)
 
   const pageState = resolveDetailState(singleStatus, singleError, !!shipment)
   if (pageState || !shipment) {
@@ -32,13 +36,15 @@ const ShipmentDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Shipment"
-        backTo="/shipments"
-        backLabel="Back to Shipments"
+        backTo={hint && KIND_PATHS[hint].shipments}
+        backLabel={hint === "preorder" ? "Back to pre-order shipments" : "Back to shipments"}
         error={singleError}
         onRetry={load}
       />
     )
   }
+
+  const kind = shipment.order_type ?? "stock"
 
   return (
     <div className="section-container space-y-6">
@@ -52,10 +58,13 @@ const ShipmentDetail = () => {
         }
         description={
           <Link to={`/order_detail/${shipment.order_id}`} className="text-primary hover:underline">
-            View order
+            {kind === "preorder" ? "View pre-order" : "View order"}
           </Link>
         }
-        back={{ to: "/shipments", label: "Back to shipments" }}
+        back={{
+          to: KIND_PATHS[kind].shipments,
+          label: kind === "preorder" ? "Back to pre-order shipments" : "Back to shipments",
+        }}
         actions={<ShipmentActions shipment={shipment} size="default" />}
       />
 

@@ -90,8 +90,13 @@ class GuestShippingQuoteRequestSerializer(GuestShippingLocationSerializer):
 
 
 class GuestCouponValidationSerializer(serializers.Serializer):
+    """`phone` and `email` are optional: with them a guest's per-customer
+    limit is checked here already, not only when the order is placed."""
+
     code = serializers.CharField(max_length=32)
     items = GuestCheckoutItemSerializer(many=True)
+    phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
 
 class StorefrontCouponSerializer(serializers.Serializer):
@@ -102,4 +107,8 @@ class StorefrontCouponSerializer(serializers.Serializer):
     discount_type = serializers.CharField(read_only=True)
     value = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     min_order_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    max_discount_amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True, allow_null=True
+    )
+    starts_at = serializers.DateTimeField(read_only=True, allow_null=True)
     expires_at = serializers.DateTimeField(read_only=True, allow_null=True)

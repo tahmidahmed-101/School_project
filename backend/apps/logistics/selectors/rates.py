@@ -21,17 +21,25 @@ def get_carrier_by_id(carrier_id: str | UUID, *, include_deleted: bool = False) 
     return queryset.filter(id=carrier_id).first()
 
 
-def zones_list(*, include_deleted: bool = False) -> QuerySet[ShippingZone]:
+def zones_list(
+    *, include_deleted: bool = False, kind: str | None = None
+) -> QuerySet[ShippingZone]:
     queryset = ShippingZone.objects.prefetch_related("rates")
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
+    if kind is not None:
+        queryset = queryset.filter(kind=kind)
     return queryset.order_by("name")
 
 
-def get_zone_by_id(zone_id: str | UUID, *, include_deleted: bool = False) -> ShippingZone | None:
+def get_zone_by_id(
+    zone_id: str | UUID, *, include_deleted: bool = False, kind: str | None = None
+) -> ShippingZone | None:
     queryset = ShippingZone.objects.prefetch_related("rates")
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
+    if kind is not None:
+        queryset = queryset.filter(kind=kind)
     return queryset.filter(id=zone_id).first()
 
 
@@ -43,9 +51,13 @@ def _live_rates() -> QuerySet[ShippingRate]:
     )
 
 
-def rates_list(*, zone=None, carrier=None, include_deleted: bool = False) -> QuerySet[ShippingRate]:
+def rates_list(
+    *, zone=None, carrier=None, include_deleted: bool = False, kind: str | None = None
+) -> QuerySet[ShippingRate]:
     queryset = ShippingRate.objects.all() if include_deleted else _live_rates()
     queryset = queryset.select_related("zone", "carrier")
+    if kind is not None:
+        queryset = queryset.filter(kind=kind)
     if zone is not None:
         queryset = queryset.filter(zone=zone)
     if carrier is not None:
@@ -58,18 +70,20 @@ def get_rate_by_id(rate_id: str | UUID, *, include_deleted: bool = False) -> Shi
     return queryset.filter(id=rate_id).first()
 
 
-def get_rate_for_zone_and_carrier(*, zone: ShippingZone, carrier: Carrier) -> ShippingRate | None:
-    return _live_rates().filter(zone=zone, carrier=carrier).first()
+def get_rate_for_zone_and_carrier(
+    *, zone: ShippingZone, carrier: Carrier, kind: str
+) -> ShippingRate | None:
+    return _live_rates().filter(zone=zone, carrier=carrier, kind=kind).first()
 
 
-def find_zone_by_address_text(text: str) -> ShippingZone | None:
-    """Matches a zone by keyword (stored in
+def find_zone_by_address_text(text: str, *, kind: str) -> ShippingZone | None:
+    """Matches one of this kind's zones by keyword (stored in
     `country_codes`, repurposed as free-text match terms) against the
     customer's address. A zone configured with no keywords is the catch-all,
     matched when nothing more specific does."""
     text_lower = (text or "").lower()
     fallback = None
-    for zone in zones_list():
+    for zone in zones_list(kind=kind):
         keywords = zone.country_codes or []
         if not keywords:
             if fallback is None:

@@ -4,6 +4,7 @@ import { Loader2, Package, Search } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useDebouncedSearch } from "@/hooks/use-debounced-search"
+import type { Kind } from "@/hooks/use-kind"
 
 import { searchProducts } from "../api"
 import type { Product } from "../types"
@@ -11,19 +12,21 @@ import type { Product } from "../types"
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Only products of this kind are offered. */
+  kind: Kind
   title: string
   description?: string
   onPick: (product: Product) => void
 }
 
 /** Search-and-pick dialog over /admin/catalog/products/ (bundles excluded: they have no variants of their own). */
-export function ProductPickerDialog({ open, onOpenChange, title, description, onPick }: Props) {
+export function ProductPickerDialog({ open, onOpenChange, kind, title, description, onPick }: Props) {
   const [query, setQuery] = useState("")
   const { results, loading } = useDebouncedSearch<Product>({
     query: query.trim(),
     delay: 250,
     enabled: open,
-    search: async (search) => (await searchProducts(search)).filter((p) => p.product_type !== "bundle"),
+    search: async (search) => (await searchProducts(search, kind)).filter((p) => p.product_type !== "bundle"),
   })
 
   return (
@@ -65,7 +68,7 @@ export function ProductPickerDialog({ open, onOpenChange, title, description, on
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{product.name}</span>
                   <span className="block text-xs capitalize text-muted-foreground">
-                    {product.product_type} · {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
+                    {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
                   </span>
                 </span>
               </button>

@@ -71,6 +71,8 @@ export interface OrderLine {
   id: string
   variant_id: string
   variant_sku: string
+  /** The variant's options when the line was added, e.g. "Red / M"; "" without options. */
+  variant_title?: string
   product_name: string
   product_image: string | null
   quantity: number
@@ -79,10 +81,13 @@ export interface OrderLine {
   delivered_quantity: number
   returned_quantity: number
   shippable_quantity: number
+  /** Pre-order units with no arrived stock set aside yet. */
+  awaiting_stock_quantity: number
   returnable_quantity: number
   unit_price: string
   discount_amount: string
   tax_amount: string
+  is_preorder: boolean
 }
 
 /** The order's ship-to snapshot (`line2` is exposed as `delivery_note`). */
@@ -111,7 +116,7 @@ export interface Order {
   contact_email: string
   contact_phone: string
   contact_name: string
-  has_preorder: boolean
+  order_type: "stock" | "preorder"
   /** Blank until staff record the first stage. */
   preorder_stage: string
   preorder_stage_events: PreorderStageEvent[]
@@ -120,6 +125,12 @@ export interface Order {
   shipping_total: string
   discount_total: string
   grand_total: string
+  /** Money received and not refunded; uncollected cash on delivery is not in it. */
+  paid_total: string
+  balance_due: string
+  deposit_due: string | null
+  /** Statuses the manual override accepts from here (services/orders.py STATUS_OVERRIDES). */
+  allowed_statuses: OrderStatus[]
   coupon_code: string | null
   created_at: string
   lines: OrderLine[]
@@ -150,6 +161,18 @@ export interface OrderCreatePayload {
   lines: { variant_id: string; quantity: number }[]
   capture_payment?: boolean
   payment_method?: PaymentMethod
+  /** Defaults to "stock". A pre-order is never paid at creation; it waits for its deposit. */
+  order_type?: "stock" | "preorder"
+}
+
+/** POST /admin/orders/quote/ — totals as decimal strings. */
+export interface OrderQuote {
+  order_type: "stock" | "preorder"
+  subtotal: string
+  tax_total: string
+  shipping_total: string
+  grand_total: string
+  deposit_due: string
 }
 
 /** AdminCartItemSerializer — a cart line's product name and SKU snapshots. */
@@ -182,4 +205,24 @@ export interface CustomerCart {
   created_at: string
   /** The last cart change: every line edit saves the cart. */
   updated_at: string
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
+}
+
+/** AdminPreorderReportView */
+export interface PreorderReport {
+  summary: { open_orders: number; order_value: string; deposits_held: string; balances_outstanding: string }
+  demand: {
+    variant_id: string
+    variant_sku: string
+    product_name: string
+    waiting: number
+    available: number
+    to_buy: number
+  }[]
+}
+
+/** AdminPreorderAllocationView */
+export interface PreorderAllocationResult {
+  allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
 }

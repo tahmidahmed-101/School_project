@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import type { ApiBusinessProfile } from "@/lib/api/types";
 import { BRAND_INFO, mergeBrand } from "../brand";
 
+describe("mergeBrand free delivery", () => {
+  it("keeps the threshold as the API's decimal string", () => {
+    expect(mergeBrand(profile({ free_delivery_min_amount: "1500.00" })).freeDeliveryMinAmount).toBe("1500.00");
+  });
+
+  it("is off for null, zero or a missing field", () => {
+    expect(mergeBrand(profile({ free_delivery_min_amount: null })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile({ free_delivery_min_amount: "0" })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile({ free_delivery_min_amount: "0.00" })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile()).freeDeliveryMinAmount).toBeNull();
+  });
+});
+
 const profile = (overrides: Partial<ApiBusinessProfile> = {}): ApiBusinessProfile => ({
   name: "",
   legal_name: "",
@@ -54,5 +67,33 @@ describe("mergeBrand", () => {
       youtube: "",
       linkedin: "",
     });
+  });
+
+  it("takes the store name and legal name from the profile", () => {
+    const brand = mergeBrand(profile({ name: " Kull Mart BD ", legal_name: "Kull Mart Trading" }));
+    expect(brand.name).toBe("Kull Mart BD");
+    expect(brand.legalName).toBe("Kull Mart Trading");
+  });
+
+  it("ignores the store name a fresh backend ships with", () => {
+    const brand = mergeBrand(profile({ name: "LaunchCart", legal_name: "LaunchCart Ltd" }));
+    expect(brand.name).toBe(BRAND_INFO.name);
+    expect(brand.legalName).toBe(BRAND_INFO.legalName);
+  });
+
+  it("takes the opening hours and the about text from the profile", () => {
+    const brand = mergeBrand(profile({ opening_hours: " Sat-Thu, 10am-8pm ", about: { bn: " আমাদের কথা " } }));
+    expect(brand.openingHours).toBe("Sat-Thu, 10am-8pm");
+    expect(brand.about).toEqual({ en: "", bn: "আমাদের কথা" });
+  });
+
+  it("leaves the about text empty while the API does not send it", () => {
+    expect(mergeBrand(profile({ phone: "01811-222333" })).about).toEqual({ en: "", bn: "" });
+  });
+
+  it("does not take the tagline or the logo from the profile", () => {
+    const brand = mergeBrand(profile({ tagline: "#kullmart", logo_url: "https://cdn.test/logo.png" }));
+    expect(brand.tagline).toEqual(BRAND_INFO.tagline);
+    expect(brand.logo).toBe(BRAND_INFO.logo);
   });
 });

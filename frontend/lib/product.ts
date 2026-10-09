@@ -1,4 +1,4 @@
-import type { Product } from "@/lib/types";
+import type { Product, ProductSale } from "@/lib/types";
 
 /** True if any field contains the query, case-insensitively. */
 export function matchesQuery(fields: string[], query: string): boolean {
@@ -13,14 +13,35 @@ export function getDiscountPercent(product: Product): number | null {
   return Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100);
 }
 
+/** The sale to name on the product, or null: pre-orders never show one, nor does a SKU the sale leaves out. */
+export function getSaleOffer(product: Product): ProductSale | null {
+  if (productKind(product) !== "stock" || product.isPreOrder) return null;
+  if (!product.sale || product.salePrice === undefined) return null;
+  return product.sale;
+}
+
 /** True for a pre-order that is marked sold out or has reached its reservation cap. */
-export function isPreOrderSoldOut(product: Product): boolean {
+export function isPreOrderSoldOut(
+  product: Pick<Product, "isPreOrder" | "preorderStatus" | "maxPreorderQuantity" | "currentPreorderQuantity">,
+): boolean {
   if (!product.isPreOrder) return false;
   if (product.preorderStatus === "sold-out") return true;
   // A cap of 0 or nothing reserved yet are real values, so compare against undefined rather than truthiness.
   return (
     product.maxPreorderQuantity !== undefined && (product.currentPreorderQuantity ?? 0) >= product.maxPreorderQuantity
   );
+}
+
+/** Belongs to the pre-order shop: its category is a pre-order one. */
+export function isPreOrderShopProduct(product: Product): boolean {
+  return product.kind === "preorder";
+}
+
+/** Dictionary key for why a product cannot be bought: a pre-order that is not open reads differently from no stock. */
+export function unavailableLabel(product: Product): "outOfStock" | "preOrderNotOpen" | "preOrderClosed" {
+  if (product.preorderStatus === "upcoming") return "preOrderNotOpen";
+  if (product.preorderStatus === "closed") return "preOrderClosed";
+  return "outOfStock";
 }
 
 /** Largest quantity a shopper can add for one order line. */
@@ -32,15 +53,39 @@ export function getMaxOrderQuantity(product: Product): number {
   return 10;
 }
 
+export type ProductKind = Product["kind"];
+
+/** Which shop a product belongs to. Lines saved before `kind` existed are read from their pre-order flag. */
+export function productKind(product: Pick<Product, "isPreOrder"> & { kind?: ProductKind }): ProductKind {
+  return product.kind ?? (product.isPreOrder ? "preorder" : "stock");
+}
+
+export function splitByKind<V>(items: V[], kindOf: (item: V) => ProductKind): Record<ProductKind, V[]> {
+  return {
+    stock: items.filter((item) => kindOf(item) === "stock"),
+    preorder: items.filter((item) => kindOf(item) === "preorder"),
+  };
+}
+
+export function shopHome(kind: ProductKind): string {
+  return kind === "preorder" ? "/pre-order" : "/shop";
+}
+
+/** Product listing of one shop; `params` are further `/shop` query parameters. */
+export function shopListing(kind: ProductKind, params: Record<string, string> = {}): string {
+  const query = new URLSearchParams({ ...(kind === "preorder" ? { type: "preorder" } : {}), ...params }).toString();
+  return query ? `/shop?${query}` : "/shop";
+}
+
 /** The few product fields the header search needs; the search index carries only these. */
 export type SearchEntry = Pick<
   Product,
-  "id" | "slug" | "name" | "tagline" | "category" | "categoryName" | "image" | "price"
+  "id" | "slug" | "name" | "tagline" | "category" | "categoryName" | "image" | "price" | "kind"
 >;
 
 export function toSearchEntry(product: Product): SearchEntry {
   const { id, slug, name, tagline, category, categoryName, image, price } = product;
-  return { id, slug, name, tagline, category, categoryName, image, price };
+  return { id, slug, name, tagline, category, categoryName, image, price, kind: productKind(product) };
 }
 
 /** Quick-search matching shared by the navbar dropdown and the mobile search sheet. */
@@ -49,4 +94,16 @@ export function searchProducts(products: SearchEntry[], rawQuery: string, limit:
   return products
     .filter((p) => matchesQuery([p.name.en, p.name.bn, p.tagline.en, p.category], rawQuery))
     .slice(0, limit);
+}
+
+export function searchByKind(
+  products: SearchEntry[],
+  rawQuery: string,
+  limit: number,
+): Record<ProductKind, SearchEntry[]> {
+  const byKind = splitByKind(products, productKind);
+  return {
+    stock: searchProducts(byKind.stock, rawQuery, limit),
+    preorder: searchProducts(byKind.preorder, rawQuery, limit),
+  };
 }

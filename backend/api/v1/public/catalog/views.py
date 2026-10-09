@@ -18,15 +18,16 @@ from apps.catalog.selectors.categories import (
     get_category_by_slug,
 )
 from apps.catalog.selectors.products import (
-    category_storefront_summaries,
     MAX_RELATED_PRODUCTS,
     RELATED_PRODUCTS_LIMIT,
+    category_storefront_summaries,
     get_product_by_slug,
     products_list,
     related_products,
 )
 from apps.catalog.selectors.questions import published_questions_for_product
 from apps.catalog.selectors.reviews import product_review_summary, reviews_for_product
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.generics import GenericListAPIView
 from apps.common.params import get_bool, get_choice, get_int, get_related
 from apps.common.responses import not_found
@@ -232,6 +233,10 @@ class PublicBundleListView(GenericListAPIView):
 
     def get_queryset(self):
         return public_bundle_variants_list()
+
+    def get_serializer_context(self, items) -> dict:
+        prime_running_sales(items)
+        return {}
 
     def get(self, request) -> Response:
         return self.list_response(request)

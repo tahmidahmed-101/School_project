@@ -1,11 +1,12 @@
 import { toNumber } from "@/lib/api/parse";
-import type { ApiOrder } from "@/lib/api/types";
+import type { ApiOrder, ApiShippingQuote } from "@/lib/api/types";
 import type { OrderResult } from "@/lib/types";
 
 /** Backend order -> what the order-success screen shows. */
 export function toOrderResult(
   order: ApiOrder,
   customer: { name: string; address: string; district: string },
+  payTo: string,
 ): OrderResult {
   return {
     orderNumber: order.order_number,
@@ -18,6 +19,7 @@ export function toOrderResult(
     lines: order.lines.map((line) => ({
       id: line.id,
       name: line.product_name,
+      variantTitle: line.variant_title ?? "",
       sku: line.variant_sku,
       quantity: line.quantity,
       unitPrice: toNumber(line.unit_price),
@@ -29,6 +31,9 @@ export function toOrderResult(
     shipping: toNumber(order.shipping_total),
     discount: toNumber(order.discount_total),
     total: toNumber(order.grand_total),
+    isPreOrderOrder: order.order_type === "preorder",
+    depositDue: toNumber(order.deposit_due),
+    payTo,
     couponCode: order.coupon_code,
     shipments: order.shipments.map((s) => ({
       id: s.id,
@@ -37,4 +42,14 @@ export function toOrderResult(
       status: s.status,
     })),
   };
+}
+
+export type ShippingQuoteState =
+  { status: "idle" } | { status: "loading" } | { status: "ok"; fee: number } | { status: "unavailable" };
+
+/** Delivery quote -> what the summary shows. A free-delivery answer is a fee of 0, which the summary words as "Free". */
+export function toShippingQuoteState(quote: ApiShippingQuote): ShippingQuoteState {
+  if (quote.free_delivery) return { status: "ok", fee: 0 };
+  if (quote.shipping_total === null) return { status: "unavailable" };
+  return { status: "ok", fee: Number(quote.shipping_total) };
 }

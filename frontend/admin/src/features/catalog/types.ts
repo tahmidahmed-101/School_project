@@ -5,14 +5,9 @@ export type ProductType = "simple" | "variant" | "bundle"
 export type CategoryType = "stock" | "preorder"
 
 export const productTypeOptions: { label: string; value: ProductType }[] = [
-  { label: "Simple", value: "simple" },
-  { label: "Variant", value: "variant" },
+  { label: "Without options", value: "simple" },
+  { label: "With options", value: "variant" },
   { label: "Bundle", value: "bundle" },
-]
-
-export const categoryTypeOptions: { label: string; value: CategoryType }[] = [
-  { label: "Stock", value: "stock" },
-  { label: "Pre-order", value: "preorder" },
 ]
 
 /** ProductImageSerializer */
@@ -20,9 +15,44 @@ export interface ProductImage {
   id: string
   product_id: string | null
   variant_id: string | null
+  /** The option value this image shows for; null shows it for every choice. */
+  option_value_id?: string | null
   url: string
   alt_text: string
   sort_order: number
+}
+
+export interface ProductOptionValue {
+  id: string
+  value: string
+  position: number
+}
+
+export interface ProductOption {
+  id: string
+  name: string
+  position: number
+  values: ProductOptionValue[]
+}
+
+/** One picked value of a variant, in option order. */
+export interface VariantOptionValue {
+  option_id: string
+  option_name: string
+  value_id: string
+  value: string
+}
+
+export interface ProductSpec {
+  name: string
+  value: string
+}
+
+/** GET products/<id>/combinations/ row; `variant_id` is null while the combination is not created. */
+export interface Combination {
+  value_ids: string[]
+  title: string
+  variant_id: string | null
 }
 
 /** ProductVariantSerializer */
@@ -37,8 +67,9 @@ export interface ProductVariant {
   discount_price: string | null
   weight: string | null
   is_active: boolean
-  color: string
-  size: string
+  /** "Red / M"; "" on a product without options. */
+  title: string
+  option_values: VariantOptionValue[]
   wholesale_price: string | null
   show_wholesale_price: boolean
   is_preorder_enabled: boolean
@@ -65,8 +96,7 @@ export interface ProductVariantPayload {
   cost_price?: string | null
   discount_price?: string | null
   weight?: string | null
-  color?: string
-  size?: string
+  option_value_ids?: string[]
   is_active?: boolean
   wholesale_price?: string | null
   show_wholesale_price?: boolean
@@ -78,18 +108,43 @@ export interface ProductVariantPayload {
   preorder_stock_limit?: number | null
 }
 
-/** VariantGenerateSerializer */
+/** Left out, `combinations` means every missing one. */
 export interface VariantGeneratePayload {
-  colors: string[]
-  sizes: string[]
-  price: string
+  combinations?: string[][]
+  price?: string
   cost_price?: string
 }
 
 export interface VariantGenerateResult {
   created: ProductVariant[]
-  skipped_existing: ProductVariant[]
-  stale: ProductVariant[]
+}
+
+/** Left out, `variant_ids` means every live variant. */
+export interface VariantBulkUpdatePayload {
+  variant_ids?: string[]
+  price?: string
+  discount_price?: string | null
+  cost_price?: string
+  is_active?: boolean
+}
+
+export interface OptionSuggestions {
+  names: string[]
+  values: string[]
+}
+
+export interface ProductOptionsPayload {
+  options: {
+    id?: string
+    name: string
+    default_value?: string
+    values: { id?: string; value: string }[]
+  }[]
+}
+
+export interface ProductOptionsResult {
+  options: ProductOption[]
+  missing_combinations: number
 }
 
 export interface VariantImportResult {
@@ -132,6 +187,8 @@ export interface Product {
   description: string
   product_type: ProductType
   highlights: string[]
+  options: ProductOption[]
+  specs: ProductSpec[]
   meta_keywords: string
   is_active: boolean
   deleted_at: string | null
@@ -139,7 +196,8 @@ export interface Product {
   images: ProductImage[]
   image: string | null
   primary_image: string | null
-  total_stock: number
+  /** Null on a pre-order product: its arrived goods are per variant, on the Arrivals page. */
+  total_stock: number | null
   price: string | null
   cost_price: string | null
   discount_price: string | null
@@ -153,8 +211,11 @@ export interface ProductPayload {
   featured?: boolean
   name?: string
   description?: string
-  product_type?: ProductType
   highlights?: string[]
+  specs?: ProductSpec[]
+  /** Create only: the options and, by value text in option order, the combinations to make (left out = all). */
+  options?: { name: string; values: string[] }[]
+  combinations?: string[][]
   meta_keywords?: string
   price?: string | null
   cost_price?: string
@@ -168,6 +229,7 @@ export interface Brand {
   id: string
   name: string
   slug: string
+  kind: CategoryType
   description: string
   is_active: boolean
   image: string | null
@@ -176,6 +238,7 @@ export interface Brand {
 
 export interface BrandPayload {
   name?: string
+  kind?: CategoryType
   description?: string
   is_active?: boolean
 }

@@ -1,4 +1,5 @@
 import type { ApiStorePolicy } from "@/lib/api/types";
+import { shortDate } from "@/lib/date";
 import type { T } from "@/lib/types";
 
 interface PolicySection {
@@ -8,7 +9,8 @@ interface PolicySection {
 
 export interface PolicyContent {
   title: T;
-  updated?: T;
+  /** The published policy's own date, already formatted per language. The built-in copy has none. */
+  effectiveDate?: T;
   intro: T;
   sections: PolicySection[];
 }
@@ -21,6 +23,9 @@ const bilingual = (value: ApiText): T => ({ en: value?.en || value?.bn || "", bn
 export function policyFromApi(policy: ApiStorePolicy): PolicyContent {
   return {
     title: bilingual(policy.title),
+    ...(shortDate(policy.effective_date, "en") && {
+      effectiveDate: { en: shortDate(policy.effective_date, "en"), bn: shortDate(policy.effective_date, "bn") },
+    }),
     intro: bilingual(policy.intro),
     sections: policy.sections.map((section) => ({
       heading: bilingual(section.heading),
@@ -31,7 +36,6 @@ export function policyFromApi(policy: ApiStorePolicy): PolicyContent {
 
 export const RETURN_POLICY: PolicyContent = {
   title: { en: "Return policy", bn: "রিটার্ন নীতি" },
-  updated: { en: "Last updated: September 2026", bn: "সর্বশেষ হালনাগাদ: সেপ্টেম্বর ২০২৬" },
   intro: {
     en: "We want you to be happy with every order. If something isn't right, you can return it under the terms below.",
     bn: "আমরা চাই আপনার প্রতিটি অর্ডার নিয়ে আপনি সন্তুষ্ট থাকুন। কোনো সমস্যা হলে নিচের শর্তানুযায়ী পণ্য ফেরত দিতে পারবেন।",
@@ -77,7 +81,6 @@ export const RETURN_POLICY: PolicyContent = {
 
 export const REFUND_POLICY: PolicyContent = {
   title: { en: "Refund policy", bn: "রিফান্ড নীতি" },
-  updated: { en: "Last updated: September 2026", bn: "সর্বশেষ হালনাগাদ: সেপ্টেম্বর ২০২৬" },
   intro: {
     en: "Once your return is received and inspected, here's how and when your refund is processed.",
     bn: "আপনার রিটার্ন পণ্য হাতে পাওয়া ও পরীক্ষার পর রিফান্ড কীভাবে ও কখন প্রক্রিয়া করা হয় তা নিচে দেওয়া হলো।",

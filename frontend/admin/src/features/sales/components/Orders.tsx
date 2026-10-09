@@ -17,12 +17,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
-import { ORDER_STATUS_OPTIONS, PREORDER_STAGE_OPTIONS, type Order } from "@/features/sales/types"
+import { ORDER_STATUS_OPTIONS, PREORDER_STAGE_OPTIONS, preorderStageLabel, type Order } from "@/features/sales/types"
+import { PreorderBook } from "@/features/sales/components/PreorderBook"
+import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
 import { paymentMethodLabel } from "@/features/payments/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { downloadFile } from "@/lib/download"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { toISODate } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -35,8 +38,11 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Lowest total", value: "grand_total" },
 ]
 
-const Orders = () => {
-  useDocumentTitle("Orders")
+const OrdersList = () => {
+  const kind = useKind()
+  const isPreorder = kind === "preorder"
+  const title = isPreorder ? "Pre-orders" : "Orders"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -61,7 +67,8 @@ const Orders = () => {
     state: ordersState,
     params: {
       status: statusFilter?.value,
-      preorder_stage: stageFilter?.value,
+      preorder_stage: isPreorder ? stageFilter?.value : undefined,
+      order_type: kind,
       start: from ? toISODate(from) : undefined,
       end: to ? toISODate(to) : undefined,
       customer_id: customerId,
@@ -74,6 +81,43 @@ const Orders = () => {
     next.delete("customer_id")
     setSearchParams(next, { replace: true })
   }
+
+  const moneyColumns: ColumnDef<Order>[] = isPreorder
+    ? [
+        {
+          id: "received",
+          header: "RECEIVED",
+          cell: ({ row }) => <MoneyCell value={row.original.paid_total} />,
+        },
+        {
+          id: "balance",
+          header: "STILL OWED",
+          cell: ({ row }) => <MoneyCell value={row.original.balance_due} />,
+        },
+        {
+          id: "stage",
+          header: "STAGE",
+          cell: ({ row }) => (
+            <TextCell value={row.original.preorder_stage ? preorderStageLabel(row.original.preorder_stage) : null} />
+          ),
+        },
+      ]
+    : [
+        {
+          id: "payment",
+          header: "PAYMENT",
+          cell: ({ row }) => {
+            const payment = row.original.payments?.[0]
+            if (!payment) return <TextCell value={null} />
+            return (
+              <div className="flex flex-col items-start gap-1">
+                <StatusBadge status={payment.status} />
+                <span className="text-xs text-muted-foreground">{paymentMethodLabel(payment.method)}</span>
+              </div>
+            )
+          },
+        },
+      ]
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -98,20 +142,7 @@ const Orders = () => {
       header: "TOTAL",
       cell: ({ row }) => <MoneyCell value={row.original.grand_total} emphasis />,
     },
-    {
-      id: "payment",
-      header: "PAYMENT",
-      cell: ({ row }) => {
-        const payment = row.original.payments?.[0]
-        if (!payment) return <TextCell value={null} />
-        return (
-          <div className="flex flex-col items-start gap-1">
-            <StatusBadge status={payment.status} />
-            <span className="text-xs text-muted-foreground">{paymentMethodLabel(payment.method)}</span>
-          </div>
-        )
-      },
-    },
+    ...moneyColumns,
     {
       accessorKey: "status",
       header: "STATUS",
@@ -126,7 +157,10 @@ const Orders = () => {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <TableActions itemName={`Order ${row.original.order_number}`} viewUrl={`/order_detail/${row.original.id}`} />
+        <TableActions
+          itemName={`${isPreorder ? "Pre-order" : "Order"} ${row.original.order_number}`}
+          viewUrl={withKind(`/order_detail/${row.original.id}`, kind)}
+        />
       ),
     },
   ]
@@ -134,18 +168,24 @@ const Orders = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Orders"
+        title={title}
         actions={
           <>
-            <ExportButton onExport={() => downloadFile("/admin/orders/export/", "orders.csv", list.query)} />
+            <ExportButton
+              onExport={() =>
+                downloadFile("/admin/orders/export/", isPreorder ? "pre-orders.csv" : "stock-orders.csv", list.query, true)
+              }
+            />
             {canManage && (
-              <Button size="action" onClick={() => navigate("/orders/new")}>
-                <PlusIcon className="size-5" /> New Order
+              <Button size="action" onClick={() => navigate(`${KIND_PATHS[kind].orders}/new`)}>
+                <PlusIcon className="size-5" /> {isPreorder ? "New pre-order" : "New Order"}
               </Button>
             )}
           </>
         }
       />
+
+      {isPreorder && <PreorderBook canManage={canManage} onAllocated={list.reload} />}
 
       <FilterToolbar
         searchPlaceholder="Search order # or email..."
@@ -163,16 +203,20 @@ const Orders = () => {
               />
             ),
           },
-          {
-            component: (
-              <Combobox
-                options={PREORDER_STAGE_OPTIONS}
-                placeholder="Pre-order stage"
-                value={stageFilter}
-                onValueChange={setStageFilter}
-              />
-            ),
-          },
+          ...(isPreorder
+            ? [
+                {
+                  component: (
+                    <Combobox
+                      options={PREORDER_STAGE_OPTIONS}
+                      placeholder="Stage"
+                      value={stageFilter}
+                      onValueChange={setStageFilter}
+                    />
+                  ),
+                },
+              ]
+            : []),
           {
             component: <SortSelect options={ORDERING_OPTIONS} value={ordering} onChange={setOrdering} />,
           },
@@ -195,15 +239,22 @@ const Orders = () => {
           columns={columns}
           data={ordersState.data}
           {...list.tableProps}
-          onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
-          emptyTitle="No orders found"
+          onRowClick={(order) => navigate(withKind(`/order_detail/${order.id}`, kind))}
+          emptyTitle={isPreorder ? "No pre-orders found" : "No orders found"}
           emptyDescription="Try adjusting the search or filters."
-          minWidth="1050px"
-          columnWidths={["140px", "220px", "120px", "130px", "130px", "120px", "80px"]}
+          minWidth={isPreorder ? "1300px" : "1050px"}
+          columnWidths={
+            isPreorder
+              ? ["140px", "220px", "120px", "120px", "120px", "200px", "130px", "120px", "80px"]
+              : ["140px", "220px", "120px", "130px", "130px", "120px", "80px"]
+          }
         />
       </div>
     </div>
   )
 }
 
-export default Orders
+// Both halves render this component on different routes; the key gives each half its own filters and page.
+const OrdersPage = () => <OrdersList key={useKind()} />
+
+export default OrdersPage

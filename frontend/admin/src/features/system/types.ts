@@ -1,5 +1,7 @@
 // Mirrors api/v1/admin/business/serializers.py (kull-mart), mounted at /admin/settings/.
 
+import type { Kind } from "@/hooks/use-kind"
+
 /** AdminBusinessProfileSerializer */
 export interface BusinessProfile {
   name: string
@@ -27,6 +29,10 @@ export interface BusinessProfile {
   tiktok_url: string
   youtube_url: string
   linkedin_url: string
+  preorder_deposit_percent: string
+  free_delivery_min_amount: string | null
+  about_en: string
+  about_bn: string
   updated_at: string
 }
 
@@ -64,9 +70,11 @@ export type ModuleUpdatePayload = { is_enabled: boolean } | { config: Record<str
 /** AdminPaymentMethodSerializer */
 export interface PaymentMethodState {
   key: string
+  kind: Kind
   label: string
   description: string
   is_enabled: boolean
+  pay_to: string
   can_disable: boolean
   locked_reason: string
 }
@@ -79,6 +87,42 @@ export interface IntegrationStatus {
     from_number: string
   }
 }
+
+// ---- storefront content (/admin/settings/hero-slides/, /admin/settings/promo-lines/) ----
+
+/** `both` is read-only: rows saved before the split keep it until `split_both_placements` has run. */
+export type HeroSlidePlacement = "home" | "preorder" | "both"
+
+/** The placement one settings page edits: `home` on stock Settings, `preorder` on Pre-order Settings. */
+export type ShopPlacement = Exclude<HeroSlidePlacement, "both">
+
+export interface HeroSlide {
+  id: string
+  /** Absolute URL. */
+  image: string
+  alt_text: string
+  tag_en: string
+  tag_bn: string
+  title_en: string
+  title_bn: string
+  link_url: string
+  placement: HeroSlidePlacement
+  sort_order: number
+  is_active: boolean
+}
+
+export type HeroSlideInput = Omit<HeroSlide, "id" | "image">
+
+export interface PromoLine {
+  id: string
+  text_en: string
+  text_bn: string
+  placement: HeroSlidePlacement
+  sort_order: number
+  is_active: boolean
+}
+
+export type PromoLineInput = Omit<PromoLine, "id">
 
 // ---- store policies (/admin/settings/policies/) ----
 

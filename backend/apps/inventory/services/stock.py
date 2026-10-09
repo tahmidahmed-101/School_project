@@ -7,55 +7,131 @@ from django.db import transaction
 
 from apps.accounting.services.postings import post_stock_adjustment, post_stock_writeoff
 from apps.audit.services.audit import log_action
-from apps.catalog.models import ProductVariant
+from apps.catalog.models import Category, ProductVariant
 from apps.catalog.selectors.products import get_variants_by_ids
+from apps.catalog.services.kind_rules import check_stock_levels_kind, is_preorder_category
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.inventory.constants import IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
-from apps.inventory.selectors.warehouse import get_default_warehouse, get_warehouse_by_id
+from apps.inventory.selectors.warehouse import (
+    all_warehouses,
+    default_warehouse,
+    get_or_create_default_warehouse,
+    get_warehouse_by_id,
+)
 
 
-def _get_warehouse(warehouse_id=None):
-    if isinstance(warehouse_id, Warehouse):
-        return warehouse_id
-    if warehouse_id:
-        wh = get_warehouse_by_id(warehouse_id)
-        if wh is None:
-            raise BusinessRuleViolationError("Warehouse not found.", code="warehouse_not_found")
-        return wh
-    return get_or_create_default_warehouse()
-
-
-def get_or_create_default_warehouse():
-    default = get_default_warehouse()
-    if default:
-        return default
-    return Warehouse.objects.create(
-        name="Main Warehouse",
-        code="MAIN",
-        is_default=True,
-        is_active=True,
+def ensure_variant_kind(variant, kind: str | None) -> None:
+    """Refuse a stock write made from one half's screens against the other
+    half's item. No `kind` means the caller did not say which half it is."""
+    if kind is None or variant.product.category.category_type == kind:
+        return
+    label = Category.CategoryType(kind).label.lower()
+    raise BusinessRuleViolationError(
+        f"{variant.product.name} ({variant.sku}) is not a {label} item.",
+        code="stock_kind_mismatch",
     )
+
+
+def _resolve_warehouse(warehouse) -> Warehouse:
+    if isinstance(warehouse, Warehouse):
+        return warehouse
+    found = get_warehouse_by_id(warehouse)
+    if found is None:
+        raise BusinessRuleViolationError("Warehouse not found.", code="warehouse_not_found")
+    return found
+
+
+def default_warehouse_for(kind: str) -> Warehouse:
+    """The stock half always has a warehouse; the pre-order half must be given
+    one, so its goods never land in the shop's stock warehouse by accident."""
+    if kind != KIND_PREORDER:
+        return get_or_create_default_warehouse(KIND_STOCK)
+    warehouse = default_warehouse(KIND_PREORDER)
+    if warehouse is None:
+        raise BusinessRuleViolationError(
+            "There is no default pre-order warehouse. Add a pre-order warehouse and mark it "
+            "as default first.",
+            code="preorder_warehouse_missing",
+        )
+    return warehouse
+
+
+def ensure_warehouse_kind(variant, warehouse: Warehouse) -> None:
+    kind = variant.product.category.category_type
+    if warehouse.kind == kind:
+        return
+    raise BusinessRuleViolationError(
+        f"{variant.product.name} ({variant.sku}) is a {Category.CategoryType(kind).label.lower()} "
+        f"item and {warehouse.name} is a {warehouse.get_kind_display().lower()} warehouse.",
+        code="warehouse_kind_mismatch",
+    )
+
+
+def warehouse_for_variant(variant, warehouse=None) -> Warehouse:
+    if not warehouse:
+        return default_warehouse_for(variant.product.category.category_type)
+    warehouse = _resolve_warehouse(warehouse)
+    ensure_warehouse_kind(variant, warehouse)
+    return warehouse
+
+
+NO_STOCK_LEVELS = {"reorder_point": 0, "target_stock_level": 0}
+
+
+def _locked_stock_item(variant, warehouse) -> StockItem:
+    stock_item, created = StockItem.objects.select_for_update().get_or_create(
+        variant=variant, warehouse=warehouse
+    )
+    if created and is_preorder_category(variant.product.category):
+        for field, value in NO_STOCK_LEVELS.items():
+            setattr(stock_item, field, value)
+        stock_item.save(update_fields=[*NO_STOCK_LEVELS, "updated_at"])
+    return stock_item
+
+
+@transaction.atomic
+def set_stock_levels(
+    *, stock_item: StockItem, reorder_point: int, target_stock_level: int
+) -> StockItem:
+    check_stock_levels_kind(
+        category=stock_item.variant.product.category,
+        values={"reorder_point": reorder_point, "target_stock_level": target_stock_level},
+    )
+    stock_item.reorder_point = reorder_point
+    stock_item.target_stock_level = target_stock_level
+    stock_item.save(update_fields=["reorder_point", "target_stock_level", "updated_at"])
+    return stock_item
 
 
 def materialize_stock_items(*, variant=None, warehouse=None) -> int:
     """Create zero-quantity cached StockItem rows for every live variant that
     doesn't have one yet, so a freshly-created product (no movement history)
     still shows up in the Stock Levels list and can be intaken/adjusted.
-    A variant with no ledger simply has 0 on hand, so materializing the row
-    with defaults is a safe cache-fill. Returns how many rows were created."""
-    warehouse = _get_warehouse(warehouse)
-    variants = ProductVariant.objects.filter(deleted_at__isnull=True)
-    if variant is not None:
-        variants = variants.filter(pk=variant.pk)
+    A warehouse only gets rows for variants of its own kind; with no warehouse
+    given, the default warehouse of each kind is filled. Returns how many rows
+    were created."""
+    if warehouse:
+        warehouses = [_resolve_warehouse(warehouse)]
+    else:
+        preorder_default = default_warehouse(KIND_PREORDER)
+        warehouses = [get_or_create_default_warehouse(KIND_STOCK)]
+        if preorder_default is not None:
+            warehouses.append(preorder_default)
 
-    # Get variants that don't have a stock item for this warehouse
-    existing_variant_ids = StockItem.objects.filter(warehouse=warehouse).values_list(
-        "variant_id", flat=True
-    )
-    variants = variants.exclude(id__in=existing_variant_ids)
-
-    rows = [StockItem(variant=v, warehouse=warehouse) for v in variants]
+    rows = []
+    for target in warehouses:
+        variants = ProductVariant.objects.filter(
+            deleted_at__isnull=True, product__category__category_type=target.kind
+        )
+        if variant is not None:
+            variants = variants.filter(pk=variant.pk)
+        variants = variants.exclude(
+            id__in=StockItem.objects.filter(warehouse=target).values_list("variant_id", flat=True)
+        )
+        levels = NO_STOCK_LEVELS if target.kind == KIND_PREORDER else {}
+        rows += [StockItem(variant=v, warehouse=target, **levels) for v in variants]
     if rows:
         StockItem.objects.bulk_create(rows)
     return len(rows)
@@ -66,29 +142,41 @@ def lock_variant_stock(variant_ids) -> list[StockItem]:
     """Row-lock every stock row of these variants in every warehouse, for the
     rest of the transaction.
 
-    Rows missing for a warehouse are first created at zero (the same cache-fill
-    as `materialize_stock_items`), so a concurrent first movement or
+    Rows missing for a warehouse of the variant's kind are first created at
+    zero (the same cache-fill as `materialize_stock_items`), so a concurrent first movement or
     reservation there blocks on the unique (variant, warehouse) row instead of
     slipping in unseen. Movements and reservations lock these same rows.
     """
     variant_ids = list(variant_ids)
-    warehouse_ids = list(
-        Warehouse.objects.filter(deleted_at__isnull=True).values_list("id", flat=True)
+    kind_by_variant = dict(
+        ProductVariant.objects.filter(id__in=variant_ids).values_list(
+            "id", "product__category__category_type"
+        )
     )
+    warehouses = list(all_warehouses().values_list("id", "kind"))
     existing = set(
         StockItem.objects.filter(variant_id__in=variant_ids).values_list(
             "variant_id", "warehouse_id"
         )
     )
-    StockItem.objects.bulk_create(
-        [
-            StockItem(variant_id=variant_id, warehouse_id=warehouse_id)
-            for variant_id in variant_ids
-            for warehouse_id in warehouse_ids
-            if (variant_id, warehouse_id) not in existing
-        ],
-        ignore_conflicts=True,
-    )
+    missing = [
+        (variant_id, warehouse_id)
+        for variant_id, kind in kind_by_variant.items()
+        for warehouse_id, warehouse_kind in warehouses
+        if warehouse_kind == kind and (variant_id, warehouse_id) not in existing
+    ]
+    if missing:
+        StockItem.objects.bulk_create(
+            [
+                StockItem(
+                    variant_id=variant_id,
+                    warehouse_id=warehouse_id,
+                    **(NO_STOCK_LEVELS if kind_by_variant[variant_id] == KIND_PREORDER else {}),
+                )
+                for variant_id, warehouse_id in missing
+            ],
+            ignore_conflicts=True,
+        )
     return list(
         StockItem.objects.select_for_update()
         .select_related("variant", "warehouse")
@@ -120,13 +208,11 @@ def record_movement(
     if movement_type not in MovementType.values:
         raise BusinessRuleViolationError("Unknown movement type.", code="invalid_movement_type")
 
-    warehouse = _get_warehouse(warehouse)
+    warehouse = warehouse_for_variant(variant, warehouse)
 
     # Locked for the transaction so two concurrent movements against the same
     # variant+warehouse can't both read the same starting balance.
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
 
     if movement_type in IN_MOVEMENT_TYPES:
         if unit_cost is not None:
@@ -182,11 +268,9 @@ def reserve_stock(*, variant, warehouse=None, quantity: int) -> StockItem:
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
-    warehouse = _get_warehouse(warehouse)
+    warehouse = warehouse_for_variant(variant, warehouse)
 
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
     if stock_item.available < quantity:
         raise BusinessRuleViolationError(
             "Not enough available stock to reserve.", code="insufficient_stock"
@@ -204,11 +288,9 @@ def release_reservation(*, variant, warehouse=None, quantity: int) -> StockItem:
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
-    warehouse = _get_warehouse(warehouse)
+    warehouse = warehouse_for_variant(variant, warehouse)
 
-    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-        variant=variant, warehouse=warehouse
-    )
+    stock_item = _locked_stock_item(variant, warehouse)
     if stock_item.quantity_reserved < quantity:
         raise BusinessRuleViolationError(
             "Cannot release more than is currently reserved.", code="over_release"
@@ -227,10 +309,12 @@ def post_adjustment(
     unit_cost: Decimal | None = None,
     notes: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """Cycle-count correction: positive delta posts ADJUSTMENT_IN, negative
     posts ADJUSTMENT_OUT, plus the matching journal entry so the GL's
     inventory asset stays equal to physical valuation."""
+    ensure_variant_kind(variant, kind)
     if quantity_delta == 0:
         raise BusinessRuleViolationError(
             "Adjustment quantity cannot be zero.", code="invalid_quantity"
@@ -253,7 +337,9 @@ def post_adjustment(
 
 
 @transaction.atomic
-def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
+def post_bulk_adjustments(
+    *, items: list[dict], actor=None, kind: str | None = None
+) -> list[dict]:
     """Apply many adjustments as one all-or-nothing batch.
 
     A partially applied cycle count is worse than a rejected one, so the first
@@ -261,7 +347,9 @@ def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
     """
     variants = {
         str(variant.id): variant
-        for variant in get_variants_by_ids([item["variant_id"] for item in items])
+        for variant in get_variants_by_ids(
+            [item["variant_id"] for item in items]
+        ).select_related("product__category")
     }
     results = []
     for index, item in enumerate(items):
@@ -278,6 +366,7 @@ def post_bulk_adjustments(*, items: list[dict], actor=None) -> list[dict]:
             unit_cost=item.get("unit_cost"),
             notes=item.get("notes", ""),
             actor=actor,
+            kind=kind,
         )
         results.append({"index": index, "entry": entry})
     return results
@@ -291,10 +380,12 @@ def stock_intake(
     unit_cost: Decimal | None = None,
     notes: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """The Stock App's intake action: receive newly stocked product. Posts a
     PURCHASE_IN movement so the ledger stays the single source of truth for
     on-hand quantities."""
+    ensure_variant_kind(variant, kind)
     return record_movement(
         variant=variant,
         warehouse=warehouse,
@@ -315,10 +406,12 @@ def write_off_stock(
     quantity: int,
     reason: str = "",
     actor=None,
+    kind: str | None = None,
 ) -> StockLedgerEntry:
     """Confirm a stock loss (damaged / expired / stolen) with a WRITE_OFF
     ledger entry plus the shrinkage journal posting (Dr Inventory Shrinkage
     / Cr Inventory Asset, blueprint §8)."""
+    ensure_variant_kind(variant, kind)
     entry = record_movement(
         variant=variant,
         warehouse=warehouse,

@@ -12,6 +12,7 @@ import { ActiveStatusBadge } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -19,7 +20,9 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
+import { productKind, productListPath } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
+import { savedOptionsOf } from "../lib/useOptionDrafts"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
 
@@ -42,7 +45,7 @@ const ProductDetail = () => {
   const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
-  const { nameById } = useCategoryOptions()
+  const { nameById, categories, isLoading: categoriesLoading } = useCategoryOptions()
 
   useDocumentTitle(product?.name ? `${product.name} — Product` : "Product Details")
 
@@ -72,21 +75,32 @@ const ProductDetail = () => {
   }, [brandId])
   const brandName = brandId && brand?.id === brandId ? brand.name : null
 
-  const pageState = resolveDetailState(singleStatus, singleError, product?.id === id)
+  const hint = useKindHint()
+  const loadedKind = product && product.id === id && !categoriesLoading ? productKind(product, categories) : undefined
+  useRecordKind(loadedKind)
+
+  // The page is laid out by the product's kind, which needs the categories as well as the product.
+  const pageState =
+    resolveDetailState(singleStatus, singleError, product?.id === id) ?? (categoriesLoading ? "loading" : null)
   if (pageState || !product || product.id !== id) {
     return (
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Product"
-        backTo="/products"
-        backLabel="Back to Products"
+        backTo={hint && productListPath(hint)}
+        backLabel={hint === "preorder" ? "Back to pre-order products" : "Back to products"}
         error={singleError}
         onRetry={refresh}
       />
     )
   }
 
+  const kind = productKind(product, categories)
+  const isStock = kind === "stock"
   const isBundle = product.product_type === "bundle"
+  const options = savedOptionsOf(product)
+  const specs = Array.isArray(product.specs) ? product.specs : []
+  const settings = product.variants.find((v) => v.is_preorder_enabled)
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
 
   const handleRestore = async () => {
@@ -104,7 +118,7 @@ const ProductDetail = () => {
       <PageHeader
         title={product.name}
         description={product.slug}
-        back={{ to: "/products", label: "Back to products" }}
+        back={{ to: productListPath(kind), label: isStock ? "Back to products" : "Back to pre-order products" }}
         actions={
           canManage &&
           (product.deleted_at ? (
@@ -144,21 +158,45 @@ const ProductDetail = () => {
             <Row label="Status">
               <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
             </Row>
-            <Row label="Type">
-              <Badge variant="secondary" className="capitalize">
-                {product.product_type}
-              </Badge>
-            </Row>
+            {isBundle ? (
+              <Row label="Type">
+                <Badge variant="secondary">Bundle</Badge>
+              </Row>
+            ) : (
+              <Row label="Options">
+                {options.length === 0
+                  ? "None"
+                  : options.map((o) => `${o.name}: ${o.values.map((v) => v.value).join(", ")}`).join(" · ")}
+              </Row>
+            )}
             <Row label="Category">{nameById.get(product.category_id) ?? "—"}</Row>
             <Row label="Brand">{brandName ?? "—"}</Row>
-            <Row label="Price">
-              <span className="font-semibold">
-                {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
-              </span>
-            </Row>
-            {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
-            <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
-            <Row label="Available stock">{product.total_stock}</Row>
+            {isStock ? (
+              <>
+                <Row label="Price">
+                  <span className="font-semibold">
+                    {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
+                  </span>
+                </Row>
+                {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
+                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
+                <Row label="Available stock">{product.total_stock}</Row>
+              </>
+            ) : (
+              <>
+                <Row label="Price">
+                  <span className="font-semibold">{product.price === null ? "—" : formatCurrency(product.price)}</span>
+                </Row>
+                {settings?.preorder_price && (
+                  <Row label="Pre-order price">{formatCurrency(settings.preorder_price)}</Row>
+                )}
+                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
+                <Row label="Pre-orders open">{formatDateTime(settings?.preorder_start_date)}</Row>
+                <Row label="Pre-orders close">{formatDateTime(settings?.preorder_end_date)}</Row>
+                <Row label="Release date">{formatDateTime(settings?.release_date)}</Row>
+                <Row label="Pre-order limit">{settings?.preorder_stock_limit ?? "Unlimited"}</Row>
+              </>
+            )}
             <Row label="Variants">{product.variants.length}</Row>
             {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
             <Row label="Description">
@@ -173,6 +211,17 @@ const ProductDetail = () => {
                 </ul>
               </Row>
             )}
+            {specs.length > 0 && (
+              <Row label="Specifications">
+                <ul className="space-y-1">
+                  {specs.map((spec, i) => (
+                    <li key={i}>
+                      <span className="text-muted-foreground">{spec.name}:</span> {spec.value}
+                    </li>
+                  ))}
+                </ul>
+              </Row>
+            )}
             {product.meta_keywords && <Row label="Meta keywords">{product.meta_keywords}</Row>}
           </dl>
         </Card>
@@ -182,6 +231,7 @@ const ProductDetail = () => {
         <>
           <ProductImagesSection
             productId={product.id}
+            options={options}
             variants={product.variants}
             canManage={canManage}
             onChanged={refresh}
@@ -198,8 +248,9 @@ const ProductDetail = () => {
             </Card>
           ) : (
             <ProductVariantsSection
-              productId={product.id}
-              productType={product.product_type}
+              key={options.map((o) => o.id).join()}
+              product={product}
+              kind={kind}
               canManage={canManage}
               canViewInventory={canViewInventory}
               onChanged={refresh}

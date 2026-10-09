@@ -5,6 +5,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.catalog.selectors.images import variant_image_url
+from apps.catalog.selectors.options import line_variant_title
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
@@ -15,8 +16,16 @@ from apps.orders.models import (
     Shipment,
     StockReservation,
 )
+from apps.orders.selectors.payments import (
+    DEPOSIT_PERCENT_CONTEXT_KEY,
+    order_balance_due,
+    order_deposit_due,
+    order_paid_total,
+)
+from apps.orders.selectors.sales_orders import order_kind
 from apps.orders.selectors.shipments import attach_delivered_quantities
 from apps.orders.services.address_snapshot import snapshot_or_live
+from apps.orders.services.orders import allowed_status_overrides
 
 
 class AdminSalesOrderLineSerializer(serializers.Serializer):
@@ -24,6 +33,7 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
+    variant_title = serializers.SerializerMethodField()
     product_image = serializers.SerializerMethodField()
     quantity = serializers.IntegerField()
     shipped_quantity = serializers.IntegerField(read_only=True)
@@ -32,10 +42,12 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
     delivered_quantity = serializers.IntegerField(read_only=True)
     returned_quantity = serializers.IntegerField(read_only=True)
     shippable_quantity = serializers.IntegerField(read_only=True)
+    awaiting_stock_quantity = serializers.IntegerField(read_only=True)
     returnable_quantity = serializers.IntegerField(read_only=True)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    is_preorder = serializers.BooleanField(read_only=True)
 
     def get_variant_sku(self, obj) -> str:
         if obj.variant_sku:
@@ -48,6 +60,9 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
         if obj.variant and getattr(obj.variant, "product", None):
             return obj.variant.product.name
         return ""
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
 
     def get_product_image(self, obj) -> str | None:
         return variant_image_url(obj.variant)
@@ -77,7 +92,7 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     contact_email = serializers.CharField(read_only=True, allow_blank=True)
     contact_phone = serializers.CharField(read_only=True, allow_blank=True)
     contact_name = serializers.CharField(read_only=True, allow_blank=True)
-    has_preorder = serializers.SerializerMethodField()
+    order_type = serializers.SerializerMethodField()
     preorder_stage = serializers.CharField(read_only=True, allow_blank=True)
     preorder_stage_events = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2)
@@ -85,12 +100,27 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     shipping_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     discount_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    paid_total = serializers.SerializerMethodField()
+    balance_due = serializers.SerializerMethodField()
+    deposit_due = serializers.SerializerMethodField()
+    allowed_statuses = serializers.SerializerMethodField()
     coupon_code = serializers.CharField(source="coupon.code", read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
     lines = serializers.SerializerMethodField()
     payments = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
     rmas = serializers.SerializerMethodField()
+
+    def get_order_type(self, obj) -> str:
+        return order_kind(obj)
+
+    def to_representation(self, instance) -> dict:
+        data = super().to_representation(instance)
+        if data["order_type"] == SalesOrder.OrderType.PREORDER:
+            data["coupon_code"] = None
+        else:
+            data.update({"preorder_stage": "", "preorder_stage_events": [], "deposit_due": None})
+        return data
 
     def get_customer_email(self, obj) -> str:
         return obj.contact_email.strip() or getattr(obj.customer, "email", "") or ""
@@ -135,8 +165,18 @@ class AdminSalesOrderSerializer(serializers.Serializer):
         lines = attach_delivered_quantities(list(obj.lines.all()))
         return AdminSalesOrderLineSerializer(lines, many=True).data
 
-    def get_has_preorder(self, obj) -> bool:
-        return any(line.is_preorder for line in obj.lines.all())
+    def get_paid_total(self, obj) -> str:
+        return str(order_paid_total(obj))
+
+    def get_balance_due(self, obj) -> str:
+        return str(order_balance_due(obj))
+
+    def get_deposit_due(self, obj) -> str | None:
+        percent = self.context.get(DEPOSIT_PERCENT_CONTEXT_KEY)
+        return str(order_deposit_due(obj, deposit_percent=percent))
+
+    def get_allowed_statuses(self, obj) -> list[str]:
+        return allowed_status_overrides(obj)
 
     def get_preorder_stage_events(self, obj) -> list[dict]:
         return PreorderStageEventSerializer(obj.preorder_stage_events.all(), many=True).data
@@ -155,10 +195,14 @@ class AdminCartItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     product_name = serializers.CharField(read_only=True)
+    variant_title = serializers.SerializerMethodField()
     sku = serializers.CharField(source="variant_sku", read_only=True)
     quantity = serializers.IntegerField(read_only=True)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     is_preorder = serializers.BooleanField(read_only=True)
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
 
 
 class AdminCustomerCartSerializer(serializers.Serializer):
@@ -179,6 +223,7 @@ class AdminCustomerCartSerializer(serializers.Serializer):
     customer_name = serializers.SerializerMethodField()
     customer_phone = serializers.SerializerMethodField()
     reached_checkout = serializers.SerializerMethodField()
+    order_type = serializers.SerializerMethodField()
     items = AdminCartItemSerializer(source="lines", many=True, read_only=True)
     item_count = serializers.SerializerMethodField()
     subtotal = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -187,6 +232,11 @@ class AdminCustomerCartSerializer(serializers.Serializer):
 
     def get_is_guest_cart(self, obj) -> bool:
         return obj.customer_id is None
+
+    def get_order_type(self, obj) -> str:
+        if any(line.variant.is_preorder_kind for line in obj.lines.all()):
+            return SalesOrder.OrderType.PREORDER
+        return SalesOrder.OrderType.STOCK
 
     def get_customer_name(self, obj) -> str | None:
         if obj.contact_name.strip():
@@ -219,6 +269,24 @@ class AdminOrderCreateSerializer(serializers.Serializer):
     capture_payment = serializers.BooleanField(required=False, default=True)
     payment_method = serializers.ChoiceField(
         choices=PaymentMethodKey.choices, required=False, default=PaymentMethodKey.MANUAL
+    )
+    order_type = serializers.ChoiceField(
+        choices=SalesOrder.OrderType.choices, required=False, default=SalesOrder.OrderType.STOCK
+    )
+    # Read only so a pre-order can refuse them by name; a staff stock order uses neither.
+    coupon_code = serializers.CharField(required=False, allow_blank=True)
+    discount_total = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False, allow_null=True
+    )
+
+
+class AdminOrderQuoteSerializer(serializers.Serializer):
+    customer_id = serializers.UUIDField(required=False, allow_null=True)
+    shipping_address_id = serializers.UUIDField(required=False, allow_null=True)
+    carrier_id = serializers.UUIDField(required=False, allow_null=True)
+    lines = AdminOrderCreateLineSerializer(many=True, allow_empty=False)
+    order_type = serializers.ChoiceField(
+        choices=SalesOrder.OrderType.choices, required=False, default=SalesOrder.OrderType.STOCK
     )
 
 
@@ -288,6 +356,7 @@ class CreateShipmentSerializer(serializers.Serializer):
 class ShipmentSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     carrier_id = serializers.UUIDField(read_only=True, allow_null=True)
     carrier_name = serializers.CharField(source="carrier.name", read_only=True, allow_null=True)
     tracking_number = serializers.CharField(allow_blank=True)
@@ -350,6 +419,7 @@ class AdminPaymentSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
     refunded_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     method = serializers.ChoiceField(choices=PaymentMethodKey.choices)
@@ -362,6 +432,7 @@ class StockReservationSerializer(serializers.Serializer):
     order_line_id = serializers.UUIDField(read_only=True)
     order_id = serializers.UUIDField(source="order_line.order_id", read_only=True)
     order_number = serializers.CharField(source="order_line.order.order_number", read_only=True)
+    order_type = serializers.CharField(source="order_line.order.order_type", read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
@@ -401,6 +472,7 @@ class AdminRMASerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     rma_number = serializers.CharField(read_only=True)
     order_id = serializers.UUIDField(read_only=True)
+    order_type = serializers.CharField(source="order.order_type", read_only=True)
     status = serializers.ChoiceField(choices=ReturnRMA.Status.choices)
     reason = serializers.CharField(allow_blank=True)
     lines = serializers.SerializerMethodField()

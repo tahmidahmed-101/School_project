@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from api.v1.admin.catalog.fields import VariantTitleField
 from apps.catalog.selectors.images import variant_image_url
+from apps.common.params import KIND_STOCK, KINDS
 from apps.inventory.constants import MovementType
 
 
@@ -10,6 +12,7 @@ class WarehouseSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
     code = serializers.CharField()
+    kind = serializers.CharField(read_only=True)
     address = serializers.CharField(allow_blank=True)
     is_active = serializers.BooleanField()
     is_default = serializers.BooleanField(read_only=True)
@@ -21,6 +24,7 @@ class WarehouseSerializer(serializers.Serializer):
 class WarehouseCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     code = serializers.CharField()
+    kind = serializers.ChoiceField(choices=KINDS, required=False, default=KIND_STOCK)
     address = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False, default=True)
     is_default = serializers.BooleanField(required=False, default=False)
@@ -29,6 +33,7 @@ class WarehouseCreateSerializer(serializers.Serializer):
 class WarehouseUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     code = serializers.CharField(required=False)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     address = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
     is_default = serializers.BooleanField(required=False)
@@ -38,6 +43,7 @@ class StockItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_image = serializers.SerializerMethodField()
     warehouse_id = serializers.UUIDField(read_only=True)
@@ -58,6 +64,7 @@ class StockLedgerEntrySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_image = serializers.SerializerMethodField()
     warehouse_id = serializers.UUIDField(read_only=True)
@@ -87,10 +94,12 @@ class StockAdjustmentSerializer(serializers.Serializer):
         max_digits=12, decimal_places=4, required=False, allow_null=True
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class BulkStockAdjustmentSerializer(serializers.Serializer):
     adjustments = serializers.ListField(child=StockAdjustmentSerializer(), min_length=1)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class StockWriteOffSerializer(serializers.Serializer):
@@ -98,6 +107,7 @@ class StockWriteOffSerializer(serializers.Serializer):
     warehouse_id = serializers.UUIDField(required=False, allow_null=True)
     quantity = serializers.IntegerField(min_value=1)
     reason = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class StockLookupVariantSerializer(serializers.Serializer):
@@ -130,6 +140,7 @@ class StockIntakeSerializer(serializers.Serializer):
         max_digits=12, decimal_places=4, required=False, allow_null=True
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class QuickProductCreateSerializer(serializers.Serializer):

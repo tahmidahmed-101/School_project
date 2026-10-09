@@ -18,9 +18,10 @@ and Recharts.
    For a local admin login and demo data:
 
    ```bash
-   python manage.py seed_chart_of_accounts
-   python manage.py seed_demo --orders 120 --days 120 --customers 30
-   python manage.py seed_data --admins 1   # seed-admin-1@example.com / SeedPass123!
+   python manage.py seed_demo            # everything: catalogue, orders, pre-orders, home content, logins
+   python manage.py seed_demo --fresh    # wipe the demo rows and rebuild
+   # Logins, password Demo12345!: admin@simpleadmin.demo, staff@simpleadmin.demo,
+   # and every seeded customer (the command prints one).
    ```
 
 2. Run the dashboard:

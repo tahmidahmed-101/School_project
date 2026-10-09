@@ -5,15 +5,17 @@ import { X, Calendar, Sparkles, AlertCircle } from "lucide-react";
 import { usePreOrderModal } from "../context";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
+import { variantById } from "@/lib/variants";
 import { Modal } from "@/design-system/ui/Modal";
 import { Button } from "@/design-system/ui/Button";
 
 export function PreOrderConfirmationModal() {
-  const { isOpen, product, quantity, selectedVariant, closePreOrderModal, confirmPreOrder } = usePreOrderModal();
+  const { isOpen, product, quantity, variantId, closePreOrderModal, confirmPreOrder } = usePreOrderModal();
   const { t, ui, money, n } = useLang();
 
   if (!product) return null;
 
+  const variantTitle = variantId ? variantById(product, variantId)?.title : undefined;
   const deliveryDate = product.expectedDelivery ? t(product.expectedDelivery) : ui("deliveryDateTbc");
 
   return (
@@ -56,15 +58,7 @@ export function PreOrderConfirmationModal() {
               {ui(product.preorderStatus === "closing-soon" ? "preOrderClosingSoon" : "preOrderBadge")}
             </span>
             <h4 className="line-clamp-1 text-xs font-bold text-fg">{t(product.name)}</h4>
-            {selectedVariant && Object.keys(selectedVariant).length > 0 && (
-              <p className="text-2xs text-fg-subtle">
-                {Object.entries(selectedVariant)
-                  .map(
-                    ([k, v]) => `${t(product.variants?.find((g) => g.name.en === k)?.name ?? { en: k, bn: k })}: ${v}`,
-                  )
-                  .join(", ")}
-              </p>
-            )}
+            {variantTitle && <p className="text-2xs text-fg-subtle">{variantTitle}</p>}
             <div className="mt-1 flex items-center justify-between text-xs">
               <span className="font-bold text-gold-800">
                 {money(product.price)} {quantity > 1 ? `× ${n(quantity)}` : ""}

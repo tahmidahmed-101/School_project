@@ -145,6 +145,8 @@ def _render_line_items(pdf: DocumentPDF, context: dict[str, Any], currency: str)
     lines = context.get("lines") or []
     for item in lines:
         name = str(item.get("name") or "Item")
+        if item.get("variant_title"):
+            name = f"{name} - {item['variant_title']}"
         sku = str(item.get("sku") or "—")
         qty = str(item.get("quantity") or 1)
         price_str = _format_currency(item.get("unit_price"), currency)
@@ -221,7 +223,8 @@ def _render_totals(pdf: DocumentPDF, context: dict[str, Any], currency: str) -> 
     )
 
     if context.get("paid") is not None and Decimal(str(context.get("paid"))) > 0:
-        _render_summary_row(pdf, summary_x, "Amount Paid:", context.get("paid"), currency)
+        label = f"{context['paid_label']}:" if context.get("is_preorder") else "Amount Paid:"
+        _render_summary_row(pdf, summary_x, label, context.get("paid"), currency)
     if context.get("balance") is not None:
         _render_summary_row(
             pdf, summary_x, "Balance Due:", context.get("balance"), currency, is_bold=True

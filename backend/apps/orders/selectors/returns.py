@@ -7,7 +7,9 @@ from django.db.models import QuerySet
 from apps.orders.models import ReturnRMA
 
 
-def rmas_list(*, order=None, status: str | None = None) -> QuerySet[ReturnRMA]:
+def rmas_list(
+    *, order=None, status: str | None = None, kind: str | None = None
+) -> QuerySet[ReturnRMA]:
     queryset = (
         ReturnRMA.objects.select_related("order")
         .prefetch_related("lines")
@@ -17,12 +19,15 @@ def rmas_list(*, order=None, status: str | None = None) -> QuerySet[ReturnRMA]:
         queryset = queryset.filter(order=order)
     if status:
         queryset = queryset.filter(status=status)
+    if kind:
+        queryset = queryset.filter(order__order_type=kind)
     return queryset.order_by("-created_at")
 
 
 def get_rma_by_id(rma_id: str | UUID) -> ReturnRMA | None:
     return (
-        ReturnRMA.objects.prefetch_related("lines")
+        ReturnRMA.objects.select_related("order")
+        .prefetch_related("lines")
         .filter(id=rma_id, deleted_at__isnull=True)
         .first()
     )

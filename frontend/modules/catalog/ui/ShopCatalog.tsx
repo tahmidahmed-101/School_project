@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCatalog, useProducts } from "../context";
 import { useLang } from "@/lib/i18n";
+import { shopHome } from "@/lib/product";
 import {
   DEFAULT_FILTERS,
   filterAndSortProducts,
   type FilterChange,
-  parseStockType,
+  shopKindFor,
   type FilterState,
+  type StockType,
 } from "../domain/shop-filters";
 import { ShopFilterSidebar } from "./ShopFilterSidebar";
 import { ShopProductGrid } from "./ShopProductGrid";
@@ -23,13 +25,24 @@ export function ShopCatalog() {
   const { categories, catalogFailed } = useCatalog();
   const { products } = useProducts();
 
+  const stockTypeOf = useCallback(
+    (type: string | null, slug: string | null): StockType =>
+      shopKindFor(
+        type,
+        categories.find((c) => c.id === slug),
+      ) === "preorder"
+        ? "preorder"
+        : "normal",
+    [categories],
+  );
+
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...DEFAULT_FILTERS,
     category: searchParams.get("category") || DEFAULT_FILTERS.category,
     collection: searchParams.get("collection") || DEFAULT_FILTERS.collection,
     sort: searchParams.get("sort") || DEFAULT_FILTERS.sort,
     searchQuery: searchParams.get("q") || DEFAULT_FILTERS.searchQuery,
-    stockType: parseStockType(searchParams.get("type")),
+    stockType: stockTypeOf(searchParams.get("type"), searchParams.get("category")),
   }));
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -44,13 +57,13 @@ export function ShopCatalog() {
     setFilters((prev) => ({
       ...prev,
       // Only follow the URL when it names a type, so the user's checkbox choice isn't overwritten.
-      ...(type && { stockType: parseStockType(type) }),
+      ...((type || category) && { stockType: stockTypeOf(type, category) }),
       ...(category && { category }),
       ...(collection && { collection }),
       ...(sort && { sort }),
       ...(searchQuery && { searchQuery }),
     }));
-  }, [searchParams]);
+  }, [searchParams, stockTypeOf]);
 
   // Reset clears the user's filters but stays on the same stock type (normal / pre-order).
   const resetFilters = () => setFilters((prev) => ({ ...DEFAULT_FILTERS, stockType: prev.stockType }));
@@ -62,11 +75,9 @@ export function ShopCatalog() {
   const filteredProducts = useMemo(() => filterAndSortProducts(products, filters), [products, filters]);
 
   const activeCategory = categories.find((c) => c.id === filters.category);
-  const activeCategoryTitle = activeCategory
-    ? t(activeCategory.name)
-    : filters.stockType === "preorder"
-      ? ui("navPreOrder")
-      : ui("navShop");
+  const shopKind = filters.stockType === "preorder" ? "preorder" : "stock";
+  const shopLabel = ui(shopKind === "preorder" ? "navPreOrder" : "navShop");
+  const activeCategoryTitle = activeCategory ? t(activeCategory.name) : shopLabel;
 
   return (
     <div className="min-h-screen w-full bg-ink-50/60">
@@ -77,8 +88,8 @@ export function ShopCatalog() {
               className="mb-4"
               items={
                 filters.category !== "all"
-                  ? [{ label: ui("navShop"), href: "/shop" }, { label: activeCategoryTitle }]
-                  : [{ label: ui("navShop") }]
+                  ? [{ label: shopLabel, href: shopHome(shopKind) }, { label: activeCategoryTitle }]
+                  : [{ label: shopLabel }]
               }
             />
           }

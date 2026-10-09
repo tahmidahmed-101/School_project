@@ -1,4 +1,5 @@
 import type { ApiBusinessProfile } from "@/lib/api/types";
+import { toPaisa } from "@/lib/money";
 
 /** Contact details and copy taken from the public Kull Mart Facebook page (facebook.com/kullmartbd). */
 export const BRAND_INFO = {
@@ -29,6 +30,11 @@ export const BRAND_INFO = {
   /** Filled from the admin business profile; an empty link hides that icon. */
   social: { instagram: "", tiktok: "", youtube: "", linkedin: "" },
   mapsUrl: "",
+  /** Filled from the admin business profile; while empty the footer shows its own built-in text. */
+  openingHours: "",
+  about: { en: "", bn: "" },
+  /** Stock-order subtotal that earns free delivery, as the API's decimal string; null while the offer is off. */
+  freeDeliveryMinAmount: null as string | null,
   logo: "brand/logo.png",
   logoMark: "brand/logo-mark.png",
   /** Gold cart cut out of the logo on a transparent background, for the green header. */
@@ -47,15 +53,22 @@ const digitsOnly = (value: string) => value.replace(/\D/g, "");
 const PLACEHOLDER_PHONES = new Set(["01700000000", "8801700000000"]);
 const isPlaceholderPhone = (value: string) => PLACEHOLDER_PHONES.has(digitsOnly(value));
 const isPlaceholderEmail = (value: string) => /@example\.(com|org|net)$/i.test(value);
+const PLACEHOLDER_NAMES = new Set(["launchcart", "launchcart ltd"]);
+const realName = (value: string | undefined) => {
+  const name = value?.trim() ?? "";
+  return PLACEHOLDER_NAMES.has(name.toLowerCase()) ? "" : name;
+};
 
 /**
- * BRAND_INFO with the storefront's live contact details from GET /business-profile/ laid over it.
- * The brand identity (name, logo, taglines, copy) stays static. Contact fields are replaced only when the
- * API actually has a value, so an empty field or an unreachable backend falls back to the static one.
- * A placeholder left over from setup (admin@example.com, 01700000000) counts as empty.
+ * BRAND_INFO with the store's name, contact details, opening hours and about text from GET /business-profile/
+ * laid over it. The logo, taglines and slogan stay static. A field is replaced only when the API actually has a
+ * value, so an empty field or an unreachable backend falls back to the static one.
+ * A placeholder left over from setup (LaunchCart, admin@example.com, 01700000000) counts as empty.
  */
 export function mergeBrand(profile: ApiBusinessProfile | null | undefined): BrandInfo {
   if (!profile) return BRAND_INFO;
+  const name = realName(profile.name);
+  const legalName = realName(profile.legal_name);
   const phone = isPlaceholderPhone(profile.phone) ? "" : profile.phone.trim();
   const whatsapp = isPlaceholderPhone(profile.whatsapp) ? "" : digitsOnly(profile.whatsapp);
   const email = isPlaceholderEmail(profile.email.trim()) ? "" : profile.email.trim();
@@ -68,8 +81,11 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     linkedin: profile.social?.linkedin?.trim() ?? "",
   };
   const mapsUrl = profile.google_maps_url?.trim() ?? "";
+  const freeDeliveryMin = profile.free_delivery_min_amount?.trim() ?? "";
   return {
     ...BRAND_INFO,
+    ...(name && { name }),
+    ...(legalName && { legalName }),
     ...(phone && {
       phone,
       phoneInternational: phone,
@@ -81,5 +97,8 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     ...(facebook && { facebook }),
     social,
     mapsUrl,
+    openingHours: profile.opening_hours?.trim() ?? "",
+    about: { en: profile.about?.en?.trim() ?? "", bn: profile.about?.bn?.trim() ?? "" },
+    freeDeliveryMinAmount: toPaisa(freeDeliveryMin) > BigInt(0) ? freeDeliveryMin : null,
   };
 }

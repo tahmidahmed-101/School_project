@@ -8,6 +8,8 @@ export interface FraudCase {
   case_number: string
   status: FraudCaseStatus
   order_id: string | null
+  /** Kind of the flagged order; a case with no order counts as stock. */
+  order_type?: "stock" | "preorder"
   customer_id: string | null
   description: string
   resolution: string

@@ -5,6 +5,7 @@ import { getNavGroups } from "@/app/modules"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
+import { kindOfPath } from "@/hooks/use-kind"
 import { isForbidden } from "@/lib/api/client"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
 import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hooks"
@@ -24,7 +25,7 @@ const Dashboard = () => {
   const canView = useCan(...REPORT_PERMISSIONS)
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
-  const report = useDashboardReport(range, canView)
+  const report = useDashboardReport(range, "stock", canView)
   const blocked = !canView || isForbidden(report.error)
 
   // Where to send a user who can't see metrics: the first few pages they *can* open.
@@ -32,7 +33,7 @@ const Dashboard = () => {
     () =>
       getNavGroups(permissions)
         .flatMap((g) => g.sections.flatMap((s) => s.items))
-        .filter((item) => item.url !== "/" && item.url !== "/analytics")
+        .filter((item) => kindOfPath(item.url) === "stock" && item.url !== "/" && item.url !== "/analytics")
         .slice(0, 4)
         .map((item) => ({ to: item.url, label: item.title })),
     [permissions]
@@ -66,11 +67,11 @@ const Dashboard = () => {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <RevenueComparisonChart points={d?.revenue} {...state} className="xl:col-span-2" />
-            <CategoryBreakdown categories={d?.categories} {...state} />
+            <CategoryBreakdown kind="stock" categories={d?.categories} {...state} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <TopProductsTable products={d?.top_products} {...state} className="xl:col-span-2" />
+            <TopProductsTable kind="stock" products={d?.top_products} {...state} className="xl:col-span-2" />
             {/* Top products sets the row's height. Low stock is taken out of the flow on wide
                 screens so it matches that height and scrolls its list, instead of stretching
                 the row to fit every low-stock variant. */}
@@ -85,7 +86,7 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <RecentOrders orders={d?.orders} {...state} className="xl:col-span-2" />
+            <RecentOrders kind="stock" orders={d?.orders} {...state} className="xl:col-span-2" />
             <FulfillmentStatus metrics={d?.fulfillment} {...state} />
           </div>
 

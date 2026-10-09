@@ -5,9 +5,12 @@ from uuid import UUID
 from django.db.models import QuerySet
 
 from apps.procurement.models import GoodsReceiptNote
+from apps.procurement.selectors.kind import filter_by_kind
 
 
-def goods_receipts_list(*, purchase_order=None) -> QuerySet[GoodsReceiptNote]:
+def goods_receipts_list(
+    *, purchase_order=None, kind: str | None = None
+) -> QuerySet[GoodsReceiptNote]:
     queryset = (
         GoodsReceiptNote.objects.select_related("purchase_order")
         .prefetch_related("lines")
@@ -15,6 +18,7 @@ def goods_receipts_list(*, purchase_order=None) -> QuerySet[GoodsReceiptNote]:
     )
     if purchase_order is not None:
         queryset = queryset.filter(purchase_order=purchase_order)
+    queryset = filter_by_kind(queryset, kind, purchase_order_field="purchase_order_id")
     return queryset.order_by("-received_date")
 
 

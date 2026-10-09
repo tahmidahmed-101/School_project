@@ -6,8 +6,8 @@ export function makeSku(overrides: Partial<SkuVariant> = {}): SkuVariant {
   return {
     id: "sku-1",
     sku: "SKU-1",
-    color: "",
-    size: "",
+    optionValueIds: [],
+    title: "",
     price: 500,
     inStock: true,
     isPreOrder: false,
@@ -33,6 +33,7 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     inStock: true,
     stockCount: 10,
     sku: "SKU-1",
+    kind: "stock",
     ...overrides,
   };
 }

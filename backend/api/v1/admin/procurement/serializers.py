@@ -4,9 +4,12 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from api.v1.admin.catalog.fields import VariantTitleField
 from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.images import variant_image_url
+from apps.common.params import KINDS
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, VendorBill
+from apps.procurement.selectors.kind import purchase_order_kind
 
 ZERO = Decimal("0")
 
@@ -14,6 +17,7 @@ ZERO = Decimal("0")
 class SupplierSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
+    kind = serializers.CharField(read_only=True)
     contact_email = serializers.EmailField(allow_blank=True)
     phone = serializers.CharField(allow_blank=True)
     payment_terms = serializers.CharField(allow_blank=True)
@@ -26,10 +30,12 @@ class SupplierCreateSerializer(serializers.Serializer):
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     payment_terms = serializers.CharField(required=False, allow_blank=True)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
 
 
 class SupplierUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
+    kind = serializers.ChoiceField(choices=KINDS, required=False)
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     payment_terms = serializers.CharField(required=False, allow_blank=True)
@@ -40,6 +46,7 @@ class PurchaseOrderLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_image = serializers.SerializerMethodField()
     quantity_ordered = serializers.IntegerField()
@@ -84,6 +91,11 @@ class PurchaseOrderSerializer(serializers.Serializer):
     def get_received_total(self, obj) -> str:
         total = sum((line.unit_cost * line.quantity_received for line in obj.lines.all()), ZERO)
         return str(quantize_money(total))
+
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj)
 
 
 class PurchaseOrderCreateSerializer(serializers.Serializer):
@@ -131,6 +143,11 @@ class GoodsReceiptNoteSerializer(serializers.Serializer):
     def get_lines(self, obj) -> list[dict]:
         return GRNLineSerializer(obj.lines.all(), many=True).data
 
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj.purchase_order)
+
 
 class GoodsReceiptCreateSerializer(serializers.Serializer):
     purchase_order_id = serializers.UUIDField()
@@ -153,6 +170,11 @@ class VendorBillSerializer(serializers.Serializer):
     def get_payments(self, obj) -> list[dict]:
         return VendorPaymentSerializer(obj.payments.all(), many=True).data
 
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        return getattr(obj, "kind", None) or purchase_order_kind(obj.purchase_order)
+
 
 class VendorBillCreateSerializer(serializers.Serializer):
     purchase_order_id = serializers.UUIDField()
@@ -174,6 +196,16 @@ class VendorPaymentSerializer(serializers.Serializer):
     paid_at = serializers.DateTimeField()
     method = serializers.CharField(allow_blank=True)
     reference = serializers.CharField(allow_blank=True)
+
+    kind = serializers.SerializerMethodField()
+
+    def get_kind(self, obj) -> str:
+        bill = obj.vendor_bill
+        return (
+            getattr(obj, "kind", None)
+            or getattr(bill, "kind", None)
+            or purchase_order_kind(bill.purchase_order)
+        )
 
 
 class VendorPaymentCreateSerializer(serializers.Serializer):

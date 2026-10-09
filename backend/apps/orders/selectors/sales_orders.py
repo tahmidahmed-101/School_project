@@ -1,19 +1,46 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 from uuid import UUID
 
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
 
 from apps.common.utils.codes import hash_code
 from apps.common.utils.dates import day_after, day_start
+from apps.common.utils.money import ZERO, quantize
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.shipments import with_delivered_quantity
 
 
-def customer_order_summary(customer) -> dict:
-    result = SalesOrder.objects.filter(customer=customer, deleted_at__isnull=True).aggregate(
+def _placed_orders() -> QuerySet[SalesOrder]:
+    """Checked-out orders. A pending order is a cart, which has no kind yet."""
+    return SalesOrder.objects.filter(deleted_at__isnull=True).exclude(
+        status=SalesOrder.Status.PENDING
+    )
+
+
+def customers_of_kind(users: QuerySet, kind: str) -> QuerySet:
+    """One half's view of the customer list. A customer is one person, so the
+    same account is in both halves once they have ordered from both. Someone
+    who has not ordered yet is listed on the stock half only."""
+    placed = _placed_orders().filter(customer=OuterRef("pk"))
+    has_preorder = Exists(placed.filter(order_type=SalesOrder.OrderType.PREORDER))
+    if kind == SalesOrder.OrderType.PREORDER:
+        return users.filter(has_preorder)
+    return users.filter(
+        Exists(placed.filter(order_type=SalesOrder.OrderType.STOCK)) | ~has_preorder
+    )
+
+
+def customer_order_summary(customer, *, kind: str | None = None) -> dict:
+    """With `kind`, the figures of that half only; `total_spent` is then the
+    customer's lifetime value on that half."""
+    orders = (
+        _placed_orders().filter(order_type=kind)
+        if kind
+        else SalesOrder.objects.filter(deleted_at__isnull=True)
+    )
+    result = orders.filter(customer=customer).aggregate(
         total_orders=Count("id"),
         completed_orders=Count(
             "id",
@@ -41,7 +68,7 @@ def customer_order_summary(customer) -> dict:
         "completed_orders": result["completed_orders"] or 0,
         "cancelled_orders": result["cancelled_orders"] or 0,
         "pending_orders": result["pending_orders"] or 0,
-        "total_spent": str(result["total_spent"] or Decimal("0.00")),
+        "total_spent": str(quantize(result["total_spent"] or ZERO)),
     }
 
 
@@ -49,12 +76,42 @@ def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[Sale
     queryset = (
         SalesOrder.objects.select_related("coupon")
         # The line serializer names each line's product, hence variant + product.
-        .prefetch_related("lines__variant__product", "shipments__carrier")
+        .prefetch_related(
+            "lines__variant__product", "lines__variant__option_values__option", "shipments__carrier"
+        )
         .filter(customer=customer, deleted_at__isnull=True)
     )
     if status:
         queryset = queryset.filter(status=status)
     return queryset.order_by("-created_at")
+
+
+def _holds_preorder() -> Exists:
+    return Exists(
+        SalesOrderLine.objects.filter(
+            order=OuterRef("pk"),
+            variant__product__category__category_type=SalesOrder.OrderType.PREORDER,
+        )
+    )
+
+
+def _of_kind(kind: str) -> Q:
+    """An open cart has no order_type until checkout, so its lines decide; a
+    placed order is what checkout made it."""
+    pending = Q(status=SalesOrder.Status.PENDING)
+    holds_preorder = _holds_preorder()
+    if kind == SalesOrder.OrderType.PREORDER:
+        return (pending & Q(holds_preorder)) | (~pending & Q(order_type=kind))
+    return (pending & ~Q(holds_preorder)) | (~pending & Q(order_type=kind))
+
+
+def order_kind(order: SalesOrder) -> str:
+    """Python twin of `_of_kind`, for one loaded order."""
+    if order.status != SalesOrder.Status.PENDING:
+        return order.order_type
+    if any(line.variant.is_preorder_kind for line in order.lines.all()):
+        return SalesOrder.OrderType.PREORDER
+    return SalesOrder.OrderType.STOCK
 
 
 def _orders_with_related() -> QuerySet[SalesOrder]:
@@ -63,7 +120,7 @@ def _orders_with_related() -> QuerySet[SalesOrder]:
     ).prefetch_related(
         # Each line carries `delivered_quantity`, summed in the lines query itself.
         Prefetch("lines", queryset=with_delivered_quantity(SalesOrderLine.objects.all())),
-        "lines__variant__product",
+        "lines__variant__product__category",
         "lines__variant__images",
         "lines__variant__product__images",
         "payments",
@@ -79,6 +136,7 @@ def orders_list(
     customer=None,
     status: str | None = None,
     preorder_stage: str | None = None,
+    order_type: str | None = None,
     search: str | None = None,
     start: date | None = None,
     end: date | None = None,
@@ -90,6 +148,8 @@ def orders_list(
         queryset = queryset.filter(status=status)
     if preorder_stage:
         queryset = queryset.filter(preorder_stage=preorder_stage)
+    if order_type:
+        queryset = queryset.filter(_of_kind(order_type))
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:
@@ -127,33 +187,30 @@ def get_guest_cart(token: str | None) -> SalesOrder | None:
     ).first()
 
 
-def customer_carts_list() -> QuerySet[SalesOrder]:
+def customer_carts_list(*, kind: str | None = None) -> QuerySet[SalesOrder]:
     """Every customer's open cart that has something in it — the same
     `pending` order `get_cart` returns, so a checked-out order (anything past
     pending) never appears. `updated_at` is the last cart change: every line
     edit recalculates and saves the order."""
-    return (
+    carts = (
         SalesOrder.objects.filter(status=SalesOrder.Status.PENDING, deleted_at__isnull=True)
         .filter(Exists(SalesOrderLine.objects.filter(order=OuterRef("pk"))))
         .select_related("customer")
-        # Lines carry product name and SKU snapshots, so no variant join.
-        .prefetch_related(Prefetch("lines", queryset=SalesOrderLine.objects.order_by("created_at")))
-    )
-
-
-def get_checked_out_order(customer) -> SalesOrder | None:
-    """The customer's checked-out-but-unpaid order. Distinct from `get_cart`:
-    once `checkout` runs, the order leaves `pending` and is no longer a cart,
-    so payment capture has to look it up by this status instead."""
-    return (
-        SalesOrder.objects.filter(
-            customer=customer,
-            status=SalesOrder.Status.AWAITING_PAYMENT,
-            deleted_at__isnull=True,
+        .prefetch_related(
+            Prefetch(
+                "lines",
+                queryset=SalesOrderLine.objects.select_related(
+                    "variant__product__category"
+                ).order_by("created_at"),
+            )
         )
-        .order_by("-created_at")
-        .first()
     )
+    if kind:
+        holds_preorder = _holds_preorder()
+        carts = carts.filter(
+            holds_preorder if kind == SalesOrder.OrderType.PREORDER else ~holds_preorder
+        )
+    return carts
 
 
 def get_order_for_document(order_id: str | UUID) -> SalesOrder | None:

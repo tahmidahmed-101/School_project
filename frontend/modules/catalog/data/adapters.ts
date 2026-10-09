@@ -1,8 +1,8 @@
-import type { CategoryInfo, Product, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
+import type { CategoryInfo, Product, ProductOption, ProductSale, ProductSpec, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { publicEnv } from "@/lib/env";
-import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant, sortSizes } from "@/lib/variants";
-import type { ApiCategory, ApiProduct, ApiVariant } from "@/lib/api/types";
+import { ORDER_QUANTITY_CAP, applyVariant } from "@/lib/variants";
+import type { ApiCategory, ApiProduct, ApiProductOption, ApiProductSale, ApiVariant } from "@/lib/api/types";
 
 /**
  * Backend -> storefront model. The UI keeps using `Product` / `CategoryInfo`; everything the API cannot supply
@@ -46,8 +46,11 @@ function formatDate(iso: string | null): T | undefined {
 
 const CLOSING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
 
-function toSkuVariant(v: ApiVariant): SkuVariant {
+function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
   const isPreOrder = v.is_preorder_enabled && v.is_preorder_active;
+  const isUpcoming = v.is_preorder_upcoming;
+  // A pre-order product is only ever sold as a pre-order: outside its window it cannot be ordered at all.
+  const inStock = isPreOrder || (kind !== "preorder" && !isUpcoming && v.in_stock);
   const price = toNumber(v.effective_price);
   const list = toNumber(v.price);
   const compareAt = v.compare_at_price ? toNumber(v.compare_at_price) : list > price ? list : undefined;
@@ -57,18 +60,21 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
     const end = v.preorder_end_date ? new Date(v.preorder_end_date).getTime() : NaN;
     if (v.preorder_remaining === 0) preorderStatus = "sold-out";
     else preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
+  } else if (isUpcoming) {
+    preorderStatus = "upcoming";
+  } else if (kind === "preorder" || (v.is_preorder_enabled && !inStock)) {
+    preorderStatus = "closed";
   }
 
   return {
     id: v.id,
     sku: v.sku,
-    color: v.color,
-    size: v.size,
+    optionValueIds: (v.option_value_ids ?? []).map(String),
+    title: v.title ?? "",
     price,
     compareAtPrice: compareAt && compareAt > price ? compareAt : undefined,
-    // Pre-order SKUs skip warehouse stock, so `in_stock` is irrelevant while their window is open. A pre-order SKU
-    // whose window is closed or not yet open cannot be bought (the backend rejects it).
-    inStock: v.is_preorder_enabled ? v.is_preorder_active : v.in_stock,
+    salePrice: kind === "stock" && !isPreOrder && v.sale_price ? toNumber(v.sale_price) : undefined,
+    inStock,
     isPreOrder,
     preorderEndDate: isPreOrder ? (v.preorder_end_date ?? undefined) : undefined,
     expectedDelivery: isPreOrder ? formatDate(v.release_date) : undefined,
@@ -79,25 +85,19 @@ function toSkuVariant(v: ApiVariant): SkuVariant {
   };
 }
 
-/** Colour / Size option groups for the existing variant picker, built from the SKU list. */
-function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
-  const groups: ProductVariant[] = [];
-  const build = (name: T, pick: (v: SkuVariant) => string, order: (values: string[]) => string[] = (v) => v) => {
-    const values = order([...new Set(skus.map(pick).filter(Boolean))]);
-    // A single value is not a choice, so no picker is shown.
-    if (values.length < 2) return;
-    groups.push({
-      name,
-      options: values.map((value) => ({
-        label: plain(value),
-        value,
-        inStock: skus.some((v) => pick(v) === value && v.inStock),
-      })),
-    });
-  };
-  build({ en: COLOUR_GROUP, bn: "রং" }, (v) => v.color);
-  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size, sortSizes);
-  return groups.length ? groups : undefined;
+function toSale(sale: ApiProductSale | null | undefined): ProductSale | undefined {
+  if (!sale?.name) return undefined;
+  return { name: sale.name, percentOff: toNumber(sale.percent_off), endsAt: formatDate(sale.ends_at) };
+}
+
+// Ids can be UUIDs or the API's synthetic legacy strings, so they are only ever compared, never parsed.
+function toOptions(options: ApiProductOption[] | undefined): ProductOption[] | undefined {
+  const rows = (options ?? []).map((option) => ({
+    id: String(option.id),
+    name: option.name,
+    values: (option.values ?? []).map((value) => ({ id: String(value.id), value: value.value })),
+  }));
+  return rows.length ? rows : undefined;
 }
 
 /** "screen_size" -> "Screen size": formatting of an API key, not a translation. */
@@ -123,35 +123,36 @@ function toBadge(badge: string): T | undefined {
   return plain(label);
 }
 
-export function toCategoryInfo(category: ApiCategory, products: Product[] = []): CategoryInfo {
-  const inCategory = products.filter((p) => p.category === category.slug);
-  const withImage = inCategory.find((p) => p.image !== PLACEHOLDER_IMAGE);
-  const counted = category.product_count !== undefined;
-  const apiImage = category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE;
+export function toCategoryInfo(category: ApiCategory): CategoryInfo {
   return {
     id: category.slug,
     apiId: category.id,
     slug: category.slug,
     name: plain(category.name),
-    // The API has no category description. Count and picture come from the API; an API deployed before those
-    // fields existed leaves them out, and the product list stands in.
+    // The API has no category description.
     description: plain(""),
-    image: counted ? apiImage : (withImage?.image ?? CATEGORY_PLACEHOLDER_IMAGE),
-    itemCount: category.product_count ?? inCategory.length,
+    image: category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE,
+    itemCount: category.product_count,
     type: category.category_type,
   };
 }
 
 export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
-  const skus = (api.variants ?? []).map(toSkuVariant);
+  const skus = (api.variants ?? []).map((v) => toSkuVariant(v, api.kind));
   const preferred = skus.find((v) => v.inStock) ?? skus[0];
   const category = categories.find((c) => c.id === api.category_id);
 
-  const gallery = [...(api.images ?? [])]
+  const images = [...(api.images ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((img) => normalizeImageUrl(img.url))
-    .filter(Boolean);
+    .map((img) => ({ url: normalizeImageUrl(img.url), valueId: img.option_value_id }))
+    .filter((img) => img.url);
+  const gallery = images.map((img) => img.url);
   if (gallery.length === 0) gallery.push(PLACEHOLDER_IMAGE);
+  const galleryByValue: Record<string, string[]> = {};
+  for (const img of images) {
+    if (img.valueId) (galleryByValue[String(img.valueId)] ??= []).push(img.url);
+  }
+  const highlights = (api.highlights ?? []).filter(Boolean).map(plain);
 
   const description = plain(api.description ?? "");
   const base: Product = {
@@ -164,6 +165,7 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     price: preferred?.price ?? 0,
     compareAtPrice: preferred?.compareAtPrice,
     category: category?.slug ?? "",
+    kind: api.kind,
     categoryName: plain(category?.name ?? ""),
     image: gallery[0]!,
     gallery,
@@ -178,11 +180,14 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     featured: api.featured,
     trending: api.trending,
     newArrival: api.new_arrival,
-    variants: optionGroups(skus),
+    options: toOptions(api.options),
+    galleryByValue: Object.keys(galleryByValue).length ? galleryByValue : undefined,
     skuVariants: skus,
     defaultVariantId: preferred?.id,
     specs: toSpecs(api.specs),
+    highlights: highlights.length ? highlights : undefined,
     metaKeywords: api.meta_keywords || undefined,
+    sale: toSale(api.sale),
   };
   return applyVariant(base, preferred);
 }

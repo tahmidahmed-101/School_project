@@ -12,6 +12,8 @@ import { DateCell, LinkCell, MoneyCell, TextCell } from "@/components/common/cel
 import { downloadFile } from "@/lib/download"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
+import { useKind } from "@/hooks/use-kind"
+import { paymentsTitle, purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useDebounced } from "@/hooks/use-debounced"
 import { useListPage } from "@/hooks/use-list-page"
@@ -37,7 +39,7 @@ const columns: ColumnDef<VendorPayment>[] = [
     accessorKey: "vendor_bill_number",
     header: "BILL",
     cell: ({ row }) => (
-      <LinkCell to="/purchasing/bills" className="font-mono font-semibold">
+      <LinkCell to={`${purchasingBase(row.original.kind)}/bills`} className="font-mono font-semibold">
         {row.original.vendor_bill_number}
       </LinkCell>
     ),
@@ -59,8 +61,10 @@ const columns: ColumnDef<VendorPayment>[] = [
   },
 ]
 
-const VendorPayments = () => {
-  useDocumentTitle("Vendor Payments")
+const VendorPaymentsList = () => {
+  const kind = useKind()
+  const title = paymentsTitle(kind)
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.vendorPayments)
 
@@ -74,16 +78,21 @@ const VendorPayments = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state,
-    params: { method: debouncedMethod, start, end, ordering: ordering?.value },
+    params: { method: debouncedMethod, start, end, ordering: ordering?.value, kind },
   })
 
   // The server builds the file from the same filters the list is showing.
-  const handleExport = () => downloadFile(`${VENDOR_PAYMENTS_ENDPOINT}export/`, "vendor-payments.csv", list.query)
+  const handleExport = () => downloadFile(
+      `${VENDOR_PAYMENTS_ENDPOINT}export/`,
+      kind === "preorder" ? "pre-order-supplier-payments.csv" : "stock-vendor-payments.csv",
+      list.query,
+      true
+    )
 
   return (
     <div className="section-container">
       <PageHeader
-        title="Vendor Payments"
+        title={title}
         actions={<ExportButton onExport={handleExport} />}
       />
 
@@ -102,12 +111,14 @@ const VendorPayments = () => {
         data={state.data}
         {...list.tableProps}
         emptyIcon={Banknote}
-        emptyTitle="No vendor payments"
+        emptyTitle={kind === "preorder" ? "No supplier payments" : "No vendor payments"}
         minWidth="760px"
         columnWidths={["180px", "160px", "140px", "140px", "180px"]}
       />
     </div>
   )
 }
+
+const VendorPayments = () => <VendorPaymentsList key={useKind()} />
 
 export default VendorPayments

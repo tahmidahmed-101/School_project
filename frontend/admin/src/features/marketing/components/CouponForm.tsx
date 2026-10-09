@@ -5,23 +5,26 @@ import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormActions } from "@/components/common/FormActions"
-import { DateField, SelectField, TextField } from "@/components/common/form-fields"
+import { DateField, FormField, MoneyField, SelectField, TextField } from "@/components/common/form-fields"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, patchData, postData } from "@/features/marketing/slices/couponSlice"
-import type { Coupon, CouponCreatePayload, CouponUpdatePayload } from "@/features/marketing/types"
+import type { Coupon, CouponCreatePayload, CouponUpdatePayload, NamedRef } from "@/features/marketing/types"
 import { useCan } from "@/hooks/use-can"
-import { reportFormError } from "@/lib/forms"
+import { moneySchema, reportFormError } from "@/lib/forms"
 import { resolveDetailState } from "@/lib/detailState"
 import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/format"
+import { toPaisa } from "@/lib/money"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useStockBrandRows, useStockCategoryRows } from "../lib/stockTargets"
+import { TickList } from "./TickList"
 
 const couponSchema = z
   .object({
@@ -34,13 +37,28 @@ const couponSchema = z
     value: z.number({ error: "Enter a discount value" }).gt(0, "Discount must be greater than 0"),
     min_order_amount: z.number({ error: "Enter a minimum order amount" }).min(0, "Can't be negative"),
     usage_limit: z.number().int("Must be a whole number").min(1, "Must be at least 1").nullable(),
+    per_customer_limit: z.number().int("Must be a whole number").min(1, "Must be at least 1").nullable(),
+    max_discount_amount: moneySchema,
+    starts_at: z.string(),
     expires_at: z.string(),
+    category_ids: z.array(z.string()),
+    brand_ids: z.array(z.string()),
     is_active: z.boolean(),
     show_on_storefront: z.boolean(),
   })
   .superRefine((values, ctx) => {
     if (values.discount_type === "percentage" && values.value > 100) {
       ctx.addIssue({ code: "custom", path: ["value"], message: "A percentage can't exceed 100" })
+    }
+    if (
+      values.discount_type === "percentage" &&
+      values.max_discount_amount &&
+      toPaisa(values.max_discount_amount) <= BigInt(0)
+    ) {
+      ctx.addIssue({ code: "custom", path: ["max_discount_amount"], message: "Must be greater than 0" })
+    }
+    if (values.starts_at && values.expires_at && values.expires_at <= values.starts_at) {
+      ctx.addIssue({ code: "custom", path: ["expires_at"], message: "The expiry must be after the start" })
     }
   })
 
@@ -52,12 +70,18 @@ const defaultValues: CouponFormValues = {
   value: 10,
   min_order_amount: 0,
   usage_limit: null,
+  per_customer_limit: null,
+  max_discount_amount: "",
+  starts_at: "",
   expires_at: "",
+  category_ids: [],
+  brand_ids: [],
   is_active: true,
   show_on_storefront: false,
 }
 
 const FORM_FIELDS = Object.keys(defaultValues)
+const NO_REFS: NamedRef[] = []
 
 const CouponForm = () => {
   const { id = "new" } = useParams<{ id: string }>()
@@ -81,6 +105,8 @@ const CouponForm = () => {
     formState: { errors, isSubmitting, isDirty },
   } = useForm<CouponFormValues>({ resolver: zodResolver(couponSchema), defaultValues })
   const discountType = watch("discount_type")
+  const categories = useStockCategoryRows(existing?.categories ?? NO_REFS)
+  const brands = useStockBrandRows(existing?.brands ?? NO_REFS)
 
   const loadCoupon = useCallback(() => dispatch(fetchSingle(id)), [dispatch, id])
 
@@ -99,7 +125,12 @@ const CouponForm = () => {
       value: Number(existing.value),
       min_order_amount: Number(existing.min_order_amount),
       usage_limit: existing.usage_limit,
+      per_customer_limit: existing.per_customer_limit ?? null,
+      max_discount_amount: existing.max_discount_amount ?? "",
+      starts_at: toDatetimeLocal(existing.starts_at),
       expires_at: toDatetimeLocal(existing.expires_at),
+      category_ids: (existing.categories ?? []).map((c) => c.id).sort(),
+      brand_ids: (existing.brands ?? []).map((b) => b.id).sort(),
       is_active: existing.is_active,
       show_on_storefront: existing.show_on_storefront,
     })
@@ -126,7 +157,13 @@ const CouponForm = () => {
       value: values.value.toFixed(2),
       min_order_amount: values.min_order_amount.toFixed(2),
       usage_limit: values.usage_limit,
+      per_customer_limit: values.per_customer_limit,
+      max_discount_amount:
+        values.discount_type === "percentage" && values.max_discount_amount ? values.max_discount_amount : null,
+      starts_at: fromDatetimeLocal(values.starts_at),
       expires_at: fromDatetimeLocal(values.expires_at),
+      category_ids: values.category_ids,
+      brand_ids: values.brand_ids,
       show_on_storefront: values.show_on_storefront,
     }
 
@@ -169,6 +206,7 @@ const CouponForm = () => {
         <Card>
           <CardHeader>
             <CardTitle>Coupon Details</CardTitle>
+            <CardDescription>A coupon works on orders for items in stock.</CardDescription>
           </CardHeader>
           <CardContent>
             <fieldset disabled={readOnly} className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -199,6 +237,17 @@ const CouponForm = () => {
                   <FieldError errors={[errors.value]} />
                 </FieldContent>
               </Field>
+
+              {discountType === "percentage" && (
+                <MoneyField
+                  showCurrency
+                  label="Maximum Discount"
+                  id="max_discount_amount"
+                  description="The most this coupon takes off one order. Leave empty for no cap."
+                  error={errors.max_discount_amount}
+                  {...register("max_discount_amount")}
+                />
+              )}
 
               <Field>
                 <FieldLabel htmlFor="min_order_amount">Minimum Order ({getDefaultCurrency()})</FieldLabel>
@@ -236,6 +285,37 @@ const CouponForm = () => {
                   <FieldError errors={[errors.usage_limit]} />
                 </FieldContent>
               </Field>
+
+              <Field>
+                <FieldLabel htmlFor="per_customer_limit">Uses Per Customer</FieldLabel>
+                <FieldContent>
+                  <Controller
+                    control={control}
+                    name="per_customer_limit"
+                    render={({ field }) => (
+                      <Input
+                        id="per_customer_limit"
+                        type="number"
+                        min="1"
+                        placeholder="Unlimited"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                      />
+                    )}
+                  />
+                  <FieldDescription>How many times one customer can use it. Leave empty for unlimited.</FieldDescription>
+                  <FieldError errors={[errors.per_customer_limit]} />
+                </FieldContent>
+              </Field>
+
+              <DateField
+                label="Starts At"
+                id="starts_at"
+                withTime
+                description="Leave empty for a coupon that works right away."
+                error={errors.starts_at}
+                {...register("starts_at")}
+              />
 
               <DateField
                 label="Expires At"
@@ -280,6 +360,47 @@ const CouponForm = () => {
                   )}
                 />
               </Field>
+
+              <Controller
+                control={control}
+                name="category_ids"
+                render={({ field }) => (
+                  <FormField
+                    label={`Limit to Categories${field.value.length ? ` (${field.value.length})` : ""}`}
+                    description="Items in stock only. Tick none, here and under brands, for a coupon on the whole order."
+                    error={errors.category_ids}
+                  >
+                    <TickList
+                      rows={categories.rows}
+                      selected={field.value}
+                      onChange={field.onChange}
+                      disabled={readOnly}
+                      isLoading={categories.isLoading}
+                      noun="categories"
+                    />
+                  </FormField>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="brand_ids"
+                render={({ field }) => (
+                  <FormField
+                    label={`Limit to Brands${field.value.length ? ` (${field.value.length})` : ""}`}
+                    error={errors.brand_ids}
+                  >
+                    <TickList
+                      rows={brands.rows}
+                      selected={field.value}
+                      onChange={field.onChange}
+                      disabled={readOnly}
+                      isLoading={brands.isLoading}
+                      noun="brands"
+                    />
+                  </FormField>
+                )}
+              />
             </fieldset>
           </CardContent>
         </Card>

@@ -3,23 +3,21 @@
 import { useMemo, useState } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
-import { VoucherSection, type Voucher } from "@/modules/marketing";
 import { CategoryShowcase, TrendingSection } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
+import { heroSlidesFor, promoLinesFor, type StorefrontContent } from "../domain/storefront-content";
 import { useCatalog, useProducts } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { BRAND_INFO } from "@/lib/brand";
-import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { EmptyState } from "@/design-system/patterns/EmptyState";
-import { buttonClass } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 
 /** Same layout as the home page (Hero, browsable grid, newsletter), scoped to pre-order stock only. */
-export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
+export function PreOrderSections({ content, hasOffers }: { content: StorefrontContent | null; hasOffers: boolean }) {
   const { ui } = useLang();
   const { categories } = useCatalog();
   const { preorderProducts } = useProducts();
@@ -47,9 +45,14 @@ export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
           <Breadcrumbs items={[{ label: ui("navPreOrder") }]} />
         </Container>
       </div>
-      <Hero heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`} shopLink="/shop?type=preorder" preorder />
-      <PromoMarquee />
-      <VoucherSection vouchers={vouchers} />
+      <Hero
+        heading={`${BRAND_INFO.name} ${ui("navPreOrder")}`}
+        slides={heroSlidesFor("preorder", content)}
+        hasOffers={hasOffers}
+        shopLink="/shop?type=preorder"
+        preorder
+      />
+      <PromoMarquee lines={promoLinesFor("preorder", content)} />
       <CategoryShowcase preorder />
 
       {preorderProducts.length === 0 ? (
@@ -59,11 +62,6 @@ export function PreOrderSections({ vouchers }: { vouchers: Voucher[] }) {
             <EmptyState
               icon={<CalendarClock className="mx-auto mb-3 h-10 w-10 text-ink-300" />}
               title={ui("preOrderEmpty")}
-              action={
-                <Link href="/shop" className={buttonClass()}>
-                  {ui("cartStartShopping")}
-                </Link>
-              }
             />
           </Container>
         </section>

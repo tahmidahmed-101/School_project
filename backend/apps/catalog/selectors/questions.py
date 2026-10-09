@@ -28,12 +28,16 @@ STATUS_PUBLISHED = "published"
 QUESTION_STATUSES = (STATUS_PENDING, STATUS_ANSWERED, STATUS_PUBLISHED)
 
 
-def questions_list(*, product=None, status: str | None = None) -> QuerySet[ProductQuestion]:
+def questions_list(
+    *, product=None, status: str | None = None, kind: str | None = None
+) -> QuerySet[ProductQuestion]:
     """Every question, for the admin moderation queue. `answered` means
     answered but not yet published."""
     queryset = ProductQuestion.objects.select_related("customer", "product", "answered_by")
     if product is not None:
         queryset = queryset.filter(product=product)
+    if kind:
+        queryset = queryset.filter(product__category__category_type=kind)
     if status == STATUS_PENDING:
         queryset = queryset.filter(answer="")
     elif status == STATUS_ANSWERED:

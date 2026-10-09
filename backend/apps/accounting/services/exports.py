@@ -8,16 +8,19 @@ REPORT_COLUMNS = ("line_item", "amount")
 
 
 def _rows(report: dict) -> list[list[str]]:
-    return [[key, str(value)] for key, value in report.items()]
+    return [
+        [key, ", ".join(value) if isinstance(value, list) else "" if value is None else str(value)]
+        for key, value in report.items()
+    ]
 
 
-def profit_and_loss_rows(*, start: date, end: date) -> list[list[str]]:
-    return _rows(profit_and_loss(start=start, end=end))
+def profit_and_loss_rows(*, start: date, end: date, kind: str | None = None) -> list[list[str]]:
+    return _rows(profit_and_loss(start=start, end=end, kind=kind))
 
 
-def balance_sheet_rows(*, as_of: date) -> list[list[str]]:
-    return _rows(balance_sheet(as_of=as_of))
+def balance_sheet_rows(*, as_of: date, kind: str | None = None) -> list[list[str]]:
+    return _rows(balance_sheet(as_of=as_of, kind=kind))
 
 
-def cash_flow_rows(*, start: date, end: date) -> list[list[str]]:
-    return _rows(cash_flow(start=start, end=end))
+def cash_flow_rows(*, start: date, end: date, kind: str | None = None) -> list[list[str]]:
+    return _rows(cash_flow(start=start, end=end, kind=kind))

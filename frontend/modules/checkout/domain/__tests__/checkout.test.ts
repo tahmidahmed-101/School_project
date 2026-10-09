@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import type { CartItem, OrderForm } from "@/lib/types";
 import { makeProduct } from "@/tests/fixtures";
-import { EMPTY_ORDER_FORM, buildCheckoutRequest, mapApiFieldErrors, validateOrderForm } from "../checkout";
+import {
+  EMPTY_ORDER_FORM,
+  acceptsCoupon,
+  buildCheckoutRequest,
+  couponErrorKey,
+  mapApiFieldErrors,
+  paymentMethodsFor,
+  validateOrderForm,
+} from "../checkout";
 
 const validForm: OrderForm = {
   name: " Rahim Uddin ",
@@ -102,5 +110,60 @@ describe("mapApiFieldErrors", () => {
 
   it("ignores fields with no input of their own", () => {
     expect(mapApiFieldErrors(apiError({ "items.0.variant_id": "Unknown variant" }))).toEqual({});
+  });
+});
+
+describe("acceptsCoupon", () => {
+  const preorderLine: CartItem = {
+    product: makeProduct({ id: "p-9", kind: "preorder", isPreOrder: true }),
+    quantity: 1,
+    variantId: "variant-9",
+  };
+
+  it("offers coupons on a stock basket only", () => {
+    expect(acceptsCoupon(items)).toBe(true);
+    expect(acceptsCoupon([preorderLine])).toBe(false);
+    expect(acceptsCoupon([...items, preorderLine])).toBe(false);
+    expect(acceptsCoupon([])).toBe(false);
+  });
+});
+
+describe("paymentMethodsFor", () => {
+  const method = (key: string, kind: "stock" | "preorder") => ({ key, kind, label: key, description: "", pay_to: "" });
+  const byKind = { stock: [method("cod", "stock")], preorder: [method("bkash", "preorder")] };
+  const preorderLine: CartItem = {
+    product: makeProduct({ id: "p-pre", isPreOrder: true, kind: "preorder" }),
+    quantity: 1,
+    variantId: "variant-pre",
+  };
+
+  it("offers a stock basket the stock methods", () => {
+    expect(paymentMethodsFor(items, byKind)).toEqual(byKind.stock);
+  });
+
+  it("offers a pre-order basket only the pre-order methods", () => {
+    expect(paymentMethodsFor([preorderLine], byKind)).toEqual(byKind.preorder);
+  });
+
+  it("never offers a pre-order method to a basket that also holds a stock line", () => {
+    expect(paymentMethodsFor([...items, preorderLine], byKind)).toEqual(byKind.stock);
+  });
+});
+
+describe("couponErrorKey", () => {
+  it("words the promotion refusals in the storefront's own copy", () => {
+    expect(couponErrorKey("coupon_not_started")).toBe("couponNotStarted");
+    expect(couponErrorKey("coupon_not_applicable")).toBe("couponNotApplicable");
+    expect(couponErrorKey("coupon_customer_limit_reached")).toBe("couponCustomerLimitReached");
+    expect(couponErrorKey("coupon_stock_only")).toBe("checkoutCouponStockOnly");
+    expect(couponErrorKey("invalid_coupon")).toBe("couponInvalid");
+    expect(couponErrorKey("coupon_expired")).toBe("couponExpired");
+    expect(couponErrorKey("coupon_usage_limit_reached")).toBe("couponUsageLimitReached");
+    expect(couponErrorKey("coupon_minimum_not_met")).toBe("couponMinimumNotMet");
+  });
+
+  it("leaves every other code to the API's message", () => {
+    expect(couponErrorKey("some_new_code")).toBeUndefined();
+    expect(couponErrorKey("toString")).toBeUndefined();
   });
 });

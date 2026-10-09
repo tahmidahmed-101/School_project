@@ -5,6 +5,16 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.catalog.selectors.bundles import bundle_available_quantities
+from apps.catalog.selectors.options import (
+    COLOUR_NAMES,
+    SIZE_NAMES,
+    product_options,
+    product_specs,
+    variant_legacy_field,
+    variant_option_values,
+    variant_title,
+)
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.inventory.selectors.stock import available_quantities_for_variants
 from apps.orders.services.carts import get_preordered_quantities
 
@@ -41,6 +51,7 @@ def stock_context_for_products(products) -> dict:
     pre-order capacity, each resolved in one query for the whole page rather
     than once per variant."""
     variants = [variant for product in products for variant in active_variants_of(product)]
+    prime_running_sales(variants)
     return {
         STOCK_CONTEXT_KEY: stock_by_variant(variants),
         PREORDER_CONTEXT_KEY: get_preordered_quantities(variants),
@@ -84,9 +95,12 @@ class PublicProductVariantSerializer(serializers.Serializer):
     compare_at_price = serializers.SerializerMethodField()
     discount_price = serializers.SerializerMethodField()
     effective_price = serializers.SerializerMethodField()
+    sale_price = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
-    color = serializers.CharField()
-    size = serializers.CharField()
+    title = serializers.SerializerMethodField()
+    option_value_ids = serializers.SerializerMethodField()
+    color = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
     is_bundle = serializers.SerializerMethodField()
     # Wholesale fields
@@ -99,10 +113,24 @@ class PublicProductVariantSerializer(serializers.Serializer):
     preorder_end_date = serializers.DateTimeField(allow_null=True)
     release_date = serializers.DateTimeField(allow_null=True)
     is_preorder_active = serializers.SerializerMethodField()
+    is_preorder_upcoming = serializers.BooleanField(read_only=True)
+    is_preorder_closed = serializers.BooleanField(read_only=True)
     is_preorder_price_applied = serializers.SerializerMethodField()
     preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
     preordered_quantity = serializers.SerializerMethodField()
     preorder_remaining = serializers.SerializerMethodField()
+
+    def get_title(self, obj) -> str:
+        return variant_title(obj)
+
+    def get_option_value_ids(self, obj) -> list[str]:
+        return [str(pair["value_id"]) for pair in variant_option_values(obj)]
+
+    def get_color(self, obj) -> str:
+        return variant_legacy_field(obj, COLOUR_NAMES)
+
+    def get_size(self, obj) -> str:
+        return variant_legacy_field(obj, SIZE_NAMES)
 
     def get_wholesale_price(self, obj) -> str | None:
         if obj.show_wholesale_price and obj.wholesale_price is not None:
@@ -113,14 +141,8 @@ class PublicProductVariantSerializer(serializers.Serializer):
         return list(obj.bundle_components.all())
 
     def get_compare_at_price(self, obj) -> str | None:
-        """Original price before discount (same as list price when discount applies)."""
-        if obj.discount_price is not None and obj.discount_price < obj.price:
-            return str(obj.price)
-        if (
-            obj.is_preorder_active
-            and obj.preorder_price is not None
-            and obj.preorder_price < obj.price
-        ):
+        """List price, shown struck through when the customer pays less."""
+        if obj.effective_price < obj.price:
             return str(obj.price)
         return None
 
@@ -136,7 +158,15 @@ class PublicProductVariantSerializer(serializers.Serializer):
         else discount price if valid)."""
         return str(obj.effective_price)
 
+    def get_sale_price(self, obj) -> str | None:
+        """Set only while a running sale is what the customer pays."""
+        sale_price = obj.sale_price
+        return None if sale_price is None else str(sale_price)
+
     def get_in_stock(self, obj) -> bool:
+        # A pre-order item is never sold from stock, in or out of its window.
+        if obj.is_preorder_kind:
+            return False
         # Exact quantity stays internal — the storefront only needs yes/no.
         stock = self.context.get(STOCK_CONTEXT_KEY)
         if stock is None:
@@ -239,6 +269,7 @@ class PublicBundleSerializer(serializers.Serializer):
 class PublicProductListSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     category_id = serializers.UUIDField(read_only=True)
+    kind = serializers.CharField(source="category.category_type", read_only=True)
     name = serializers.CharField()
     slug = serializers.CharField()
     product_type = serializers.CharField()
@@ -247,9 +278,43 @@ class PublicProductListSerializer(serializers.Serializer):
     trending = serializers.BooleanField(read_only=True)
     new_arrival = serializers.BooleanField(read_only=True)
     badge = serializers.CharField(read_only=True)
-    specs = serializers.JSONField(read_only=True)
+    specs = serializers.SerializerMethodField()
+    highlights = serializers.ListField(child=serializers.CharField(), read_only=True)
+    options = serializers.SerializerMethodField()
     variants = serializers.SerializerMethodField()
+    sale = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
+
+    def get_sale(self, obj) -> dict | None:
+        """The running sale that sets the price of at least one variant."""
+        for variant in active_variants_of(obj):
+            sale = variant.applied_sale
+            if sale is not None:
+                return {
+                    "name": sale.name,
+                    "percent_off": str(sale.percent_off),
+                    "ends_at": serializers.DateTimeField().to_representation(sale.ends_at)
+                    if sale.ends_at
+                    else None,
+                }
+        return None
+
+    def get_specs(self, obj) -> dict:
+        """Name to value, in the order staff set. The storefront reads it as an object."""
+        return {row["name"]: row["value"] for row in product_specs(obj)}
+
+    def get_options(self, obj) -> list[dict]:
+        return [
+            {
+                "id": str(option["id"]),
+                "name": option["name"],
+                "values": [
+                    {"id": str(value["id"]), "value": value["value"]}
+                    for value in option["values"]
+                ],
+            }
+            for option in product_options(obj, sellable_only=True)
+        ]
 
     def get_variants(self, obj) -> list[dict]:
         return PublicProductVariantSerializer(
@@ -274,7 +339,12 @@ class PublicProductListSerializer(serializers.Serializer):
         # would still land behind every product image.
         unique.sort(key=lambda image: image.sort_order)
         return [
-            {"url": image.url, "alt_text": image.alt_text, "sort_order": image.sort_order}
+            {
+                "url": image.url,
+                "alt_text": image.alt_text,
+                "sort_order": image.sort_order,
+                "option_value_id": str(image.option_value_id) if image.option_value_id else None,
+            }
             for image in unique
         ]
 

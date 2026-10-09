@@ -6,21 +6,27 @@ import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/modules/auth";
 import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from "@/modules/cart";
+import { useBrand } from "@/modules/catalog";
 import { ApiError } from "@/lib/api/client";
+import { freeDeliveryStatus } from "@/lib/free-delivery";
+import { shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import { toOrderResult } from "../data/adapters";
 import {
+  COUPON_STOCK_ONLY_CODE,
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
+  acceptsCoupon,
   buildCheckoutRequest,
   isBdMobile,
   mapApiFieldErrors,
+  paymentMethodsFor,
   validateOrderForm,
   type FormErrors,
+  type PaymentMethodsByKind,
 } from "../domain/checkout";
 import { useCoupon, useShippingQuote } from "./useCheckoutPricing";
-import type { ApiPaymentMethod } from "@/lib/api/types";
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -31,7 +37,7 @@ import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
 
-export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMethod[] }) {
+export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: PaymentMethodsByKind }) {
   const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
@@ -43,10 +49,15 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
 
+  const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind);
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
-  const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0].key;
+  const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
+  const freeDeliveryEstimate = freeDeliveryStatus(useBrand().freeDeliveryMinAmount, items);
+  // The quote is the store's answer: once it charges a fee, the estimate must not claim free delivery beside it.
+  const quoteCharges = shipping.status === "ok" && shipping.fee > 0;
+  const freeDelivery = quoteCharges && freeDeliveryEstimate?.reached ? null : freeDeliveryEstimate;
 
   // An abandoned checkout is only worth a call back with a number, so the cart learns it as soon as it is valid.
   const contactPhone = form.phone.trim();
@@ -76,6 +87,10 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    if (!paymentMethod) {
+      setErrorMsg(ui("checkoutNoPaymentMethod"));
+      return;
+    }
 
     const problems = validateOrderForm(form);
     if (Object.keys(problems).length > 0) {
@@ -91,16 +106,19 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
       // The backend prices the order (shipping zone, tax, discounts); its response is what the shopper sees.
       // Check out the shopper's saved cart when the backend holds exactly these items, so it stops being an open cart.
       const cartToken = await syncedGuestCartToken(items);
-      const request = buildCheckoutRequest(form, items, { paymentMethod, couponCode: coupon.applied?.code });
+      const request = buildCheckoutRequest(form, items, {
+        paymentMethod,
+        couponCode: acceptsCoupon(items) ? coupon.applied?.code : undefined,
+      });
       // Logged in: the order is placed on the customer's account. Guest: exactly as before.
       const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
       if (cartToken) forgetGuestCart();
       setOrderResult(
-        toOrderResult(order, {
-          name: form.name.trim(),
-          address: form.address.trim(),
-          district: form.district,
-        }),
+        toOrderResult(
+          order,
+          { name: form.name.trim(), address: form.address.trim(), district: form.district },
+          paymentMethods.find((m) => m.key === paymentMethod)?.pay_to ?? "",
+        ),
       );
       clearCart();
       window.scrollTo({ top: 0 });
@@ -110,6 +128,10 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
         if (Object.keys(mapped).length > 0) {
           setFieldErrors(mapped);
           setErrorMsg(ui(errorKey(error)));
+        } else if (error.code === "mixed_basket") {
+          setErrorMsg(ui("cartMixedNotice"));
+        } else if (error.code === COUPON_STOCK_ONLY_CODE) {
+          setErrorMsg(ui("checkoutCouponStockOnly"));
         } else if (NO_SHIPPING_CODES.has(error.code)) {
           setErrorMsg(ui("errNoShipping"));
         } else if (error.status === 400 || error.status === 409) {
@@ -141,9 +163,14 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
           </div>
           <p className="text-base font-bold text-fg">{ui("cartEmptyTitle")}</p>
           <p className="text-xs text-fg-muted">{ui("cartEmptySubtitle")}</p>
-          <Link href="/shop" className={buttonClass()}>
-            {ui("cartStartShopping")}
-          </Link>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href={shopHome("stock")} className={buttonClass()}>
+              {ui("navReadyStock")}
+            </Link>
+            <Link href={shopHome("preorder")} className={buttonClass()}>
+              {ui("navPreOrder")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -156,13 +183,17 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
 
         <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-7">
-            {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
+            {errorMsg ? (
+              <FormAlert>{errorMsg}</FormAlert>
+            ) : (
+              !paymentMethod && <FormAlert>{ui("checkoutNoPaymentMethod")}</FormAlert>
+            )}
             <CheckoutFields
               form={form}
               errors={fieldErrors}
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
               paymentMethods={paymentMethods}
-              paymentMethod={paymentMethod}
+              paymentMethod={paymentMethod ?? ""}
               onPaymentMethodChange={setChosenPayment}
             />
           </div>
@@ -173,6 +204,7 @@ export function CheckoutView({ paymentMethods }: { paymentMethods: ApiPaymentMet
               subtotal={subtotal}
               isSubmitting={isSubmitting}
               shipping={shipping}
+              freeDelivery={freeDelivery}
               coupon={coupon}
             />
           </div>

@@ -23,7 +23,7 @@ def set_preorder_stage(*, order: SalesOrder, stage: str, note: str = "", actor=N
             "An open cart has no pre-order stage; it is set once the order is placed.",
             code="order_not_placed",
         )
-    if not order.lines.filter(is_preorder=True).exists():
+    if order.order_type != SalesOrder.OrderType.PREORDER:
         raise BusinessRuleViolationError(
             "This order has no pre-order items.", code="not_a_preorder"
         )

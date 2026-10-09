@@ -20,10 +20,18 @@ from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import create_user
 from apps.audit.models import AuditLog, LoginHistory
 from apps.audit.services.audit import log_action, record_login_attempt
-from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+from apps.catalog.models import (
+    Category,
+    Product,
+    ProductImage,
+    ProductOptionValue,
+    ProductVariant,
+)
 from apps.catalog.services.categories import create_category
+from apps.catalog.services.options import set_product_options
 from apps.catalog.services.products import create_product, create_product_image, create_variant
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.common.services.demo_seed.constants import (
     AUDIT_IPS,
     AUDIT_MARKER,
@@ -57,11 +65,12 @@ from apps.common.services.demo_seed.constants import (
     TAX_RATE_NAME,
     TAX_RATE_PERCENT,
 )
+from apps.common.services.demo_seed.extras import DemoExtras
 from apps.inventory.constants import MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.inventory.services.stock import post_adjustment, write_off_stock
 from apps.logistics.models import Carrier, ShippingRate, ShippingZone
-from apps.logistics.services.rates import create_carrier, create_rate
+from apps.logistics.services.rates import create_carrier, create_rate, create_zone
 from apps.marketing.models import NewsletterSubscriber
 from apps.marketing.services.subscribers import subscribe, unsubscribe
 from apps.orders.constants import PaymentMethodKey
@@ -146,6 +155,7 @@ class DemoSeeder:
         self.seed_inventory_movements()
         self.seed_expenses()
         self.seed_audit_trail()
+        DemoExtras(self).run()
         return self.counts
 
     # ---- helpers -------------------------------------------------------
@@ -197,6 +207,12 @@ class DemoSeeder:
         # The zones themselves are fixed logistics fixtures, not demo data —
         # attach demo rates to every live zone so checkout can quote any
         # destination a seeded customer ships to.
+        for zone in ShippingZone.objects.filter(deleted_at__isnull=True, kind=KIND_STOCK):
+            if not ShippingZone.objects.filter(name=zone.name, kind=KIND_PREORDER).exists():
+                create_zone(
+                    name=zone.name, country_codes=list(zone.country_codes), kind=KIND_PREORDER
+                )
+                self._bump("shipping_zones")
         base_weight, base_charge, increment_weight, increment_charge = SHIPPING_RATE
         for zone in ShippingZone.objects.filter(deleted_at__isnull=True):
             for carrier in self.carriers:
@@ -227,9 +243,15 @@ class DemoSeeder:
         variants: list[ProductVariant] = []
         barcode_seq = 1
         for index, (cat_code, name, price, axis, weight) in enumerate(PRODUCTS, start=1):
-            product = self._ensure_product(categories[cat_code], name)
-            self._ensure_product_images(product, categories[cat_code], index)
             labels = SIZE_AXES[axis][: 2 + (index % 3)]
+            option_name = "Colour" if axis == "colour" else "Size"
+            product = self._ensure_product(categories[cat_code], name, option_name, labels)
+            self._ensure_product_images(product, categories[cat_code], index)
+            value_ids = dict(
+                ProductOptionValue.objects.filter(option__product=product).values_list(
+                    "value", "id"
+                )
+            )
             for label in labels:
                 sku = f"{SKU_PREFIX}-{cat_code}-{index:02d}-{label.upper()[:3]}"
                 barcode_seq += 1
@@ -242,8 +264,7 @@ class DemoSeeder:
                         cost_price=money(Decimal(price) * COST_RATIO),
                         barcode=f"880{barcode_seq:010d}",
                         weight=Decimal(weight),
-                        color=label if axis == "colour" else "",
-                        size="" if axis == "colour" else label,
+                        option_value_ids=[value_ids[label]],
                     )
                     self._bump("variants")
                 variants.append(variant)
@@ -270,7 +291,9 @@ class DemoSeeder:
             )
             self._bump("product_images")
 
-    def _ensure_product(self, category: Category, name: str) -> Product:
+    def _ensure_product(
+        self, category: Category, name: str, option_name: str, labels: list[str]
+    ) -> Product:
         slug = f"{SLUG_PREFIX}{slugify(name)}"
         product = Product.objects.filter(slug=slug).first()
         if product is not None:
@@ -282,10 +305,13 @@ class DemoSeeder:
                 f"{name} from the {BRAND} {category.name.lower()} line — cut and finished "
                 "for year-round wear in Bangladesh."
             ),
-            product_type=Product.ProductType.VARIANT,
         )
         Product.objects.filter(pk=product.pk).update(slug=slug)
         product.slug = slug
+        set_product_options(
+            product=product,
+            options=[{"name": option_name, "values": [{"value": label} for label in labels]}],
+        )
         self._bump("products")
         return product
 
@@ -399,8 +425,8 @@ class DemoSeeder:
         for code, discount_type, value, min_order_amount, usage_limit, expired in DEMO_COUPONS:
             if Coupon.objects.filter(code=code).exists():
                 continue
-            expiry_day = self.today - timedelta(days=5) if expired else self.today + timedelta(
-                days=45
+            expiry_day = (
+                self.today - timedelta(days=5) if expired else self.today + timedelta(days=45)
             )
             coupon = create_coupon(
                 code=code,
@@ -1005,18 +1031,14 @@ class DemoSeeder:
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
-            LoginHistory.objects.filter(pk=success.pk).update(
-                created_at=self._moment(day, hour=10)
-            )
+            LoginHistory.objects.filter(pk=success.pk).update(created_at=self._moment(day, hour=10))
             self._bump("login_history")
 
     def _admin_audit_targets(self) -> list[tuple[str, str, object, dict]]:
         targets: list[tuple[str, str, object, dict]] = []
         product = Product.objects.filter(slug__startswith=SLUG_PREFIX).first()
         if product is not None:
-            targets.append(
-                ("product.updated", "Product", product.id, {"field": "description"})
-            )
+            targets.append(("product.updated", "Product", product.id, {"field": "description"}))
         coupon = Coupon.objects.filter(code__in=[row[0] for row in DEMO_COUPONS]).first()
         if coupon is not None:
             targets.append(("coupon.created", "Coupon", coupon.id, {"code": coupon.code}))
@@ -1025,9 +1047,7 @@ class DemoSeeder:
             targets.append(
                 ("order.status_changed", "SalesOrder", order.id, {"status": order.status})
             )
-        ip_block = IPBlock.objects.filter(
-            ip_address__in=[ip for ip, _ in DEMO_BLOCKED_IPS]
-        ).first()
+        ip_block = IPBlock.objects.filter(ip_address__in=[ip for ip, _ in DEMO_BLOCKED_IPS]).first()
         if ip_block is not None:
             targets.append(
                 ("risk.ip_blocked", "IPBlock", ip_block.id, {"ip_address": ip_block.ip_address})

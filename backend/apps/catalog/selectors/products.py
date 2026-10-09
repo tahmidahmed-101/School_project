@@ -6,7 +6,11 @@ from django.db.models import Case, Count, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from apps.catalog.models import Product, ProductImage, ProductVariant
+from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+
+from .options import option_values_prefetch
+
+PRODUCT_OPTIONS_PREFETCH = "options__values"
 
 
 def _active_variants_prefetch() -> Prefetch:
@@ -16,11 +20,12 @@ def _active_variants_prefetch() -> Prefetch:
     return Prefetch(
         "variants",
         queryset=ProductVariant.objects.filter(deleted_at__isnull=True)
-        .select_related("product")
+        .select_related("product__category")
         .prefetch_related(
             "images",
             "product__images",
             "bundle_components__component_variant",
+            option_values_prefetch(),
         ),
         to_attr="active_variants",
     )
@@ -57,7 +62,7 @@ def _filter_basic_product_fields(
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
     if category is not None:
-        queryset = queryset.filter(category=category)
+        queryset = queryset.filter(Q(category=category) | Q(category__parent=category))
     if category_type:
         queryset = queryset.filter(category__category_type=category_type)
     if featured is not None:
@@ -90,7 +95,7 @@ def products_list(
     badge: str | None = None,
 ) -> QuerySet[Product]:
     queryset = Product.objects.select_related("category").prefetch_related(
-        _active_variants_prefetch(), "images"
+        _active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH
     )
     queryset = _filter_basic_product_fields(
         queryset,
@@ -111,6 +116,7 @@ def products_list(
         queryset = queryset.filter(SELLABLE_VARIANT_FILTER).distinct()
     if preorder_only or preorder_status:
         preorder_filter = Q(
+            category__category_type=Category.CategoryType.PREORDER,
             variants__is_preorder_enabled=True,
             variants__deleted_at__isnull=True,
         )
@@ -135,7 +141,9 @@ def products_list(
 
 
 def get_product_by_id(product_id: str | UUID, *, include_deleted: bool = False) -> Product | None:
-    queryset = Product.objects.prefetch_related(_active_variants_prefetch(), "images")
+    queryset = Product.objects.prefetch_related(
+        _active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH
+    )
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.filter(id=product_id).first()
@@ -146,7 +154,7 @@ def _public_products() -> QuerySet[Product]:
     # whose serializer walks variants -> images/components.
     return (
         Product.objects.select_related("category")
-        .prefetch_related(_active_variants_prefetch(), "images")
+        .prefetch_related(_active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH)
         .filter(SELLABLE_VARIANT_FILTER, deleted_at__isnull=True, is_active=True)
     )
 
@@ -203,9 +211,10 @@ MAX_RELATED_PRODUCTS = 24
 def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -> list[Product]:
     """Storefront "you may also like" for one product, ranked in a single query:
     same category and brand, then same category, then same brand, then the
-    merchandised (featured/trending) catalog as a filler. Built on
-    `products_list` so it inherits the sellable filter and the prefetches the
-    public list serializer depends on."""
+    merchandised (featured/trending) catalog as a filler. Every suggestion stays
+    in the product's own shop (stock or pre-order). Built on `products_list` so
+    it inherits the sellable filter and the prefetches the public list
+    serializer depends on."""
     same_category = Q(category_id=product.category_id)
     same_brand = Q(brand_id=product.brand_id) if product.brand_id else Q(pk__in=[])
     merchandised = Q(featured=True) | Q(trending=True)
@@ -213,7 +222,9 @@ def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -
         When(same_brand, then=Value(1)), default=Value(0)
     )
     return list(
-        products_list(is_active=True, sellable_only=True)
+        products_list(
+            is_active=True, sellable_only=True, category_type=product.category.category_type
+        )
         .exclude(pk=product.pk)
         .filter(same_category | same_brand | merchandised)
         .annotate(relevance=score)
@@ -243,7 +254,7 @@ def get_variant_by_sku_or_barcode(identifier: str) -> ProductVariant | None:
             Q(sku__iexact=identifier) | Q(barcode__iexact=identifier),
             deleted_at__isnull=True,
         )
-        .select_related("product")
+        .select_related("product__category")
         .first()
     )
 
@@ -251,8 +262,8 @@ def get_variant_by_sku_or_barcode(identifier: str) -> ProductVariant | None:
 def variants_for_product(product: Product) -> QuerySet[ProductVariant]:
     return (
         ProductVariant.objects.filter(product=product, deleted_at__isnull=True)
-        .select_related("product")
-        .prefetch_related("images", "product__images")
+        .select_related("product__category")
+        .prefetch_related("images", "product__images", option_values_prefetch())
         .order_by("sku")
     )
 
@@ -262,8 +273,6 @@ def variants_list(
     product=None,
     category=None,
     category_type: str | None = None,
-    color: str = "",
-    size: str = "",
     is_active: bool | None = None,
     preorder_only: bool = False,
     preorder_status: str | None = None,
@@ -275,7 +284,7 @@ def variants_list(
 
     queryset = (
         ProductVariant.objects.select_related("product", "product__category")
-        .prefetch_related("images", "product__images")
+        .prefetch_related("images", "product__images", option_values_prefetch())
         .filter(deleted_at__isnull=True)
     )
     if product is not None:
@@ -284,14 +293,11 @@ def variants_list(
         queryset = queryset.filter(product__category=category)
     if category_type:
         queryset = queryset.filter(product__category__category_type=category_type)
-    if color:
-        queryset = queryset.filter(color=color)
-    if size:
-        queryset = queryset.filter(size=size)
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
     if preorder_only or preorder_status:
         preorder_filter = Q(
+            product__category__category_type=Category.CategoryType.PREORDER,
             is_preorder_enabled=True,
             deleted_at__isnull=True,
         )

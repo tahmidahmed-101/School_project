@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from django.db import transaction
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -17,13 +16,21 @@ from apps.accounts.selectors.users import get_user_by_id
 from apps.catalog.selectors.products import get_variants_by_ids
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_date, get_uuid, validate_date_range
+from apps.common.params import (
+    get_bool,
+    get_choice,
+    get_date,
+    get_kind,
+    get_uuid,
+    validate_date_range,
+)
 from apps.common.pdf import PdfRenderer, pdf_response
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import CapturePaymentSerializer
 from apps.common.utils.export import CsvRenderer, csv_response
 from apps.logistics.selectors.rates import get_carrier_by_id
+from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
     PreorderStage,
@@ -32,7 +39,12 @@ from apps.orders.models import (
     SalesOrder,
     StockReservation,
 )
-from apps.orders.selectors.payments import get_payment_by_id, payments_list
+from apps.orders.selectors.payments import (
+    deposit_percent_context,
+    get_payment_by_id,
+    payments_list,
+)
+from apps.orders.selectors.preorder_demand import preorder_book_summary, preorder_demand
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
@@ -47,8 +59,6 @@ from apps.orders.selectors.shipments import (
     get_shipment_detail,
     shipments_list,
 )
-from apps.orders.services.carts import add_line, create_order
-from apps.orders.services.checkout import checkout
 from apps.orders.services.exports import export_orders
 from apps.orders.services.invoice_document import (
     INVOICE_TEMPLATE,
@@ -64,8 +74,12 @@ from apps.orders.services.orders import (
     update_order,
     update_order_line,
 )
-from apps.orders.services.payments import capture_payment, refund_payment
+from apps.orders.services.payments import (
+    capture_payment,
+    refund_payment,
+)
 from apps.orders.services.preorder import set_preorder_stage
+from apps.orders.services.preorder_allocation import allocate_preorder_stock
 from apps.orders.services.reservations import release_stock_reservation
 from apps.orders.services.returns import (
     approve_rma,
@@ -81,6 +95,7 @@ from apps.orders.services.shipments import (
     replace_damaged_units,
     update_shipment_status,
 )
+from apps.orders.services.staff_orders import place_staff_order, quote_staff_order
 
 from .serializers import (
     SHIP_TO_API_FIELDS,
@@ -88,6 +103,7 @@ from .serializers import (
     AdminOrderCreateSerializer,
     AdminOrderLineCreateSerializer,
     AdminOrderLineUpdateSerializer,
+    AdminOrderQuoteSerializer,
     AdminOrderStatusSerializer,
     AdminOrderUpdateSerializer,
     AdminPaymentSerializer,
@@ -145,14 +161,54 @@ class OrderQuerysetMixin:
             customer=customer,
             status=get_choice(params, "status", SalesOrder.Status.values),
             preorder_stage=get_choice(params, "preorder_stage", PreorderStage.values),
+            order_type=get_choice(params, "order_type", SalesOrder.OrderType.values),
             start=start,
             end=end,
         )
 
 
+def _staff_order_inputs(data: dict) -> tuple:
+    """The customer, ship-to address, carrier and (variant, quantity) lines a
+    staff order request names. A quote may leave the customer out."""
+    customer = None
+    if data.get("customer_id"):
+        customer = get_user_by_id(data["customer_id"])
+        if customer is None or customer.role != UserRole.CUSTOMER:
+            raise DomainError("Customer not found.", code="customer_not_found")
+
+    shipping_address = None
+    if customer is not None and data.get("shipping_address_id"):
+        shipping_address = get_address_for_user(customer, data["shipping_address_id"])
+        if shipping_address is None:
+            raise DomainError(
+                "Shipping address not found for this customer.", code="address_not_found"
+            )
+
+    carrier = None
+    if data.get("carrier_id"):
+        carrier = get_carrier_by_id(data["carrier_id"])
+        if carrier is None:
+            raise DomainError("Carrier not found.", code="carrier_not_found")
+
+    variants = {
+        str(variant.id): variant
+        for variant in get_variants_by_ids([line["variant_id"] for line in data["lines"]])
+    }
+    lines = []
+    for line in data["lines"]:
+        variant = variants.get(str(line["variant_id"]))
+        if variant is None:
+            raise DomainError("Variant not found.", code="variant_not_found")
+        lines.append((variant, line["quantity"]))
+    return customer, shipping_address, carrier, lines
+
+
 @extend_schema(tags=["Orders"])
 class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListAPIView):
     serializer_class = AdminSalesOrderSerializer
+
+    def get_serializer_context(self, items: list) -> dict:
+        return deposit_percent_context(items)
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -172,58 +228,20 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
         serializer = AdminOrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
-        customer = get_user_by_id(data["customer_id"])
-        if customer is None or customer.role != UserRole.CUSTOMER:
-            return error_from_exception(
-                DomainError("Customer not found.", code="customer_not_found")
-            )
-
-        shipping_address = None
-        shipping_address_id = data.get("shipping_address_id")
-        if shipping_address_id:
-            shipping_address = get_address_for_user(customer, shipping_address_id)
-            if shipping_address is None:
-                return error_from_exception(
-                    DomainError(
-                        "Shipping address not found for this customer.", code="address_not_found"
-                    )
-                )
-
-        carrier = None
-        carrier_id = data.get("carrier_id")
-        if carrier_id:
-            carrier = get_carrier_by_id(carrier_id)
-            if carrier is None:
-                return error_from_exception(
-                    DomainError("Carrier not found.", code="carrier_not_found")
-                )
-
-        variants = {
-            str(variant.id): variant
-            for variant in get_variants_by_ids([line["variant_id"] for line in data["lines"]])
-        }
-        resolved_lines = []
-        for line in data["lines"]:
-            variant = variants.get(str(line["variant_id"]))
-            if variant is None:
-                return error_from_exception(
-                    DomainError("Variant not found.", code="variant_not_found")
-                )
-            resolved_lines.append((variant, line["quantity"]))
-
         try:
-            with transaction.atomic():
-                order = create_order(customer=customer, created_by=request.user)
-                for variant, quantity in resolved_lines:
-                    add_line(order=order, variant=variant, quantity=quantity)
-                order = checkout(order=order, shipping_address=shipping_address, carrier=carrier)
-                if data.get("capture_payment", True):
-                    capture_payment(
-                        order=order,
-                        amount=order.grand_total,
-                        method=data.get("payment_method") or "manual",
-                    )
+            customer, shipping_address, carrier, lines = _staff_order_inputs(data)
+            order = place_staff_order(
+                customer=customer,
+                lines=lines,
+                kind=data["order_type"],
+                shipping_address=shipping_address,
+                carrier=carrier,
+                payment_method=data.get("payment_method") or PaymentMethodKey.MANUAL,
+                capture=data.get("capture_payment", True),
+                coupon_code=data.get("coupon_code", ""),
+                discount=data.get("discount_total"),
+                actor=request.user,
+            )
         except DomainError as exc:
             return error_from_exception(exc)
 
@@ -231,6 +249,38 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
         return Response(
             {"data": AdminSalesOrderSerializer(order).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema(tags=["Orders"])
+class AdminOrderQuoteView(APIView):
+    """What a staff order would come to, by the same steps that place it."""
+
+    serializer_class = AdminOrderQuoteSerializer
+    permission_classes: ClassVar[list] = [OrdersManagePermission]
+
+    @extend_schema(request=AdminOrderQuoteSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request) -> Response:
+        serializer = AdminOrderQuoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            _customer, shipping_address, carrier, lines = _staff_order_inputs(data)
+            quote = quote_staff_order(
+                lines=lines,
+                kind=data["order_type"],
+                shipping_address=shipping_address,
+                carrier=carrier,
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {
+                "data": {
+                    key: value if isinstance(value, bool) else str(value)
+                    for key, value in quote.items()
+                }
+            }
         )
 
 
@@ -327,6 +377,35 @@ class AdminOrderStatusView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": AdminSalesOrderSerializer(order).data, "message": "Success"})
+
+
+@extend_schema(tags=["Orders"])
+class AdminPreorderReportView(APIView):
+    """What open pre-orders still need from the supplier, and the money held
+    and owed on them."""
+
+    permission_classes: ClassVar[list] = [OrdersViewPermission]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request) -> Response:
+        return Response(
+            {
+                "data": {"summary": preorder_book_summary(), "demand": preorder_demand()},
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Orders"])
+class AdminPreorderAllocationView(APIView):
+    """Hand arrived stock to waiting pre-orders, oldest order first."""
+
+    permission_classes: ClassVar[list] = [OrdersManagePermission]
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request) -> Response:
+        allocated = allocate_preorder_stock(actor=request.user)
+        return Response({"data": {"allocated": allocated}, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])
@@ -487,6 +566,7 @@ class AdminPaymentListView(GenericListAPIView):
             method=params.get("method") or None,
             start=start,
             end=end,
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:
@@ -525,7 +605,7 @@ class AdminCustomerCartListView(GenericListAPIView):
     default_ordering = "-updated_at"
 
     def get_queryset(self):
-        return customer_carts_list()
+        return customer_carts_list(kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -546,6 +626,7 @@ class AdminReservationListView(GenericListAPIView):
             status=get_choice(params, "status", StockReservation.Status.values),
             created_before=get_date(params, "created_before"),
             expired=get_bool(params, "expired"),
+            kind=get_kind(params),
         )
 
     def get(self, request) -> Response:
@@ -615,7 +696,7 @@ class AdminShipmentListCreateView(GenericListAPIView):
     default_ordering = "-created_at"
 
     def get_queryset(self):
-        return shipments_list()
+        return shipments_list(kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -797,8 +878,10 @@ class AdminRMAListView(GenericListAPIView):
     default_ordering = "-created_at"
 
     def get_queryset(self):
-        status_param = get_choice(self.request.query_params, "status", ReturnRMA.Status.values)
-        return rmas_list(status=status_param)
+        params = self.request.query_params
+        return rmas_list(
+            status=get_choice(params, "status", ReturnRMA.Status.values), kind=get_kind(params)
+        )
 
     def get(self, request) -> Response:
         return self.list_response(request)

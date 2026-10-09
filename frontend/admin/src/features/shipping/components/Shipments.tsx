@@ -11,17 +11,25 @@ import type { Shipment } from "@/features/shipping/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, LinkCell, MoneyCell } from "@/components/common/cells"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { ReturnOutcome } from "./ReturnOutcome"
 import { ShipmentActions } from "./ShipmentActions"
 
-const Shipments = () => {
-  useDocumentTitle("Shipments")
+const ShipmentsList = () => {
+  const kind = useKind()
+  const isPreorder = kind === "preorder"
+  const title = isPreorder ? "Pre-order shipments" : "Shipments"
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const shipmentState = useAppSelector((state) => state.shipments)
-  const list = useListPage({ fetch: (p) => dispatch(fetchAllShipments(p)), state: shipmentState })
+  const list = useListPage({
+    fetch: (p) => dispatch(fetchAllShipments(p)),
+    state: shipmentState,
+    params: { kind },
+  })
 
   const columns: ColumnDef<Shipment>[] = [
     {
@@ -38,9 +46,9 @@ const Shipments = () => {
     },
     {
       id: "order",
-      header: "ORDER",
+      header: isPreorder ? "PRE-ORDER" : "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={`/order_detail/${row.original.order_id}`}>View order</LinkCell>
+        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
       ),
     },
     {
@@ -77,7 +85,7 @@ const Shipments = () => {
       cell: ({ row }) => (
         <TableActions
           itemName={`Shipment ${row.original.tracking_number || ""}`.trim()}
-          viewUrl={`/shipment_detail/${row.original.id}`}
+          viewUrl={withKind(`/shipment_detail/${row.original.id}`, kind)}
         />
       ),
     },
@@ -85,7 +93,7 @@ const Shipments = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Shipments" />
+      <PageHeader title={title} />
 
       <FilterToolbar
         searchPlaceholder="Search tracking #, order # or carrier..."
@@ -97,9 +105,13 @@ const Shipments = () => {
         columns={columns}
         data={shipmentState.data}
         {...list.tableProps}
-        onRowClick={(s) => navigate(`/shipment_detail/${s.id}`)}
+        onRowClick={(s) => navigate(withKind(`/shipment_detail/${s.id}`, kind))}
         emptyTitle="No shipments found"
-        emptyDescription="Shipments are created from a confirmed order's detail page."
+        emptyDescription={
+          isPreorder
+            ? "Shipments are created from a confirmed pre-order once its items have arrived."
+            : "Shipments are created from a confirmed order's detail page."
+        }
         minWidth="1150px"
         columnWidths={["170px", "150px", "110px", "120px", "150px", "170px", "220px", "80px"]}
       />
@@ -107,4 +119,7 @@ const Shipments = () => {
   )
 }
 
-export default Shipments
+// Both halves render this component on different routes; the key gives each half its own filters and page.
+const ShipmentsPage = () => <ShipmentsList key={useKind()} />
+
+export default ShipmentsPage

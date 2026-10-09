@@ -29,6 +29,8 @@ import { formatCurrency, formatDate, formatDateTime, fromDatetimeLocal, toDateti
 import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
 import { useAppDispatch } from "@/app/hooks"
 import type { Option } from "@/lib/types"
+import { useKind } from "@/hooks/use-kind"
+import { billsTitle, purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 
@@ -197,7 +199,7 @@ function BillDetailDialog({
             </DialogTitle>
             <DialogDescription>
               {bill.supplier_name} · PO{" "}
-              <Link to={`/purchasing/orders/${bill.purchase_order_id}`} className="text-primary hover:underline">
+              <Link to={`${purchasingBase(bill.kind)}/orders/${bill.purchase_order_id}`} className="text-primary hover:underline">
                 {bill.purchase_order_number}
               </Link>
             </DialogDescription>
@@ -296,15 +298,17 @@ const SORT_OPTIONS: Option[] = [
   { label: "Recently created", value: "-created_at" },
 ]
 
-const VendorBills = () => {
-  useDocumentTitle("Vendor Bills")
+const VendorBillsList = () => {
+  const kind = useKind()
+  const title = billsTitle(kind)
+  useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.vendorBills)
   const { data } = state
   const canWrite = useCanWriteBills()
 
   const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
-  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: filters.params })
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ...filters.params, kind } })
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -332,7 +336,7 @@ const VendorBills = () => {
       header: "PO",
       cell: ({ row }) => (
         <LinkCell
-          to={`/purchasing/orders/${row.original.purchase_order_id}`}
+          to={`${purchasingBase(row.original.kind)}/orders/${row.original.purchase_order_id}`}
           className="font-mono text-muted-foreground hover:text-primary"
         >
           {row.original.purchase_order_number}
@@ -373,7 +377,7 @@ const VendorBills = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Vendor Bills"
+        title={title}
         actions={
           canWrite && (
             <Button size="action" onClick={() => setCreateOpen(true)}>
@@ -396,7 +400,7 @@ const VendorBills = () => {
         {...list.tableProps}
         onRowClick={(b) => setViewingId(b.id)}
         emptyIcon={FileText}
-        emptyTitle="No vendor bills"
+        emptyTitle={kind === "preorder" ? "No supplier bills" : "No vendor bills"}
         minWidth="1080px"
         columnWidths={["150px", "190px", "130px", "130px", "130px", "110px", "100px", "80px"]}
       />
@@ -413,5 +417,7 @@ const VendorBills = () => {
     </div>
   )
 }
+
+const VendorBills = () => <VendorBillsList key={useKind()} />
 
 export default VendorBills

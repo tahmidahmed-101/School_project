@@ -5,9 +5,12 @@ from uuid import UUID
 from django.db.models import QuerySet
 
 from apps.procurement.models import VendorBill
+from apps.procurement.selectors.kind import filter_by_kind
 
 
-def vendor_bills_list(*, supplier=None, status: str | None = None) -> QuerySet[VendorBill]:
+def vendor_bills_list(
+    *, supplier=None, status: str | None = None, kind: str | None = None
+) -> QuerySet[VendorBill]:
     queryset = (
         VendorBill.objects.select_related("supplier", "purchase_order")
         .prefetch_related("payments")
@@ -17,6 +20,7 @@ def vendor_bills_list(*, supplier=None, status: str | None = None) -> QuerySet[V
         queryset = queryset.filter(supplier=supplier)
     if status:
         queryset = queryset.filter(status=status)
+    queryset = filter_by_kind(queryset, kind, purchase_order_field="purchase_order_id")
     return queryset.order_by("-due_date")
 
 

@@ -15,8 +15,14 @@ from apps.catalog.factories import (
     ProductVariantFactory,
 )
 from apps.catalog.models import PriceIssueReport
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded(db):
+    live_sales()
 
 ADMIN_URL = "/api/v1/admin/catalog/price-reports/"
 

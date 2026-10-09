@@ -98,6 +98,8 @@ interface DataTableProps<TData, TValue> {
   /** True while the current page's data is being fetched. The rows are replaced by a
    * centred spinner until the fetch settles, so stale rows never show alongside the loader. */
   isLoading?: boolean
+  /** False while `data` still holds rows fetched for another page; they are not shown. */
+  rowsReady?: boolean
   /** Set when the fetch backing this table failed — from the slice's `error` field. */
   error?: unknown
   /** Shown as a "Retry" action on the error state, when the fetch can be re-dispatched. */
@@ -138,7 +140,8 @@ interface DataTableProps<TData, TValue> {
 
 export function DataTable<TData, TValue>({
   columns,
-  data,
+  data: loadedData,
+  rowsReady = true,
   pageSize = 15,
   columnWidths,
   minWidth = "700px",
@@ -166,6 +169,7 @@ export function DataTable<TData, TValue>({
   footer,
 }: DataTableProps<TData, TValue>) {
   const selectable = selectableProp ?? (Boolean(bulk) || !embedded)
+  const data = React.useMemo(() => (rowsReady ? loadedData : []), [rowsReady, loadedData])
   const navigate = useNavigate()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   // Only the layout for this screen size is rendered: building both the table and the

@@ -12,29 +12,45 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
-from apps.catalog.factories import CategoryFactory, ProductFactory, ProductVariantFactory
+from apps.catalog.factories import (
+    CategoryFactory,
+    ProductFactory,
+    ProductVariantFactory,
+    make_options,
+    make_variant,
+)
 from apps.catalog.models import Category
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
 
 SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
 
 
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded():
+    """The sale list is read from the database once a minute, not per request,
+    so these counts are taken with it already in the cache."""
+    live_sales()
+
+
 def _catalog(products: int, variants_per_product: int) -> None:
     for _ in range(products):
         product = ProductFactory(is_active=True)
+        sizes = make_options(product, {"Size": SIZES[:variants_per_product]})
         for index in range(variants_per_product):
-            ProductVariantFactory(product=product, size=SIZES[index])
+            make_variant(product, [sizes[SIZES[index]]])
 
 
 def _preorder_catalog(products: int, variants_per_product: int) -> None:
     now = timezone.now()
     for _ in range(products):
         product = ProductFactory(is_active=True)
+        sizes = make_options(product, {"Size": SIZES[:variants_per_product]})
         for index in range(variants_per_product):
-            ProductVariantFactory(
-                product=product,
-                size=SIZES[index],
+            make_variant(
+                product,
+                [sizes[SIZES[index]]],
                 is_preorder_enabled=True,
                 preorder_start_date=now - timedelta(days=1),
                 preorder_end_date=now + timedelta(days=10),
@@ -54,6 +70,33 @@ def test_product_list_query_count_does_not_grow_with_the_catalog(api_client):
     assert len(large) == len(small)
 
 
+def test_product_list_prices_a_running_sale_without_a_query_per_variant(api_client):
+    from decimal import Decimal
+
+    from apps.catalog.services.sales import create_sale
+
+    _catalog(products=2, variants_per_product=2)
+    with CaptureQueriesContext(connection) as no_sale:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    create_sale(
+        name="Storewide",
+        percent_off=Decimal("10.00"),
+        starts_at=timezone.now() - timedelta(days=1),
+    )
+    with CaptureQueriesContext(connection) as reload:
+        response = api_client.get("/api/v1/public/catalog/products/")
+    assert response.data["data"]["results"][0]["sale"]["name"] == "Storewide"
+
+    _catalog(products=6, variants_per_product=3)
+    with CaptureQueriesContext(connection) as large:
+        response = api_client.get("/api/v1/public/catalog/products/")
+    assert len(response.data["data"]["results"]) == 8
+
+    assert len(large) == len(no_sale)
+    assert len(reload) - len(no_sale) <= 4
+
+
 def test_product_list_query_count_does_not_grow_with_preorder_variants(api_client):
     """Pre-order capacity (preorder_stock_limit/preordered_quantity/
     preorder_remaining) is resolved via the same batched
@@ -71,14 +114,16 @@ def test_product_list_query_count_does_not_grow_with_preorder_variants(api_clien
 
 
 def test_product_detail_query_count_does_not_grow_with_variants(api_client):
+    # Both have an option: a product without one skips the option-values query.
     one = ProductFactory(is_active=True)
-    ProductVariantFactory(product=one)
+    make_variant(one, [make_options(one, {"Size": ["S"]})["S"]])
     with CaptureQueriesContext(connection) as single:
         assert api_client.get(f"/api/v1/public/catalog/products/{one.slug}/").status_code == 200
 
     many = ProductFactory(is_active=True)
+    sizes = make_options(many, {"Size": SIZES})
     for index in range(6):
-        ProductVariantFactory(product=many, size=SIZES[index])
+        make_variant(many, [sizes[SIZES[index]]])
     with CaptureQueriesContext(connection) as multiple:
         assert api_client.get(f"/api/v1/public/catalog/products/{many.slug}/").status_code == 200
 

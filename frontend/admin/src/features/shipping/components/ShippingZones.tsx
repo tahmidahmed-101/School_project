@@ -15,13 +15,17 @@ import { deleteZone, fetchZones, restoreZone, updateZone } from "@/features/ship
 import type { ShippingZone } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useKind } from "@/hooks/use-kind"
 import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
+import { deliveryPath, deliveryTitle } from "../lib/kind"
 import { ZoneFormDialog } from "./ZoneFormDialog"
 
 const MAX_AREAS_SHOWN = 6
 
-const ShippingZones = () => {
-  useDocumentTitle("Delivery Zones")
+const ShippingZonesList = () => {
+  const kind = useKind()
+  const title = deliveryTitle(kind, "Delivery Zones")
+  useDocumentTitle(title)
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -38,6 +42,7 @@ const ShippingZones = () => {
   const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<ShippingZone>({
     fetch: (p) => dispatch(fetchZones(p)),
     state: zoneState,
+    params: { kind },
     noun: "zone",
     canUpdate,
     remove: (id) => dispatch(deleteZone(id)).unwrap(),
@@ -82,7 +87,7 @@ const ShippingZones = () => {
           data-no-row-click="true"
           onClick={(e) => {
             e.stopPropagation()
-            navigate(`/shipping_rates?zone_id=${row.original.id}`)
+            navigate(`${deliveryPath(kind, "shipping_rates")}?zone_id=${row.original.id}`)
           }}
         >
           <Truck className="size-4" />
@@ -97,13 +102,14 @@ const ShippingZones = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Delivery Zones"
+        title={title}
         actions={
           canUpdate && (
             <>
               <RestoreDeletedButton<ShippingZone>
                 noun="delivery zones"
                 endpoint="/admin/logistics/zones/"
+                params={{ kind }}
                 restore={(item) => dispatch(restoreZone(item.id)).unwrap()}
                 label={(item) => item.name}
                 onRestored={list.reload}
@@ -128,14 +134,20 @@ const ShippingZones = () => {
         data={zoneState.data}
         {...list.tableProps}
         emptyTitle="No delivery zones"
-        emptyDescription="Create a zone, then add carrier rates to it."
+        emptyDescription={
+          kind === "preorder"
+            ? "Create a zone, then add carrier rates to it. Pre-orders use only these zones."
+            : "Create a zone, then add carrier rates to it."
+        }
         minWidth="850px"
         columnWidths={canUpdate ? ["180px", "380px", "100px", "110px", "110px"] : ["200px", "420px", "110px", "120px"]}
       />
 
-      <ZoneFormDialog open={formOpen} onOpenChange={setFormOpen} zone={editing} onSaved={list.reload} />
+      <ZoneFormDialog open={formOpen} onOpenChange={setFormOpen} zone={editing} kind={kind} onSaved={list.reload} />
     </div>
   )
 }
+
+const ShippingZones = () => <ShippingZonesList key={useKind()} />
 
 export default ShippingZones

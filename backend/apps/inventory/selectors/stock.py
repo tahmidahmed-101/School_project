@@ -5,9 +5,19 @@ from uuid import UUID
 
 from django.db.models import F, QuerySet
 
+from apps.catalog.models import Category
 from apps.inventory.models import StockItem, StockLedgerEntry
 
-from .warehouse import get_default_warehouse
+from .warehouse import default_warehouse_ids
+
+
+def _in_default_warehouse(queryset: QuerySet, warehouse) -> QuerySet:
+    """A variant only has rows in warehouses of its own kind, so the default
+    warehouses of both kinds together give one row per variant."""
+    if warehouse is not None:
+        return queryset.filter(warehouse=warehouse)
+    default_ids = default_warehouse_ids()
+    return queryset.filter(warehouse_id__in=default_ids) if default_ids else queryset
 
 
 def stock_items_list(
@@ -15,6 +25,7 @@ def stock_items_list(
     variant=None,
     warehouse=None,
     low_stock_only: bool = False,
+    kind: str | None = None,
 ) -> QuerySet[StockItem]:
     queryset = (
         StockItem.objects.select_related("variant__product", "warehouse")
@@ -25,8 +36,13 @@ def stock_items_list(
         queryset = queryset.filter(variant=variant)
     if warehouse is not None:
         queryset = queryset.filter(warehouse=warehouse)
+    if kind:
+        queryset = queryset.filter(variant__product__category__category_type=kind)
     if low_stock_only:
-        queryset = queryset.annotate(
+        # Reorder points exist for stock items only; a pre-order item is never low.
+        queryset = queryset.filter(
+            variant__product__category__category_type=Category.CategoryType.STOCK
+        ).annotate(
             low_stock_expr=F("quantity_on_hand") - F("quantity_reserved") - F("reorder_point")
         ).filter(low_stock_expr__lte=0)
     return queryset.order_by("warehouse__name", "variant__sku")
@@ -34,12 +50,7 @@ def stock_items_list(
 
 def get_stock_item(*, variant, warehouse=None) -> StockItem | None:
     queryset = StockItem.objects.filter(variant=variant)
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     return queryset.first()
 
 
@@ -64,30 +75,20 @@ def available_quantities_for_variants(
     """Batch version of `available_quantity_for_variant` — one query for many
     variants, so callers building a variant table/list don't issue an N+1."""
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     rows = queryset.values("variant_id", "quantity_on_hand", "quantity_reserved")
     return {row["variant_id"]: row["quantity_on_hand"] - row["quantity_reserved"] for row in rows}
 
 
 def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> dict[UUID, int]:
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    if warehouse is not None:
-        queryset = queryset.filter(warehouse=warehouse)
-    else:
-        default_wh = get_default_warehouse()
-        if default_wh:
-            queryset = queryset.filter(warehouse=default_wh)
+    queryset = _in_default_warehouse(queryset, warehouse)
     rows = queryset.values("variant_id", "reorder_point")
     return {row["variant_id"]: row["reorder_point"] for row in rows}
 
 
 def ledger_entries_list(
-    *, variant=None, warehouse=None, movement_type: str | None = None
+    *, variant=None, warehouse=None, movement_type: str | None = None, kind: str | None = None
 ) -> QuerySet[StockLedgerEntry]:
     queryset = StockLedgerEntry.objects.select_related(
         "variant__product", "warehouse"
@@ -98,4 +99,6 @@ def ledger_entries_list(
         queryset = queryset.filter(warehouse=warehouse)
     if movement_type:
         queryset = queryset.filter(movement_type=movement_type)
+    if kind:
+        queryset = queryset.filter(variant__product__category__category_type=kind)
     return queryset.order_by("-created_at")

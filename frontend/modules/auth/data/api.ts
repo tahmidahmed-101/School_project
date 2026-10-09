@@ -27,6 +27,13 @@ export interface RegisterInput {
 export const register = (input: RegisterInput) =>
   apiRequest<ApiAuthUser>("/auth/register/", { ...customer, method: "POST", body: input });
 
+/** Answers the same whether or not the email has an account. */
+export const forgotPassword = (email: string) =>
+  apiRequest<void>("/auth/forgot-password/", { ...customer, method: "POST", body: { email } });
+
+export const resetPassword = (input: { email: string; code: string; new_password: string }) =>
+  apiRequest<void>("/auth/reset-password/", { ...customer, method: "POST", body: input });
+
 /** POST /auth/refresh/ — trades the refresh cookie for a new access token (401 when there is no session). */
 export const refresh = () => apiRequest<{ access: string }>("/auth/refresh/", { ...customer, method: "POST" });
 

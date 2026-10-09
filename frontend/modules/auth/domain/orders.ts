@@ -27,7 +27,8 @@ export function orderStatusTone(status: string): "done" | "bad" | "progress" {
   return "progress";
 }
 
-/** "Black / M", "Black", "M" or "" from a line's colour and size. */
-export function variantLabel(line: { color: string; size: string }): string {
-  return [line.color, line.size].filter(Boolean).join(" / ");
+export function preorderStageTone(stage: string): "done" | "bad" | "progress" {
+  if (stage === "completed") return "done";
+  if (stage === "cancelled") return "bad";
+  return "progress";
 }

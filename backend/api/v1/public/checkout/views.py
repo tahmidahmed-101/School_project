@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import ClassVar
 
 from drf_spectacular.utils import extend_schema
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 
 from api.v1.public.cart.views import guest_cart_token, resolve_guest_cart
 from apps.common.exceptions import DomainError
+from apps.common.params import KIND_STOCK, get_kind
 from apps.common.responses import error_from_exception, not_found
 from apps.common.throttling import (
     CouponRateThrottle,
@@ -22,10 +24,21 @@ from apps.logistics.selectors.rates import (
     get_zone_by_id,
     zones_list,
 )
-from apps.logistics.services.rates import shipping_options, try_quote_shipping
+from apps.logistics.services.rates import (
+    is_free_delivery,
+    shipping_options,
+    try_quote_shipping,
+)
+from apps.orders.selectors.basket_kind import kind_for_items
 from apps.orders.selectors.coupons import storefront_coupons
 from apps.orders.services.coupons import preview_coupon
-from apps.orders.services.guest_checkout import guest_checkout, subtotal_for_items, weight_for_items
+from apps.orders.services.guest_checkout import (
+    guest_checkout,
+    items_hold_preorder,
+    priced_lines_for_items,
+    subtotal_for_items,
+    weight_for_items,
+)
 from apps.risk.request_ip import client_ip
 
 from .serializers import (
@@ -74,16 +87,17 @@ class GuestCheckoutView(APIView):
         )
 
 
-def _resolve_zone_for_guest(*, zone_id, address_text):
+def _resolve_zone_for_guest(*, zone_id, address_text, kind):
     """Guest counterpart of the customer cart's `_resolve_zone` — there is no
     address book to look an id up against, only typed text or an explicit
-    zone id. An explicit zone_id still wins outright over any text given."""
+    zone id. An explicit zone_id still wins outright over any text given.
+    Only zones of the basket's own kind are looked at."""
     if zone_id:
-        zone = get_zone_by_id(zone_id)
+        zone = get_zone_by_id(zone_id, kind=kind)
         if zone is None:
             return None, not_found("zone_not_found", "Delivery zone not found.")
         return zone, None
-    zone = find_zone_by_address_text(address_text)
+    zone = find_zone_by_address_text(address_text, kind=kind)
     if zone is None:
         return None, error_from_exception(
             DomainError("Delivery is not available for this address yet.", code="zone_not_found")
@@ -105,8 +119,12 @@ class ShippingQuoteView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        try:
+            kind = kind_for_items(data["items"])
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone_for_guest(
-            zone_id=data.get("zone_id"), address_text=data.get("address_text")
+            zone_id=data.get("zone_id"), address_text=data.get("address_text"), kind=kind
         )
         if error is not None:
             return error
@@ -119,9 +137,12 @@ class ShippingQuoteView(APIView):
 
         try:
             weight = weight_for_items(data["items"])
+            subtotal = subtotal_for_items(data["items"])
         except DomainError as exc:
             return error_from_exception(exc)
-        quote = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
+        quote = try_quote_shipping(
+            zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+        )
         return Response(
             {
                 "data": {
@@ -129,6 +150,7 @@ class ShippingQuoteView(APIView):
                     "weight": str(weight),
                     "carrier_id": str(carrier.id) if carrier else None,
                     "shipping_total": str(quote) if quote is not None else None,
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                 },
                 "message": "Success",
             }
@@ -146,14 +168,19 @@ class ShippingOptionListView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        try:
+            kind = kind_for_items(data["items"])
+        except DomainError as exc:
+            return error_from_exception(exc)
         zone, error = _resolve_zone_for_guest(
-            zone_id=data.get("zone_id"), address_text=data.get("address_text")
+            zone_id=data.get("zone_id"), address_text=data.get("address_text"), kind=kind
         )
         if error is not None:
             return error
 
         try:
             weight = weight_for_items(data["items"])
+            subtotal = subtotal_for_items(data["items"])
         except DomainError as exc:
             return error_from_exception(exc)
 
@@ -161,13 +188,16 @@ class ShippingOptionListView(APIView):
 
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(zone=zone, weight=weight)
+            for option in shipping_options(
+                zone=zone, weight=weight, kind=kind, subtotal=subtotal
+            )
         ]
         return Response(
             {
                 "data": {
                     "zone": zone.name,
                     "weight": str(weight),
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                     "options": ShippingOptionSerializer(options, many=True).data,
                 },
                 "message": "Success",
@@ -178,7 +208,8 @@ class ShippingOptionListView(APIView):
 @extend_schema(tags=["Public Checkout"])
 class ShippingZoneListView(APIView):
     """Lists the delivery zones a guest can pick from directly — same
-    keyword-free payload as the customer cart's zone list."""
+    keyword-free payload as the customer cart's zone list. `kind` picks the
+    half; a quote still reads the kind from the basket itself."""
 
     permission_classes: ClassVar[list] = [AllowAny]
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
@@ -186,7 +217,7 @@ class ShippingZoneListView(APIView):
     def get(self, request) -> Response:
         from api.v1.customer.orders.serializers import ShippingZoneOptionSerializer
 
-        zones = zones_list()
+        zones = zones_list(kind=get_kind(request.query_params) or KIND_STOCK)
         return Response(
             {"data": ShippingZoneOptionSerializer(zones, many=True).data, "message": "Success"}
         )
@@ -208,8 +239,17 @@ class CouponValidationView(APIView):
         data = serializer.validated_data
 
         try:
-            subtotal = subtotal_for_items(data["items"])
-            result = preview_coupon(code=data["code"], subtotal=subtotal)
+            priced_lines = priced_lines_for_items(data["items"])
+            subtotal = sum((amount for _product, amount in priced_lines), Decimal("0"))
+            result = preview_coupon(
+                code=data["code"],
+                subtotal=subtotal,
+                holds_preorder=items_hold_preorder(data["items"]),
+                priced_lines=priced_lines,
+                customer=request.user if request.user.is_authenticated else None,
+                phone=data.get("phone", ""),
+                email=data.get("email", ""),
+            )
         except DomainError as exc:
             return error_from_exception(exc)
 

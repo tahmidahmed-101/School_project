@@ -75,6 +75,9 @@ class ShipmentLine(TimeStampedModel):
     # How many of those damaged units `replace_damaged_units` has since freed to
     # ship again with replacement stock. Still owed = damaged - replaced.
     replaced_quantity = models.PositiveIntegerField(default=0)
+    # False only for pre-order consignments sent before pre-order lines moved
+    # stock; receiving those back must not add units that never left.
+    stock_posted = models.BooleanField(default=True)
 
     @property
     def unresolved_damaged_quantity(self) -> int:

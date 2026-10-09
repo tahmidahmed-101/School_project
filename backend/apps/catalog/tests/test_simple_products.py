@@ -4,9 +4,10 @@ from decimal import Decimal
 
 import pytest
 
-from apps.catalog.factories import CategoryFactory, ProductVariantFactory
+from apps.catalog.factories import CategoryFactory, ProductVariantFactory, make_options
 from apps.catalog.models import Product
 from apps.catalog.selectors.products import get_product_by_slug, products_list
+from apps.catalog.services.options import set_product_options
 from apps.catalog.services.products import create_product, create_variant
 from apps.common.exceptions import BusinessRuleViolationError
 
@@ -35,32 +36,46 @@ def test_no_variant_is_created_without_a_price():
     assert product.variants.count() == 0
 
 
-def test_a_second_variant_promotes_a_simple_product():
+def test_adding_an_option_promotes_a_simple_product():
     product = _simple()
 
-    create_variant(product=product, sku="KETTLE-2", price=Decimal("210.00"), size="Large")
+    set_product_options(
+        product=product,
+        options=[
+            {
+                "name": "Size",
+                "default_value": "Small",
+                "values": [{"value": "Small"}, {"value": "Large"}],
+            }
+        ],
+    )
+    large = product.options.get().values.get(value="Large")
+    create_variant(
+        product=product, sku="KETTLE-2", price=Decimal("210.00"), option_value_ids=[large.id]
+    )
 
     product.refresh_from_db()
     assert product.product_type == Product.ProductType.VARIANT
-    assert product.variants.count() == 2
+    assert [variant.title for variant in product.variants.order_by("sku")] == ["Small", "Large"]
 
 
-def test_a_simple_product_refuses_a_second_variant_with_the_same_combo():
+def test_a_product_without_options_refuses_a_second_variant():
     product = _simple()
 
     with pytest.raises(BusinessRuleViolationError) as exc:
         create_variant(product=product, sku="KETTLE-2", price=Decimal("210.00"))
-    assert exc.value.code == "duplicate_variant_combo"
+    assert exc.value.code == "variant_combination_exists"
 
 
-def test_a_variant_product_accepts_several():
-    product = create_product(
-        category=CategoryFactory(),
-        name="T-shirt",
-        product_type=Product.ProductType.VARIANT,
+def test_a_product_with_options_accepts_several_variants():
+    product = create_product(category=CategoryFactory(), name="T-shirt")
+    values = make_options(product, {"Size": ["S", "M"]})
+    create_variant(
+        product=product, sku="TEE-S", price=Decimal("10.00"), option_value_ids=[values["S"].id]
     )
-    create_variant(product=product, sku="TEE-S", price=Decimal("10.00"), size="S")
-    create_variant(product=product, sku="TEE-M", price=Decimal("10.00"), size="M")
+    create_variant(
+        product=product, sku="TEE-M", price=Decimal("10.00"), option_value_ids=[values["M"].id]
+    )
 
     assert product.variants.count() == 2
 
@@ -87,9 +102,7 @@ def test_the_public_page_404s_a_product_with_no_live_variant():
 
 
 def test_a_deleted_variant_does_not_keep_a_product_sellable():
-    product = create_product(
-        category=CategoryFactory(), name="Gone", product_type=Product.ProductType.VARIANT
-    )
+    product = create_product(category=CategoryFactory(), name="Gone")
     variant = ProductVariantFactory(product=product)
     variant.soft_delete()
 
@@ -109,16 +122,10 @@ def test_create_product_stores_cost_and_discount_on_the_variant():
     assert variant.discount_price == Decimal("179.00")
 
 
-def test_update_product_price_fans_out_to_all_variants():
-    from apps.catalog.services.products import create_variant, update_product
+def test_update_product_price_sets_the_single_variant_of_a_product_without_options():
+    from apps.catalog.services.products import update_product
 
-    product = create_product(
-        category=CategoryFactory(),
-        name="Tee",
-        product_type=Product.ProductType.VARIANT,
-    )
-    create_variant(product=product, sku="TEE-A", price=Decimal("10.00"), size="S")
-    create_variant(product=product, sku="TEE-B", price=Decimal("10.00"), size="M")
+    product = _simple()
 
     update_product(
         product=product,
@@ -129,10 +136,27 @@ def test_update_product_price_fans_out_to_all_variants():
         },
     )
 
-    for variant in product.variants.all():
-        assert variant.price == Decimal("25.00")
-        assert variant.cost_price == Decimal("12.00")
-        assert variant.discount_price == Decimal("20.00")
+    variant = product.variants.get()
+    assert variant.price == Decimal("25.00")
+    assert variant.cost_price == Decimal("12.00")
+    assert variant.discount_price == Decimal("20.00")
+
+
+def test_update_product_price_leaves_the_variants_of_a_product_with_options_alone():
+    from apps.catalog.services.products import update_product
+
+    product = create_product(
+        category=CategoryFactory(),
+        name="Tee",
+        price=Decimal("10.00"),
+        options=[{"name": "Size", "values": ["S", "M"]}],
+    )
+
+    update_product(product=product, data={"price": Decimal("25.00"), "name": "Tee 2"})
+
+    product.refresh_from_db()
+    assert product.name == "Tee 2"
+    assert {variant.price for variant in product.variants.all()} == {Decimal("10.00")}
 
 
 def test_update_product_price_creates_a_variant_when_none_exists():
@@ -169,17 +193,19 @@ def test_product_serializer_exposes_representative_pricing():
 
 
 def test_adding_a_variation_inherits_pricing_from_sibling():
-    from apps.catalog.services.products import create_variant
-
     product = create_product(
         category=CategoryFactory(),
         name="Polo",
-        product_type=Product.ProductType.VARIANT,
         price=Decimal("40.00"),
         cost_price=Decimal("22.00"),
         discount_price=Decimal("35.00"),
+        options=[{"name": "Size", "values": ["M", "L"]}],
+        combinations=[["M"]],
     )
-    variation = create_variant(product=product, color="Blue", size="L")
+    large = product.options.get().values.get(value="L")
+
+    variation = create_variant(product=product, option_value_ids=[large.id])
+
     assert variation.price == Decimal("40.00")
     assert variation.cost_price == Decimal("22.00")
     assert variation.discount_price == Decimal("35.00")
@@ -190,5 +216,5 @@ def test_variation_without_price_needs_an_existing_variant():
 
     product = create_product(category=CategoryFactory(), name="Empty")
     with pytest.raises(BusinessRuleViolationError) as exc:
-        create_variant(product=product, color="Red")
+        create_variant(product=product)
     assert exc.value.code == "price_required"

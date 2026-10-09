@@ -6,10 +6,15 @@ from django.test.utils import CaptureQueriesContext
 
 from apps.catalog.factories import CategoryFactory, ProductFactory, ProductVariantFactory
 from apps.catalog.models import Brand
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
 
-SIZES = ["S", "M", "L", "XL"]
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded(db):
+    live_sales()
+
 
 
 def _url(product, **params) -> str:
@@ -21,8 +26,8 @@ def _url(product, **params) -> str:
 
 def _product(variants: int = 1, **kwargs):
     product = ProductFactory(**{"is_active": True, **kwargs})
-    for index in range(variants):
-        ProductVariantFactory(product=product, size=SIZES[index])
+    for _ in range(variants):
+        ProductVariantFactory(product=product)
     return product
 
 
@@ -49,6 +54,20 @@ def test_related_ranks_same_category_and_brand_first(api_client):
         str(brand_only.id),
         str(featured_elsewhere.id),
     ]
+
+
+def test_related_never_crosses_between_the_stock_and_preorder_shops(api_client):
+    brand = Brand.objects.create(name="Acme", slug="acme")
+    stock = CategoryFactory(category_type="stock")
+    preorder = CategoryFactory(category_type="preorder")
+    current = _product(category=preorder, brand=brand)
+    same_shop = _product(category=preorder, name="Same shop")
+    _product(category=stock, brand=brand, featured=True, name="Other shop")
+
+    response = api_client.get(_url(current))
+
+    assert _ids(response) == [str(same_shop.id)]
+    assert response.data["data"][0]["kind"] == "preorder"
 
 
 def test_related_excludes_self_and_unsellable_products(api_client):

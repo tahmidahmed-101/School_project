@@ -2,12 +2,26 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.catalog.selectors.options import (
+    COLOUR_NAMES,
+    SIZE_NAMES,
+    line_variant_title,
+    variant_legacy_field,
+)
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
+from apps.orders.selectors.payments import (
+    DEPOSIT_PERCENT_CONTEXT_KEY,
+    order_balance_due,
+    order_deposit_due,
+    order_paid_total,
+)
 
 
 class SalesOrderLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
+    # The snapshot only: carts and checkout must not load a variant per line.
+    variant_title = serializers.CharField(read_only=True)
     quantity = serializers.IntegerField()
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -38,9 +52,15 @@ class SalesOrderSerializer(serializers.Serializer):
     shipping_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     discount_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    order_type = serializers.CharField(read_only=True)
+    deposit_due = serializers.SerializerMethodField()
     coupon_code = serializers.CharField(source="coupon.code", read_only=True, allow_null=True)
     lines = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
+
+    def get_deposit_due(self, obj) -> str:
+        percent = self.context.get(DEPOSIT_PERCENT_CONTEXT_KEY)
+        return str(order_deposit_due(obj, deposit_percent=percent))
 
     def get_lines(self, obj) -> list[dict]:
         return SalesOrderLineSerializer(obj.lines.all(), many=True).data
@@ -59,8 +79,19 @@ class OrderHistoryLineSerializer(SalesOrderLineSerializer):
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_slug = serializers.CharField(source="variant.product.slug", read_only=True)
     sku = serializers.CharField(source="variant.sku", read_only=True)
-    color = serializers.CharField(source="variant.color", read_only=True)
-    size = serializers.CharField(source="variant.size", read_only=True)
+    variant_title = serializers.SerializerMethodField()
+    # Kept for older storefront builds; new code reads `variant_title`.
+    color = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
+
+    def get_color(self, obj) -> str:
+        return variant_legacy_field(obj.variant, COLOUR_NAMES)
+
+    def get_size(self, obj) -> str:
+        return variant_legacy_field(obj.variant, SIZE_NAMES)
 
 
 class OrderHistorySerializer(SalesOrderSerializer):
@@ -68,6 +99,15 @@ class OrderHistorySerializer(SalesOrderSerializer):
     `orders_for_customer`, which prefetches each line's variant and product."""
 
     created_at = serializers.DateTimeField(read_only=True)
+    preorder_stage = serializers.CharField(read_only=True)
+    paid_total = serializers.SerializerMethodField()
+    balance_due = serializers.SerializerMethodField()
+
+    def get_paid_total(self, obj) -> str:
+        return str(order_paid_total(obj))
+
+    def get_balance_due(self, obj) -> str:
+        return str(order_balance_due(obj))
 
     def get_lines(self, obj) -> list[dict]:
         return OrderHistoryLineSerializer(obj.lines.all(), many=True).data

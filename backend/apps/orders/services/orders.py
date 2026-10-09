@@ -4,13 +4,20 @@ from django.db import transaction
 
 from apps.audit.services.audit import log_action
 from apps.catalog.selectors.bundles import expand_variant
+from apps.catalog.selectors.options import variant_title
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
-from apps.orders.models import SalesOrder, SalesOrderLine, StockReservation
+from apps.orders.models import Payment, SalesOrder, SalesOrderLine, StockReservation
 from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
-from apps.orders.services.carts import _check_preorder_stock_limit, compute_line_tax
-from apps.orders.services.notifications import notify_order
+from apps.orders.services.carts import (
+    _check_preorder_stock_limit,
+    add_line,
+    compute_line_tax,
+    ensure_purchasable,
+    ensure_single_kind,
+)
+from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.reservations import release_stock_reservation
 
 UPDATABLE_ORDER_FIELDS = ("shipping_address", "notes", "contact_email", "contact_phone")
@@ -26,6 +33,27 @@ LINE_EDITABLE_STATUSES = frozenset(
         SalesOrder.Status.CONFIRMED,
     }
 )
+
+
+# What the manual override may do. Checkout, payment capture and shipments
+# move an order forward because they also move stock and money; the override
+# only records what those have already done, so it can never skip one.
+STATUS_OVERRIDES: dict[str, frozenset[str]] = {
+    SalesOrder.Status.PENDING: frozenset({SalesOrder.Status.CANCELLED}),
+    SalesOrder.Status.AWAITING_PAYMENT: frozenset({SalesOrder.Status.CANCELLED}),
+    SalesOrder.Status.CONFIRMED: frozenset(
+        {SalesOrder.Status.CANCELLED, SalesOrder.Status.DELIVERED, SalesOrder.Status.CLOSED}
+    ),
+    SalesOrder.Status.SHIPPED: frozenset({SalesOrder.Status.DELIVERED, SalesOrder.Status.CLOSED}),
+    SalesOrder.Status.DELIVERED: frozenset({SalesOrder.Status.CLOSED}),
+    SalesOrder.Status.CLOSED: frozenset(),
+    SalesOrder.Status.CANCELLED: frozenset(),
+}
+
+
+def allowed_status_overrides(order: SalesOrder) -> list[str]:
+    allowed = STATUS_OVERRIDES.get(order.status, frozenset())
+    return [value for value in SalesOrder.Status.values if value in allowed]
 
 
 def lock_order(order: SalesOrder) -> SalesOrder:
@@ -47,6 +75,7 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
     released back to Available (no ledger entry — stock never physically
     moved, blueprint §5). Cancelling never refunds money by itself — that is
     a separate, explicitly approved step via `refund_payment`."""
+    lock_order(order)
     if order.status not in {
         SalesOrder.Status.PENDING,
         SalesOrder.Status.AWAITING_PAYMENT,
@@ -56,6 +85,14 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
             "Only orders that have not shipped yet can be cancelled.",
             code="invalid_order_status",
         )
+    # A confirmed order can already have a consignment out: the order only
+    # becomes "shipped" once every line has gone.
+    if order.lines.filter(shipped_quantity__gt=0).exists():
+        raise BusinessRuleViolationError(
+            "Part of this order has already shipped. Receive the parcel back or "
+            "use a return instead of cancelling.",
+            code="order_partly_shipped",
+        )
 
     reservations = StockReservation.objects.select_for_update().filter(
         order_line__order=order,
@@ -64,10 +101,14 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
     for reservation in reservations:
         release_stock_reservation(reservation=reservation, actor=actor)
 
+    # Cash on delivery that was never collected is no longer owed.
+    Payment.objects.filter(order=order, status=Payment.Status.PENDING).update(
+        status=Payment.Status.FAILED
+    )
     order.status = SalesOrder.Status.CANCELLED
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
-    notify_order(order, f"Order {order.order_number} was cancelled.")
+    notify_order(order, f"{order_label(order)} was cancelled.")
     return order
 
 
@@ -149,8 +190,6 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
     if new_status == order.status:
         return order
 
-    if new_status == SalesOrder.Status.CANCELLED:
-        return cancel_order(order=order, actor=actor)
     if order.status == SalesOrder.Status.CANCELLED:
         raise BusinessRuleViolationError(
             "A cancelled order cannot be reopened — its stock reservations are already "
@@ -167,6 +206,15 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
             code="shipments_incomplete",
         )
 
+    if new_status not in STATUS_OVERRIDES[order.status]:
+        raise BusinessRuleViolationError(
+            f"An order that is {order.get_status_display().lower()} cannot be set to "
+            f"{SalesOrder.Status(new_status).label.lower()} by hand. Capture the payment or "
+            "create the shipment instead.",
+            code="status_change_not_allowed",
+        )
+    if new_status == SalesOrder.Status.CANCELLED:
+        return cancel_order(order=order, actor=actor)
     previous = order.status
     order.status = new_status
     order.updated_by = actor
@@ -178,7 +226,7 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
         target_id=order.id,
         metadata={"from": previous, "to": new_status},
     )
-    notify_order(order, f"Order {order.order_number} is now {order.get_status_display().lower()}.")
+    notify_order(order, f"{order_label(order)} is now {order.get_status_display().lower()}.")
     return order
 
 
@@ -207,6 +255,13 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         had_reservations = True
         release_stock_reservation(reservation=reservation, actor=actor)
 
+    # A pre-order line goes back to the queue; allocation hands stock out again.
+    if line.is_preorder:
+        if line.allocated_quantity:
+            line.allocated_quantity = 0
+            line.save(update_fields=["allocated_quantity", "updated_at"])
+        return
+
     # A pending order has not reserved anything yet — checkout does that.
     if not had_reservations:
         return
@@ -218,6 +273,27 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
             variant=component,
             quantity=component_qty,
         )
+
+
+def ensure_variant_of_kind(variant, kind: str) -> None:
+    if variant.product.category.category_type != kind:
+        label = SalesOrder.OrderType(kind).label.lower()
+        raise BusinessRuleViolationError(
+            f"{variant.product.name} ({variant.sku}) cannot go on a {label} order.",
+            code="order_kind_mismatch",
+        )
+
+
+@transaction.atomic
+def add_staff_order_lines(
+    *, order: SalesOrder, lines: list[tuple], kind: str = SalesOrder.OrderType.STOCK
+) -> None:
+    """Lines of an order staff key in. Every line must be of the order's kind;
+    `add_line` then applies the shopper's own window, limit and price rules."""
+    for variant, _quantity in lines:
+        ensure_variant_of_kind(variant, kind)
+    for variant, quantity in lines:
+        add_line(order=order, variant=variant, quantity=quantity)
 
 
 @transaction.atomic
@@ -236,17 +312,17 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         )
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+    # A pending order has no kind yet; the mixed-basket check covers it.
+    if order.status != SalesOrder.Status.PENDING:
+        ensure_variant_of_kind(variant, order.order_type)
     if order.lines.filter(variant=variant).exists():
         raise BusinessRuleViolationError(
             "This item is already on the order. Change its quantity instead.",
             code="line_exists",
         )
-    if variant.is_preorder_enabled and not variant.is_preorder_active:
-        raise BusinessRuleViolationError(
-            "This product is not available for pre-order at this time.",
-            code="preorder_not_active",
-        )
-    is_preorder = variant.is_preorder_active
+    ensure_purchasable(variant)
+    is_preorder = variant.is_preorder_kind
+    ensure_single_kind(order, is_preorder=is_preorder)
     if is_preorder and variant.preorder_stock_limit is not None:
         _check_preorder_stock_limit(variant, quantity)
 
@@ -259,6 +335,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         tax_amount=compute_line_tax(unit_price=unit_price, quantity=quantity),
         product_name=variant.product.name,
         variant_sku=variant.sku,
+        variant_title=variant_title(variant),
         is_preorder=is_preorder,
     )
     if order.status != SalesOrder.Status.PENDING and not is_preorder:
@@ -288,6 +365,11 @@ def update_order_line(*, line: SalesOrderLine, quantity: int, actor=None) -> Sal
     _assert_line_editable(line)
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+
+    if line.is_preorder and quantity > line.quantity:
+        ensure_purchasable(line.variant)
+        held = 0 if line.order.status == SalesOrder.Status.PENDING else line.quantity
+        _check_preorder_stock_limit(line.variant, quantity, held)
 
     line.quantity = quantity
     line.tax_amount = compute_line_tax(unit_price=line.unit_price, quantity=quantity)

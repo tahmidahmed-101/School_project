@@ -3,7 +3,8 @@
 import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { getDiscountPercent } from "@/lib/product";
+import { getDiscountPercent, getSaleOffer, unavailableLabel } from "@/lib/product";
+import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
@@ -13,8 +14,9 @@ interface ProductSummaryProps {
 
 /** Category, title, price, rating and availability line at the top of the details column. */
 export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
-  const { t, money, n } = useLang();
+  const { t, ui, money, n } = useLang();
   const discountPercent = getDiscountPercent(product);
+  const sale = getSaleOffer(product);
 
   return (
     <>
@@ -35,6 +37,15 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
           <Availability product={product} isSoldOut={isSoldOut} />
         </div>
       </div>
+
+      {sale && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <SaleLabel name={sale.name} size="md" />
+          {sale.endsAt && (
+            <span className="font-medium text-fg-muted">{ui("saleEnds").replace("{date}", t(sale.endsAt))}</span>
+          )}
+        </div>
+      )}
 
       {product.reviewCount > 0 && (
         <div className="mt-3 flex items-center gap-2 text-xs">
@@ -62,7 +73,7 @@ function Availability({ product, isSoldOut }: ProductSummaryProps) {
     return (
       <div className="flex items-center gap-1.5 font-semibold text-danger">
         <span className="h-2 w-2 rounded-full bg-danger" />
-        <span>{ui("outOfStock")}</span>
+        <span>{ui(unavailableLabel(product))}</span>
       </div>
     );
   }

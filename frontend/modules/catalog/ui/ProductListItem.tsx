@@ -7,15 +7,18 @@ import type { Product } from "@/lib/types";
 import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent } from "@/lib/product";
+import { getDiscountPercent, getSaleOffer } from "@/lib/product";
+import { soleVariant } from "@/lib/variants";
+import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
-import { Button } from "@/design-system/ui/Button";
+import { Button, buttonClass } from "@/design-system/ui/Button";
 
 /** Horizontal product row used by the shop's list view. */
 export function ProductListItem({ product }: { product: Product }) {
   const { t, ui, money } = useLang();
   const { addItem } = useCart();
   const discountPercent = getDiscountPercent(product);
+  const sale = getSaleOffer(product);
   const href = `/product/${product.slug}`;
 
   return (
@@ -37,6 +40,7 @@ export function ProductListItem({ product }: { product: Product }) {
       <div className="w-full min-w-0 flex-1 space-y-1 text-left">
         <div className="flex items-center gap-2 text-2xs font-semibold text-gold-800">
           <span>{t(product.categoryName)}</span>
+          {sale && <SaleLabel name={sale.name} />}
         </div>
 
         <Link href={href}>
@@ -57,14 +61,24 @@ export function ProductListItem({ product }: { product: Product }) {
             <span className="block text-xs text-fg-muted line-through">{money(product.compareAtPrice)}</span>
           )}
         </div>
-        <Button
-          size="xs"
-          onClick={() => addItem(product)}
-          aria-label={`${ui("addToCart")} - ${t(product.name)}`}
-          leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
-        >
-          {ui("addToCart")}
-        </Button>
+        {soleVariant(product) ? (
+          <Button
+            size="xs"
+            onClick={() => addItem(product)}
+            aria-label={`${ui("addToCart")} - ${t(product.name)}`}
+            leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
+          >
+            {ui("addToCart")}
+          </Button>
+        ) : (
+          <Link
+            href={href}
+            className={buttonClass({ size: "xs" })}
+            aria-label={`${ui("chooseOptions")} - ${t(product.name)}`}
+          >
+            {ui("chooseOptions")}
+          </Link>
+        )}
       </div>
     </div>
   );

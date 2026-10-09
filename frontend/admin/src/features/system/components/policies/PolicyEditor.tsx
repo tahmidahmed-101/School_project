@@ -18,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
-import { SwitchField } from "@/components/common/FormDialog"
 import { DateField, FormField, TextField, TextareaField } from "@/components/common/form-fields"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppDispatch } from "@/app/hooks"
@@ -64,7 +63,6 @@ const schema = z.object({
       (v) => v === "" || (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= MAX_RETURN_WINDOW_DAYS),
       `Enter a whole number of days from 1 to ${MAX_RETURN_WINDOW_DAYS}, or leave it blank`
     ),
-  preorder_returns_allowed: z.boolean(),
   non_returnable_category_ids: z.array(z.string()),
 })
 
@@ -85,7 +83,6 @@ const toForm = (policy: StorePolicy): FormValues => ({
   },
   effective_date: policy.effective_date ?? "",
   return_window_days: policy.return_rules?.return_window_days?.toString() ?? "",
-  preorder_returns_allowed: policy.return_rules?.preorder_returns_allowed ?? true,
   non_returnable_category_ids: (policy.return_rules?.non_returnable_categories ?? []).map((c) => c.id).sort(),
 })
 
@@ -210,9 +207,6 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
     if (isReturns) {
       const days = values.return_window_days
       if (days !== original.return_window_days) patch.return_window_days = days === "" ? null : Number(days)
-      if (values.preorder_returns_allowed !== original.preorder_returns_allowed) {
-        patch.preorder_returns_allowed = values.preorder_returns_allowed
-      }
       const ids = [...values.non_returnable_category_ids].sort()
       if (ids.join() !== original.non_returnable_category_ids.join()) patch.non_returnable_category_ids = ids
     }
@@ -410,12 +404,6 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
                 error={errors.return_window_days}
                 {...register("return_window_days")}
               />
-              <SwitchField
-                control={control}
-                name="preorder_returns_allowed"
-                label="Pre-ordered items can be returned"
-                disabled={!canManage}
-              />
               <NonReturnableCategories
                 control={control}
                 saved={policy.return_rules?.non_returnable_categories ?? []}
@@ -551,7 +539,7 @@ function NonReturnableCategories({
   error?: { message?: string }
   disabled: boolean
 }) {
-  const { options, isLoading } = useCategoryOptions()
+  const { options, isLoading } = useCategoryOptions("stock")
   // A saved category that has since been deleted is no longer an option; list it so it can be unticked.
   const known = new Set(options.map((o) => o.value))
   const rows = [

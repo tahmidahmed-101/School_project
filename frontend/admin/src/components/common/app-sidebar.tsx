@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, NavLink, useLocation } from "react-router-dom"
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAppSelector } from "@/app/hooks"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -11,22 +11,37 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 
-import { ChevronDown, Store } from "lucide-react"
+import { CalendarClock, ChevronDown, Store } from "lucide-react"
 import { getNavGroups } from "@/app/modules"
 import { userDisplayName } from "@/lib/user-display"
-import type { NavItem } from "@/app/moduleTypes"
+import { NAV_GROUP_LABELS, type NavItem } from "@/app/moduleTypes"
+import { useKind } from "@/hooks/use-kind"
+import { findNavEntry } from "./navEntry"
 
-// Detail/form routes (e.g. /order_detail/:id) don't appear in the nav; a link stays
-// active for its own path and anything nested under it.
-const isItemActive = (item: NavItem, pathname: string) =>
-  item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
+// A link is active for its own path and anything nested under it; a detail or form route
+// (/order_detail/:id) is not in the nav, so `ownUrl` names the list of the half its record belongs to.
+const HALVES = [
+  { kind: "stock", group: "STOCK", url: "/", icon: Store },
+  { kind: "preorder", group: "PREORDER", url: "/preorder_overview", icon: CalendarClock },
+] as const
+
+const isItemActive = (item: NavItem, pathname: string, ownUrl?: string) =>
+  item.url === "/"
+    ? pathname === "/"
+    : pathname === item.url || pathname.startsWith(`${item.url}/`) || item.url === ownUrl
 
 export function AppSidebar() {
   const location = useLocation()
+  const kind = useKind()
+  const ownUrl = findNavEntry(location.pathname, kind)?.item.url
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
   const user = useAppSelector((state) => state.auth.user)
   const permissions = user?.permissions
-  const navGroups = useMemo(() => getNavGroups(permissions), [permissions])
+  const half = HALVES.find((h) => h.kind === kind) ?? HALVES[0]
+  const navGroups = useMemo(
+    () => getNavGroups(permissions).filter((g) => g.label === half.group || g.label === "BUSINESS"),
+    [permissions, half.group],
+  )
   const sidebarItems = useMemo(() => navGroups.flatMap((g) => g.sections), [navGroups])
 
   const isCollapsed = state === "collapsed"
@@ -54,15 +69,16 @@ export function AppSidebar() {
   // Close all sections when collapsed, and auto-open the active route's section when
   // the route changes or the sidebar expands. Adjusted during render rather than in
   // effects, which would paint once with stale sections and then re-render.
-  const [syncedWith, setSyncedWith] = useState({ pathname: "", isCollapsed: !isCollapsed })
-  if (syncedWith.pathname !== location.pathname || syncedWith.isCollapsed !== isCollapsed) {
-    setSyncedWith({ pathname: location.pathname, isCollapsed })
+  const routeKey = `${location.pathname}|${ownUrl ?? ""}`
+  const [syncedWith, setSyncedWith] = useState({ routeKey: "", isCollapsed: !isCollapsed })
+  if (syncedWith.routeKey !== routeKey || syncedWith.isCollapsed !== isCollapsed) {
+    setSyncedWith({ routeKey, isCollapsed })
 
     if (isCollapsed) {
       setOpenSections([])
     } else {
       const active = sidebarItems.find((section) =>
-        section.items.some((item) => isItemActive(item, location.pathname)),
+        section.items.some((item) => isItemActive(item, location.pathname, ownUrl)),
       )
       if (active) {
         setOpenSections((prev) =>
@@ -87,7 +103,7 @@ export function AppSidebar() {
   return (
     <Sidebar variant="floating" collapsible="icon" className="z-40">
       {/* HEADER */}
-      <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+      <SidebarHeader className="mb-3 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <NavLink
           to="/"
           onClick={handleLinkClick}
@@ -109,18 +125,40 @@ export function AppSidebar() {
 
       {/* CONTENT */}
       <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
+        <div className="mb-4 flex gap-1 rounded-lg bg-muted p-[3px] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:flex-col">
+          {HALVES.map((option) => (
+            <Link
+              key={option.kind}
+              to={option.url}
+              onClick={handleLinkClick}
+              title={NAV_GROUP_LABELS[option.group]}
+              aria-current={option.kind === kind ? "true" : undefined}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:px-0 ${
+                option.kind === kind
+                  ? "bg-background text-primary-500 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <option.icon className="size-4 shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">{NAV_GROUP_LABELS[option.group]}</span>
+            </Link>
+          ))}
+        </div>
+
         {navGroups.map((group) => (
           <div key={group.label} className="mb-4 last:mb-0">
-            <p className="mb-2 px-3 text-xs font-normal uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-              {group.label}
-            </p>
+            {group.label === "BUSINESS" && (
+              <p className="mb-2 mt-5 border-t border-border px-3 pt-4 text-xs font-normal uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                {NAV_GROUP_LABELS[group.label]}
+              </p>
+            )}
 
             <div className="space-y-1">
               {group.sections.map((section) => {
 
                 const isOpen = openSections.includes(section.label)
                 const isActive = section.items.some(
-                  (item) => isItemActive(item, location.pathname),
+                  (item) => isItemActive(item, location.pathname, ownUrl),
                 )
 
                 return (
@@ -166,7 +204,7 @@ export function AppSidebar() {
                               onClick={handleLinkClick}
                               className={({ isActive: itemActive }) =>
                                 `flex items-center rounded-lg px-3 py-2 pl-6 text-sm transition-colors duration-200 ${
-                                  itemActive
+                                  itemActive || item.url === ownUrl
                                     ? "bg-primary-500/10 font-medium text-primary-500"
                                     : "text-gray-700 hover:bg-muted hover:text-sidebar-accent-foreground dark:text-sidebar-foreground dark:hover:bg-sidebar-accent"
                                 }`

@@ -15,13 +15,17 @@ def reviews_for_product(product: Product) -> QuerySet[ProductReview]:
     )
 
 
-def reviews_list(*, product=None, rating: int | None = None) -> QuerySet[ProductReview]:
+def reviews_list(
+    *, product=None, rating: int | None = None, kind: str | None = None
+) -> QuerySet[ProductReview]:
     """Every review, for the admin moderation list."""
     queryset = ProductReview.objects.select_related("customer", "product")
     if product is not None:
         queryset = queryset.filter(product=product)
     if rating is not None:
         queryset = queryset.filter(rating=rating)
+    if kind:
+        queryset = queryset.filter(product__category__category_type=kind)
     return queryset
 
 

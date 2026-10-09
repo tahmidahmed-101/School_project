@@ -3,10 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { CheckCircle2, ClipboardList, MapPin, Package, PackageCheck, Search, Truck, XCircle } from "lucide-react";
 import { ContactButtons } from "@/modules/catalog";
+import { shortDate } from "@/lib/date";
 import { useLang } from "@/lib/i18n";
 import { ApiError } from "@/lib/api/client";
 import { trackOrder } from "../data/mutations";
-import { preorderStageLabel } from "../domain/preorder-stages";
+import { preorderStageLabel } from "@/lib/preorder-stages";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -15,8 +16,6 @@ import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert, FormField, INPUT_CLASS } from "@/design-system/ui/FormField";
 import { cardClass } from "@/design-system/ui/Card";
-
-const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** The backend's progress statuses in order (Cancelled is a separate end state). */
 const STAGES = [
@@ -30,18 +29,14 @@ const STAGES = [
 ] as const satisfies readonly { status: ApiTrackStatus; labelKey: string; icon: unknown }[];
 
 export function TrackOrderView() {
-  const { t, ui, n } = useLang();
+  const { lang, t, ui, money } = useLang();
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiTrackOrder | null>(null);
 
-  const formatDate = (iso: string) => {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "";
-    return `${n(date.getDate())} ${MONTHS_EN[date.getMonth()]} ${n(date.getFullYear())}`;
-  };
+  const formatDate = (iso: string) => shortDate(iso, lang);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -78,7 +73,17 @@ export function TrackOrderView() {
 
   const currentStageIndex = result ? STAGES.findIndex((stage) => stage.status === result.status) : -1;
   const isCancelled = result?.status === "Cancelled";
+  const isPreorder = result?.order_type === "preorder";
+  const currentStatus = !result
+    ? ""
+    : isCancelled
+      ? ui("trackStageCancelled")
+      : isPreorder
+        ? result.preorder_stage && t(preorderStageLabel(result.preorder_stage))
+        : ui(STAGES[Math.max(currentStageIndex, 0)]!.labelKey);
   const stageEvent = (status: string) => result?.tracking_timeline.find((event) => event.status === status);
+
+  const carrierShipments = result?.shipments.filter((shipment) => shipment.carrier_name) ?? [];
 
   const breadcrumbs = [{ label: ui("navTrackOrder") }];
 
@@ -127,15 +132,41 @@ export function TrackOrderView() {
                   {ui("trackOrderPlacedOn")}: {formatDate(result.created_at)}
                 </span>
               </div>
-              <div className="text-right">
-                <span className="block text-2xs font-semibold text-fg-subtle">{ui("trackOrderCurrentStatus")}</span>
-                <span className={`text-sm font-bold ${isCancelled ? "text-danger" : "text-fg"}`}>
-                  {isCancelled ? ui("trackStageCancelled") : ui(STAGES[Math.max(currentStageIndex, 0)]!.labelKey)}
-                </span>
-              </div>
+              {currentStatus && (
+                <div className="text-right">
+                  <span className="block text-2xs font-semibold text-fg-subtle">{ui("trackOrderCurrentStatus")}</span>
+                  <span className={`text-sm font-bold ${isCancelled ? "text-danger" : "text-fg"}`}>
+                    {currentStatus}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {result.preorder_stage && (
+            {carrierShipments.length > 0 && (
+              <ul className="space-y-1 text-2xs text-fg-subtle">
+                {carrierShipments.map((shipment) => (
+                  <li key={shipment.id}>
+                    {ui("trackOrderShipment")}: <span className="font-semibold text-fg">{shipment.carrier_name}</span>
+                    {shipment.tracking_number && ` · ${ui("trackOrderTrackingNo")} ${shipment.tracking_number}`}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {isPreorder && (
+              <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface p-4 text-2xs">
+                <div>
+                  <dt className="font-semibold text-fg-subtle">{ui("preorderPaid")}</dt>
+                  <dd className="mt-0.5 text-sm font-bold text-fg">{money(Number(result.paid_total))}</dd>
+                </div>
+                <div className="text-right">
+                  <dt className="font-semibold text-fg-subtle">{ui("preorderBalanceDue")}</dt>
+                  <dd className="mt-0.5 text-sm font-bold text-fg">{money(Number(result.balance_due))}</dd>
+                </div>
+              </dl>
+            )}
+
+            {isPreorder && result.preorder_stage && (
               <section className="rounded-xl bg-surface p-4">
                 <h2 className="text-2xs font-semibold text-fg-subtle">{ui("trackPreorderTitle")}</h2>
                 <p className="mt-0.5 text-sm font-bold text-gold-800">{t(preorderStageLabel(result.preorder_stage))}</p>
@@ -155,7 +186,7 @@ export function TrackOrderView() {
                 <XCircle className="h-5 w-5 shrink-0" />
                 <span>{ui("trackStageCancelled")}</span>
               </div>
-            ) : (
+            ) : isPreorder ? null : (
               <ol>
                 {STAGES.map((stage, index) => {
                   const isComplete = index <= currentStageIndex;

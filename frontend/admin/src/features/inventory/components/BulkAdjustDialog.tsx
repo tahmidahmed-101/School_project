@@ -17,6 +17,7 @@ import { postBulkAdjustments } from "../api"
 import type { Warehouse } from "../types"
 
 const DEFAULT_WAREHOUSE = "default"
+const STOCK_VARIANTS = { category_type: "stock" }
 
 const schema = z.object({
   notes: z.string(),
@@ -73,7 +74,8 @@ export function BulkAdjustDialog({
           warehouse_id: l.warehouse_id === DEFAULT_WAREHOUSE ? null : l.warehouse_id,
           quantity_delta: l.quantity_delta,
           notes: values.notes,
-        }))
+        })),
+        "stock"
       )
       toast.success(`${res.count} adjustment${res.count === 1 ? "" : "s"} posted`)
       onDone()
@@ -108,7 +110,9 @@ export function BulkAdjustDialog({
             <Controller
               control={control}
               name={`lines.${i}.variant`}
-              render={({ field }) => <VariantPicker value={field.value ?? null} onChange={field.onChange} />}
+              render={({ field }) => (
+                <VariantPicker value={field.value ?? null} onChange={field.onChange} filters={STOCK_VARIANTS} />
+              )}
             />
             <FieldError errors={[errors.lines?.[i]?.variant]} />
           </div>

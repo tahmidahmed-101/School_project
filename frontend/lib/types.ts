@@ -8,23 +8,26 @@ export type T = {
 /** Category slug from the API (categories are data now, not a fixed list). */
 type ProductCategory = string;
 
-export interface ProductVariant {
-  name: T;
-  options: {
-    label: T;
-    value: string;
-    inStock?: boolean;
-  }[];
+export interface ProductOption {
+  id: string;
+  name: string;
+  values: { id: string; value: string }[];
 }
 
-/** One purchasable SKU from the API (colour / size combination). Checkout needs its `id`. */
+/** One purchasable SKU from the API (one value of every option). Checkout needs its `id`. */
+/** "upcoming" and "closed" are pre-orders that cannot be placed right now. */
+export type PreorderStatus = "available" | "closing-soon" | "sold-out" | "upcoming" | "closed";
+
 export interface SkuVariant {
   id: string;
   sku: string;
-  color: string;
-  size: string;
+  optionValueIds: string[];
+  /** "Red / M"; "" for a product without options. */
+  title: string;
   price: number;
   compareAtPrice?: number;
+  /** Set when a running sale lowers this SKU's price. */
+  salePrice?: number;
   /** Purchasable right now: in stock, or inside an active pre-order window. */
   inStock: boolean;
   isPreOrder: boolean;
@@ -34,12 +37,19 @@ export interface SkuVariant {
   /** Pre-order cap; undefined when the pre-order has no limit. */
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
-  preorderStatus?: "available" | "closing-soon" | "sold-out";
+  preorderStatus?: PreorderStatus;
 }
 
 export interface ProductSpec {
   label: T;
   value: T;
+}
+
+/** The running sale that makes a stock product cheaper. */
+export interface ProductSale {
+  name: string;
+  percentOff: number;
+  endsAt?: T;
 }
 
 export interface Product {
@@ -51,6 +61,9 @@ export interface Product {
   longDescription: T;
   price: number;
   compareAtPrice?: number;
+  /** The chosen SKU's sale price; undefined when the sale does not cover it. */
+  salePrice?: number;
+  sale?: ProductSale;
   category: ProductCategory;
   categoryName: T;
   image: string;
@@ -67,8 +80,9 @@ export interface Product {
   featured?: boolean;
   trending?: boolean;
   newArrival?: boolean;
-  /** Option-group view (Colour / Size) of `skuVariants`, for the existing variant picker. */
-  variants?: ProductVariant[];
+  options?: ProductOption[];
+  /** Photos that belong to one option value, by value id. */
+  galleryByValue?: Record<string, string[]>;
   /** Backend SKU variants. Empty for legacy/local products, which cannot be ordered through the API. */
   skuVariants?: SkuVariant[];
   /** SKU shown by default (first purchasable one); the price/stock fields above describe it. */
@@ -77,6 +91,8 @@ export interface Product {
   highlights?: T[];
   /** SEO keywords from the product detail endpoint. */
   metaKeywords?: string;
+  /** Which shop the product belongs to, from its category. */
+  kind: "stock" | "preorder";
   // Pre-order attributes
   isPreOrder?: boolean;
   preorderEndDate?: string;
@@ -86,7 +102,7 @@ export interface Product {
   preorderCloses?: T;
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
-  preorderStatus?: "available" | "closing-soon" | "sold-out";
+  preorderStatus?: PreorderStatus;
 }
 
 export interface CategoryInfo {
@@ -107,9 +123,8 @@ export interface CartItem {
   /** Snapshot of the product with the chosen SKU's price / stock / pre-order state applied. */
   product: Product;
   quantity: number;
-  /** Option-group selection (e.g. { Colour: "Black" }), used for display and line identity. */
-  selectedVariant?: Record<string, string>;
-  /** Backend variant UUID, sent as `variant_id` at checkout. */
+  variantTitle?: string;
+  /** Backend variant UUID, sent as `variant_id` at checkout; also the line's identity. */
   variantId: string;
 }
 
@@ -136,6 +151,7 @@ export interface OrderResult {
   lines: {
     id: string;
     name: string;
+    variantTitle: string;
     sku: string;
     quantity: number;
     unitPrice: number;
@@ -147,6 +163,9 @@ export interface OrderResult {
   shipping: number;
   discount: number;
   total: number;
+  isPreOrderOrder: boolean;
+  depositDue: number;
+  payTo: string;
   couponCode: string | null;
   shipments: { id: string; carrier: string | null; trackingNumber: string; status: string }[];
 }

@@ -1,15 +1,20 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { api, extractApiError } from "@/lib/api/client"
-import { unwrapEnvelope } from "@/lib/api/envelope"
+import { unwrapEnvelope, unwrapList } from "@/lib/api/envelope"
+import type { Kind } from "@/hooks/use-kind"
 import { setDefaultCurrency } from "@/lib/format"
 import type {
   BusinessModule,
   BusinessProfile,
   BusinessProfileUpdate,
+  HeroSlide,
+  HeroSlideInput,
   IntegrationStatus,
   ModuleUpdatePayload,
   PaymentMethodState,
   PolicyKind,
+  PromoLine,
+  PromoLineInput,
   StorePolicy,
   StorePolicyUpdate,
 } from "../types"
@@ -31,6 +36,8 @@ interface BusinessSettingsState {
   paymentMethods: Section<PaymentMethodState[]>
   integrations: Section<IntegrationStatus | null>
   policies: Section<StorePolicy[]>
+  heroSlides: Section<HeroSlide[]>
+  promoLines: Section<PromoLine[]>
 }
 
 const section = <T,>(data: T): Section<T> => ({ data, status: "idle", error: null })
@@ -41,6 +48,8 @@ const initialState: BusinessSettingsState = {
   paymentMethods: section([]),
   integrations: section(null),
   policies: section([]),
+  heroSlides: section([]),
+  promoLines: section([]),
 }
 
 const get = <T,>(type: string, url: string) =>
@@ -52,6 +61,29 @@ const get = <T,>(type: string, url: string) =>
       return rejectWithValue(extractApiError(err))
     }
   })
+
+const getList = <T,>(type: string, url: string) =>
+  createAsyncThunk(type, async (_: void, { rejectWithValue }) => {
+    try {
+      const res = await api.get(url)
+      return unwrapList<T>(res.data).items
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  })
+
+const remove = (type: string, url: string) =>
+  createAsyncThunk(type, async (id: string, { rejectWithValue }) => {
+    try {
+      await api.delete(`${url}${id}/`)
+      return id
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  })
+
+const upsert = <T extends { id: string; sort_order: number }>(rows: T[], saved: T) =>
+  [...rows.filter((row) => row.id !== saved.id), saved].sort((a, b) => a.sort_order - b.sort_order)
 
 /**
  * GET /admin/settings/business-profile/ (settings.view). Also points the app-wide money
@@ -88,9 +120,17 @@ export const updateBusinessProfile = createAsyncThunk(
 )
 
 export const fetchModules = get<BusinessModule[]>("businessSettings/fetchModules", "/admin/settings/modules/")
-export const fetchPaymentMethods = get<PaymentMethodState[]>(
+/** GET /admin/settings/payment-methods/?kind= — one half's own switches and numbers. */
+export const fetchPaymentMethods = createAsyncThunk(
   "businessSettings/fetchPaymentMethods",
-  "/admin/settings/payment-methods/"
+  async (kind: Kind, { rejectWithValue }) => {
+    try {
+      const res = await api.get("/admin/settings/payment-methods/", { params: { kind } })
+      return unwrapEnvelope<PaymentMethodState[]>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
 )
 export const fetchIntegrations = get<IntegrationStatus>("businessSettings/fetchIntegrations", "/admin/settings/integrations/")
 
@@ -126,18 +166,66 @@ export const updateModule = createAsyncThunk(
   }
 )
 
-/** PATCH /admin/settings/payment-methods/{key}/ {is_enabled}. */
+/** PATCH /admin/settings/payment-methods/{key}/?kind= {is_enabled?, pay_to?}. */
 export const updatePaymentMethod = createAsyncThunk(
   "businessSettings/updatePaymentMethod",
-  async ({ key, is_enabled }: { key: string; is_enabled: boolean }, { rejectWithValue }) => {
+  async (
+    { key, kind, ...patch }: { key: string; kind: Kind; is_enabled?: boolean; pay_to?: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, { is_enabled })
+      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, patch, { params: { kind } })
       return unwrapEnvelope<PaymentMethodState>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
   }
 )
+
+const HERO_SLIDES = "/admin/settings/hero-slides/"
+const PROMO_LINES = "/admin/settings/promo-lines/"
+
+export const fetchHeroSlides = getList<HeroSlide>("businessSettings/fetchHeroSlides", HERO_SLIDES)
+export const fetchPromoLines = getList<PromoLine>("businessSettings/fetchPromoLines", PROMO_LINES)
+
+/** POST (no id; `image` required) or PATCH /admin/settings/hero-slides/{id}/. Multipart whenever an image is sent. */
+export const saveHeroSlide = createAsyncThunk(
+  "businessSettings/saveHeroSlide",
+  async (
+    { id, values, image }: { id?: string; values: Partial<HeroSlideInput>; image?: File | null },
+    { rejectWithValue }
+  ) => {
+    try {
+      let body: FormData | Partial<HeroSlideInput> = values
+      if (image) {
+        body = new FormData()
+        for (const [key, value] of Object.entries(values)) body.append(key, String(value))
+        body.append("image", image)
+      }
+      const res = id ? await api.patch(`${HERO_SLIDES}${id}/`, body) : await api.post(HERO_SLIDES, body)
+      return unwrapEnvelope<HeroSlide>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+export const deleteHeroSlide = remove("businessSettings/deleteHeroSlide", HERO_SLIDES)
+
+/** POST (no id) or PATCH /admin/settings/promo-lines/{id}/. */
+export const savePromoLine = createAsyncThunk(
+  "businessSettings/savePromoLine",
+  async ({ id, values }: { id?: string; values: Partial<PromoLineInput> }, { rejectWithValue }) => {
+    try {
+      const res = id ? await api.patch(`${PROMO_LINES}${id}/`, values) : await api.post(PROMO_LINES, values)
+      return unwrapEnvelope<PromoLine>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+export const deletePromoLine = remove("businessSettings/deletePromoLine", PROMO_LINES)
 
 const businessSettingsSlice = createSlice({
   name: "businessSettings",
@@ -188,6 +276,18 @@ const businessSettingsSlice = createSlice({
       })
       .addCase(fetchPolicies.rejected, (state, action) => failed(state.policies, action.payload ?? action.error))
 
+      .addCase(fetchHeroSlides.pending, (state) => pending(state.heroSlides))
+      .addCase(fetchHeroSlides.fulfilled, (state, action) => {
+        state.heroSlides = { data: action.payload, status: "succeeded", error: null }
+      })
+      .addCase(fetchHeroSlides.rejected, (state, action) => failed(state.heroSlides, action.payload ?? action.error))
+
+      .addCase(fetchPromoLines.pending, (state) => pending(state.promoLines))
+      .addCase(fetchPromoLines.fulfilled, (state, action) => {
+        state.promoLines = { data: action.payload, status: "succeeded", error: null }
+      })
+      .addCase(fetchPromoLines.rejected, (state, action) => failed(state.promoLines, action.payload ?? action.error))
+
     builder
       .addCase(updateBusinessProfile.fulfilled, (state, action) => {
         state.profile.data = action.payload
@@ -198,11 +298,23 @@ const businessSettingsSlice = createSlice({
       })
       .addCase(updatePaymentMethod.fulfilled, (state, action) => {
         state.paymentMethods.data = state.paymentMethods.data.map((m) =>
-          m.key === action.payload.key ? action.payload : m
+          m.key === action.payload.key && m.kind === action.payload.kind ? action.payload : m
         )
       })
       .addCase(updatePolicy.fulfilled, (state, action) => {
         state.policies.data = state.policies.data.map((p) => (p.kind === action.payload.kind ? action.payload : p))
+      })
+      .addCase(saveHeroSlide.fulfilled, (state, action) => {
+        state.heroSlides.data = upsert(state.heroSlides.data, action.payload)
+      })
+      .addCase(deleteHeroSlide.fulfilled, (state, action) => {
+        state.heroSlides.data = state.heroSlides.data.filter((slide) => slide.id !== action.payload)
+      })
+      .addCase(savePromoLine.fulfilled, (state, action) => {
+        state.promoLines.data = upsert(state.promoLines.data, action.payload)
+      })
+      .addCase(deletePromoLine.fulfilled, (state, action) => {
+        state.promoLines.data = state.promoLines.data.filter((line) => line.id !== action.payload)
       })
   },
 })

@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
+import { useKind } from "@/hooks/use-kind"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
 
 import { createGoodsReceipt } from "../slices/goodsReceiptSlice"
@@ -43,10 +44,11 @@ export function GoodsReceiptDialog({
   purchaseOrder?: PurchaseOrder | null
   onReceived?: (grn: GoodsReceipt) => void
 }) {
+  const kind = useKind()
   const pickMode = !purchaseOrder
   const { items: submittedPos, isLoading: posLoading } = useAllPages<PurchaseOrder>(
     "/admin/procurement/purchase-orders/",
-    { status: "submitted" },
+    { status: "submitted", kind },
     { enabled: open && pickMode }
   )
   const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)
@@ -64,8 +66,10 @@ export function GoodsReceiptDialog({
             Receive Goods{po ? ` — ${po.po_number}` : ""}
           </DialogTitle>
           <DialogDescription>
-            Accepted quantities go into stock at the PO unit cost and post to the ledger. Rejected quantities are
-            logged on the receipt only.
+            {kind === "preorder"
+              ? "Accepted quantities count as arrived at the PO unit cost."
+              : "Accepted quantities go into stock at the PO unit cost and post to the ledger."}{" "}
+            Rejected quantities are logged on the receipt only.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,6 +123,8 @@ function ReceiptForm({
   onReceived: (grn: GoodsReceipt) => void
 }) {
   const dispatch = useAppDispatch()
+  const pageKind = useKind()
+  const isPreorder = (po?.kind ?? pageKind) === "preorder"
   const [receivedDate, setReceivedDate] = useState(todayLocalISODate)
   const [lineState, setLineState] = useState<Record<string, LineState>>(() => {
     const initial: Record<string, LineState> = {}
@@ -157,8 +163,12 @@ function ReceiptForm({
       ).unwrap()
       toast.success(
         grn.status === "qc_reject"
-          ? "Receipt recorded — rejected lines were not added to stock"
-          : "Goods received and added to stock"
+          ? isPreorder
+            ? "Receipt recorded — rejected lines were not counted as arrived"
+            : "Receipt recorded — rejected lines were not added to stock"
+          : isPreorder
+            ? "Goods received and counted as arrived"
+            : "Goods received and added to stock"
       )
       onReceived(grn)
     } catch (err) {

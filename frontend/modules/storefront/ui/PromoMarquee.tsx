@@ -5,36 +5,15 @@ import type { T } from "@/lib/types";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { containerClass } from "@/design-system/ui/Container";
 
-const MARQUEE_ITEMS: T[] = [
-  {
-    en: "Cash on delivery available nationwide",
-    bn: "সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা",
-  },
-  {
-    en: "Free delivery on orders over ৳2,000",
-    bn: "৳২,০০০ এর বেশি অর্ডারে ফ্রি ডেলিভারি",
-  },
-  {
-    en: "Wholesale & retail orders welcome",
-    bn: "পাইকারি ও খুচরা উভয় অর্ডার গ্রহণযোগ্য",
-  },
-  {
-    en: "Women's fashion, innerwear, kids & gadgets",
-    bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
-  },
-  {
-    en: "New arrivals added every week",
-    bn: "প্রতি সপ্তাহে নতুন পণ্য যুক্ত হয়",
-  },
-];
-
 /** Continuously scrolling (right to left) promo strip shown right below the hero on the home and pre-order pages. */
-export function PromoMarquee() {
+export function PromoMarquee({ lines }: { lines: T[] }) {
   const { lang } = useLang();
+
+  if (lines.length === 0) return null;
 
   const track = (
     <div className="flex shrink-0 items-center" aria-hidden="true">
-      {MARQUEE_ITEMS.map((item, i) => (
+      {lines.map((item, i) => (
         <span key={i} className="flex items-center gap-6 px-6">
           <span className="whitespace-nowrap text-xs font-bold uppercase tracking-wider text-ink-950 sm:text-sm">
             {item[lang]}
@@ -48,7 +27,7 @@ export function PromoMarquee() {
   return (
     <ScrollReveal y={16} duration={0.7} className={containerClass("default", "pb-3 pt-1 sm:pb-4 sm:pt-1.5")}>
       <div className="overflow-hidden rounded border border-gold-600/40 bg-gold-400 py-2 sm:rounded-md">
-        <div className="sr-only">{MARQUEE_ITEMS.map((item) => item[lang]).join(" — ")}</div>
+        <div className="sr-only">{lines.map((item) => item[lang]).join(" — ")}</div>
         <div className="flex w-max animate-marquee-rtl hover:[animation-play-state:paused]">
           {track}
           {track}

@@ -5,14 +5,20 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.catalog.selectors.bundles import expand_variant
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
 from apps.logistics.services.rates import quote_shipping
 from apps.orders.models import SalesOrder, StockReservation
 from apps.orders.services.address_snapshot import build_address_snapshot
-from apps.orders.services.carts import _check_preorder_stock_limit
-from apps.orders.services.coupons import revalidate_applied_coupon
+from apps.orders.services.carts import (
+    MIXED_BASKET_MESSAGE,
+    _check_preorder_stock_limit,
+    compute_line_tax,
+    ensure_purchasable,
+)
+from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
 from apps.risk.services import blocklist, ip_blocklist
 
@@ -27,9 +33,40 @@ def order_weight(order: SalesOrder) -> Decimal:
     return weight
 
 
+def order_subtotal_now(order: SalesOrder) -> Decimal:
+    """The subtotal checkout would charge: every line at today's price, since
+    a cart keeps the price it was added at until checkout re-prices it."""
+    lines = list(order.lines.select_related("variant__product__category"))
+    prime_running_sales([line.variant for line in lines])
+    return sum((line.variant.effective_price * line.quantity for line in lines), Decimal("0"))
+
+
 def _is_preorder_line(line) -> bool:
-    variant = line.variant
-    return variant.is_preorder_enabled and variant.is_preorder_active
+    return line.variant.is_preorder_kind
+
+
+def _reprice_lines(order: SalesOrder, lines) -> None:
+    """A cart can outlive a price change or the end of an offer. The order is
+    charged at today's price, which is the one the storefront is showing."""
+    prime_running_sales([line.variant for line in lines])
+    repriced = False
+    for line in lines:
+        unit_price = line.variant.effective_price
+        if line.unit_price != unit_price:
+            line.unit_price = unit_price
+            line.tax_amount = compute_line_tax(unit_price=unit_price, quantity=line.quantity)
+            line.save(update_fields=["unit_price", "tax_amount"])
+            repriced = True
+    if repriced:
+        order.recalculate_totals()
+
+
+def _settle_coupon(order: SalesOrder, lines) -> None:
+    if order.coupon_id is not None and any(_is_preorder_line(line) for line in lines):
+        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
+    # A cart can sit long enough for its applied coupon to expire or hit its
+    # usage limit before checkout actually runs — re-validate here too.
+    revalidate_applied_coupon(order)
 
 
 @transaction.atomic
@@ -69,26 +106,21 @@ def checkout(
         raise BusinessRuleViolationError(
             "Only a pending order can be checked out.", code="not_pending"
         )
-    lines = list(order.lines.select_related("variant"))
+    lines = list(order.lines.select_related("variant__product__category"))
     if not lines:
         raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
 
-    # Validate pre-order items are still within pre-order period at checkout
     for line in lines:
         variant = line.variant
-        if variant.is_preorder_enabled and not variant.is_preorder_active:
-            raise BusinessRuleViolationError(
-                f"Pre-order period has ended for {variant.product.name} ({variant.sku}).",
-                code="preorder_expired"
-            )
-        if variant.is_preorder_active and variant.preorder_stock_limit is not None:
-            # Check stock limit at checkout (line.quantity is already in preordered count)
-            _check_preorder_stock_limit(variant, line.quantity, line.quantity)
+        ensure_purchasable(variant)
+        if variant.is_preorder_kind and variant.preorder_stock_limit is not None:
+            _check_preorder_stock_limit(variant, line.quantity)
 
-    # A cart can sit long enough for its applied coupon to expire or hit its
-    # usage limit before checkout actually runs — re-validate here too.
-    revalidate_applied_coupon(order)
+    _reprice_lines(order, lines)
 
+    _settle_coupon(order, lines)
+
+    kinds: set[bool] = set()
     for line in lines:
         # Re-derive and persist is_preorder here, not just at cart-add time:
         # this is the decision point for whether a reservation gets created,
@@ -98,6 +130,7 @@ def checkout(
         if line.is_preorder != is_preorder:
             line.is_preorder = is_preorder
             line.save(update_fields=["is_preorder"])
+        kinds.add(is_preorder)
         # Skip stock reservation for pre-order items (they don't need real inventory yet)
         if is_preorder:
             continue
@@ -109,17 +142,29 @@ def checkout(
                 quantity=component_qty,
             )
 
+    if len(kinds) > 1:
+        raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")
+    order.order_type = (
+        SalesOrder.OrderType.PREORDER if True in kinds else SalesOrder.OrderType.STOCK
+    )
+
     if shipping_address is not None:
         order.shipping_address = shipping_address
         order.shipping_address_snapshot = build_address_snapshot(shipping_address)
-        zone = find_zone_by_address_text(address_zone_text(shipping_address))
+        zone = find_zone_by_address_text(
+            address_zone_text(shipping_address), kind=order.order_type
+        )
         if zone is None:
             raise BusinessRuleViolationError(
                 "Delivery is not available yet — no shipping zones are configured.",
                 code="no_shipping_zone",
             )
         order.shipping_total = quote_shipping(
-            zone=zone, weight=order_weight(order), carrier=carrier
+            zone=zone,
+            weight=order_weight(order),
+            kind=order.order_type,
+            carrier=carrier,
+            subtotal=sum((line.unit_price * line.quantity for line in lines), Decimal("0")),
         )
     else:
         order.shipping_total = Decimal("0")
@@ -127,6 +172,7 @@ def checkout(
     order.status = SalesOrder.Status.AWAITING_PAYMENT
     order.save(
         update_fields=[
+            "order_type",
             "shipping_address",
             "shipping_address_snapshot",
             "shipping_total",

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useLazyMount } from "@/design-system/patterns/useLazyMount";
 import { Navbar } from "./Navbar";
 import { CartDrawer } from "@/modules/cart";
+import { useBrand } from "@/modules/catalog";
 import { WishlistDrawer } from "@/modules/wishlist";
 import { MobileBottomBar } from "./MobileBottomBar";
 import { FloatingContact } from "./FloatingContact";
@@ -17,12 +18,15 @@ const MobileNavMenu = dynamic(() => import("./MobileNavMenu").then((m) => m.Mobi
 interface ClientShellProps {
   /** Rendered on the server and handed in, so the footer ships no JavaScript. */
   footer: React.ReactNode;
+  /** Whether the mobile menu links to /shipping-policy (only once that policy is published). */
+  hasShippingPolicy?: boolean;
   children: React.ReactNode;
 }
 
-export function ClientShell({ footer, children }: ClientShellProps) {
+export function ClientShell({ footer, hasShippingPolicy = false, children }: ClientShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuReady = useLazyMount(isMenuOpen);
+  const { freeDeliveryMinAmount } = useBrand();
 
   return (
     <PreOrderModalProvider>
@@ -30,9 +34,11 @@ export function ClientShell({ footer, children }: ClientShellProps) {
         <Navbar onOpenMenu={() => setIsMenuOpen(true)} />
         <main className="flex-1 pb-28 lg:pb-0">{children}</main>
         {footer}
-        <CartDrawer />
+        <CartDrawer freeDeliveryMinAmount={freeDeliveryMinAmount} />
         <WishlistDrawer />
-        {menuReady && <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} />}
+        {menuReady && (
+          <MobileNavMenu open={isMenuOpen} onClose={() => setIsMenuOpen(false)} hasShippingPolicy={hasShippingPolicy} />
+        )}
         <MobileBottomBar />
         <FloatingContact />
         <PreOrderConfirmationModal />

@@ -3,14 +3,14 @@ import type { LucideIcon } from "lucide-react"
 import type { RouteObject } from "react-router-dom"
 
 /**
- * Each feature domain (src/features/<domain>/module.ts) describes its own routes and
- * sidebar entries; src/app/modules.ts collects them. Adding a page means touching only
- * the owning domain's files, never the router or the sidebar.
+ * Each feature domain (src/features/<domain>/module.ts) describes its own routes;
+ * src/app/modules.ts collects them. The sidebar is one list in src/app/nav.ts.
  */
 
-/** Sidebar groups, rendered in this order. */
-export const NAV_GROUPS = ["MAIN", "OPERATIONS", "FINANCE", "ADMIN"] as const
+/** Sidebar groups: the two halves (one shown at a time) and the pages of the whole company. */
+export const NAV_GROUPS = ["STOCK", "PREORDER", "BUSINESS"] as const
 export type NavGroup = (typeof NAV_GROUPS)[number]
+export const NAV_GROUP_LABELS: Record<NavGroup, string> = { STOCK: "Shop", PREORDER: "Pre-order", BUSINESS: "Business" }
 
 export interface NavItem {
   title: string
@@ -27,15 +27,12 @@ export interface NavSection {
   label: string
   icon: LucideIcon
   group: NavGroup
-  /** Position within its group (lower first). */
-  order: number
   items: NavItem[]
 }
 
 export interface FeatureModule {
   /** Child routes of the authenticated dashboard layout (paths relative to "/"). */
   routes: RouteObject[]
-  nav: NavSection[]
 }
 
 /**

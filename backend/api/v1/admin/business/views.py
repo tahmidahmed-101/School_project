@@ -4,6 +4,7 @@ from typing import ClassVar
 
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -15,27 +16,49 @@ from apps.business.selectors.policies import (
     policy_revisions,
     store_policies_list,
 )
+from apps.business.selectors.storefront_content import (
+    get_hero_slide,
+    get_promo_line,
+    hero_slides_list,
+    promo_lines_list,
+)
 from apps.business.services import update_business_profile, update_store_policy
 from apps.business.services.modules import set_module_config, set_module_enabled
+from apps.business.services.storefront_content import (
+    create_hero_slide,
+    create_promo_line,
+    delete_hero_slide,
+    delete_promo_line,
+    update_hero_slide,
+    update_promo_line,
+)
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
+from apps.common.params import KIND_STOCK, get_kind
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.orders.selectors.payment_methods import (
     get_payment_method_state,
     payment_methods_list,
 )
-from apps.orders.services.payment_methods import set_payment_method_enabled
+from apps.orders.services.payment_methods import (
+    set_payment_method_enabled,
+    set_payment_method_pay_to,
+)
 
 from .serializers import (
     AdminBusinessProfileSerializer,
     AdminBusinessProfileUpdateSerializer,
+    AdminHeroSlideSerializer,
+    AdminHeroSlideWriteSerializer,
     AdminIntegrationStatusSerializer,
     AdminModuleSerializer,
     AdminModuleUpdateSerializer,
     AdminPaymentMethodSerializer,
     AdminPaymentMethodUpdateSerializer,
+    AdminPromoLineSerializer,
+    AdminPromoLineWriteSerializer,
     AdminStorePolicyRevisionSerializer,
     AdminStorePolicySerializer,
     AdminStorePolicyUpdateSerializer,
@@ -137,9 +160,12 @@ class AdminPaymentMethodListView(APIView):
     permission_classes: ClassVar[list] = [SettingsViewPermission]
 
     def get(self, request) -> Response:
+        kind = get_kind(request.query_params) or KIND_STOCK
         return Response(
             {
-                "data": AdminPaymentMethodSerializer(payment_methods_list(), many=True).data,
+                "data": AdminPaymentMethodSerializer(
+                    payment_methods_list(kind=kind), many=True
+                ).data,
                 "message": "Success",
             }
         )
@@ -151,14 +177,20 @@ class AdminPaymentMethodDetailView(APIView):
     permission_classes: ClassVar[list] = [SettingsManagePermission]
 
     def patch(self, request, key: str) -> Response:
-        if get_payment_method_state(key) is None:
+        kind = get_kind(request.query_params) or KIND_STOCK
+        if get_payment_method_state(key, kind=kind) is None:
             return not_found("payment_method_not_found", "Payment method not found.")
         serializer = AdminPaymentMethodUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            state = set_payment_method_enabled(
-                key=key, is_enabled=serializer.validated_data["is_enabled"]
-            )
+            data = serializer.validated_data
+            state = get_payment_method_state(key, kind=kind)
+            if "is_enabled" in data:
+                state = set_payment_method_enabled(
+                    key=key, is_enabled=data["is_enabled"], kind=kind
+                )
+            if "pay_to" in data:
+                state = set_payment_method_pay_to(key=key, pay_to=data["pay_to"], kind=kind)
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": AdminPaymentMethodSerializer(state).data, "message": "Success"})
@@ -233,3 +265,107 @@ class AdminStorePolicyRevisionListView(GenericListAPIView):
             return not_found("policy_not_found", "Unknown policy.")
         self._policy = policy
         return self.list_response(request)
+
+
+def _hero_slide_response(request, slide, status_code: int = status.HTTP_200_OK) -> Response:
+    data = AdminHeroSlideSerializer(slide, context={"request": request}).data
+    return Response({"data": data, "message": "Success"}, status=status_code)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminHeroSlideListView(APIView):
+    """Storefront hero slides, inactive ones included. Create is multipart."""
+
+    serializer_class = AdminHeroSlideWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request) -> Response:
+        data = AdminHeroSlideSerializer(
+            hero_slides_list(), many=True, context={"request": request}
+        ).data
+        return Response({"data": data, "message": "Success"})
+
+    def post(self, request) -> Response:
+        serializer = AdminHeroSlideWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            slide = create_hero_slide(data=serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return _hero_slide_response(request, slide, status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminHeroSlideDetailView(APIView):
+    serializer_class = AdminHeroSlideWriteSerializer
+    permission_classes: ClassVar[list] = [SettingsManagePermission]
+
+    def patch(self, request, pk) -> Response:
+        slide = get_hero_slide(pk)
+        if slide is None:
+            return not_found("hero_slide_not_found", "Hero slide not found.")
+        serializer = AdminHeroSlideWriteSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            slide = update_hero_slide(slide=slide, data=serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return _hero_slide_response(request, slide)
+
+    def delete(self, request, pk) -> Response:
+        slide = get_hero_slide(pk)
+        if slide is None:
+            return not_found("hero_slide_not_found", "Hero slide not found.")
+        delete_hero_slide(slide=slide)
+        return Response({"data": {}, "message": "Success"})
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromoLineListView(APIView):
+    """Promo strip lines, inactive ones included."""
+
+    serializer_class = AdminPromoLineWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request) -> Response:
+        data = AdminPromoLineSerializer(promo_lines_list(), many=True).data
+        return Response({"data": data, "message": "Success"})
+
+    def post(self, request) -> Response:
+        serializer = AdminPromoLineWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        line = create_promo_line(data=serializer.validated_data)
+        return Response(
+            {"data": AdminPromoLineSerializer(line).data, "message": "Success"},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromoLineDetailView(APIView):
+    serializer_class = AdminPromoLineWriteSerializer
+    permission_classes: ClassVar[list] = [SettingsManagePermission]
+
+    def patch(self, request, pk) -> Response:
+        line = get_promo_line(pk)
+        if line is None:
+            return not_found("promo_line_not_found", "Promo line not found.")
+        serializer = AdminPromoLineWriteSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        line = update_promo_line(line=line, data=serializer.validated_data)
+        return Response({"data": AdminPromoLineSerializer(line).data, "message": "Success"})
+
+    def delete(self, request, pk) -> Response:
+        line = get_promo_line(pk)
+        if line is None:
+            return not_found("promo_line_not_found", "Promo line not found.")
+        delete_promo_line(line=line)
+        return Response({"data": {}, "message": "Success"})

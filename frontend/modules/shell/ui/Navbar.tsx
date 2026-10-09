@@ -14,6 +14,7 @@ import { photo } from "@/lib/photo";
 import { NavbarSearch } from "@/modules/catalog";
 import { MobileSearchBar } from "@/modules/catalog";
 import { NavCategoriesMenu } from "./NavCategoriesMenu";
+import { WithShopCounts } from "./WithShopCounts";
 import { mapsHref, socialLinks } from "./contactLinks";
 import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { WithActiveCategory } from "@/modules/catalog";
@@ -54,8 +55,8 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
 
   const { lang, setLang, t, ui, n } = useLang();
   const BRAND_INFO = useBrand();
-  const { totalItems, openDrawer } = useCart();
-  const { totalWishlistItems, openWishlist } = useWishlist();
+  const { openDrawer } = useCart();
+  const { openWishlist } = useWishlist();
   const { user } = useAuth();
 
   // Sticky shadow once the page has scrolled
@@ -157,26 +158,32 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               {user ? <UserAvatar user={user} /> : <User className="h-5 w-5" />}
             </Link>
 
-            {/* Desktop only; on mobile the wishlist lives in the bottom bar */}
-            <button
-              type="button"
-              onClick={openWishlist}
-              aria-label={ui("navWishlist")}
-              className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:flex"
-            >
-              <Heart className={`h-5 w-5 ${totalWishlistItems > 0 ? "fill-gold-300 text-gold-300" : ""}`} />
-              {totalWishlistItems > 0 && <CountBadge>{n(totalWishlistItems)}</CountBadge>}
-            </button>
+            <WithShopCounts>
+              {(counts) => (
+                <>
+                  {/* Desktop only; on mobile the wishlist lives in the bottom bar */}
+                  <button
+                    type="button"
+                    onClick={openWishlist}
+                    aria-label={ui("navWishlist")}
+                    className="relative hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:flex"
+                  >
+                    <Heart className={`h-5 w-5 ${counts.wishlist > 0 ? "fill-gold-300 text-gold-300" : ""}`} />
+                    {counts.wishlist > 0 && <CountBadge>{n(counts.wishlist)}</CountBadge>}
+                  </button>
 
-            <button
-              type="button"
-              onClick={openDrawer}
-              aria-label={ui("openCart")}
-              className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
-            >
-              <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
-              {totalItems > 0 && <CountBadge>{n(totalItems)}</CountBadge>}
-            </button>
+                  <button
+                    type="button"
+                    onClick={openDrawer}
+                    aria-label={ui("openCart")}
+                    className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
+                  >
+                    <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
+                    {counts.cart > 0 && <CountBadge>{n(counts.cart)}</CountBadge>}
+                  </button>
+                </>
+              )}
+            </WithShopCounts>
           </div>
         </div>
 

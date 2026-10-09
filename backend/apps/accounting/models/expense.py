@@ -28,6 +28,10 @@ class Expense(FullAuditModel):
         Account, on_delete=models.PROTECT, related_name="expense_payments"
     )
     reference_number = models.CharField(max_length=50, blank=True)
+    # Blank means the whole business (rent, salaries); the journal entry carries the same value.
+    kind = models.CharField(
+        max_length=10, choices=JournalEntry.Kind.choices, blank=True, default=""
+    )
     journal_entry = models.ForeignKey(
         JournalEntry, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses"
     )

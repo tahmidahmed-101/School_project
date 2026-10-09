@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from rest_framework import serializers
+from rest_framework.fields import empty
 
 from apps.business.models import PolicyKind
+from apps.business.models.storefront_content import WRITABLE_PLACEMENTS
 from apps.business.policy_content import missing_policy_fields
 from apps.common.serializers import user_label
 
@@ -43,6 +47,13 @@ class AdminBusinessProfileSerializer(serializers.Serializer):
     youtube_url = serializers.CharField(allow_blank=True)
     linkedin_url = serializers.CharField(allow_blank=True)
 
+    preorder_deposit_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    free_delivery_min_amount = serializers.DecimalField(
+        max_digits=14, decimal_places=2, allow_null=True
+    )
+    about_en = serializers.CharField(allow_blank=True)
+    about_bn = serializers.CharField(allow_blank=True)
+
     updated_at = serializers.DateTimeField(read_only=True)
 
 
@@ -79,6 +90,19 @@ class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
     tiktok_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     youtube_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     linkedin_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    preorder_deposit_percent = serializers.DecimalField(
+        required=False,
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        max_value=Decimal("100"),
+    )
+    free_delivery_min_amount = serializers.DecimalField(
+        required=False, allow_null=True, max_digits=14, decimal_places=2, min_value=Decimal("0")
+    )
+    about_en = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+    about_bn = serializers.CharField(required=False, allow_blank=True, max_length=5000)
 
     URL_FIELDS = (
         "website",
@@ -159,15 +183,18 @@ class AdminIntegrationStatusSerializer(serializers.Serializer):
 
 class AdminPaymentMethodSerializer(serializers.Serializer):
     key = serializers.CharField(read_only=True)
+    kind = serializers.CharField(read_only=True)
     label = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     is_enabled = serializers.BooleanField(read_only=True)
+    pay_to = serializers.CharField(read_only=True)
     can_disable = serializers.BooleanField(read_only=True)
     locked_reason = serializers.CharField(read_only=True)
 
 
 class AdminPaymentMethodUpdateSerializer(serializers.Serializer):
-    is_enabled = serializers.BooleanField()
+    is_enabled = serializers.BooleanField(required=False)
+    pay_to = serializers.CharField(required=False, allow_blank=True, max_length=200)
 
 
 class AdminPolicyCategorySerializer(serializers.Serializer):
@@ -226,3 +253,66 @@ class AdminStorePolicyRevisionSerializer(serializers.Serializer):
 
     def get_changed_by_name(self, obj) -> str:
         return user_label(obj.changed_by)
+
+
+class _OmittableBooleanField(serializers.BooleanField):
+    # DRF reads a boolean missing from a multipart form as an unticked
+    # checkbox (False), which would create every uploaded slide inactive.
+    default_empty_html = empty
+
+
+class AdminHeroSlideSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    image = serializers.SerializerMethodField()
+    alt_text = serializers.CharField(read_only=True)
+    tag_en = serializers.CharField(read_only=True)
+    tag_bn = serializers.CharField(read_only=True)
+    title_en = serializers.CharField(read_only=True)
+    title_bn = serializers.CharField(read_only=True)
+    link_url = serializers.CharField(read_only=True)
+    placement = serializers.CharField(read_only=True)
+    sort_order = serializers.IntegerField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+
+    def get_image(self, obj) -> str:
+        request = self.context.get("request")
+        url = obj.image.url
+        return request.build_absolute_uri(url) if request else url
+
+
+class AdminHeroSlideWriteSerializer(serializers.Serializer):
+    """Used with `partial=True` on PATCH, so `image` and `placement` are only
+    mandatory on create. A row belongs to one shop: `both` is refused."""
+
+    image = serializers.ImageField()
+    alt_text = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    tag_en = serializers.CharField(required=False, allow_blank=True, max_length=80)
+    tag_bn = serializers.CharField(required=False, allow_blank=True, max_length=80)
+    title_en = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    title_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    link_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS)
+    sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
+    is_active = _OmittableBooleanField(required=False)
+
+    def validate_link_url(self, value: str) -> str:
+        if value and not value.startswith(("/", "http://", "https://")):
+            raise serializers.ValidationError("Enter a site path starting with / or a full URL.")
+        return value
+
+
+class AdminPromoLineSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    text_en = serializers.CharField(read_only=True)
+    text_bn = serializers.CharField(read_only=True)
+    placement = serializers.CharField(read_only=True)
+    sort_order = serializers.IntegerField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+
+
+class AdminPromoLineWriteSerializer(serializers.Serializer):
+    text_en = serializers.CharField(max_length=160)
+    text_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS)
+    sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
+    is_active = _OmittableBooleanField(required=False)

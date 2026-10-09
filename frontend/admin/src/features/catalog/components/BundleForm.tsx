@@ -34,6 +34,8 @@ import { ProductImagesSection } from "./ProductImagesSection"
 import { StagedImagesCard } from "./StagedImagesCard"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
+const STOCK_ONLY = { category_type: "stock" }
+
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   category_id: z.string().min(1, "Choose a category"),
@@ -63,7 +65,7 @@ const BundleForm = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.catalogBundles)
   const bundle = singleData as Bundle | null
-  const { options: categoryOptions } = useCategoryOptions()
+  const { options: categoryOptions } = useCategoryOptions("stock")
 
   useDocumentTitle(isEditing ? (bundle?.name ? `Edit ${bundle.name}` : "Edit Bundle") : "New Bundle")
 
@@ -257,6 +259,7 @@ const BundleForm = () => {
                       <VariantPicker
                         value={field.value ?? null}
                         onChange={field.onChange}
+                        filters={STOCK_ONLY}
                         excludeIds={pickedIds}
                       />
                     )}
@@ -309,6 +312,7 @@ const BundleForm = () => {
           >
             <ProductImagesSection
               productId={bundle.product_id}
+              options={[]}
               variants={[]}
               canManage={canManage}
               onChanged={() => dispatch(fetchSingle(bundle.id))}

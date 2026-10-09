@@ -20,6 +20,8 @@ export interface Rma {
   status: RmaStatus
   reason: string
   lines: RmaLine[]
+  /** The order's kind; absent on older API answers, read as stock. */
+  order_type?: "stock" | "preorder"
 }
 
 export const RMA_STATUS_OPTIONS: { label: string; value: RmaStatus }[] = [

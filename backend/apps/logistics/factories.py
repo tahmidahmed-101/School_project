@@ -18,9 +18,10 @@ class CarrierFactory(factory.django.DjangoModelFactory):
 class ShippingZoneFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = ShippingZone
-        django_get_or_create = ("name",)
+        django_get_or_create = ("name", "kind")
 
     name = factory.Sequence(lambda n: f"Zone {n}")
+    kind = "stock"
 
 
 class ShippingRateFactory(factory.django.DjangoModelFactory):
@@ -29,6 +30,7 @@ class ShippingRateFactory(factory.django.DjangoModelFactory):
 
     zone = factory.SubFactory(ShippingZoneFactory)
     carrier = factory.SubFactory(CarrierFactory)
+    kind = factory.SelfAttribute("zone.kind")
     base_weight = Decimal("0")
     base_charge = Decimal("9.99")
     increment_weight = Decimal("1")

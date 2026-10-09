@@ -1,6 +1,23 @@
 import { ApiError } from "@/lib/api/client";
-import type { ApiCheckoutRequest } from "@/lib/api/types";
+import type { ApiCheckoutRequest, ApiPaymentMethod } from "@/lib/api/types";
+import type { UiKey } from "@/lib/dictionary";
+import { productKind, type ProductKind } from "@/lib/product";
 import type { CartItem, OrderForm } from "@/lib/types";
+
+/** Coupons are for stock orders only: the backend refuses one on any basket holding a pre-order line. */
+export const COUPON_STOCK_ONLY_CODE = "coupon_stock_only";
+
+export function acceptsCoupon(items: CartItem[]): boolean {
+  return items.length > 0 && items.every((item) => productKind(item.product) === "stock");
+}
+
+export type PaymentMethodsByKind = Record<ProductKind, ApiPaymentMethod[]>;
+
+/** The basket's own half decides the list; a basket that is not purely pre-order is offered the stock methods. */
+export function paymentMethodsFor(items: CartItem[], byKind: PaymentMethodsByKind): ApiPaymentMethod[] {
+  const allPreorder = items.length > 0 && items.every((item) => productKind(item.product) === "preorder");
+  return allPreorder ? byKind.preorder : byKind.stock;
+}
 
 export const EMPTY_ORDER_FORM: OrderForm = {
   name: "",
@@ -93,3 +110,18 @@ export function mapApiFieldErrors(error: ApiError): FormErrors {
 
 /** Domain codes where the store cannot deliver to the address at all (no zone / no rate configured). */
 export const NO_SHIPPING_CODES = new Set(["no_shipping_zone", "no_shipping_rate"]);
+
+/** Coupon refusals the storefront words itself, in both languages; any other code shows the API's own message. */
+const COUPON_ERROR_KEYS: Record<string, UiKey> = {
+  [COUPON_STOCK_ONLY_CODE]: "checkoutCouponStockOnly",
+  coupon_not_started: "couponNotStarted",
+  invalid_coupon: "couponInvalid",
+  coupon_expired: "couponExpired",
+  coupon_usage_limit_reached: "couponUsageLimitReached",
+  coupon_minimum_not_met: "couponMinimumNotMet",
+  coupon_not_applicable: "couponNotApplicable",
+  coupon_customer_limit_reached: "couponCustomerLimitReached",
+};
+
+export const couponErrorKey = (code: string): UiKey | undefined =>
+  Object.hasOwn(COUPON_ERROR_KEYS, code) ? COUPON_ERROR_KEYS[code] : undefined;

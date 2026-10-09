@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { shortDate } from "@/lib/date";
 import { useLang } from "@/lib/i18n";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { listStorefrontCoupons } from "../data/queries";
@@ -38,13 +39,20 @@ export function useCollectedVouchers(): Voucher[] {
   return collectedVouchers(vouchers, codes);
 }
 
-/** Shopper-facing wording for a voucher: the headline ("৳100 OFF", "10% OFF") and its spending condition. */
+/** Shopper-facing wording for a voucher: the headline ("৳100 OFF", "10% OFF"), its spending condition and expiry. */
 export function useVoucherText() {
-  const { ui, money, n } = useLang();
+  const { lang, ui, money, n } = useLang();
   return {
     title: (voucher: Voucher) =>
       `${voucher.kind === "fixed" ? money(voucher.value) : `${n(voucher.value)}%`} ${ui("voucherOff")}`,
     condition: (voucher: Voucher) =>
       voucher.minSpend > 0 ? `${ui("voucherMinSpend")} ${money(voucher.minSpend)}` : ui("voucherNoMinSpend"),
+    cap: (voucher: Voucher) =>
+      voucher.maxDiscount ? ui("voucherMaxDiscount").replace("{amount}", money(voucher.maxDiscount)) : "",
+    /** "" for a voucher that does not expire. */
+    validUntil: (voucher: Voucher) => {
+      const date = shortDate(voucher.expiresAt, lang);
+      return date ? ui("voucherValidUntil").replace("{date}", date) : "";
+    },
   };
 }

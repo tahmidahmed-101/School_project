@@ -15,8 +15,10 @@ from apps.catalog.factories import (
     CategoryFactory,
     ProductFactory,
     ProductVariantFactory,
+    make_options,
+    make_variant,
 )
-from apps.catalog.models import Category, Product, ProductVariant
+from apps.catalog.models import Category, ProductVariant
 from apps.catalog.services.categories import create_category, delete_category, update_category
 from apps.catalog.services.products import (
     create_product,
@@ -24,7 +26,6 @@ from apps.catalog.services.products import (
     update_variant,
 )
 from apps.catalog.services.variant_import_export import export_variants, import_variants
-from apps.catalog.services.variants import generate_variants
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
@@ -127,8 +128,11 @@ def test_create_product_and_variant_duplicate_sku_rejected():
 
 def test_create_variant_generates_a_sku_from_the_product_slug_and_combo():
     product = ProductFactory(name="Panjabi Classic", slug="panjabi-classic")
+    values = make_options(product, {"Colour": ["Navy"], "Size": ["L"]})
 
-    variant = create_variant(product=product, price=Decimal("1200"), color="Navy", size="L")
+    variant = create_variant(
+        product=product, price=Decimal("1200"), option_value_ids=[v.id for v in values.values()]
+    )
 
     assert variant.sku == "PANJABI-CLASSIC-NAVY-L"
 
@@ -136,116 +140,13 @@ def test_create_variant_generates_a_sku_from_the_product_slug_and_combo():
 def test_create_variant_suffixes_a_generated_sku_that_is_already_taken():
     ProductVariantFactory(sku="PANJABI-CLASSIC-NAVY-L")
     product = ProductFactory(name="Panjabi Classic", slug="panjabi-classic")
+    values = make_options(product, {"Colour": ["Navy"], "Size": ["L"]})
 
-    variant = create_variant(product=product, price=Decimal("1200"), color="Navy", size="L")
+    variant = create_variant(
+        product=product, price=Decimal("1200"), option_value_ids=[v.id for v in values.values()]
+    )
 
     assert variant.sku == "PANJABI-CLASSIC-NAVY-L-2"
-
-
-def test_create_variant_rejects_a_repeated_colour_and_size_on_the_same_product():
-    product = ProductFactory(product_type=Product.ProductType.VARIANT)
-    create_variant(product=product, price=Decimal("950"), color="Black", size="M")
-
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        create_variant(product=product, price=Decimal("950"), color="Black", size="M")
-
-    assert exc.value.code == "duplicate_variant_combo"
-
-
-def test_create_variant_allows_the_same_colour_and_size_on_another_product():
-    first = ProductFactory()
-    second = ProductFactory()
-    create_variant(product=first, price=Decimal("950"), color="Black", size="M")
-
-    variant = create_variant(product=second, price=Decimal("950"), color="Black", size="M")
-
-    assert variant.pk is not None
-
-
-def test_create_variant_allows_a_combo_freed_by_a_soft_delete():
-    product = ProductFactory(product_type=Product.ProductType.VARIANT)
-    first = create_variant(product=product, price=Decimal("950"), color="Black", size="M")
-
-    first.soft_delete()
-    replacement = create_variant(product=product, price=Decimal("990"), color="Black", size="M")
-
-    assert replacement.pk != first.pk
-
-
-def test_generate_variants_creates_cartesian_product_and_skips_existing():
-    product = ProductFactory(
-        name="Nike T-Shirt", slug="nike-t-shirt", product_type=Product.ProductType.VARIANT
-    )
-    existing = create_variant(
-        product=product, sku="EXISTING-RED-S", price=Decimal("10"), color="Red", size="S"
-    )
-
-    result = generate_variants(
-        product=product,
-        colors=["Red", "Blue"],
-        sizes=["S", "L"],
-        price=Decimal("25.00"),
-    )
-
-    assert {(variant.color, variant.size) for variant in result.created} == {
-        ("Red", "L"),
-        ("Blue", "S"),
-        ("Blue", "L"),
-    }
-    assert result.skipped_existing == [existing]
-    assert result.stale == []
-    assert product.variants.count() == 4
-
-
-def test_generate_variants_reports_combinations_outside_the_selection_as_stale():
-    product = ProductFactory(product_type=Product.ProductType.VARIANT)
-    dropped = create_variant(product=product, price=Decimal("10"), color="Red", size="S")
-
-    result = generate_variants(
-        product=product, colors=["Blue"], sizes=["S"], price=Decimal("25.00")
-    )
-
-    assert result.stale == [dropped]
-    dropped.refresh_from_db()
-    assert dropped.deleted_at is None
-
-
-def test_generate_variants_with_colours_only_leaves_size_blank():
-    product = ProductFactory(product_type=Product.ProductType.VARIANT)
-
-    result = generate_variants(
-        product=product, colors=["Black", "Brown", "Navy"], sizes=[], price=Decimal("450")
-    )
-
-    assert [(variant.color, variant.size) for variant in result.created] == [
-        ("Black", ""),
-        ("Brown", ""),
-        ("Navy", ""),
-    ]
-
-
-def test_generate_variants_with_sizes_only_leaves_colour_blank():
-    product = ProductFactory(product_type=Product.ProductType.VARIANT)
-
-    result = generate_variants(
-        product=product, colors=[], sizes=["S", "M", "L", "XL"], price=Decimal("1450")
-    )
-
-    assert [(variant.color, variant.size) for variant in result.created] == [
-        ("", "S"),
-        ("", "M"),
-        ("", "L"),
-        ("", "XL"),
-    ]
-
-
-def test_generate_variants_rejects_an_empty_colour_and_size_selection():
-    product = ProductFactory()
-
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        generate_variants(product=product, colors=[], sizes=[], price=Decimal("10"))
-
-    assert exc.value.code == "no_variant_axes"
 
 
 def test_export_then_import_variants_round_trip():
@@ -267,17 +168,26 @@ def test_export_then_import_variants_round_trip():
     assert variant.price == Decimal("12.50")
 
 
-def test_export_variants_carries_colour_and_size_columns():
+def test_export_variants_carries_the_option_columns():
     product = ProductFactory(name="Muffler Product")
-    variant = ProductVariantFactory(product=product, sku="MUF-1", color="Navy", size="Free")
+    values = make_options(product, {"Colour": ["Navy"], "Size": ["Free"]})
+    variant = make_variant(product, list(values.values()), sku="MUF-1")
 
     csv_text = export_variants(ProductVariant.objects.filter(id=variant.id), fmt="csv").decode(
         "utf-8"
     )
 
     header, row = csv_text.splitlines()[:2]
-    assert header.split(",")[8:10] == ["color", "size"]
-    assert row.split(",")[8:10] == ["Navy", "Free"]
+    assert header.split(",")[8:14] == [
+        "option1_name",
+        "option1_value",
+        "option2_name",
+        "option2_value",
+        "option3_name",
+        "option3_value",
+    ]
+    assert "color" not in header.split(",")
+    assert row.split(",")[8:14] == ["Colour", "Navy", "Size", "Free", "", ""]
 
 
 def test_import_variants_reports_row_errors_without_aborting():
@@ -297,6 +207,8 @@ def test_import_variants_reports_row_errors_without_aborting():
 
 
 def _import_csv(rows: list[str]):
+    """Counts the importer's own lookups (product by name, SKUs of the file).
+    Each row then goes through the variant service, which reads per row."""
     header = (
         "product_name,sku,barcode,price,cost_price,discount_price,stock,weight,color,size,"
         "is_active\n"
@@ -308,14 +220,17 @@ def _import_csv(rows: list[str]):
         1
         for q in captured
         if q["sql"].startswith("SELECT")
-        and ('FROM "catalog_product"' in q["sql"] or 'FROM "catalog_productvariant"' in q["sql"])
+        and (
+            '"catalog_product"."name" LIKE' in q["sql"]
+            or '"catalog_productvariant"."sku" IN' in q["sql"]
+        )
     )
     return result, lookups
 
 
 def test_import_variants_looks_products_and_skus_up_once_not_per_row():
     product = ProductFactory(name="Import Scale Product")
-    # Variants of one product must differ by colour/size, hence the size column.
+    # Variants of one product must differ by an option value, hence the size column.
     _, one_row = _import_csv([f"{product.name},SCALE-0,,10,5,,0,,,S0,1"])
     result, many_rows = _import_csv(
         [f"{product.name},SCALE-{n},,10,5,,0,,,S{n},1" for n in range(1, 9)]
@@ -340,7 +255,7 @@ def test_import_variants_repeated_sku_in_one_file_updates_rather_than_duplicates
 
 
 def test_create_variant_with_preorder_fields():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -361,7 +276,7 @@ def test_create_variant_with_preorder_fields():
 
 
 def test_create_variant_preorder_price_must_be_lower_than_normal_price():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     with pytest.raises(BusinessRuleViolationError) as exc:
@@ -379,7 +294,7 @@ def test_create_variant_preorder_price_must_be_lower_than_normal_price():
 
 
 def test_create_variant_preorder_dates_validation():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     # preorder_end_date before preorder_start_date should fail
@@ -398,7 +313,7 @@ def test_create_variant_preorder_dates_validation():
 
 
 def test_create_variant_release_date_before_preorder_end():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     with pytest.raises(BusinessRuleViolationError) as exc:
@@ -415,23 +330,29 @@ def test_create_variant_release_date_before_preorder_end():
     assert exc.value.code == "release_date_before_preorder_end"
 
 
-def test_preorder_not_active_when_dates_not_set():
-    product = ProductFactory()
+def test_preorder_needs_its_dates_and_a_preorder_category():
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_variant(
+            product=ProductFactory(category__category_type="preorder"),
+            price=Decimal("1000"),
+            is_preorder_enabled=True,
+        )
+    assert exc.value.code == "preorder_dates_required"
 
-    variant = create_variant(
-        product=product,
-        price=Decimal("1000"),
-        is_preorder_enabled=True,
-        preorder_price=Decimal("900"),
-        # No dates set
-    )
-
-    assert variant.is_preorder_active is False
-    assert variant.can_preorder is False
+    now = timezone.now()
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_variant(
+            product=ProductFactory(),
+            price=Decimal("1000"),
+            is_preorder_enabled=True,
+            preorder_start_date=now,
+            preorder_end_date=now + timedelta(days=7),
+        )
+    assert exc.value.code == "preorder_category_required"
 
 
 def test_preorder_not_active_when_dates_in_past():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -449,7 +370,7 @@ def test_preorder_not_active_when_dates_in_past():
 
 
 def test_preorder_not_active_when_dates_in_future():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -467,7 +388,7 @@ def test_preorder_not_active_when_dates_in_future():
 
 
 def test_preorder_active_when_within_date_range():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -485,7 +406,7 @@ def test_preorder_active_when_within_date_range():
 
 
 def test_effective_price_uses_preorder_price_when_active():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -502,11 +423,11 @@ def test_effective_price_uses_preorder_price_when_active():
     assert variant.is_preorder_price_applied is True
 
 
-def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
-    product = ProductFactory()
+def test_effective_price_is_list_price_once_preorder_has_ended():
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
-    variant = create_variant(
+    variant = ProductVariantFactory(
         product=product,
         price=Decimal("1000"),
         discount_price=Decimal("950"),
@@ -517,12 +438,12 @@ def test_effective_price_falls_back_to_discount_price_when_preorder_inactive():
         release_date=now - timedelta(days=15),
     )
 
-    assert variant.effective_price == Decimal("950")
+    assert variant.effective_price == Decimal("1000")
     assert variant.is_preorder_price_applied is False
 
 
 def test_can_preorder_checks_stock_limit():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -544,15 +465,16 @@ def test_can_preorder_checks_stock_limit():
     variant.refresh_from_db()
     assert variant.can_preorder is True
 
-    # Second order reaches limit
+    # An open cart holds no slot; the limit is reached once the order is placed.
     add_line(order=cart, variant=variant, quantity=2)
+    checkout(order=cart)
 
     variant.refresh_from_db()
     assert variant.can_preorder is False
 
 
 def test_preorder_stock_limit_enforced_at_cart():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -581,7 +503,7 @@ def test_preorder_stock_limit_enforced_at_cart():
 
 
 def test_preorder_not_available_when_disabled():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -598,32 +520,77 @@ def test_preorder_not_available_when_disabled():
     assert variant.can_preorder is False
 
 
-def test_preorder_expired_rejected_at_checkout():
-    product = ProductFactory()
+def test_preorder_variant_cannot_be_bought_once_its_window_has_ended():
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
-
     variant = create_variant(
         product=product,
         price=Decimal("1000"),
         is_preorder_enabled=True,
         preorder_price=Decimal("900"),
         preorder_start_date=now - timedelta(days=60),
-        preorder_end_date=now - timedelta(days=30),  # Expired
+        preorder_end_date=now - timedelta(days=30),
         release_date=now - timedelta(days=15),
     )
+    cart = get_or_create_cart(create_user(email="test@example.com", role=UserRole.CUSTOMER))
 
-    customer = create_user(email="test@example.com", role=UserRole.CUSTOMER)
-    cart = get_or_create_cart(customer)
+    assert variant.is_preorder_closed is True
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        add_line(order=cart, variant=variant, quantity=1)
+    assert exc.value.code == "preorder_closed"
+    assert not cart.lines.exists()
 
-    # Add line should fail because pre-order is expired
+
+def test_preorder_that_has_not_opened_is_rejected_at_cart():
+    product = ProductFactory(category__category_type="preorder")
+    now = timezone.now()
+    variant = create_variant(
+        product=product,
+        price=Decimal("1000"),
+        is_preorder_enabled=True,
+        preorder_start_date=now + timedelta(days=5),
+        preorder_end_date=now + timedelta(days=30),
+    )
+    cart = get_or_create_cart(create_user(email="early@example.com", role=UserRole.CUSTOMER))
+
     with pytest.raises(BusinessRuleViolationError) as exc:
         add_line(order=cart, variant=variant, quantity=1)
 
     assert exc.value.code == "preorder_not_active"
 
 
+def test_preorder_price_is_charged_whatever_discount_price_is_left_over():
+    product = ProductFactory(category__category_type="preorder")
+    now = timezone.now()
+    window = {
+        "is_preorder_enabled": True,
+        "preorder_start_date": now - timedelta(days=1),
+        "preorder_end_date": now + timedelta(days=1),
+    }
+
+    discount_lower = ProductVariantFactory(
+        product=product,
+        price=Decimal("1000"),
+        discount_price=Decimal("800"),
+        preorder_price=Decimal("900"),
+        **window,
+    )
+    preorder_lower = ProductVariantFactory(
+        product=product,
+        price=Decimal("1000"),
+        discount_price=Decimal("950"),
+        preorder_price=Decimal("900"),
+        **window,
+    )
+
+    assert discount_lower.effective_price == Decimal("900")
+    assert discount_lower.is_preorder_price_applied is True
+    assert preorder_lower.effective_price == Decimal("900")
+    assert preorder_lower.is_preorder_price_applied is True
+
+
 def test_update_variant_preorder_fields():
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(product=product, price=Decimal("1000"))
@@ -674,7 +641,7 @@ def test_normal_product_order_still_works():
 def test_preorder_checkout_works_with_zero_inventory_stock():
     from apps.orders.services.checkout import checkout
 
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -706,7 +673,7 @@ def test_preorder_active_without_preorder_price():
     """is_preorder_active — and the order line's is_preorder flag it drives —
     must not depend on preorder_price being set. A variant with no discounted
     pre-order price is still a pre-order while within its date window."""
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -732,7 +699,7 @@ def test_preorder_active_without_preorder_price():
 def test_preorder_checkout_succeeds_without_preorder_price():
     """A pre-order with no discounted price still checks out normally, and
     stays flagged as a pre-order line through checkout."""
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -769,7 +736,7 @@ def test_preorder_stock_limit_enforced_across_separate_orders():
     database) does not, so this test exercises the check's logic, not the
     lock's concurrency guarantee itself.
     """
-    product = ProductFactory()
+    product = ProductFactory(category__category_type="preorder")
     now = timezone.now()
 
     variant = create_variant(
@@ -785,6 +752,7 @@ def test_preorder_stock_limit_enforced_across_separate_orders():
     first_customer = create_user(email="preorder-race-1@example.com", role=UserRole.CUSTOMER)
     first_cart = get_or_create_cart(first_customer)
     add_line(order=first_cart, variant=variant, quantity=3)
+    checkout(order=first_cart)
 
     second_customer = create_user(email="preorder-race-2@example.com", role=UserRole.CUSTOMER)
     second_cart = get_or_create_cart(second_customer)

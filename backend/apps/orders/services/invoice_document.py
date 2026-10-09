@@ -3,7 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+from apps.catalog.selectors.options import line_variant_title
 from apps.orders.models import Payment, SalesOrder
+from apps.orders.selectors.payments import order_deposit_due
 from apps.orders.services.address_snapshot import snapshot_or_live
 
 INVOICE_TEMPLATE = "pdf/invoice.html"
@@ -31,14 +33,15 @@ def _address_lines(address: dict[str, str]) -> list[str]:
 
 
 def _settlement(order: SalesOrder) -> tuple[Decimal, Decimal, str]:
-    captured = ZERO
+    received = ZERO
     refunded = ZERO
     for payment in order.payments.all():
-        if payment.status == Payment.Status.CAPTURED:
-            captured += payment.amount
+        # A fully refunded payment was still received first.
+        if payment.status in (Payment.Status.CAPTURED, Payment.Status.REFUNDED):
+            received += payment.amount
         refunded += payment.refunded_amount
 
-    net = captured - refunded
+    net = received - refunded
     if refunded and net <= ZERO:
         label = "refunded"
     elif net >= order.grand_total and order.grand_total > ZERO:
@@ -61,6 +64,7 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
         lines.append(
             {
                 "name": line.product_name or variant.product.name,
+                "variant_title": line_variant_title(line),
                 "sku": line.variant_sku or variant.sku,
                 "quantity": line.quantity,
                 "unit_price": line.unit_price,
@@ -74,11 +78,18 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
     balance = order.grand_total - paid
 
     address = snapshot_or_live(order)
+    is_preorder = order.order_type == SalesOrder.OrderType.PREORDER
     doc_meta = [{"label": "Issued", "value": order.created_at.strftime("%d %b %Y")}]
-    doc_meta.append({"label": "Status", "value": order.get_status_display()})
+    if not is_preorder:
+        doc_meta.append({"label": "Status", "value": order.get_status_display()})
+    elif order.preorder_stage:
+        doc_meta.append({"label": "Stage", "value": order.get_preorder_stage_display()})
 
     return {
-        "doc_title": "Invoice",
+        "doc_title": "Pre-order invoice" if is_preorder else "Invoice",
+        "is_preorder": is_preorder,
+        "paid_label": "Deposit paid" if is_preorder and balance > ZERO else "Paid",
+        "deposit_due": order_deposit_due(order) if is_preorder else None,
         "doc_number": order.order_number,
         "doc_meta": doc_meta,
         "doc_status": payment_label,

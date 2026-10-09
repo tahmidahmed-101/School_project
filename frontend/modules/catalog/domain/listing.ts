@@ -1,4 +1,16 @@
+import { productKind } from "@/lib/product";
 import type { Product } from "@/lib/types";
+
+/** "You may also like" for a product: the API's picks, else its own category, and only ever from its own shop. */
+export function relatedForProduct(
+  product: Product,
+  apiPicks: Product[] | null,
+  catalog: Product[],
+  count: number,
+): Product[] {
+  const candidates = apiPicks ?? catalog.filter((p) => p.category === product.category);
+  return candidates.filter((p) => p.id !== product.id && productKind(p) === productKind(product)).slice(0, count);
+}
 
 /**
  * A product as cards, filters and search need it. Listing pages send every product to the browser, so the parts
@@ -9,6 +21,7 @@ export function forListing(product: Product): Product {
     ...product,
     longDescription: { en: "", bn: "" },
     gallery: [product.image],
+    galleryByValue: undefined,
     specs: undefined,
     highlights: undefined,
     metaKeywords: undefined,

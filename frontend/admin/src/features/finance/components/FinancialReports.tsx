@@ -14,7 +14,18 @@ import { formatCurrency, formatDate, toISODate, todayLocalISODate } from "@/lib/
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import type { BalanceSheetReport, CashFlowReport, InventoryValuationReport, ProfitAndLossReport } from "../types"
+import type { Kind } from "@/hooks/use-kind"
+import { KindSwitch } from "@/features/analytics/components/KindSwitch"
+import { BelongsToSwitch } from "./BelongsToSwitch"
+import type {
+  BalanceSheetReport,
+  CashFlowReport,
+  InventoryValuationReport,
+  KindBalanceSheetReport,
+  KindCashFlowReport,
+  KindProfitAndLossReport,
+  ProfitAndLossReport,
+} from "../types"
 
 const REPORTS = "/admin/accounting/reports/"
 const yearStart = () => toISODate(startOfYear(new Date()))
@@ -203,157 +214,349 @@ function ReportCard({
 
 // ---- Reports -------------------------------------------------------------------------------
 
+type View = Kind | "company"
+
+const VIEW_LABELS: Record<View, string> = { stock: "Stock", preorder: "Pre-order", company: "Company" }
+const VIEW_NOUN: Record<Kind, string> = { stock: "stock", preorder: "pre-order" }
+
+const withView = (params: Record<string, string>, view: View) => (view === "company" ? params : { ...params, kind: view })
+
+function Note({ children }: { children: ReactNode }) {
+  return <p className="mt-4 text-xs text-muted-foreground">{children}</p>
+}
+
+function KindProfitAndLoss({ kind, params }: { kind: Kind; params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<KindProfitAndLossReport>("profit-and-loss/", params)
+  const margin = data?.gross_margin_percent ?? null
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>{VIEW_LABELS[kind]} sales</SectionHeading>
+          <StatementLine label="Sales" value={data.revenue} hint="Shipped goods, less returns" />
+          <StatementLine label="Cost of goods sold" value={-data.cost_of_goods_sold} indent />
+          <StatementLine
+            label="Gross profit"
+            value={data.gross_profit}
+            variant="subtotal"
+            hint={margin !== null ? `Gross margin ${margin.toFixed(1)}%` : undefined}
+          />
+          <SectionHeading>{VIEW_LABELS[kind]} costs</SectionHeading>
+          <StatementLine label="Goods written off or adjusted" value={-data.goods_written_off} indent />
+          <StatementLine
+            label={`${VIEW_LABELS[kind]} expenses`}
+            value={-data.operating_expenses}
+            indent
+            hint={`Expenses and entries marked ${VIEW_NOUN[kind]} only`}
+          />
+          <StatementLine
+            label={`${VIEW_LABELS[kind]} profit before whole-business costs`}
+            value={data.profit_before_company_costs}
+            variant="total"
+          />
+          {kind === "preorder" && (
+            <Note>A deposit is money held, not a sale. Sales are counted when the goods are shipped.</Note>
+          )}
+          <Note>
+            This is not net income. Rent, salaries and other costs recorded for the whole business are not split
+            between stock and pre-order, so they are not taken off here. They, and net income, are in the Company view.
+          </Note>
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
+function CompanyProfitAndLoss({ params }: { params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<ProfitAndLossReport>("profit-and-loss/", params)
+  const margin = data?.gross_margin_percent ?? null
+  const hasUnmarked = !!data && (Number(data.unassigned_revenue) !== 0 || Number(data.unassigned_cost_of_goods_sold) !== 0)
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>Income, stock and pre-order together</SectionHeading>
+          <StatementLine label="Revenue" value={data.revenue} hint="Sales net of returns" />
+          <StatementLine label="Cost of goods sold" value={-data.cost_of_goods_sold} indent />
+          <StatementLine
+            label="Gross profit"
+            value={data.gross_profit}
+            variant="subtotal"
+            hint={margin !== null ? `Gross margin ${margin.toFixed(1)}%` : undefined}
+          />
+          <SectionHeading>Expenses</SectionHeading>
+          <StatementLine label="Operating expenses" value={-data.operating_expenses} indent />
+          <StatementLine label="Net income" value={data.net_income} variant="total" />
+          {hasUnmarked && (
+            <Note>
+              {formatCurrency(data.unassigned_revenue)} of sales and {formatCurrency(data.unassigned_cost_of_goods_sold)}{" "}
+              of cost of goods are on entries not marked stock or pre-order, so they show here only.
+            </Note>
+          )}
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
 function ProfitAndLoss() {
+  const [view, setView] = useState<View>("stock")
   const [start, setStart] = useState(yearStart)
   const [end, setEnd] = useState(todayLocalISODate)
-  const params = start && end && start <= end ? { start, end } : null
-  const { data, error, isLoading, reload } = useReport<ProfitAndLossReport>("profit-and-loss/", params)
-  const margin = data && data.revenue ? (data.gross_profit / data.revenue) * 100 : null
+  const params = start && end && start <= end ? withView({ start, end }, view) : null
 
   return (
     <ReportCard
       title="Profit & Loss"
-      description={`For the period ${formatDate(start)} – ${formatDate(end)}`}
-      onDownload={params ? () => downloadCsv("profit-and-loss/", params, `profit-and-loss_${start}_${end}.csv`) : undefined}
+      description={`${VIEW_LABELS[view]} · ${formatDate(start)} – ${formatDate(end)}`}
+      onDownload={
+        params ? () => downloadCsv("profit-and-loss/", params, `profit-and-loss_${view}_${start}_${end}.csv`) : undefined
+      }
       controls={
         <>
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
           <DateField id="pnl-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="pnl-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
       }
     >
-      <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
-        {data && (
-          <>
-            <SectionHeading>Income</SectionHeading>
-            <StatementLine label="Revenue" value={data.revenue} hint="Sales net of returns" />
-            <StatementLine label="Cost of goods sold" value={-data.cost_of_goods_sold} indent />
-            <StatementLine
-              label="Gross profit"
-              value={data.gross_profit}
-              variant="subtotal"
-              hint={margin !== null ? `Gross margin ${margin.toFixed(1)}%` : undefined}
-            />
-            <SectionHeading>Expenses</SectionHeading>
-            <StatementLine label="Operating expenses" value={-data.operating_expenses} indent />
-            <StatementLine label="Net income" value={data.net_income} variant="total" />
-          </>
-        )}
-      </ReportBody>
+      {params &&
+        (view === "company" ? (
+          <CompanyProfitAndLoss key={view} params={params} />
+        ) : (
+          <KindProfitAndLoss key={view} kind={view} params={params} />
+        ))}
     </ReportCard>
+  )
+}
+
+function KindBalanceSheet({ kind, params }: { kind: Kind; params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<KindBalanceSheetReport>("balance-sheet/", params)
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>{VIEW_LABELS[kind]} only</SectionHeading>
+          <StatementLine label="Goods on hand" value={data.inventory_asset} hint="At cost, per the ledger" />
+          <StatementLine
+            label="Customer balance"
+            value={data.customer_balance}
+            hint={
+              kind === "preorder"
+                ? "Owed by customers. A minus means money held: deposits paid before the goods ship."
+                : "Owed by customers. A minus means customers have paid ahead."
+            }
+          />
+          <StatementLine label="Owed to suppliers" value={data.accounts_payable} hint="Bills not yet paid" />
+          <StatementLine label="Goods received, not yet billed" value={data.goods_received_not_billed} />
+          <Note>
+            Cash, tax and the owner&apos;s equity belong to the whole business and are not split between stock and
+            pre-order. They are in the Company view.
+          </Note>
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
+function CompanyBalanceSheet({ params }: { params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<BalanceSheetReport>("balance-sheet/", params)
+  const balanced = !data || data.out_of_balance === 0
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>Assets, stock and pre-order together</SectionHeading>
+          <StatementLine label="Inventory" value={data.inventory_asset} indent />
+          <StatementLine
+            label="Other assets"
+            value={data.other_assets}
+            indent
+            hint="Bank, receivables and other asset accounts"
+          />
+          <StatementLine label="Total assets" value={data.assets} variant="subtotal" />
+
+          <SectionHeading>Liabilities</SectionHeading>
+          <StatementLine label="Total liabilities" value={data.liabilities} variant="subtotal" />
+
+          <SectionHeading>Equity</SectionHeading>
+          <StatementLine label="Contributed equity" value={data.contributed_equity} indent />
+          <StatementLine label="Retained earnings" value={data.retained_earnings} indent hint="Accumulated net income to date" />
+          <StatementLine label="Total equity" value={data.equity} variant="subtotal" />
+
+          <StatementLine label="Total liabilities & equity" value={data.liabilities_and_equity} variant="total" />
+          <p
+            className={cn(
+              "mt-3 inline-flex items-center gap-1.5 text-xs",
+              balanced ? "text-green-600 dark:text-green-500" : "text-destructive"
+            )}
+          >
+            {balanced ? <CheckCircle2 className="size-3.5" /> : <AlertCircle className="size-3.5" />}
+            {balanced
+              ? "Assets equal liabilities plus equity."
+              : `Out of balance by ${formatCurrency(Math.abs(data.out_of_balance))}.`}
+          </p>
+        </>
+      )}
+    </ReportBody>
   )
 }
 
 function BalanceSheet() {
+  const [view, setView] = useState<View>("stock")
   const [asOf, setAsOf] = useState(todayLocalISODate)
-  const params = asOf ? { as_of: asOf } : null
-  const { data, error, isLoading, reload } = useReport<BalanceSheetReport>("balance-sheet/", params)
-  const liabilitiesAndEquity = data ? data.liabilities + data.equity : 0
-  const balanced = data ? Math.abs(data.assets - liabilitiesAndEquity) < 0.005 : true
+  const params = asOf ? withView({ as_of: asOf }, view) : null
 
   return (
     <ReportCard
       title="Balance Sheet"
-      description={`As of ${formatDate(asOf)}`}
-      onDownload={params ? () => downloadCsv("balance-sheet/", params, `balance-sheet_${asOf}.csv`) : undefined}
-      controls={<DateField id="bs-asof" label="As of" value={asOf} onChange={setAsOf} />}
+      description={`${VIEW_LABELS[view]} · as of ${formatDate(asOf)}`}
+      onDownload={params ? () => downloadCsv("balance-sheet/", params, `balance-sheet_${view}_${asOf}.csv`) : undefined}
+      controls={
+        <>
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          <DateField id="bs-asof" label="As of" value={asOf} onChange={setAsOf} />
+        </>
+      }
     >
-      <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
-        {data && (
-          <>
-            <SectionHeading>Assets</SectionHeading>
-            <StatementLine label="Inventory" value={data.inventory_asset} indent />
-            <StatementLine label="Other assets" value={data.assets - data.inventory_asset} indent hint="Bank, receivables and other asset accounts" />
-            <StatementLine label="Total assets" value={data.assets} variant="subtotal" />
-
-            <SectionHeading>Liabilities</SectionHeading>
-            <StatementLine label="Total liabilities" value={data.liabilities} variant="subtotal" />
-
-            <SectionHeading>Equity</SectionHeading>
-            <StatementLine label="Contributed equity" value={data.contributed_equity} indent />
-            <StatementLine label="Retained earnings" value={data.retained_earnings} indent hint="Accumulated net income to date" />
-            <StatementLine label="Total equity" value={data.equity} variant="subtotal" />
-
-            <StatementLine label="Total liabilities & equity" value={liabilitiesAndEquity} variant="total" />
-            <p
-              className={cn(
-                "mt-3 inline-flex items-center gap-1.5 text-xs",
-                balanced ? "text-green-600 dark:text-green-500" : "text-destructive"
-              )}
-            >
-              {balanced ? <CheckCircle2 className="size-3.5" /> : <AlertCircle className="size-3.5" />}
-              {balanced
-                ? "Assets equal liabilities plus equity."
-                : `Out of balance by ${formatCurrency(Math.abs(data.assets - liabilitiesAndEquity))}.`}
-            </p>
-          </>
-        )}
-      </ReportBody>
+      {params &&
+        (view === "company" ? (
+          <CompanyBalanceSheet key={view} params={params} />
+        ) : (
+          <KindBalanceSheet key={view} kind={view} params={params} />
+        ))}
     </ReportCard>
   )
 }
 
+function KindCashFlow({ kind, params }: { kind: Kind; params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<KindCashFlowReport>("cash-flow/", params)
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>{VIEW_LABELS[kind]} only</SectionHeading>
+          <StatementLine
+            label="Received from customers"
+            value={data.customer_receipts}
+            hint={kind === "preorder" ? "Deposits and balances paid" : undefined}
+          />
+          <StatementLine label="Refunded to customers" value={-data.customer_refunds} />
+          <StatementLine label="Paid to suppliers" value={-data.supplier_payments} />
+          <StatementLine
+            label={`${VIEW_LABELS[kind]} expenses paid`}
+            value={-data.expenses_paid}
+            hint={`Expenses marked ${VIEW_NOUN[kind]} only, paid from the Bank account`}
+          />
+          {Number(data.other) !== 0 && (
+            <StatementLine label="Other" value={data.other} hint={`Manual entries marked ${VIEW_NOUN[kind]}`} />
+          )}
+          <StatementLine label={`Net cash from ${VIEW_NOUN[kind]}`} value={data.net_change_in_cash} variant="total" />
+          <Note>
+            Whole-business expenses, owner money and entries not marked stock or pre-order are not split. They are in
+            the Company view.
+          </Note>
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
+function CompanyCashFlow({ params }: { params: Record<string, string> }) {
+  const { data, error, isLoading, reload } = useReport<CashFlowReport>("cash-flow/", params)
+  return (
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <SectionHeading>Whole business, stock and pre-order together</SectionHeading>
+          <StatementLine
+            label="Not tied to stock or pre-order"
+            value={data.company_wide}
+            hint="Whole-business expenses paid, owner money and entries with no stock or pre-order mark"
+          />
+          <StatementLine
+            label="Net change in cash"
+            value={data.net_change_in_cash}
+            variant="total"
+            hint="Movement on the Bank account over the period"
+          />
+          <Note>
+            The ledger tracks cash through a single Bank account, so operating, investing and financing activities
+            aren&apos;t broken out separately.
+          </Note>
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
 function CashFlow() {
+  const [view, setView] = useState<View>("stock")
   const [start, setStart] = useState(yearStart)
   const [end, setEnd] = useState(todayLocalISODate)
-  const params = start && end && start <= end ? { start, end } : null
-  const { data, error, isLoading, reload } = useReport<CashFlowReport>("cash-flow/", params)
+  const params = start && end && start <= end ? withView({ start, end }, view) : null
 
   return (
     <ReportCard
       title="Cash Flow"
-      description={`For the period ${formatDate(start)} – ${formatDate(end)}`}
-      onDownload={params ? () => downloadCsv("cash-flow/", params, `cash-flow_${start}_${end}.csv`) : undefined}
+      description={`${VIEW_LABELS[view]} · ${formatDate(start)} – ${formatDate(end)}`}
+      onDownload={params ? () => downloadCsv("cash-flow/", params, `cash-flow_${view}_${start}_${end}.csv`) : undefined}
       controls={
         <>
+          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
           <DateField id="cf-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="cf-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
       }
     >
-      <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
-        {data && (
-          <>
-            <StatementLine
-              label="Net change in cash"
-              value={data.net_change_in_cash}
-              variant="total"
-              hint="Movement on the Bank account over the period"
-            />
-            <p className="mt-4 text-xs text-muted-foreground">
-              The ledger tracks cash through a single Bank account, so operating, investing and financing activities
-              aren't broken out separately.
-            </p>
-          </>
-        )}
-      </ReportBody>
+      {params &&
+        (view === "company" ? (
+          <CompanyCashFlow key={view} params={params} />
+        ) : (
+          <KindCashFlow key={view} kind={view} params={params} />
+        ))}
     </ReportCard>
   )
 }
 
-function InventoryValuation() {
-  const { data, error, isLoading, reload } = useReport<InventoryValuationReport>("inventory-valuation/", {})
-  const asOf = todayLocalISODate()
-  const ledger = useReport<BalanceSheetReport>("balance-sheet/", { as_of: asOf })
-  const difference = data && ledger.data ? data.inventory_value - ledger.data.inventory_asset : null
-
+function KindValuation({ kind }: { kind: Kind }) {
+  const { data, error, isLoading, reload } = useReport<InventoryValuationReport>("inventory-valuation/", { kind })
   return (
-    <ReportCard title="Inventory Valuation" description="Stock on hand valued at moving average cost, right now.">
-      <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
-        {data && (
-          <>
-            <StatementLine label="Stock on hand × average cost" value={data.inventory_value} variant="subtotal" />
-            {ledger.data && (
-              <>
-                <StatementLine label="Inventory asset per ledger" value={ledger.data.inventory_asset} hint={`Balance as of ${formatDate(asOf)}`} />
-                {difference !== null && (
-                  <StatementLine label="Difference" value={difference} variant="total" hint="Should be zero when stock and ledger agree" />
-                )}
-              </>
-            )}
-          </>
-        )}
-      </ReportBody>
+    <ReportBody isLoading={isLoading} error={error} onRetry={reload} hasData={!!data}>
+      {data && (
+        <>
+          <StatementLine
+            label={kind === "preorder" ? "Pre-order items on hand × average cost" : "Stock items on hand × average cost"}
+            value={data.inventory_value}
+            variant="subtotal"
+          />
+          <SectionHeading>Ledger check ({VIEW_NOUN[kind]} only)</SectionHeading>
+          <StatementLine
+            label="Goods on hand per ledger"
+            value={data.ledger_inventory_asset}
+            hint={`Ledger entries marked ${VIEW_NOUN[kind]}`}
+          />
+          <StatementLine
+            label="Difference"
+            value={data.ledger_difference}
+            variant="total"
+            hint="Should be zero when goods on hand and ledger agree"
+          />
+        </>
+      )}
+    </ReportBody>
+  )
+}
+
+function InventoryValuation() {
+  const [kind, setKind] = useState<Kind>("stock")
+  return (
+    <ReportCard
+      title="Inventory Valuation"
+      description="Goods on hand valued at moving average cost, right now."
+      controls={<KindSwitch value={kind} onChange={setKind} />}
+    >
+      <KindValuation key={kind} kind={kind} />
     </ReportCard>
   )
 }
@@ -363,6 +566,11 @@ const FinancialReports = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeading title="Financial Reports" />
+      <p className="max-w-3xl text-sm text-muted-foreground">
+        Each report shows stock or pre-order on its own, with the expenses marked for that half. Figures that belong to
+        the whole business, such as cash, rent, salaries and net income, are in the Company view. A pre-order deposit is money held, not a sale: revenue is
+        recorded when the goods are shipped.
+      </p>
       <Tabs defaultValue="pnl" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>

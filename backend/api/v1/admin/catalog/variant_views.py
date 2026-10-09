@@ -21,11 +21,12 @@ from apps.catalog.selectors.products import (
 )
 from apps.catalog.services.products import (
     create_variant,
-    deactivate_variant,
+    delete_variant,
     update_variant,
 )
 from apps.catalog.services.variant_import_export import export_variants, import_variants
-from apps.catalog.services.variants import generate_variants
+from apps.catalog.services.variants import bulk_update_variants, generate_variants
+from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import (
     GenericListAPIView,
@@ -52,8 +53,19 @@ from .serializers import (
     ProductVariantCreateSerializer,
     ProductVariantSerializer,
     ProductVariantUpdateSerializer,
+    VariantBulkUpdateSerializer,
     VariantGenerateSerializer,
 )
+
+
+def _variant_rows(variants: list) -> list[dict]:
+    variant_ids = [variant.id for variant in variants]
+    context = {
+        "stock_by_variant": available_quantities_for_variants(variant_ids),
+        "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
+        "preordered_by_variant": get_preordered_quantities(variants),
+    }
+    return ProductVariantSerializer(variants, many=True, context=context).data
 
 
 class AdminProductVariantListCreateView(CatalogPermissionMixin, APIView):
@@ -133,13 +145,15 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             product=product,
             category=category,
             category_type=category_type,
-            color=params.get("color", ""),
-            size=params.get("size", ""),
             is_active=is_active,
             preorder_only=preorder_only,
             preorder_status=preorder_status,
         )
         stock_status = get_choice(params, "stock_status", ("out", "low", "in"))
+        if stock_status == "low":
+            queryset = queryset.filter(
+                product__category__category_type=Category.CategoryType.STOCK
+            )
         if stock_status:
             variant_ids = list(queryset.values_list("id", flat=True))
             stock_by_variant = available_quantities_for_variants(variant_ids)
@@ -202,38 +216,39 @@ class AdminProductVariantGenerateView(APIView):
         serializer = VariantGenerateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            result = generate_variants(
+            created = generate_variants(
                 product=product, actor=request.user, **serializer.validated_data
             )
         except DomainError as exc:
-            return error_from_exception(exc)
-        generated_variants = result.created + result.skipped_existing + result.stale
-        generated_variant_ids = [v.id for v in generated_variants]
-        stock_by_variant = available_quantities_for_variants(generated_variant_ids)
-        reorder_point_by_variant = reorder_points_for_variants(generated_variant_ids)
-        preordered_by_variant = get_preordered_quantities(generated_variants)
-        context = {
-            "stock_by_variant": stock_by_variant,
-            "reorder_point_by_variant": reorder_point_by_variant,
-            "preordered_by_variant": preordered_by_variant,
-        }
+            return error_from_exception(exc, status_for_code(exc.code))
         return Response(
-            {
-                "data": {
-                    "created": ProductVariantSerializer(
-                        result.created, many=True, context=context
-                    ).data,
-                    "skipped_existing": ProductVariantSerializer(
-                        result.skipped_existing, many=True, context=context
-                    ).data,
-                    "stale": ProductVariantSerializer(
-                        result.stale, many=True, context=context
-                    ).data,
-                },
-                "message": "Success",
-            },
+            {"data": {"created": _variant_rows(created)}, "message": "Success"},
             status=status.HTTP_201_CREATED,
         )
+
+
+@extend_schema(tags=["Catalog"])
+class AdminProductVariantBulkUpdateView(APIView):
+    serializer_class = VariantBulkUpdateSerializer
+    permission_classes: ClassVar[list] = [CatalogManagePermission]
+
+    def post(self, request, product_id) -> Response:
+        product = get_product_by_id(product_id)
+        if product is None:
+            return not_found("product_not_found", "Product not found.")
+        serializer = VariantBulkUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        try:
+            updated = bulk_update_variants(
+                product=product,
+                variant_ids=data.pop("variant_ids", None),
+                data=data,
+                actor=request.user,
+            )
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
+        return Response({"data": {"updated": _variant_rows(updated)}, "message": "Success"})
 
 
 @extend_schema(tags=["Catalog"])
@@ -251,8 +266,11 @@ class AdminVariantExportView(APIView):
         params = request.query_params
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
-        queryset = variants_list(product=product, category=category)
-        content = export_variants(filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt)
+        category_type = get_choice(params, "category_type", Category.CategoryType.values)
+        queryset = variants_list(product=product, category=category, category_type=category_type)
+        content = export_variants(
+            filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt, kind=category_type
+        )
         content_type = (
             "text/csv"
             if fmt == "csv"
@@ -324,7 +342,10 @@ class AdminProductVariantDetailView(CatalogPermissionMixin, APIView):
         variant = get_variant_by_id(variant_id)
         if variant is None:
             return not_found("variant_not_found", "Variant not found.")
-        deactivate_variant(variant=variant, actor=request.user)
+        try:
+            delete_variant(variant=variant, actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": {}, "message": "Success"})
 
 

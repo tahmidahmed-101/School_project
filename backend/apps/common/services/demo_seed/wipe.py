@@ -2,21 +2,36 @@ from __future__ import annotations
 
 from django.db import models, transaction
 
-from apps.accounting.models import Account, Expense, JournalEntry, TaxRate
+from apps.accounting.models import Account, Expense, ExpenseCategory, JournalEntry, TaxRate
 from apps.accounts.models import Address, User
 from apps.audit.models import AuditLog, LoginHistory
-from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+from apps.business.models import HeroSlide, PromoLine
+from apps.catalog.models import (
+    Brand,
+    BundleItem,
+    Category,
+    Product,
+    ProductImage,
+    ProductVariant,
+    Sale,
+)
+from apps.catalog.selectors.sales import clear_live_sales_cache
 from apps.common.services.demo_seed.constants import (
     AUDIT_MARKER,
     CARRIER_MARKER,
     DEMO_BLOCKED_IPS,
     DEMO_BLOCKED_PHONES,
     DEMO_COUPONS,
+    DEMO_DISCOUNT_NAMES,
     DEMO_DOMAIN,
+    DEMO_FRAUD_CASE_PREFIX,
+    EXPENSE_CATEGORY_NOTE,
     EXPENSE_REF_PREFIX,
     EXTRA_ACCOUNTS,
+    HERO_ALT_PREFIX,
     NEWSLETTER_SIGNUPS,
     OPENING_REFERENCE_TYPE,
+    PROMO_LINES,
     SKU_PREFIX,
     SLUG_PREFIX,
     TAX_RATE_NAME,
@@ -42,7 +57,7 @@ from apps.procurement.models import (
     VendorBill,
     VendorPayment,
 )
-from apps.risk.models import IPBlock, PhoneBlock
+from apps.risk.models import FraudCase, IPBlock, PhoneBlock
 
 
 def _ids(queryset) -> list:
@@ -114,6 +129,22 @@ def _wipe_config() -> None:
             account.delete()
 
 
+def _wipe_extras(*, variants) -> None:
+    """Shop settings (profile, payment methods) are left alone: they hold no
+    demo marker and a real shop may have edited them since."""
+    Sale.objects.filter(
+        name=DEMO_DISCOUNT_NAMES[0], categories__slug__startswith=SLUG_PREFIX
+    ).delete()
+    clear_live_sales_cache()
+    BundleItem.objects.filter(bundle_variant__in=variants).delete()
+    FraudCase.objects.filter(case_number__startswith=DEMO_FRAUD_CASE_PREFIX).delete()
+    ExpenseCategory.objects.filter(description=EXPENSE_CATEGORY_NOTE).delete()
+    for slide in HeroSlide.objects.filter(alt_text__startswith=HERO_ALT_PREFIX):
+        slide.image.delete(save=False)
+        slide.delete()
+    PromoLine.objects.filter(text_en__in=[text for _, text, _ in PROMO_LINES]).delete()
+
+
 @transaction.atomic
 def wipe_demo_data() -> dict[str, int]:
     """Delete everything a previous `seed_demo` run created, matched by the
@@ -149,6 +180,7 @@ def wipe_demo_data() -> dict[str, int]:
     JournalEntry.objects.filter(id__in=expense_entry_ids).delete()
 
     _wipe_orders(orders)
+    _wipe_extras(variants=variants)
     _wipe_procurement(purchase_orders, suppliers)
     _wipe_marketing_risk_audit(users=users)
 
@@ -159,6 +191,7 @@ def wipe_demo_data() -> dict[str, int]:
     variants.delete()
     products.delete()
     categories.delete()
+    Brand.objects.filter(slug__startswith=SLUG_PREFIX).delete()
 
     Address.objects.filter(user__in=users).delete()
     users.delete()
