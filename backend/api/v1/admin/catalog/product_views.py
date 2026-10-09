@@ -187,10 +187,12 @@ class AdminProductDetailView(CatalogPermissionMixin, APIView):
                 data["brand"] = _resolve_brand(data.pop("brand_id"))
             except DomainError as exc:
                 return error_from_exception(exc)
-        product = update_product(product=product, data=data)
+        update_product(product=product, data=data)
         return Response(
             {
-                "data": ProductSerializer(product, context={"request": request}).data,
+                "data": ProductSerializer(
+                    get_product_by_id(product_id), context={"request": request}
+                ).data,
                 "message": "Success",
             }
         )

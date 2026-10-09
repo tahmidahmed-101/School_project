@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from itertools import product as cartesian_product
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -10,12 +11,20 @@ from django.utils import timezone
 from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
-from apps.business.services.modules import require_feature
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+from apps.catalog.selectors.options import label_key, normalise_label
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_sku_for, unique_slug_for
 
 from .kind_rules import check_variant_kind, is_preorder_category
+from .options import (
+    build_title,
+    ensure_combination_free,
+    lock_product,
+    resolve_combination,
+    set_product_options,
+    sync_product_type,
+)
 
 
 def product_variations_in_use() -> str | None:
@@ -33,9 +42,38 @@ def product_variations_in_use() -> str | None:
     return None
 
 
-def _require_variations_for_type(product_type: str) -> None:
-    if product_type == Product.ProductType.VARIANT:
-        require_feature(ModuleKey.CATALOG, "product_variations")
+def _clean_specs(specs: list | None) -> list[dict]:
+    rows = [
+        {"name": normalise_label(row.get("name")), "value": normalise_label(row.get("value"))}
+        for row in specs or []
+    ]
+    return [row for row in rows if row["name"] and row["value"]]
+
+
+def _combination_ids(product: Product, combinations: list | None) -> list[list]:
+    """Combinations given by value text, in option order, as value ids. None means all."""
+    options = [
+        {label_key(value.value): value.id for value in option.values.all()}
+        for option in product.options.prefetch_related("values")
+    ]
+    if combinations is None:
+        return [list(ids) for ids in cartesian_product(*(lookup.values() for lookup in options))]
+    resolved = []
+    for combination in combinations:
+        if len(combination) != len(options):
+            raise BusinessRuleViolationError(
+                "Pick exactly one value for every option of the product.",
+                code="variant_options_incomplete",
+            )
+        try:
+            resolved.append(
+                [lookup[label_key(text)] for lookup, text in zip(options, combination, strict=True)]
+            )
+        except KeyError:
+            raise BusinessRuleViolationError(
+                "A combination names a value that is not in the options.", code="invalid_target"
+            ) from None
+    return resolved
 
 
 def _check_brand_kind(brand, category: Category) -> None:
@@ -54,6 +92,9 @@ def create_product(
     description: str = "",
     product_type: str = Product.ProductType.SIMPLE,
     highlights: list | None = None,
+    specs: list | None = None,
+    options: list | None = None,
+    combinations: list | None = None,
     price: Decimal | None = None,
     cost_price: Decimal = Decimal("0"),
     discount_price: Decimal | None = None,
@@ -63,7 +104,13 @@ def create_product(
     featured: bool = False,
     actor=None,
 ) -> Product:
-    _require_variations_for_type(product_type)
+    is_bundle = product_type == Product.ProductType.BUNDLE
+    if options and is_bundle:
+        raise BusinessRuleViolationError("A bundle takes no options.", code="bundle_no_options")
+    if options and price is None:
+        raise BusinessRuleViolationError(
+            "A product with options needs a base price for its variants.", code="price_required"
+        )
     _check_brand_kind(brand, category)
     product = Product(
         category=category,
@@ -71,13 +118,33 @@ def create_product(
         featured=featured,
         name=name,
         description=description,
-        product_type=product_type,
+        product_type=product_type if is_bundle else Product.ProductType.SIMPLE,
         highlights=highlights or [],
+        specs=_clean_specs(specs),
         meta_keywords=meta_keywords,
         slug=unique_slug_for(model=Product, text=name),
     )
     product.save()
-    if price is not None:
+    if options:
+        set_product_options(
+            product=product,
+            options=[
+                {"name": option["name"], "values": [{"value": value} for value in option["values"]]}
+                for option in options
+            ],
+            actor=actor,
+        )
+        for value_ids in _combination_ids(product, combinations):
+            create_variant(
+                product=product,
+                option_value_ids=value_ids,
+                price=price,
+                cost_price=cost_price,
+                discount_price=discount_price,
+                actor=actor,
+            )
+        product.refresh_from_db(fields=["product_type"])
+    elif price is not None:
         create_variant(
             product=product,
             sku=sku,
@@ -126,14 +193,14 @@ def update_product(*, product: Product, data: dict) -> Product:
         "featured",
         "name",
         "description",
-        "product_type",
         "highlights",
+        "specs",
         "meta_keywords",
         "is_active",
         "image",
     }
-    if "product_type" in data:
-        _require_variations_for_type(data["product_type"])
+    if "specs" in data:
+        data = {**data, "specs": _clean_specs(data["specs"])}
     if data.get("category") is not None:
         _check_category_keeps_kind(product, data["category"])
     brand = data.get("brand", product.brand)
@@ -150,10 +217,10 @@ def update_product(*, product: Product, data: dict) -> Product:
     if update_fields:
         product.save(update_fields=update_fields)
 
-    # Pricing is stored per-variant but edited product-wide, so a price change
-    # fans out to every live variant of the product.
+    # A product without options is edited as one price. With options the price
+    # belongs to each variant, so a product-level price is not applied.
     price_updates = {f: data[f] for f in ("price", "cost_price", "discount_price") if f in data}
-    if price_updates:
+    if price_updates and not product.options.exists():
         check_variant_kind(category=product.category, values=price_updates)
         variants = product.variants.filter(deleted_at__isnull=True)
         if variants.exists():
@@ -176,7 +243,7 @@ def update_product(*, product: Product, data: dict) -> Product:
 MAX_STOCK_BLOCKERS_SHOWN = 3
 
 
-def _ensure_no_stock(product: Product) -> None:
+def _ensure_no_stock(product: Product, *, variant: ProductVariant | None = None) -> None:
     """Refuse to delete a product while any of its variants, deleted ones
     included, still has stock on hand or reserved in any warehouse, or an
     active reservation. Stock must be cleared through the write-off flow and
@@ -186,7 +253,11 @@ def _ensure_no_stock(product: Product) -> None:
     from apps.inventory.services.stock import lock_variant_stock
     from apps.orders.models import StockReservation
 
-    variant_ids = list(product.variants.values_list("id", flat=True))
+    variant_ids = (
+        [variant.id] if variant else list(product.variants.values_list("id", flat=True))
+    )
+    subject = variant.sku if variant else product.name
+    noun = "variant" if variant else "product"
     if not variant_ids:
         return
     blockers = [
@@ -208,13 +279,13 @@ def _ensure_no_stock(product: Product) -> None:
         shown += f"; and {len(blockers) - MAX_STOCK_BLOCKERS_SHOWN} more"
     if is_preorder_category(product.category):
         raise BusinessRuleViolationError(
-            f"{product.name} still has received goods ({shown}). Clear them and resolve the "
-            "pre-orders holding them before deleting the product.",
+            f"{subject} still has received goods ({shown}). Clear them and resolve the "
+            f"pre-orders holding them before deleting the {noun}.",
             code="product_stock_in_use",
         )
     raise BusinessRuleViolationError(
-        f"{product.name} still has stock ({shown}). Write the stock off under Inventory and "
-        "resolve the orders holding it before deleting the product.",
+        f"{subject} still has stock ({shown}). Write the stock off under Inventory and "
+        f"resolve the orders holding it before deleting the {noun}.",
         code="product_stock_in_use",
     )
 
@@ -267,8 +338,7 @@ def create_variant(
     discount_price: Decimal | None = None,
     barcode: str = "",
     weight: Decimal | None = None,
-    color: str = "",
-    size: str = "",
+    option_value_ids: list | None = None,
     # Wholesale fields
     wholesale_price: Decimal | None = None,
     show_wholesale_price: bool = False,
@@ -281,6 +351,7 @@ def create_variant(
     preorder_stock_limit: int | None = None,
     actor=None,
 ) -> ProductVariant:
+    product = lock_product(product)
     _check_preorder_rules(
         product=product,
         enabled=is_preorder_enabled,
@@ -315,24 +386,19 @@ def create_variant(
         raise BusinessRuleViolationError(
             "A variant with this SKU already exists.", code="duplicate_sku"
         )
-    if product.variants.filter(deleted_at__isnull=True).exists():
-        if not is_feature_enabled(ModuleKey.CATALOG, "product_variations"):
-            raise BusinessRuleViolationError(
-                "Each product has one price and one SKU. Turn product variations on first.",
-                code="simple_product_single_variant",
-            )
-        # The admin UI has no product-type selector; a second variant is what makes
-        # a product a variant product, so promote rather than reject.
-        if product.product_type == Product.ProductType.SIMPLE:
-            product.product_type = Product.ProductType.VARIANT
-            product.save(update_fields=["product_type", "updated_at"])
-    if product.variants.filter(deleted_at__isnull=True, color=color, size=size).exists():
+    if product.variants.filter(
+        deleted_at__isnull=True
+    ).exists() and not is_feature_enabled(ModuleKey.CATALOG, "product_variations"):
         raise BusinessRuleViolationError(
-            "This colour and size combination already exists on the product.",
-            code="duplicate_variant_combo",
+            "Each product has one price and one SKU. Turn product variations on first.",
+            code="simple_product_single_variant",
         )
+    values = resolve_combination(product, option_value_ids)
+    ensure_combination_free(product, values)
     if not sku:
-        sku = unique_sku_for(model=ProductVariant, text=f"{product.slug}-{color}-{size}".strip("-"))
+        sku = unique_sku_for(
+            model=ProductVariant, text="-".join([product.slug, *(v.value for v in values)])
+        )
     variant = ProductVariant.objects.create(
         product=product,
         sku=sku,
@@ -341,8 +407,7 @@ def create_variant(
         discount_price=discount_price,
         barcode=barcode,
         weight=weight,
-        color=color,
-        size=size,
+        title=build_title(values),
         # Wholesale fields
         wholesale_price=wholesale_price,
         show_wholesale_price=show_wholesale_price,
@@ -374,10 +439,8 @@ def create_variant(
         # Fallback for any other validation errors
         raise BusinessRuleViolationError(str(e), code="validation_error") from None
     variant.save()
-    live_variant_count = product.variants.filter(deleted_at__isnull=True).count()
-    if product.product_type == Product.ProductType.SIMPLE and live_variant_count > 1:
-        product.product_type = Product.ProductType.VARIANT
-        product.save(update_fields=["product_type", "updated_at"])
+    variant.option_values.set(values)
+    sync_product_type(product)
     log_action(
         actor=actor,
         action="product_variant.created",
@@ -397,8 +460,6 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         "cost_price",
         "discount_price",
         "weight",
-        "color",
-        "size",
         "is_active",
         # Wholesale fields
         "wholesale_price",
@@ -418,8 +479,18 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         for field in changed_fields
         if field == "sku" or field in price_fields
     }
+    new_values = _changed_combination(variant, data)
+    if "sku" in changed_fields and data["sku"] != variant.sku:
+        _refuse_if_on_order(variant)
+        if ProductVariant.objects.filter(sku=data["sku"]).exclude(pk=variant.pk).exists():
+            raise BusinessRuleViolationError(
+                "A variant with this SKU already exists.", code="duplicate_sku"
+            )
     for field in changed_fields:
         setattr(variant, field, data[field])
+    if new_values is not None:
+        variant.title = build_title(new_values)
+        changed_fields.append("title")
     if PREORDER_RULE_FIELDS.intersection(changed_fields):
         _check_preorder_rules(
             product=variant.product,
@@ -430,7 +501,7 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
     # Only what this save sets, so a legacy mixed row can still be cleaned up.
     check_variant_kind(
         category=variant.product.category,
-        values={field: data[field] for field in changed_fields},
+        values={field: data[field] for field in changed_fields if field in data},
     )
     if changed_fields:
         try:
@@ -453,6 +524,8 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
             # Fallback for any other validation errors
             raise BusinessRuleViolationError(str(e), code="validation_error") from None
         variant.save(update_fields=changed_fields)
+    if new_values is not None:
+        variant.option_values.set(new_values)
 
     if "sku" in changed_fields:
         log_action(
@@ -484,14 +557,50 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
     return variant
 
 
+def _refuse_if_on_order(variant: ProductVariant) -> None:
+    if variant.sales_order_lines.exists():
+        raise BusinessRuleViolationError(
+            "This variant is on an order, so its options and SKU are fixed. "
+            "Add a new variant instead.",
+            code="variant_in_use",
+        )
+
+
+def _changed_combination(variant: ProductVariant, data: dict) -> list | None:
+    """The new option values when `option_value_ids` really changes them, else None."""
+    if "option_value_ids" not in data:
+        return None
+    product = lock_product(variant.product)
+    values = resolve_combination(product, data["option_value_ids"])
+    current = set(variant.option_values.values_list("id", flat=True))
+    if {value.id for value in values} == current:
+        return None
+    _refuse_if_on_order(variant)
+    ensure_combination_free(product, values, exclude=variant)
+    return values
+
+
 @transaction.atomic
-def deactivate_variant(*, variant: ProductVariant, actor=None) -> ProductVariant:
-    variant.deactivate()
+def delete_variant(*, variant: ProductVariant, actor=None) -> ProductVariant:
+    """Soft delete: the combination is free again, the SKU stays taken for history."""
+    from apps.common.services.soft_delete import soft_delete_instance
+
+    product = lock_product(variant.product)
+    if not product.variants.filter(deleted_at__isnull=True).exclude(pk=variant.pk).exists():
+        raise BusinessRuleViolationError(
+            "A product keeps at least one variant. Delete the product instead.",
+            code="last_variant",
+        )
+    _ensure_no_stock(product, variant=variant)
+    soft_delete_instance(variant, actor=actor)
+    variant.is_active = False
+    variant.save(update_fields=["is_active"])
     log_action(
         actor=actor,
-        action="product_variant.deactivated",
+        action="product_variant.deleted",
         target_type="ProductVariant",
         target_id=variant.id,
+        metadata={"sku": variant.sku, "product_id": str(product.id)},
     )
     return variant
 
@@ -527,22 +636,44 @@ def create_quick_product(
     )
 
 
+def _check_image_option_value(image: ProductImage) -> None:
+    if image.option_value is None:
+        return
+    if image.product_id is None or image.option_value.option.product_id != image.product_id:
+        raise BusinessRuleViolationError(
+            "This option value does not belong to the image's product.", code="invalid_target"
+        )
+
+
 def create_product_image(
-    *, product=None, variant=None, url: str, alt_text: str = "", sort_order: int = 0
+    *,
+    product=None,
+    variant=None,
+    option_value=None,
+    url: str,
+    alt_text: str = "",
+    sort_order: int = 0,
 ) -> ProductImage:
     image = ProductImage(
-        product=product, variant=variant, url=url, alt_text=alt_text, sort_order=sort_order
+        product=product,
+        variant=variant,
+        option_value=option_value,
+        url=url,
+        alt_text=alt_text,
+        sort_order=sort_order,
     )
+    _check_image_option_value(image)
     image.full_clean()
     image.save()
     return image
 
 
 def update_product_image(*, image: ProductImage, data: dict) -> ProductImage:
-    allowed_fields = {"url", "alt_text", "sort_order"}
+    allowed_fields = {"url", "alt_text", "sort_order", "option_value"}
     update_fields = [field for field in data if field in allowed_fields]
     for field in update_fields:
         setattr(image, field, data[field])
+    _check_image_option_value(image)
     if update_fields:
         image.full_clean()
         image.save(update_fields=update_fields)

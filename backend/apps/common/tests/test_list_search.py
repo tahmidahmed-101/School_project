@@ -82,8 +82,8 @@ def test_ledger_export_honours_search(admin_client):
 
 def test_product_variant_search_filters_by_sku(admin_client):
     product = ProductFactory()
-    ProductVariantFactory(product=product, sku="NEEDLE-VARIANT", size="M")
-    ProductVariantFactory(product=product, sku="OTHER-VARIANT", size="L")
+    ProductVariantFactory(product=product, sku="NEEDLE-VARIANT")
+    ProductVariantFactory(product=product, sku="OTHER-VARIANT")
 
     results = _results(
         admin_client.get(

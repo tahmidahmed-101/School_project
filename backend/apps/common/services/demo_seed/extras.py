@@ -267,7 +267,6 @@ class DemoExtras:
                     category=category,
                     name=product_name,
                     description=f"{product_name}, brought in on pre-order.",
-                    product_type=Product.ProductType.VARIANT,
                 )
                 Product.objects.filter(pk=product.pk).update(slug=product_slug)
                 create_product_image(

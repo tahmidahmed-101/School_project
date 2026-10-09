@@ -43,6 +43,7 @@
       <tr>
         <td>
           <div class="cell__title">{{ line.name }}</div>
+          {% if line.variant_title %}<div class="cell__sub">{{ line.variant_title }}</div>{% endif %}
           <div class="cell__sub">{{ line.sku }}</div>
         </td>
         <td class="num">{{ line.quantity }}</td>

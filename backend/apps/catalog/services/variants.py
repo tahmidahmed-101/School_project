@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from decimal import Decimal
-from itertools import product as cartesian_product
 
 from django.db import transaction
 
@@ -10,99 +8,107 @@ from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.services.modules import require_feature
 from apps.catalog.models import Product, ProductVariant
-from apps.catalog.selectors.products import variants_for_product
+from apps.catalog.selectors.options import product_combinations
 from apps.common.exceptions import BusinessRuleViolationError
 
+from .options import lock_product, resolve_combination
+from .products import create_variant, representative_variant, update_variant
 
-@dataclass
-class VariantGenerationResult:
-    created: list[ProductVariant] = field(default_factory=list)
-    skipped_existing: list[ProductVariant] = field(default_factory=list)
-    stale: list[ProductVariant] = field(default_factory=list)
+MAX_GENERATED_VARIANTS = 500
+BULK_FIELDS = ("price", "discount_price", "cost_price", "is_active")
 
 
 @transaction.atomic
 def generate_variants(
     *,
     product: Product,
-    colors: list[str],
-    sizes: list[str],
-    price: Decimal,
-    cost_price: Decimal = Decimal("0"),
+    combinations: list[list] | None = None,
+    price: Decimal | None = None,
+    cost_price: Decimal | None = None,
     actor=None,
-) -> VariantGenerationResult:
-    """Create the Cartesian product of `colors` x `sizes` as variants on
-    `product`. Combinations that already exist are left untouched and reported
-    back as `skipped_existing`; existing variants whose combination falls
-    outside the requested selection are reported as `stale` for the admin to
-    review rather than deleted automatically.
-    """
+) -> list[ProductVariant]:
+    """Create the listed combinations (lists of option value ids), or every
+    missing one when none are listed. A combination that already has a live
+    variant is skipped."""
     require_feature(ModuleKey.CATALOG, "product_variations")
-    if not colors and not sizes:
+    product = lock_product(product)
+    rows = product_combinations(product) if product.options.exists() else []
+    taken = {
+        frozenset(str(value_id) for value_id in row["value_ids"])
+        for row in rows
+        if row["variant_id"] is not None
+    }
+    if combinations is None:
+        combinations = [row["value_ids"] for row in rows if row["variant_id"] is None]
+    if len(combinations) > MAX_GENERATED_VARIANTS:
         raise BusinessRuleViolationError(
-            "Pick at least one colour or size.", code="no_variant_axes"
+            f"That is {len(combinations)} variants. Create at most {MAX_GENERATED_VARIANTS} "
+            "at a time.",
+            code="too_many_combinations",
         )
 
-    existing_by_combo: dict[tuple[str, str], ProductVariant] = {
-        (variant.color, variant.size): variant for variant in variants_for_product(product)
-    }
+    sibling = representative_variant(product)
+    discount_price = None
+    if price is None:
+        if sibling is None:
+            raise BusinessRuleViolationError(
+                "This product has no price to inherit. Set a price first.", code="price_required"
+            )
+        price, discount_price = sibling.price, sibling.discount_price
+    if cost_price is None:
+        cost_price = sibling.cost_price if sibling else Decimal("0")
 
-    requested_combos = list(cartesian_product(colors or [""], sizes or [""]))
-    requested_combo_keys: set[tuple[str, str]] = set()
-
-    result = VariantGenerationResult()
-    existing_skus = set(ProductVariant.objects.values_list("sku", flat=True))
-    new_variants: list[ProductVariant] = []
-
-    for color, size in requested_combos:
-        combo_key = (color, size)
-        requested_combo_keys.add(combo_key)
-        if combo_key in existing_by_combo:
-            result.skipped_existing.append(existing_by_combo[combo_key])
+    created = []
+    for value_ids in combinations:
+        resolve_combination(product, value_ids)
+        key = frozenset(str(value_id) for value_id in value_ids)
+        if key in taken:
             continue
-
-        sku_suffix = "-".join(part for part in (color, size) if part)
-        base_sku = f"{product.slug}-{sku_suffix}".upper().replace(" ", "-")
-        sku = base_sku
-        suffix_counter = 2
-        while sku in existing_skus:
-            sku = f"{base_sku}-{suffix_counter}"
-            suffix_counter += 1
-        existing_skus.add(sku)
-
-        new_variants.append(
-            ProductVariant(
+        taken.add(key)
+        created.append(
+            create_variant(
                 product=product,
-                sku=sku,
+                option_value_ids=value_ids,
                 price=price,
                 cost_price=cost_price,
-                color=color,
-                size=size,
+                discount_price=discount_price,
+                actor=actor,
             )
         )
-
-    if new_variants:
-        ProductVariant.objects.bulk_create(new_variants)
-        result.created = new_variants
-        if product.product_type == Product.ProductType.SIMPLE:
-            product.product_type = Product.ProductType.VARIANT
-            product.save(update_fields=["product_type", "updated_at"])
-
-    result.stale = [
-        variant
-        for combo_key, variant in existing_by_combo.items()
-        if combo_key not in requested_combo_keys
-    ]
-
     log_action(
         actor=actor,
         action="product_variant.generated",
         target_type="Product",
         target_id=product.id,
-        metadata={
-            "created": len(result.created),
-            "skipped_existing": len(result.skipped_existing),
-            "stale": len(result.stale),
-        },
+        metadata={"created": len(created)},
     )
-    return result
+    return created
+
+
+@transaction.atomic
+def bulk_update_variants(
+    *, product: Product, data: dict, variant_ids: list | None = None, actor=None
+) -> list[ProductVariant]:
+    """Set the given fields on the listed live variants of a product, or on all of them."""
+    variants = ProductVariant.objects.filter(
+        product=product, deleted_at__isnull=True
+    ).select_related("product__category")
+    if variant_ids is not None:
+        variants = variants.filter(id__in=variant_ids)
+        if variants.count() != len(set(variant_ids)):
+            raise BusinessRuleViolationError(
+                "These variants do not all belong to this product.", code="invalid_target"
+            )
+    changes = {field: data[field] for field in BULK_FIELDS if field in data}
+    updated = []
+    for variant in variants.order_by("sku"):
+        price = changes.get("price", variant.price)
+        discount = changes.get("discount_price", variant.discount_price)
+        priced = "discount_price" in changes or "price" in changes
+        if priced and discount is not None and discount >= price:
+            raise BusinessRuleViolationError(
+                f"The discount price of {variant.sku} would not be below its price.",
+                code="discount_not_below_price",
+            )
+        updated.append(update_variant(variant=variant, data=dict(changes), actor=actor))
+    return updated

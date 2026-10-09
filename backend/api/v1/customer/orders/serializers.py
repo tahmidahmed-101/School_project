@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.catalog.selectors.options import (
+    COLOUR_NAMES,
+    SIZE_NAMES,
+    line_variant_title,
+    variant_legacy_field,
+)
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
 from apps.orders.selectors.payments import (
     DEPOSIT_PERCENT_CONTEXT_KEY,
@@ -14,6 +20,8 @@ from apps.orders.selectors.payments import (
 class SalesOrderLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
+    # The snapshot only: carts and checkout must not load a variant per line.
+    variant_title = serializers.CharField(read_only=True)
     quantity = serializers.IntegerField()
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -71,8 +79,19 @@ class OrderHistoryLineSerializer(SalesOrderLineSerializer):
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_slug = serializers.CharField(source="variant.product.slug", read_only=True)
     sku = serializers.CharField(source="variant.sku", read_only=True)
-    color = serializers.CharField(source="variant.color", read_only=True)
-    size = serializers.CharField(source="variant.size", read_only=True)
+    variant_title = serializers.SerializerMethodField()
+    # Kept for older storefront builds; new code reads `variant_title`.
+    color = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
+
+    def get_color(self, obj) -> str:
+        return variant_legacy_field(obj.variant, COLOUR_NAMES)
+
+    def get_size(self, obj) -> str:
+        return variant_legacy_field(obj.variant, SIZE_NAMES)
 
 
 class OrderHistorySerializer(SalesOrderSerializer):

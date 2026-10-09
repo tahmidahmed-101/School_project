@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from api.v1.admin.catalog.fields import VariantTitleField
 from apps.catalog.selectors.images import variant_image_url
 from apps.common.params import KIND_STOCK, KINDS
 from apps.inventory.constants import MovementType
@@ -42,6 +43,7 @@ class StockItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_image = serializers.SerializerMethodField()
     warehouse_id = serializers.UUIDField(read_only=True)
@@ -62,6 +64,7 @@ class StockLedgerEntrySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     product_image = serializers.SerializerMethodField()
     warehouse_id = serializers.UUIDField(read_only=True)

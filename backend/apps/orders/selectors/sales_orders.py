@@ -76,7 +76,9 @@ def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[Sale
     queryset = (
         SalesOrder.objects.select_related("coupon")
         # The line serializer names each line's product, hence variant + product.
-        .prefetch_related("lines__variant__product", "shipments__carrier")
+        .prefetch_related(
+            "lines__variant__product", "lines__variant__option_values__option", "shipments__carrier"
+        )
         .filter(customer=customer, deleted_at__isnull=True)
     )
     if status:

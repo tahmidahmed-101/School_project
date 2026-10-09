@@ -11,7 +11,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
-from apps.catalog.factories import ProductFactory, ProductVariantFactory
+from apps.catalog.factories import ProductFactory, make_options, make_variant
 from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
@@ -27,10 +27,11 @@ def _live_sales_already_loaded():
 def _product(variants: int):
     now = timezone.now()
     product = ProductFactory(is_active=True)
+    sizes = make_options(product, {"Size": SIZES[:variants]})
     for index in range(variants):
-        ProductVariantFactory(
-            product=product,
-            size=SIZES[index],
+        make_variant(
+            product,
+            [sizes[SIZES[index]]],
             is_preorder_enabled=True,
             preorder_start_date=now - timedelta(days=1),
             preorder_end_date=now + timedelta(days=10),

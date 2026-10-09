@@ -138,6 +138,7 @@ class SalesOrderLine(TimeStampedModel):
     # after the product is renamed or the SKU is reissued.
     product_name = models.CharField(max_length=200, blank=True)
     variant_sku = models.CharField(max_length=64, blank=True)
+    variant_title = models.CharField(max_length=160, blank=True, default="")
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=0

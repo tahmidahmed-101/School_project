@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from api.v1.admin.catalog.fields import VariantTitleField
+
 
 class SalesTrendPointSerializer(serializers.Serializer):
     date = serializers.DateField()
@@ -12,6 +14,7 @@ class LowStockItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
     quantity_on_hand = serializers.IntegerField()
     quantity_reserved = serializers.IntegerField()

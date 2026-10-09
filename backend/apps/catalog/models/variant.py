@@ -28,8 +28,13 @@ class ProductVariant(FullAuditModel):
     weight = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )
+    # Legacy text, read only by the transition rule in selectors/options.py.
     color = models.CharField(max_length=50, blank=True)
     size = models.CharField(max_length=50, blank=True)
+    option_values = models.ManyToManyField(
+        "catalog.ProductOptionValue", blank=True, related_name="variants"
+    )
+    title = models.CharField(max_length=160, blank=True, default="")
 
     # Wholesale fields
     wholesale_price = models.DecimalField(
@@ -65,13 +70,6 @@ class ProductVariant(FullAuditModel):
                 fields=["preorder_start_date", "preorder_end_date"],
                 name="variant_preorder_dates_idx"
             ),
-        ]
-        constraints: ClassVar[list] = [
-            models.UniqueConstraint(
-                fields=["product", "color", "size"],
-                condition=models.Q(deleted_at__isnull=True),
-                name="unique_live_variant_combo",
-            )
         ]
 
     @property

@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.accounts.models import Address, User
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import get_or_create_guest_customer
+from apps.catalog.selectors.options import variant_title
 from apps.catalog.selectors.products import get_variants_by_ids
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
@@ -296,6 +297,7 @@ def _order_from_items(
             tax_amount=tax_amount,
             product_name=variant.product.name,
             variant_sku=variant.sku,
+            variant_title=variant_title(variant),
             is_preorder=is_preorder,
         )
 

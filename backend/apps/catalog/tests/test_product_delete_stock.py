@@ -49,9 +49,7 @@ def _stock_in(variant, quantity: int, warehouse=None) -> None:
 
 def _product(variants: int = 1):
     product = ProductFactory(is_active=True)
-    return product, [
-        ProductVariantFactory(product=product, size=f"S{index}") for index in range(variants)
-    ]
+    return product, [ProductVariantFactory(product=product) for _ in range(variants)]
 
 
 def _second_warehouse() -> Warehouse:

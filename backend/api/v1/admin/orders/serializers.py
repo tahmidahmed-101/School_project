@@ -5,6 +5,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.catalog.selectors.images import variant_image_url
+from apps.catalog.selectors.options import line_variant_title
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
@@ -32,6 +33,7 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
+    variant_title = serializers.SerializerMethodField()
     product_image = serializers.SerializerMethodField()
     quantity = serializers.IntegerField()
     shipped_quantity = serializers.IntegerField(read_only=True)
@@ -58,6 +60,9 @@ class AdminSalesOrderLineSerializer(serializers.Serializer):
         if obj.variant and getattr(obj.variant, "product", None):
             return obj.variant.product.name
         return ""
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
 
     def get_product_image(self, obj) -> str | None:
         return variant_image_url(obj.variant)
@@ -190,10 +195,14 @@ class AdminCartItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
     product_name = serializers.CharField(read_only=True)
+    variant_title = serializers.SerializerMethodField()
     sku = serializers.CharField(source="variant_sku", read_only=True)
     quantity = serializers.IntegerField(read_only=True)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     is_preorder = serializers.BooleanField(read_only=True)
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
 
 
 class AdminCustomerCartSerializer(serializers.Serializer):
