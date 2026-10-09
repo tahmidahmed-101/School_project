@@ -30,6 +30,7 @@ export interface BusinessProfile {
   youtube_url: string
   linkedin_url: string
   preorder_deposit_percent: string
+  free_delivery_min_amount: string | null
   about_en: string
   about_bn: string
   updated_at: string
