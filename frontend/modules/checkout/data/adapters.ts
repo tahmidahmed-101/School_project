@@ -19,6 +19,7 @@ export function toOrderResult(
     lines: order.lines.map((line) => ({
       id: line.id,
       name: line.product_name,
+      variantTitle: line.variant_title ?? "",
       sku: line.variant_sku,
       quantity: line.quantity,
       unitPrice: toNumber(line.unit_price),

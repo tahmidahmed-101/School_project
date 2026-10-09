@@ -70,19 +70,15 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
           </AccordionItem>
         )}
 
-        {(hasSpecs || description) && (
+        {hasSpecs && (
           <AccordionItem title={ui("specifications")}>
-            {product.specs && product.specs.length > 0 ? (
-              <ul className="list-disc space-y-1.5 pb-3 pl-4 pt-3 text-xs leading-relaxed text-fg-muted">
-                {product.specs.map((spec, i) => (
-                  <li key={i}>
-                    <strong className="text-ink-800">{t(spec.label)}:</strong> {t(spec.value)}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="pb-3 pt-3 text-xs text-fg-subtle">{t(product.description)}</p>
-            )}
+            <ul className="list-disc space-y-1.5 pb-3 pl-4 pt-3 text-xs leading-relaxed text-fg-muted">
+              {product.specs?.map((spec, i) => (
+                <li key={i}>
+                  <strong className="text-ink-800">{t(spec.label)}:</strong> {t(spec.value)}
+                </li>
+              ))}
+            </ul>
           </AccordionItem>
         )}
 

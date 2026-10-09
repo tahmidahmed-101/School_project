@@ -11,10 +11,11 @@ import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
 import { getDiscountPercent, getSaleOffer, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { soleVariant } from "@/lib/variants";
 import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
-import { Button } from "@/design-system/ui/Button";
+import { Button, buttonClass } from "@/design-system/ui/Button";
 
 interface ProductCardProps {
   product: Product;
@@ -34,6 +35,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const sale = getSaleOffer(product);
   const isSoldOut = isPreOrderSoldOut(product);
   const isOutOfStock = !product.isPreOrder && !product.inStock;
+  const needsChoice = !soleVariant(product);
 
   const buyNow = () => {
     if (addItem(product, 1, undefined, { openDrawer: false })) router.push("/checkout");
@@ -126,6 +128,14 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             <Button variant="muted" size="xs" fullWidth disabled>
               {ui(unavailableLabel(product))}
             </Button>
+          ) : needsChoice && !isSoldOut ? (
+            <Link
+              href={`/product/${product.slug}`}
+              className={buttonClass({ size: "xs", fullWidth: true })}
+              aria-label={`${ui("chooseOptions")} - ${t(product.name)}`}
+            >
+              {ui("chooseOptions")}
+            </Link>
           ) : product.isPreOrder ? (
             isSoldOut ? (
               <Button variant="muted" size="xs" fullWidth disabled title={ui("preOrderCapacityReached")}>

@@ -46,8 +46,8 @@ describe("toProduct pre-order state", () => {
     effective_price: "1000.00",
     compare_at_price: null,
     in_stock: false,
-    color: "",
-    size: "",
+    color: "Black",
+    size: "M",
     is_preorder_enabled: true,
     is_preorder_active: false,
     is_preorder_upcoming: false,
@@ -65,6 +65,11 @@ describe("toProduct pre-order state", () => {
       [],
     );
 
+  it("reads options only from the API's option fields, never from colour or size", () => {
+    expect(product({ in_stock: true }).options).toBeUndefined();
+    expect(product({ in_stock: true }).skuVariants?.[0]).toMatchObject({ optionValueIds: [], title: "" });
+  });
+
   it("marks a pre-order that has not opened as upcoming and not buyable", () => {
     const shown = product({ is_preorder_upcoming: true, in_stock: true }, "preorder");
     expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "upcoming" });
@@ -80,5 +85,80 @@ describe("toProduct pre-order state", () => {
     const shown = product({ in_stock: true }, "preorder");
     expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "closed" });
     expect(shown.stockCount).toBe(0);
+  });
+});
+
+describe("toProduct options", () => {
+  const variant = (id: string, valueIds: string[], title: string) => ({
+    id,
+    sku: id.toUpperCase(),
+    price: "1000.00",
+    effective_price: "1000.00",
+    in_stock: true,
+    title,
+    option_value_ids: valueIds,
+  });
+  const shown = toProduct(
+    {
+      id: "p1",
+      category_id: "c1",
+      kind: "stock",
+      name: "Shirt",
+      slug: "shirt",
+      highlights: ["Pure cotton", ""],
+      options: [
+        {
+          id: "legacy:colour",
+          name: "Colour",
+          values: [
+            { id: "legacy:colour:red", value: "Red" },
+            { id: "legacy:colour:blue", value: "Blue" },
+          ],
+        },
+        { id: "o-size", name: "Size", values: [{ id: "v-m", value: "M" }] },
+      ],
+      variants: [
+        variant("red-m", ["legacy:colour:red", "v-m"], "Red / M"),
+        variant("blue-m", ["legacy:colour:blue", "v-m"], "Blue / M"),
+      ],
+      images: [
+        { url: "/media/blue.jpg", alt_text: "", sort_order: 2, option_value_id: "legacy:colour:blue" },
+        { url: "/media/front.jpg", alt_text: "", sort_order: 1, option_value_id: null },
+      ],
+    } as never,
+    [],
+  );
+
+  it("carries the options in the API's order with their ids untouched", () => {
+    expect(shown.options).toEqual([
+      {
+        id: "legacy:colour",
+        name: "Colour",
+        values: [
+          { id: "legacy:colour:red", value: "Red" },
+          { id: "legacy:colour:blue", value: "Blue" },
+        ],
+      },
+      { id: "o-size", name: "Size", values: [{ id: "v-m", value: "M" }] },
+    ]);
+  });
+
+  it("carries each SKU's value ids and title", () => {
+    expect(shown.skuVariants?.map((v) => [v.optionValueIds, v.title])).toEqual([
+      [["legacy:colour:red", "v-m"], "Red / M"],
+      [["legacy:colour:blue", "v-m"], "Blue / M"],
+    ]);
+  });
+
+  it("groups photos by the option value they belong to", () => {
+    expect(shown.gallery).toEqual([
+      "https://api.kullmart.com/media/front.jpg",
+      "https://api.kullmart.com/media/blue.jpg",
+    ]);
+    expect(shown.galleryByValue).toEqual({ "legacy:colour:blue": ["https://api.kullmart.com/media/blue.jpg"] });
+  });
+
+  it("carries the highlights, leaving blank ones out", () => {
+    expect(shown.highlights).toEqual([{ en: "Pure cotton", bn: "" }]);
   });
 });

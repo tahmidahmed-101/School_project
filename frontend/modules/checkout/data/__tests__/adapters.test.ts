@@ -35,6 +35,7 @@ const order: ApiOrder = {
     {
       id: "l-1",
       product_name: "Wallet",
+      variant_title: "Brown / Slim",
       variant_sku: "W-1",
       quantity: 2,
       unit_price: "999.00",
@@ -59,7 +60,23 @@ describe("toOrderResult", () => {
       total: 1978,
       payTo: "01700000000",
       couponCode: "WELCOME100",
-      lines: [{ name: "Wallet", sku: "W-1", quantity: 2, unitPrice: 999, total: 1998, isPreOrder: false }],
+      lines: [
+        {
+          name: "Wallet",
+          variantTitle: "Brown / Slim",
+          sku: "W-1",
+          quantity: 2,
+          unitPrice: 999,
+          total: 1998,
+          isPreOrder: false,
+        },
+      ],
     });
+  });
+
+  it("leaves the variant title blank when the API sends none", () => {
+    const plain = { ...order, lines: order.lines.map((line) => ({ ...line, variant_title: undefined })) } as ApiOrder;
+    const result = toOrderResult(plain, { name: "Rahim", address: "House 1", district: "Dhaka" }, "");
+    expect(result.lines[0]?.variantTitle).toBe("");
   });
 });

@@ -95,8 +95,8 @@ export function CheckoutSummary({
       )}
 
       <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
-        {items.map(({ product, quantity, selectedVariant }, idx) => (
-          <div key={`${product.id}-${idx}`} className="flex items-start gap-3 text-xs">
+        {items.map(({ product, quantity, variantTitle, variantId }) => (
+          <div key={variantId} className="flex items-start gap-3 text-xs">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-surface-muted">
               <Image src={photo(product.image)} alt={t(product.name)} fill sizes="48px" className="object-cover" />
             </div>
@@ -107,15 +107,13 @@ export function CheckoutSummary({
                   <PreOrderBadge status={product.preorderStatus || "available"} size="sm" className="shrink-0" />
                 )}
               </div>
+              {variantTitle && <div className="truncate text-2xs font-medium text-fg-subtle">{variantTitle}</div>}
               <div className="text-2xs font-medium text-fg-subtle">{money(product.price)}</div>
               <div className="flex items-center gap-2 pt-0.5">
-                <QuantityStepper
-                  quantity={quantity}
-                  onChange={(next) => updateQuantity(product.id, next, selectedVariant)}
-                />
+                <QuantityStepper quantity={quantity} onChange={(next) => updateQuantity(variantId, next)} />
                 <button
                   type="button"
-                  onClick={() => removeItem(product.id, selectedVariant)}
+                  onClick={() => removeItem(variantId)}
                   className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-fg-muted transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-danger-surface hover:text-danger"
                   aria-label={ui("cartRemove")}
                 >

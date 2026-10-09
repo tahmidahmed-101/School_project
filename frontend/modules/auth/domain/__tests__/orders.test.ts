@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone, variantLabel } from "../orders";
+import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone } from "../orders";
 
 describe("orderStatusKey", () => {
   it("maps the statuses a customer sees to their copy", () => {
@@ -26,14 +26,6 @@ describe("orderStatusTone", () => {
     expect(orderStatusTone("closed")).toBe("done");
     expect(orderStatusTone("cancelled")).toBe("bad");
     expect(orderStatusTone("shipped")).toBe("progress");
-  });
-});
-
-describe("variantLabel", () => {
-  it("joins what the variant has", () => {
-    expect(variantLabel({ color: "Black", size: "M" })).toBe("Black / M");
-    expect(variantLabel({ color: "", size: "M" })).toBe("M");
-    expect(variantLabel({ color: "", size: "" })).toBe("");
   });
 });
 

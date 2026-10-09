@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { CartItem, Product } from "@/lib/types";
 import { getMaxOrderQuantity, productKind, type ProductKind } from "@/lib/product";
 import { usePersistedState } from "@/lib/usePersistedState";
-import { ORDER_QUANTITY_CAP, applyVariant, resolveVariant, selectionFor } from "@/lib/variants";
+import { ORDER_QUANTITY_CAP, applyVariant, soleVariant, variantById } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
 import { MIXED_BASKET_CODE, cartRefusalCode, setCartCustomer, syncGuestCart } from "./data/guestCart";
 import { acceptsProduct, basketGroups, basketKind, itemCountByKind, type BasketGroup } from "./domain/kind";
@@ -12,16 +12,11 @@ import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
   items: CartItem[];
-  /** Adds the SKU that `selectedVariant` points at (the product's default SKU when omitted). */
+  /** Adds the SKU `variantId`; without one, only a product that has a single SKU and no options is added. */
   /** Adds a line and opens the cart drawer; pass `openDrawer: false` when the caller navigates away instead. */
-  addItem: (
-    product: Product,
-    quantity?: number,
-    selectedVariant?: Record<string, string>,
-    options?: { openDrawer?: boolean },
-  ) => boolean;
-  updateQuantity: (productId: string, quantity: number, selectedVariant?: Record<string, string>) => void;
-  removeItem: (productId: string, selectedVariant?: Record<string, string>) => void;
+  addItem: (product: Product, quantity?: number, variantId?: string, options?: { openDrawer?: boolean }) => boolean;
+  updateQuantity: (variantId: string, quantity: number) => void;
+  removeItem: (variantId: string) => void;
   clearCart: () => void;
   isDrawerOpen: boolean;
   openDrawer: () => void;
@@ -50,13 +45,6 @@ const LEGACY_CART_KEY = "kullmart:cart";
 /** Quiet time after the last cart change before it is mirrored to the backend, so a run of +/- taps is one sync. */
 const SYNC_DELAY_MS = 600;
 
-function variantMatches(a?: Record<string, string>, b?: Record<string, string>): boolean {
-  const keysA = Object.keys(a ?? {});
-  const keysB = Object.keys(b ?? {});
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((k) => a?.[k] === b?.[k]);
-}
-
 /** One line never holds more than the product page lets a shopper pick (stock, or the pre-order limit). */
 const lineCap = (product: Product) => Math.max(1, Math.min(ORDER_QUANTITY_CAP, getMaxOrderQuantity(product)));
 
@@ -67,7 +55,8 @@ function toCartProduct(product: Product): Product {
     gallery: [product.image],
     description: { en: "", bn: "" },
     longDescription: { en: "", bn: "" },
-    variants: undefined,
+    options: undefined,
+    galleryByValue: undefined,
     skuVariants: undefined,
     specs: undefined,
     highlights: undefined,
@@ -140,18 +129,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isHydrated, authStatus, asCustomer, authRequest]);
 
   const addItem = useCallback(
-    (
-      product: Product,
-      quantity = 1,
-      selectedVariant?: Record<string, string>,
-      { openDrawer = true }: { openDrawer?: boolean } = {},
-    ) => {
-      const variant = resolveVariant(product, selectedVariant);
-      // No SKU means the product did not come from the API (e.g. an old wishlist entry): it cannot be ordered.
+    (product: Product, quantity = 1, variantId?: string, { openDrawer = true }: { openDrawer?: boolean } = {}) => {
+      const variant = variantId ? variantById(product, variantId) : soleVariant(product);
+      // No SKU: its options are still to be picked, or the product did not come from the API (an old wishlist entry).
       if (!variant || !variant.inStock) return false;
 
       const line = toCartProduct(applyVariant(product, variant));
-      const selection = selectionFor(variant);
+      const variantTitle = variant.title || undefined;
 
       if (!acceptsProduct(items, line)) {
         setRefusedKind(productKind(line));
@@ -170,6 +154,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           updated[existingIdx] = {
             ...existing,
             product: line,
+            variantTitle,
             quantity: Math.min(lineCap(line), existing.quantity + quantity),
           };
           return updated;
@@ -179,7 +164,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           {
             product: line,
             quantity: Math.min(lineCap(line), quantity),
-            selectedVariant: Object.keys(selection).length ? selection : undefined,
+            variantTitle,
             variantId: variant.id,
           },
         ];
@@ -192,28 +177,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removeItem = useCallback(
-    (productId: string, selectedVariant?: Record<string, string>) => {
-      setItems((prev) =>
-        prev.filter(
-          (item) => !(item.product.id === productId && variantMatches(item.selectedVariant, selectedVariant)),
-        ),
-      );
+    (variantId: string) => {
+      setItems((prev) => prev.filter((item) => item.variantId !== variantId));
     },
     [setItems],
   );
 
   const updateQuantity = useCallback(
-    (productId: string, quantity: number, selectedVariant?: Record<string, string>) => {
+    (variantId: string, quantity: number) => {
       if (quantity <= 0) {
-        removeItem(productId, selectedVariant);
+        removeItem(variantId);
         return;
       }
 
       setItems((prev) =>
         prev.map((item) =>
-          item.product.id === productId && variantMatches(item.selectedVariant, selectedVariant)
-            ? { ...item, quantity: Math.min(lineCap(item.product), quantity) }
-            : item,
+          item.variantId === variantId ? { ...item, quantity: Math.min(lineCap(item.product), quantity) } : item,
         ),
       );
     },

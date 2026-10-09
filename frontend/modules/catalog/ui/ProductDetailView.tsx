@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { isPreOrderSoldOut, productKind, shopHome } from "@/lib/product";
-import { applyVariant, defaultVariant, resolveVariant, selectionFor } from "@/lib/variants";
+import { applyVariant, galleryFor, initialSelection, missingOption, resolveVariant, selectValue } from "@/lib/variants";
 import { useReportPageProductKind } from "../context";
 import { ProductCardGrid } from "./ProductCardGrid";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -25,26 +25,17 @@ interface ProductDetailViewProps {
   relatedProducts: Product[];
 }
 
-/** Keeps only the option groups the picker shows. */
-function pickGroups(product: Product, selection: Record<string, string>): Record<string, string> {
-  const groups = new Set(product.variants?.map((v) => v.name.en));
-  return Object.fromEntries(Object.entries(selection).filter(([group]) => groups.has(group)));
-}
-
-/** Starting selection: the default SKU's options, so the picker and the price agree on first paint. */
-function defaultVariants(product: Product): Record<string, string> {
-  const sku = defaultVariant(product);
-  return sku ? pickGroups(product, selectionFor(sku)) : {};
-}
-
 export function ProductDetailView({ product, relatedProducts }: ProductDetailViewProps) {
   const { t, ui } = useLang();
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariants, setSelectedVariants] = useState(() => defaultVariants(product));
+  const [selection, setSelection] = useState(() => initialSelection(product));
 
-  // The product as it looks with the chosen SKU: its price, stock and pre-order dates.
-  const selectedSku = useMemo(() => resolveVariant(product, selectedVariants), [product, selectedVariants]);
+  // The product as it looks with the chosen SKU: its price, stock and pre-order dates. Until every option is
+  // picked there is no SKU, and the product shows as the catalogue lists it.
+  const selectedSku = useMemo(() => resolveVariant(product, selection), [product, selection]);
   const shown = useMemo(() => applyVariant(product, selectedSku), [product, selectedSku]);
+  const images = useMemo(() => galleryFor(product, selection), [product, selection]);
+  const toPick = missingOption(product, selection);
   const isSoldOut = isPreOrderSoldOut(shown);
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
   const kind = productKind(product);
@@ -64,33 +55,26 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
 
         {/* Gallery | details, the gallery slightly the narrower of the two */}
         <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16 xl:gap-20">
-          <ProductGallery product={product} />
+          {/* Keyed on the lead photo so picking a value with photos of its own shows them straight away. */}
+          <ProductGallery key={images[0]} product={product} images={images} />
 
           <div className="flex w-full flex-col justify-start lg:pl-4 xl:pl-8">
             <ProductSummary product={shown} isSoldOut={isSoldOut} />
 
             {shown.isPreOrder && <PreOrderPanel product={shown} isSoldOut={isSoldOut} />}
 
-            {product.variants && (
-              <VariantPicker
-                variants={product.variants}
-                selected={selectedVariants}
-                onSelect={(name, value) =>
-                  setSelectedVariants((prev) => {
-                    const next = { ...prev, [name]: value };
-                    // If that colour/size pair was never made, snap the other option to a SKU that exists.
-                    const sku = resolveVariant(product, next);
-                    return sku ? { ...next, ...pickGroups(product, selectionFor(sku)) } : next;
-                  })
-                }
-              />
-            )}
+            <VariantPicker
+              product={product}
+              selection={selection}
+              onSelect={(optionId, valueId) => setSelection((prev) => selectValue(product, prev, optionId, valueId))}
+            />
 
             <ProductActions
               product={shown}
               quantity={quantity}
               onQuantityChange={setQuantity}
-              selectedVariants={selectedVariants}
+              variantId={selectedSku?.id}
+              hint={toPick && ui("optionChoose").replace("{option}", toPick.name)}
               isSoldOut={isSoldOut}
               isOutOfStock={isOutOfStock}
             />

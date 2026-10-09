@@ -1,8 +1,8 @@
-import type { CategoryInfo, Product, ProductSale, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
+import type { CategoryInfo, Product, ProductOption, ProductSale, ProductSpec, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { publicEnv } from "@/lib/env";
-import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant, sortSizes } from "@/lib/variants";
-import type { ApiCategory, ApiProduct, ApiProductSale, ApiVariant } from "@/lib/api/types";
+import { ORDER_QUANTITY_CAP, applyVariant } from "@/lib/variants";
+import type { ApiCategory, ApiProduct, ApiProductOption, ApiProductSale, ApiVariant } from "@/lib/api/types";
 
 /**
  * Backend -> storefront model. The UI keeps using `Product` / `CategoryInfo`; everything the API cannot supply
@@ -69,8 +69,8 @@ function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
   return {
     id: v.id,
     sku: v.sku,
-    color: v.color,
-    size: v.size,
+    optionValueIds: (v.option_value_ids ?? []).map(String),
+    title: v.title ?? "",
     price,
     compareAtPrice: compareAt && compareAt > price ? compareAt : undefined,
     salePrice: kind === "stock" && !isPreOrder && v.sale_price ? toNumber(v.sale_price) : undefined,
@@ -90,25 +90,14 @@ function toSale(sale: ApiProductSale | null | undefined): ProductSale | undefine
   return { name: sale.name, percentOff: toNumber(sale.percent_off), endsAt: formatDate(sale.ends_at) };
 }
 
-/** Colour / Size option groups for the existing variant picker, built from the SKU list. */
-function optionGroups(skus: SkuVariant[]): ProductVariant[] | undefined {
-  const groups: ProductVariant[] = [];
-  const build = (name: T, pick: (v: SkuVariant) => string, order: (values: string[]) => string[] = (v) => v) => {
-    const values = order([...new Set(skus.map(pick).filter(Boolean))]);
-    // A single value is not a choice, so no picker is shown.
-    if (values.length < 2) return;
-    groups.push({
-      name,
-      options: values.map((value) => ({
-        label: plain(value),
-        value,
-        inStock: skus.some((v) => pick(v) === value && v.inStock),
-      })),
-    });
-  };
-  build({ en: COLOUR_GROUP, bn: "রং" }, (v) => v.color);
-  build({ en: SIZE_GROUP, bn: "সাইজ" }, (v) => v.size, sortSizes);
-  return groups.length ? groups : undefined;
+// Ids can be UUIDs or the API's synthetic legacy strings, so they are only ever compared, never parsed.
+function toOptions(options: ApiProductOption[] | undefined): ProductOption[] | undefined {
+  const rows = (options ?? []).map((option) => ({
+    id: String(option.id),
+    name: option.name,
+    values: (option.values ?? []).map((value) => ({ id: String(value.id), value: value.value })),
+  }));
+  return rows.length ? rows : undefined;
 }
 
 /** "screen_size" -> "Screen size": formatting of an API key, not a translation. */
@@ -153,11 +142,17 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
   const preferred = skus.find((v) => v.inStock) ?? skus[0];
   const category = categories.find((c) => c.id === api.category_id);
 
-  const gallery = [...(api.images ?? [])]
+  const images = [...(api.images ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((img) => normalizeImageUrl(img.url))
-    .filter(Boolean);
+    .map((img) => ({ url: normalizeImageUrl(img.url), valueId: img.option_value_id }))
+    .filter((img) => img.url);
+  const gallery = images.map((img) => img.url);
   if (gallery.length === 0) gallery.push(PLACEHOLDER_IMAGE);
+  const galleryByValue: Record<string, string[]> = {};
+  for (const img of images) {
+    if (img.valueId) (galleryByValue[String(img.valueId)] ??= []).push(img.url);
+  }
+  const highlights = (api.highlights ?? []).filter(Boolean).map(plain);
 
   const description = plain(api.description ?? "");
   const base: Product = {
@@ -185,10 +180,12 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     featured: api.featured,
     trending: api.trending,
     newArrival: api.new_arrival,
-    variants: optionGroups(skus),
+    options: toOptions(api.options),
+    galleryByValue: Object.keys(galleryByValue).length ? galleryByValue : undefined,
     skuVariants: skus,
     defaultVariantId: preferred?.id,
     specs: toSpecs(api.specs),
+    highlights: highlights.length ? highlights : undefined,
     metaKeywords: api.meta_keywords || undefined,
     sale: toSale(api.sale),
   };

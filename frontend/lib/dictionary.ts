@@ -171,6 +171,9 @@ export const DICT = {
   // Product Card & Detail
   addToCart: { en: "Add to cart", bn: "কার্টে নিন" },
   buyNow: { en: "Buy now", bn: "অর্ডার করুন" },
+  chooseOptions: { en: "Choose options", bn: "অপশন বেছে নিন" },
+  optionChoose: { en: "Choose {option}", bn: "{option} বেছে নিন" },
+  optionUnavailable: { en: "Not available", bn: "পাওয়া যাচ্ছে না" },
   productCode: { en: "Code", bn: "কোড" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },

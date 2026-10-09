@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { preorderStageLabel } from "@/lib/preorder-stages";
 import { Loader } from "@/design-system/patterns/Loader";
 import { useAuth } from "../context";
-import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone, variantLabel } from "../domain/orders";
+import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone } from "../domain/orders";
 import { cardClass } from "@/design-system/ui/Card";
 
 const PAGE_SIZE = 5;
@@ -143,7 +143,7 @@ function OrderList({ kind, emptyKey }: { kind: OrderKind; emptyKey: (typeof TABS
                         >
                           {line.product_name}
                         </Link>
-                        {variantLabel(line) && <span className="text-fg-muted"> · {variantLabel(line)}</span>}
+                        {line.variant_title && <span className="text-fg-muted"> · {line.variant_title}</span>}
                       </span>
                       <span className="shrink-0 text-fg-muted">× {n(line.quantity)}</span>
                     </li>

@@ -53,7 +53,8 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
             {orderResult.lines.map((line) => (
               <div key={line.id} className="flex justify-between gap-3 text-fg-muted">
                 <span className="min-w-0 truncate">
-                  {line.name} × {n(line.quantity)}
+                  {line.name}
+                  {line.variantTitle && ` · ${line.variantTitle}`} × {n(line.quantity)}
                 </span>
                 <span className="shrink-0 font-semibold text-ink-800">{money(line.total)}</span>
               </div>

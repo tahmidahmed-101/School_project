@@ -6,6 +6,7 @@ import { useWishlist } from "../context";
 import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
 import { splitByKind, productKind } from "@/lib/product";
+import { soleVariant } from "@/lib/variants";
 import {
   Drawer,
   DrawerBody,
@@ -15,7 +16,7 @@ import {
   DrawerItemImage,
   DrawerRemoveButton,
 } from "@/design-system/ui/Drawer";
-import { Button } from "@/design-system/ui/Button";
+import { Button, buttonClass } from "@/design-system/ui/Button";
 
 const SECTIONS = [
   { kind: "stock", titleKey: "kindStockItems", moveAllKey: "wishlistMoveStockToCart" },
@@ -80,13 +81,23 @@ export function WishlistDrawer() {
                     <div className="text-xs font-bold text-gold-800">{money(item.price)}</div>
 
                     <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        size="xs"
-                        onClick={() => addItem(item)}
-                        leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
-                      >
-                        {ui("wishlistMoveToCart")}
-                      </Button>
+                      {soleVariant(item) ? (
+                        <Button
+                          size="xs"
+                          onClick={() => addItem(item)}
+                          leadingIcon={<ShoppingCart className="h-3.5 w-3.5" />}
+                        >
+                          {ui("wishlistMoveToCart")}
+                        </Button>
+                      ) : (
+                        <Link
+                          href={`/product/${item.slug}`}
+                          onClick={closeWishlist}
+                          className={buttonClass({ size: "xs" })}
+                        >
+                          {ui("chooseOptions")}
+                        </Link>
+                      )}
 
                       <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(item.id)} />
                     </div>

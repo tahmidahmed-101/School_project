@@ -12,7 +12,7 @@ import { DrawerItem, DrawerItemImage, DrawerRemoveButton } from "@/design-system
 export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: () => void }) {
   const { t, ui, money } = useLang();
   const { updateQuantity, removeItem } = useCart();
-  const { product, quantity, selectedVariant } = item;
+  const { product, quantity, variantTitle, variantId } = item;
 
   return (
     <DrawerItem>
@@ -32,6 +32,8 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
           )}
         </div>
 
+        {variantTitle && <div className="truncate text-2xs font-medium text-fg-subtle">{variantTitle}</div>}
+
         <div className="text-xs font-bold text-gold-800">{money(product.price)}</div>
 
         {product.isPreOrder && (
@@ -48,9 +50,9 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
         )}
 
         <div className="flex items-center gap-2 pt-1">
-          <QuantityStepper quantity={quantity} onChange={(next) => updateQuantity(product.id, next, selectedVariant)} />
+          <QuantityStepper quantity={quantity} onChange={(next) => updateQuantity(variantId, next)} />
 
-          <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(product.id, selectedVariant)} />
+          <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(variantId)} />
         </div>
       </div>
     </DrawerItem>
