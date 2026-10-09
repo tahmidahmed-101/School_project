@@ -12,11 +12,10 @@ import { moneySchema, reportFormError } from "@/lib/forms"
 
 import { createVariant, updateVariant } from "../api"
 import type { ProductVariant, ProductVariantPayload } from "../types"
+import { reportedRefusal } from "../lib/productFormBase"
 
 const fields = z.object({
   sku: z.string().trim(),
-  color: z.string().trim(),
-  size: z.string().trim(),
   price: moneySchema,
   cost_price: moneySchema,
   weight: z
@@ -61,8 +60,6 @@ const preorderSchema = fields.superRefine((v, ctx) => {
 /** `settings` supplies the pre-order fields: the variant itself, or a sibling for a new variant. */
 const toValues = (v: ProductVariant | null | undefined, settings: ProductVariant | null | undefined): FormValues => ({
   sku: v?.sku ?? "",
-  color: v?.color ?? "",
-  size: v?.size ?? "",
   price: v?.price ?? "",
   cost_price: v?.cost_price ?? "",
   weight: v?.weight ?? "",
@@ -110,6 +107,7 @@ interface Props {
 export function VariantFormDialog({ open, onOpenChange, kind, productId, variant, sibling, onSaved }: Props) {
   const isEditing = Boolean(variant)
   const isStock = kind === "stock"
+  const chosen = variant?.option_values ?? []
   const {
     control,
     register,
@@ -128,8 +126,6 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
 
   const onSubmit = async (values: FormValues) => {
     const payload: ProductVariantPayload = {
-      color: values.color,
-      size: values.size,
       weight: values.weight || null,
       ...(isStock ? stockPayload(values) : preorderPayload(values)),
     }
@@ -148,6 +144,7 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
       onSaved()
       onOpenChange(false)
     } catch (err) {
+      if (reportedRefusal(err)) return
       reportFormError(err, { setError, fields: Object.keys(values), fallback: "Failed to save variant" })
     }
   }
@@ -167,18 +164,29 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? `Edit variant ${variant?.sku}` : "Add variant"}
-      description={isEditing ? "Changes apply to this SKU only." : "Leave price blank to inherit it from a sibling variant."}
+      title={isEditing ? `Edit ${variant?.title || variant?.sku}` : "Add variant"}
+      description={isEditing ? "Changes apply to this variant only." : "The price, SKU and stock unit of this product."}
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={isEditing ? "Save variant" : "Create variant"}
       size="lg"
     >
+      {chosen.length > 0 && (
+        <div className="space-y-1">
+          <dl className="flex flex-wrap gap-x-6 gap-y-1 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+            {chosen.map((picked) => (
+              <div key={picked.option_id} className="flex min-w-0 gap-1.5">
+                <dt className="text-muted-foreground">{picked.option_name}</dt>
+                <dd className="break-words font-medium">{picked.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-muted-foreground">Options are set on the product and cannot be changed here.</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {text("sku", "SKU", { placeholder: isEditing ? undefined : "Auto-generated if blank" })}
         {isStock && text("barcode", "Barcode")}
-        {text("color", "Colour")}
-        {text("size", "Size")}
         {text("price", `Price (${getDefaultCurrency()})`, { placeholder: "0.00" })}
         {isStock && text("discount_price", "Discount price", { placeholder: "Optional" })}
         {text("cost_price", "Cost price", { placeholder: "0.00" })}

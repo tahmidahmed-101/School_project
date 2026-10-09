@@ -272,7 +272,7 @@ const Products = ({ kind }: { kind: Kind }) => {
                   <CsvImportButton
                     entityName="products"
                     fields={importFields}
-                    createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
+                    createRow={(payload) => createProduct(payload as ProductPayload)}
                     onComplete={() => {
                       categoryLookup.reset()
                       list.reload()

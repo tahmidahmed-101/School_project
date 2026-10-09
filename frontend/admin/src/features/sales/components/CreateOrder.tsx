@@ -54,8 +54,7 @@ interface VariantHit {
   id: string
   sku: string
   product_name: string
-  size: string
-  color: string
+  title?: string
   effective_price: string
   stock: number
   is_active: boolean
@@ -380,9 +379,7 @@ const CreateOrder = () => {
                         <span className="min-w-0">
                           <span className="block truncate font-medium">
                             {v.product_name}
-                            {[v.size, v.color].filter(Boolean).length > 0 && (
-                              <span className="text-muted-foreground"> · {[v.size, v.color].filter(Boolean).join(" / ")}</span>
-                            )}
+                            {v.title && <span className="text-muted-foreground"> · {v.title}</span>}
                           </span>
                           <span className="font-mono text-xs text-muted-foreground">{v.sku}</span>
                         </span>

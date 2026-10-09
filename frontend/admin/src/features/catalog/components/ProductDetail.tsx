@@ -22,6 +22,7 @@ import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
 import { productKind, productListPath } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
+import { savedOptionsOf } from "../lib/useOptionDrafts"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
 
@@ -97,6 +98,8 @@ const ProductDetail = () => {
   const kind = productKind(product, categories)
   const isStock = kind === "stock"
   const isBundle = product.product_type === "bundle"
+  const options = savedOptionsOf(product)
+  const specs = Array.isArray(product.specs) ? product.specs : []
   const settings = product.variants.find((v) => v.is_preorder_enabled)
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
 
@@ -155,11 +158,17 @@ const ProductDetail = () => {
             <Row label="Status">
               <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
             </Row>
-            <Row label="Type">
-              <Badge variant="secondary" className="capitalize">
-                {product.product_type}
-              </Badge>
-            </Row>
+            {isBundle ? (
+              <Row label="Type">
+                <Badge variant="secondary">Bundle</Badge>
+              </Row>
+            ) : (
+              <Row label="Options">
+                {options.length === 0
+                  ? "None"
+                  : options.map((o) => `${o.name}: ${o.values.map((v) => v.value).join(", ")}`).join(" · ")}
+              </Row>
+            )}
             <Row label="Category">{nameById.get(product.category_id) ?? "—"}</Row>
             <Row label="Brand">{brandName ?? "—"}</Row>
             {isStock ? (
@@ -202,6 +211,17 @@ const ProductDetail = () => {
                 </ul>
               </Row>
             )}
+            {specs.length > 0 && (
+              <Row label="Specifications">
+                <ul className="space-y-1">
+                  {specs.map((spec, i) => (
+                    <li key={i}>
+                      <span className="text-muted-foreground">{spec.name}:</span> {spec.value}
+                    </li>
+                  ))}
+                </ul>
+              </Row>
+            )}
             {product.meta_keywords && <Row label="Meta keywords">{product.meta_keywords}</Row>}
           </dl>
         </Card>
@@ -211,6 +231,7 @@ const ProductDetail = () => {
         <>
           <ProductImagesSection
             productId={product.id}
+            options={options}
             variants={product.variants}
             canManage={canManage}
             onChanged={refresh}
@@ -227,9 +248,9 @@ const ProductDetail = () => {
             </Card>
           ) : (
             <ProductVariantsSection
-              productId={product.id}
+              key={options.map((o) => o.id).join()}
+              product={product}
               kind={kind}
-              productType={product.product_type}
               canManage={canManage}
               canViewInventory={canViewInventory}
               onChanged={refresh}

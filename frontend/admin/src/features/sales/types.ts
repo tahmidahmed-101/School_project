@@ -71,6 +71,8 @@ export interface OrderLine {
   id: string
   variant_id: string
   variant_sku: string
+  /** The variant's options when the line was added, e.g. "Red / M"; "" without options. */
+  variant_title?: string
   product_name: string
   product_image: string | null
   quantity: number
