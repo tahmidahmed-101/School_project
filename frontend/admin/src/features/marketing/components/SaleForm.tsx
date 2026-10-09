@@ -28,7 +28,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useStockBrandRows, useStockCategoryRows } from "../lib/stockTargets"
 import { TickList } from "./TickList"
 
-const PERCENT_MESSAGE = "Enter a percentage above 0, up to 100"
+const PERCENT_MESSAGE = "Enter a percentage above 0 and below 100"
 
 const saleSchema = z
   .object({
@@ -37,7 +37,7 @@ const saleSchema = z
       .string()
       .trim()
       .regex(/^\d{1,3}(\.\d{1,2})?$/, PERCENT_MESSAGE)
-      .refine((value) => Number(value) > 0 && Number(value) <= 100, PERCENT_MESSAGE),
+      .refine((value) => Number(value) > 0 && Number(value) < 100, PERCENT_MESSAGE),
     starts_at: z.string().min(1, "Choose when the sale starts"),
     ends_at: z.string(),
     is_active: z.boolean(),
