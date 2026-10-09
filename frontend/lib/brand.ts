@@ -1,4 +1,5 @@
 import type { ApiBusinessProfile } from "@/lib/api/types";
+import { toPaisa } from "@/lib/money";
 
 /** Contact details and copy taken from the public Kull Mart Facebook page (facebook.com/kullmartbd). */
 export const BRAND_INFO = {
@@ -32,6 +33,8 @@ export const BRAND_INFO = {
   /** Filled from the admin business profile; while empty the footer shows its own built-in text. */
   openingHours: "",
   about: { en: "", bn: "" },
+  /** Stock-order subtotal that earns free delivery, as the API's decimal string; null while the offer is off. */
+  freeDeliveryMinAmount: null as string | null,
   logo: "brand/logo.png",
   logoMark: "brand/logo-mark.png",
   /** Gold cart cut out of the logo on a transparent background, for the green header. */
@@ -78,6 +81,7 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     linkedin: profile.social?.linkedin?.trim() ?? "",
   };
   const mapsUrl = profile.google_maps_url?.trim() ?? "";
+  const freeDeliveryMin = profile.free_delivery_min_amount?.trim() ?? "";
   return {
     ...BRAND_INFO,
     ...(name && { name }),
@@ -95,5 +99,6 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     mapsUrl,
     openingHours: profile.opening_hours?.trim() ?? "",
     about: { en: profile.about?.en?.trim() ?? "", bn: profile.about?.bn?.trim() ?? "" },
+    freeDeliveryMinAmount: toPaisa(freeDeliveryMin) > BigInt(0) ? freeDeliveryMin : null,
   };
 }

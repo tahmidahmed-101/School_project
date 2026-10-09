@@ -6,7 +6,9 @@ import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/modules/auth";
 import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from "@/modules/cart";
+import { useBrand } from "@/modules/catalog";
 import { ApiError } from "@/lib/api/client";
+import { freeDeliveryStatus } from "@/lib/free-delivery";
 import { shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
@@ -52,6 +54,10 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
+  const freeDeliveryEstimate = freeDeliveryStatus(useBrand().freeDeliveryMinAmount, items);
+  // The quote is the store's answer: once it charges a fee, the estimate must not claim free delivery beside it.
+  const quoteCharges = shipping.status === "ok" && shipping.fee > 0;
+  const freeDelivery = quoteCharges && freeDeliveryEstimate?.reached ? null : freeDeliveryEstimate;
 
   // An abandoned checkout is only worth a call back with a number, so the cart learns it as soon as it is valid.
   const contactPhone = form.phone.trim();
@@ -198,6 +204,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
               subtotal={subtotal}
               isSubmitting={isSubmitting}
               shipping={shipping}
+              freeDelivery={freeDelivery}
               coupon={coupon}
             />
           </div>

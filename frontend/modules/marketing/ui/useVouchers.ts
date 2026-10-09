@@ -47,6 +47,8 @@ export function useVoucherText() {
       `${voucher.kind === "fixed" ? money(voucher.value) : `${n(voucher.value)}%`} ${ui("voucherOff")}`,
     condition: (voucher: Voucher) =>
       voucher.minSpend > 0 ? `${ui("voucherMinSpend")} ${money(voucher.minSpend)}` : ui("voucherNoMinSpend"),
+    cap: (voucher: Voucher) =>
+      voucher.maxDiscount ? ui("voucherMaxDiscount").replace("{amount}", money(voucher.maxDiscount)) : "",
     /** "" for a voucher that does not expire. */
     validUntil: (voucher: Voucher) => {
       const date = shortDate(voucher.expiresAt, lang);

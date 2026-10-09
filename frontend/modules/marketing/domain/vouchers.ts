@@ -1,3 +1,4 @@
+import { toNumber } from "@/lib/api/parse";
 import type { ApiStorefrontCoupon } from "@/lib/api/types";
 
 /** A coupon the store chose to advertise (dashboard: Coupons > "Show on storefront"). */
@@ -10,6 +11,8 @@ export interface Voucher {
   minSpend: number;
   /** API timestamp after which the code stops working; null when it does not expire. */
   expiresAt: string | null;
+  /** Most taka a percentage voucher can take off; undefined when it has no cap. */
+  maxDiscount?: number;
 }
 
 export function toVoucher(coupon: ApiStorefrontCoupon): Voucher {
@@ -19,6 +22,7 @@ export function toVoucher(coupon: ApiStorefrontCoupon): Voucher {
     value: Number(coupon.value),
     minSpend: Number(coupon.min_order_amount),
     expiresAt: coupon.expires_at || null,
+    ...(toNumber(coupon.max_discount_amount) > 0 && { maxDiscount: toNumber(coupon.max_discount_amount) }),
   };
 }
 

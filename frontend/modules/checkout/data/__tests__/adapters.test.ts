@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 import type { ApiOrder } from "@/lib/api/types";
-import { toOrderResult } from "../adapters";
+import { toOrderResult, toShippingQuoteState } from "../adapters";
+
+describe("toShippingQuoteState", () => {
+  const quote = { zone: "Dhaka", weight: "0.50", carrier_id: null, shipping_total: "80.00" };
+
+  it("shows the quoted fee", () => {
+    expect(toShippingQuoteState(quote)).toEqual({ status: "ok", fee: 80 });
+    expect(toShippingQuoteState({ ...quote, free_delivery: false })).toEqual({ status: "ok", fee: 80 });
+  });
+
+  it("charges nothing when the quote says delivery is free", () => {
+    expect(toShippingQuoteState({ ...quote, free_delivery: true })).toEqual({ status: "ok", fee: 0 });
+  });
+
+  it("is unavailable when the zone has no rate", () => {
+    expect(toShippingQuoteState({ ...quote, shipping_total: null })).toEqual({ status: "unavailable" });
+  });
+});
 
 const order: ApiOrder = {
   id: "o-1",

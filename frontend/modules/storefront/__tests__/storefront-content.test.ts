@@ -112,4 +112,10 @@ describe("hasDiscountedProduct", () => {
     expect(hasDiscountedProduct([makeProduct(), makeProduct({ price: 500, compareAtPrice: 500 })])).toBe(false);
     expect(hasDiscountedProduct([makeProduct(), makeProduct({ price: 400, compareAtPrice: 500 })])).toBe(true);
   });
+
+  it("counts a product whose price a sale lowered", () => {
+    const sale = { name: "Eid Sale", percentOff: 20 };
+    const onSale = makeProduct({ price: 800, compareAtPrice: 1000, salePrice: 800, sale });
+    expect(hasDiscountedProduct([makeProduct(), onSale])).toBe(true);
+  });
 });

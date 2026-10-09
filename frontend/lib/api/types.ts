@@ -59,6 +59,8 @@ export interface ApiVariant {
   compare_at_price?: string | null;
   discount_price: string | null;
   effective_price: string;
+  /** Price under a running sale; null when no sale covers this variant. `effective_price` already includes it. */
+  sale_price?: string | null;
   in_stock: boolean;
   color: string;
   size: string;
@@ -81,6 +83,13 @@ export interface ApiVariant {
   preorder_remaining: number | null;
 }
 
+/** Why a stock product is cheaper right now, and until when. */
+export interface ApiProductSale {
+  name: string;
+  percent_off: string;
+  ends_at: string | null;
+}
+
 export interface ApiProduct {
   id: string;
   category_id: string;
@@ -97,6 +106,8 @@ export interface ApiProduct {
   specs: Record<string, unknown>;
   variants: ApiVariant[];
   images: ApiProductImage[];
+  /** Stock products only. Absent on an API deployed before sales existed. */
+  sale?: ApiProductSale | null;
   /** Present on the detail endpoint only. */
   description?: string;
   /** SEO keywords, comma separated. Present on the detail endpoint only. */
@@ -220,6 +231,8 @@ export interface ApiBusinessProfile {
   social: Record<string, string>;
   /** Absent on backends that predate the about field. */
   about?: ApiBilingual;
+  /** Stock-order subtotal that earns free delivery; null or "0" means the offer is off. */
+  free_delivery_min_amount?: string | null;
 }
 
 type ApiLocalizedText = { en: string; bn: string };
@@ -313,6 +326,9 @@ export interface ApiStorefrontCoupon {
   value: string;
   min_order_amount: string;
   expires_at: string | null;
+  starts_at?: string | null;
+  /** Cap on what a percentage coupon can take off; null when there is none. */
+  max_discount_amount?: string | null;
 }
 
 /** POST /checkout/coupon/ */
@@ -330,6 +346,8 @@ export interface ApiShippingQuote {
   weight: string;
   carrier_id: string | null;
   shipping_total: string | null;
+  /** True when the store's free-delivery offer covers this cart. */
+  free_delivery?: boolean;
 }
 
 interface ApiOrderLine {

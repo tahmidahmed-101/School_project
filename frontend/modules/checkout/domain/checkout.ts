@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 import type { ApiCheckoutRequest, ApiPaymentMethod } from "@/lib/api/types";
+import type { UiKey } from "@/lib/dictionary";
 import { productKind, type ProductKind } from "@/lib/product";
 import type { CartItem, OrderForm } from "@/lib/types";
 
@@ -109,3 +110,14 @@ export function mapApiFieldErrors(error: ApiError): FormErrors {
 
 /** Domain codes where the store cannot deliver to the address at all (no zone / no rate configured). */
 export const NO_SHIPPING_CODES = new Set(["no_shipping_zone", "no_shipping_rate"]);
+
+/** Coupon refusals the storefront words itself, in both languages; any other code shows the API's own message. */
+const COUPON_ERROR_KEYS: Record<string, UiKey> = {
+  [COUPON_STOCK_ONLY_CODE]: "checkoutCouponStockOnly",
+  coupon_not_started: "couponNotStarted",
+  coupon_not_applicable: "couponNotApplicable",
+  coupon_customer_limit_reached: "couponCustomerLimitReached",
+};
+
+export const couponErrorKey = (code: string): UiKey | undefined =>
+  Object.hasOwn(COUPON_ERROR_KEYS, code) ? COUPON_ERROR_KEYS[code] : undefined;

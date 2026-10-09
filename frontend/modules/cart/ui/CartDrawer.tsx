@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ShoppingCart, ArrowRight, Info } from "lucide-react";
 import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
+import { freeDeliveryStatus } from "@/lib/free-delivery";
+import { FreeDeliveryNote } from "@/design-system/patterns/FreeDeliveryNote";
 import { CartItemRow } from "./CartItemRow";
 import { Drawer, DrawerBody, DrawerEmpty, DrawerFooter } from "@/design-system/ui/Drawer";
 import { buttonClass } from "@/design-system/ui/Button";
@@ -11,7 +13,8 @@ import { buttonClass } from "@/design-system/ui/Button";
 const GROUP_TITLE = { stock: "kindStockItems", preorder: "kindPreorderItems" } as const;
 const REFUSED_NOTICE = { stock: "cartHoldsPreorder", preorder: "cartHoldsStock" } as const;
 
-export function CartDrawer() {
+/** `freeDeliveryMinAmount` comes from the shell: the brand lives in the catalog module, which already imports this one. */
+export function CartDrawer({ freeDeliveryMinAmount }: { freeDeliveryMinAmount?: string | null }) {
   const { groups, kind, refusedKind, serverRefusedMixed, isDrawerOpen, closeDrawer } = useCart();
   const { ui, money, n } = useLang();
 
@@ -79,6 +82,7 @@ export function CartDrawer() {
             <span>{ui("cartSubtotal")}</span>
             <span className="text-sm font-bold text-fg">{money(only.subtotal)}</span>
           </div>
+          <FreeDeliveryNote status={freeDeliveryStatus(freeDeliveryMinAmount, only.items)} />
 
           <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
             <span>{ui("cartProceedToCheckout")}</span>

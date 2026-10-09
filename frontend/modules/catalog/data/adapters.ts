@@ -1,8 +1,8 @@
-import type { CategoryInfo, Product, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
+import type { CategoryInfo, Product, ProductSale, ProductSpec, ProductVariant, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { publicEnv } from "@/lib/env";
 import { COLOUR_GROUP, ORDER_QUANTITY_CAP, SIZE_GROUP, applyVariant, sortSizes } from "@/lib/variants";
-import type { ApiCategory, ApiProduct, ApiVariant } from "@/lib/api/types";
+import type { ApiCategory, ApiProduct, ApiProductSale, ApiVariant } from "@/lib/api/types";
 
 /**
  * Backend -> storefront model. The UI keeps using `Product` / `CategoryInfo`; everything the API cannot supply
@@ -73,6 +73,7 @@ function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
     size: v.size,
     price,
     compareAtPrice: compareAt && compareAt > price ? compareAt : undefined,
+    salePrice: kind === "stock" && !isPreOrder && v.sale_price ? toNumber(v.sale_price) : undefined,
     inStock,
     isPreOrder,
     preorderEndDate: isPreOrder ? (v.preorder_end_date ?? undefined) : undefined,
@@ -82,6 +83,11 @@ function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
     currentPreorderQuantity: isPreOrder ? v.preordered_quantity : undefined,
     preorderStatus,
   };
+}
+
+function toSale(sale: ApiProductSale | null | undefined): ProductSale | undefined {
+  if (!sale?.name) return undefined;
+  return { name: sale.name, percentOff: toNumber(sale.percent_off), endsAt: formatDate(sale.ends_at) };
 }
 
 /** Colour / Size option groups for the existing variant picker, built from the SKU list. */
@@ -184,6 +190,7 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     defaultVariantId: preferred?.id,
     specs: toSpecs(api.specs),
     metaKeywords: api.meta_keywords || undefined,
+    sale: toSale(api.sale),
   };
   return applyVariant(base, preferred);
 }

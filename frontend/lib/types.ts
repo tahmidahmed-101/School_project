@@ -28,6 +28,8 @@ export interface SkuVariant {
   size: string;
   price: number;
   compareAtPrice?: number;
+  /** Set when a running sale lowers this SKU's price. */
+  salePrice?: number;
   /** Purchasable right now: in stock, or inside an active pre-order window. */
   inStock: boolean;
   isPreOrder: boolean;
@@ -45,6 +47,13 @@ export interface ProductSpec {
   value: T;
 }
 
+/** The running sale that makes a stock product cheaper. */
+export interface ProductSale {
+  name: string;
+  percentOff: number;
+  endsAt?: T;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -54,6 +63,9 @@ export interface Product {
   longDescription: T;
   price: number;
   compareAtPrice?: number;
+  /** The chosen SKU's sale price; undefined when the sale does not cover it. */
+  salePrice?: number;
+  sale?: ProductSale;
   category: ProductCategory;
   categoryName: T;
   image: string;

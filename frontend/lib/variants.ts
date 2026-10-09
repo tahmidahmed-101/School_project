@@ -53,6 +53,7 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     sku: variant.sku,
     price: variant.price,
     compareAtPrice: variant.compareAtPrice,
+    salePrice: variant.salePrice,
     inStock: variant.inStock,
     stockCount: variant.inStock ? ORDER_QUANTITY_CAP : 0,
     isPreOrder: variant.isPreOrder,
