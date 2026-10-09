@@ -151,3 +151,10 @@ Stock only. A coupon still applies on top of a sale price, as today. Pre-order h
 - [x] Merge, full backend suite once (2424 passed, 3 failed; all three fixed and re-run by file), browser check of storefront, dashboard and API
 - [ ] Production: `migrate` only (three schema migrations, no data command), with the Phase P deploy
 - [ ] Not hand-tested: once-per-customer limit, a placed order with free delivery, sale on brands or picked products, Bangla pages, mobile
+
+## Phase R: product options and variants (change request, owner "generic options setup" 2026-10-09)
+Any option name with its own value list per product (up to 3); variants are combinations picked from those lists, never typed.
+- [ ] R1 API: options, values, variant combinations, rules, order-line snapshot, images per option value, specs and highlights, import/export, dry-run command `move_colour_size_to_options`
+- [ ] R2 Dashboard: options editor, combinations table, images per option value, specifications editor
+- [ ] R3 Storefront: generic picker with per-combination availability, photos follow the option, variant title in cart, checkout and order history (en + bn)
+- [ ] Merge, run the command on the local DB, full backend suite once, browser check of storefront, dashboard and API
