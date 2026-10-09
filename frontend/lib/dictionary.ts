@@ -108,6 +108,8 @@ export const DICT = {
   voucherNoMinSpend: { en: "No minimum spend", bn: "সর্বনিম্ন খরচ নেই" },
   voucherCode: { en: "Code", bn: "কোড" },
   voucherValidUntil: { en: "Valid until {date}", bn: "মেয়াদ {date} পর্যন্ত" },
+  voucherMaxDiscount: { en: "Up to {amount} off", bn: "সর্বোচ্চ {amount} ছাড়" },
+  saleEnds: { en: "Offer ends {date}", bn: "অফার চলবে {date} পর্যন্ত" },
   loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },
   navSearch: { en: "Search", bn: "অনুসন্ধান" },
   loading: { en: "Loading", bn: "লোড হচ্ছে" },
@@ -327,6 +329,8 @@ export const DICT = {
   cartStartShopping: { en: "Start shopping", bn: "কেনাকাটা শুরু করুন" },
   cartSubtotal: { en: "Subtotal", bn: "উপমোট" },
   cartDeliveryFree: { en: "Free", bn: "ফ্রি" },
+  freeDeliveryAddMore: { en: "Add {amount} more for free delivery", bn: "আর {amount} কিনলেই ডেলিভারি ফ্রি" },
+  freeDeliveryReached: { en: "Free delivery", bn: "ফ্রি ডেলিভারি" },
   cartProceedToCheckout: { en: "Proceed to checkout", bn: "চেকআউটে এগিয়ে যান" },
   cartRemove: { en: "Remove", bn: "মুছুন" },
   cartPreOrderNotice: {
@@ -498,6 +502,15 @@ export const DICT = {
     bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",
   },
   checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
+  couponNotStarted: { en: "This coupon is not active yet.", bn: "কুপনটা এখনো চালু হয়নি।" },
+  couponNotApplicable: {
+    en: "This coupon does not apply to the items in your cart.",
+    bn: "কার্টের পণ্যে এই কুপন চলবে না।",
+  },
+  couponCustomerLimitReached: {
+    en: "You have already used this coupon as many times as allowed.",
+    bn: "এই কুপন যতবার ব্যবহার করা যায়, ততবার করে ফেলেছেন।",
+  },
   checkoutShippingChecking: { en: "Calculating…", bn: "হিসাব হচ্ছে…" },
   checkoutShippingUnavailable: { en: "Not available for this address", bn: "এই ঠিকানায় ডেলিভারি নেই" },
   errNoShipping: {

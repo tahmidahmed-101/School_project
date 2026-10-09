@@ -3,6 +3,7 @@ import { makeProduct } from "@/tests/fixtures";
 import {
   getDiscountPercent,
   getMaxOrderQuantity,
+  getSaleOffer,
   isPreOrderSoldOut,
   matchesQuery,
   searchByKind,
@@ -24,6 +25,21 @@ describe("getDiscountPercent", () => {
     expect(getDiscountPercent(makeProduct({ price: 500 }))).toBeNull();
     expect(getDiscountPercent(makeProduct({ price: 500, compareAtPrice: 500 }))).toBeNull();
     expect(getDiscountPercent(makeProduct({ price: 500, compareAtPrice: 400 }))).toBeNull();
+  });
+});
+
+describe("getSaleOffer", () => {
+  const sale = { name: "Eid Sale", percentOff: 20 };
+
+  it("names the sale on a stock product whose SKU it covers", () => {
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400 }))).toBe(sale);
+  });
+
+  it("is null without a sale, for an uncovered SKU and for a pre-order", () => {
+    expect(getSaleOffer(makeProduct())).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale }))).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400, isPreOrder: true }))).toBeNull();
+    expect(getSaleOffer(makeProduct({ sale, salePrice: 400, kind: "preorder" }))).toBeNull();
   });
 });
 

@@ -10,7 +10,8 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent, getSaleOffer, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 import { Button } from "@/design-system/ui/Button";
@@ -30,6 +31,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const isWishlisted = isInWishlist(product.id);
 
   const discountPercent = getDiscountPercent(product);
+  const sale = getSaleOffer(product);
   const isSoldOut = isPreOrderSoldOut(product);
   const isOutOfStock = !product.isPreOrder && !product.inStock;
 
@@ -54,11 +56,14 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         </Link>
 
         {/* Badges: Preorder Badge or Discount Badge */}
-        <div className="pointer-events-none absolute left-1 top-1 z-10 flex flex-col gap-1">
+        <div className="pointer-events-none absolute left-1 top-1 z-10 flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-1">
           {product.isPreOrder ? (
             <PreOrderBadge status={product.preorderStatus} size="sm" />
           ) : (
-            discountPercent && <DiscountBadge percent={discountPercent} />
+            <>
+              {discountPercent && <DiscountBadge percent={discountPercent} />}
+              {sale && <SaleLabel name={sale.name} />}
+            </>
           )}
         </div>
 

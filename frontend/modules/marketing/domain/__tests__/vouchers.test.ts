@@ -32,6 +32,17 @@ describe("toVoucher", () => {
   });
 });
 
+describe("toVoucher with a discount cap", () => {
+  it("carries the cap when the coupon has one", () => {
+    expect(toVoucher({ ...api, max_discount_amount: "200.00" }).maxDiscount).toBe(200);
+  });
+
+  it("has no cap when the API sends none", () => {
+    expect(toVoucher({ ...api, max_discount_amount: null })).not.toHaveProperty("maxDiscount");
+    expect(toVoucher({ ...api, max_discount_amount: "0.00" })).not.toHaveProperty("maxDiscount");
+  });
+});
+
 describe("collectedVouchers", () => {
   it("keeps only collected codes the store still offers", () => {
     const live = [toVoucher(api), toVoucher({ ...api, code: "EID25" })];

@@ -16,7 +16,9 @@ import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { errorKey } from "@/lib/api/errors";
 import { ApiError } from "@/lib/api/client";
 import { productKind, shopHome } from "@/lib/product";
-import { COUPON_STOCK_ONLY_CODE, acceptsCoupon } from "../domain/checkout";
+import type { FreeDeliveryStatus } from "@/lib/free-delivery";
+import { FreeDeliveryNote } from "@/design-system/patterns/FreeDeliveryNote";
+import { acceptsCoupon, couponErrorKey } from "../domain/checkout";
 import type { AppliedCoupon, ShippingQuoteState } from "./useCheckoutPricing";
 import { cardClass } from "@/design-system/ui/Card";
 
@@ -26,6 +28,8 @@ interface CheckoutSummaryProps {
   subtotal: number;
   isSubmitting: boolean;
   shipping: ShippingQuoteState;
+  /** The store's free-delivery offer against this basket; null when there is nothing to say. */
+  freeDelivery: FreeDeliveryStatus | null;
   coupon: {
     applied: AppliedCoupon | null;
     error: Error | null;
@@ -36,14 +40,22 @@ interface CheckoutSummaryProps {
 }
 
 /** Order summary card: line items, totals and the submit button. */
-export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupon }: CheckoutSummaryProps) {
+export function CheckoutSummary({
+  items,
+  subtotal,
+  isSubmitting,
+  shipping,
+  freeDelivery,
+  coupon,
+}: CheckoutSummaryProps) {
   const { t, ui, money, n } = useLang();
   const [couponInput, setCouponInput] = useState("");
   const shippingFee = shipping.status === "ok" ? shipping.fee : 0;
+  const ownCouponMessage = coupon.error instanceof ApiError ? couponErrorKey(coupon.error.code) : undefined;
   const couponError = !coupon.error
     ? ""
-    : coupon.error instanceof ApiError && coupon.error.code === COUPON_STOCK_ONLY_CODE
-      ? ui("checkoutCouponStockOnly")
+    : ownCouponMessage
+      ? ui(ownCouponMessage)
       : coupon.error instanceof ApiError &&
           coupon.error.status < 500 &&
           coupon.error.status !== 429 &&
@@ -231,6 +243,7 @@ export function CheckoutSummary({ items, subtotal, isSubmitting, shipping, coupo
                     : ui("checkoutShippingPending")}
             </span>
           </div>
+          <FreeDeliveryNote status={freeDelivery} />
           {preOrderItem && (
             <div className="flex items-start justify-between rounded-xl border border-gold-200/80 bg-gold-50/70 p-2 text-2xs text-gold-900">
               <span className="flex items-center gap-1 font-medium">

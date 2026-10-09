@@ -6,6 +6,7 @@ import {
   EMPTY_ORDER_FORM,
   acceptsCoupon,
   buildCheckoutRequest,
+  couponErrorKey,
   mapApiFieldErrors,
   paymentMethodsFor,
   validateOrderForm,
@@ -146,5 +147,19 @@ describe("paymentMethodsFor", () => {
 
   it("never offers a pre-order method to a basket that also holds a stock line", () => {
     expect(paymentMethodsFor([...items, preorderLine], byKind)).toEqual(byKind.stock);
+  });
+});
+
+describe("couponErrorKey", () => {
+  it("words the promotion refusals in the storefront's own copy", () => {
+    expect(couponErrorKey("coupon_not_started")).toBe("couponNotStarted");
+    expect(couponErrorKey("coupon_not_applicable")).toBe("couponNotApplicable");
+    expect(couponErrorKey("coupon_customer_limit_reached")).toBe("couponCustomerLimitReached");
+    expect(couponErrorKey("coupon_stock_only")).toBe("checkoutCouponStockOnly");
+  });
+
+  it("leaves every other code to the API's message", () => {
+    expect(couponErrorKey("coupon_expired")).toBeUndefined();
+    expect(couponErrorKey("toString")).toBeUndefined();
   });
 });

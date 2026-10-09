@@ -1,4 +1,4 @@
-import type { Product } from "@/lib/types";
+import type { Product, ProductSale } from "@/lib/types";
 
 /** True if any field contains the query, case-insensitively. */
 export function matchesQuery(fields: string[], query: string): boolean {
@@ -11,6 +11,13 @@ export function matchesQuery(fields: string[], query: string): boolean {
 export function getDiscountPercent(product: Product): number | null {
   if (!product.compareAtPrice || product.compareAtPrice <= product.price) return null;
   return Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100);
+}
+
+/** The sale to name on the product, or null: pre-orders never show one, nor does a SKU the sale leaves out. */
+export function getSaleOffer(product: Product): ProductSale | null {
+  if (productKind(product) !== "stock" || product.isPreOrder) return null;
+  if (!product.sale || product.salePrice === undefined) return null;
+  return product.sale;
 }
 
 /** True for a pre-order that is marked sold out or has reached its reservation cap. */

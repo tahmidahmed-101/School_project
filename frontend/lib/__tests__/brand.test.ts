@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import type { ApiBusinessProfile } from "@/lib/api/types";
 import { BRAND_INFO, mergeBrand } from "../brand";
 
+describe("mergeBrand free delivery", () => {
+  it("keeps the threshold as the API's decimal string", () => {
+    expect(mergeBrand(profile({ free_delivery_min_amount: "1500.00" })).freeDeliveryMinAmount).toBe("1500.00");
+  });
+
+  it("is off for null, zero or a missing field", () => {
+    expect(mergeBrand(profile({ free_delivery_min_amount: null })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile({ free_delivery_min_amount: "0" })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile({ free_delivery_min_amount: "0.00" })).freeDeliveryMinAmount).toBeNull();
+    expect(mergeBrand(profile()).freeDeliveryMinAmount).toBeNull();
+  });
+});
+
 const profile = (overrides: Partial<ApiBusinessProfile> = {}): ApiBusinessProfile => ({
   name: "",
   legal_name: "",

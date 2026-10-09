@@ -1,5 +1,5 @@
 import { toNumber } from "@/lib/api/parse";
-import type { ApiOrder } from "@/lib/api/types";
+import type { ApiOrder, ApiShippingQuote } from "@/lib/api/types";
 import type { OrderResult } from "@/lib/types";
 
 /** Backend order -> what the order-success screen shows. */
@@ -41,4 +41,14 @@ export function toOrderResult(
       status: s.status,
     })),
   };
+}
+
+export type ShippingQuoteState =
+  { status: "idle" } | { status: "loading" } | { status: "ok"; fee: number } | { status: "unavailable" };
+
+/** Delivery quote -> what the summary shows. A free-delivery answer is a fee of 0, which the summary words as "Free". */
+export function toShippingQuoteState(quote: ApiShippingQuote): ShippingQuoteState {
+  if (quote.free_delivery) return { status: "ok", fee: 0 };
+  if (quote.shipping_total === null) return { status: "unavailable" };
+  return { status: "ok", fee: Number(quote.shipping_total) };
 }

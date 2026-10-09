@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api/client";
+import { toShippingQuoteState, type ShippingQuoteState } from "../data/adapters";
 import { quoteShipping, validateCoupon } from "../data/mutations";
 import type { CartItem, OrderForm } from "@/lib/types";
 
@@ -10,8 +11,7 @@ const toApiItems = (items: CartItem[]) =>
 
 const itemsKeyOf = (items: CartItem[]) => items.map((i) => `${i.variantId}:${i.quantity}`).join("|");
 
-export type ShippingQuoteState =
-  { status: "idle" } | { status: "loading" } | { status: "ok"; fee: number } | { status: "unavailable" };
+export type { ShippingQuoteState };
 
 /**
  * Live delivery fee for the cart to the typed address. The backend matches its shipping zones on the address text,
@@ -30,8 +30,7 @@ export function useShippingQuote(items: CartItem[], form: OrderForm): ShippingQu
     const timer = setTimeout(async () => {
       try {
         const quote = await quoteShipping(toApiItems(items), addressText, controller.signal);
-        const fee = quote.shipping_total === null ? null : Number(quote.shipping_total);
-        setResult({ key, state: fee === null ? { status: "unavailable" } : { status: "ok", fee } });
+        setResult({ key, state: toShippingQuoteState(quote) });
       } catch (error) {
         if (controller.signal.aborted) return;
         // A definite "no delivery here" answer is shown; transient failures (network, throttle) just leave the fee pending.

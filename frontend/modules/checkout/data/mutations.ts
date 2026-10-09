@@ -46,7 +46,8 @@ export async function placeOrder(
 
 /**
  * POST /checkout/coupon/ — checks a code against the cart before the order is placed. Throws ApiError with code
- * invalid_coupon | coupon_expired | coupon_usage_limit_reached | coupon_minimum_not_met (message is shopper-ready).
+ * invalid_coupon | coupon_expired | coupon_usage_limit_reached | coupon_minimum_not_met | coupon_stock_only |
+ * coupon_not_started | coupon_not_applicable | coupon_customer_limit_reached (message is shopper-ready).
  */
 export const validateCoupon = (code: string, items: ApiCheckoutItem[], signal?: AbortSignal) =>
   apiRequest<ApiCouponPreview>("/checkout/coupon/", { method: "POST", body: { code, items }, signal });
