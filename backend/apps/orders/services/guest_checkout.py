@@ -8,6 +8,7 @@ from apps.accounts.models import Address, User
 from apps.accounts.services.addresses import create_address
 from apps.accounts.services.users import get_or_create_guest_customer
 from apps.catalog.selectors.products import get_variants_by_ids
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.utils.codes import generate_document_number
 from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
@@ -27,7 +28,8 @@ from apps.orders.services.orders import lock_order
 
 def _variants_by_id(items: list[dict]) -> dict:
     ids = [item["variant_id"] for item in items]
-    return {str(variant.id): variant for variant in get_variants_by_ids(ids)}
+    variants = get_variants_by_ids(ids).select_related("product__category")
+    return {str(variant.id): variant for variant in variants}
 
 
 def weight_for_items(items: list[dict]) -> Decimal:
@@ -52,17 +54,22 @@ def items_hold_preorder(items: list[dict]) -> bool:
     )
 
 
-def subtotal_for_items(items: list[dict]) -> Decimal:
-    """Order subtotal for a raw item list — same per-line price `guest_checkout`
-    would charge, used to preview a coupon before an order exists."""
+def priced_lines_for_items(items: list[dict]) -> list[tuple]:
+    """(product, line total) for a raw item list, at the per-line price
+    `guest_checkout` would charge — for previews made before an order exists."""
     variants_by_id = _variants_by_id(items)
-    subtotal = Decimal("0")
+    prime_running_sales(variants_by_id.values())
+    priced = []
     for item in items:
         variant = variants_by_id.get(str(item["variant_id"]))
         if variant is None:
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
-        subtotal += variant.effective_price * item["quantity"]
-    return subtotal
+        priced.append((variant.product, variant.effective_price * item["quantity"]))
+    return priced
+
+
+def subtotal_for_items(items: list[dict]) -> Decimal:
+    return sum((amount for _product, amount in priced_lines_for_items(items)), Decimal("0"))
 
 
 def _guest_identity(*, phone: str, first_name: str, last_name: str) -> User:
@@ -173,7 +180,10 @@ def guest_checkout(
             # these fall back to no discount rather than aborting checkout.
             if exc.code not in (
                 "invalid_coupon",
+                "coupon_not_started",
                 "coupon_expired",
+                "coupon_not_applicable",
+                "coupon_customer_limit_reached",
                 "coupon_usage_limit_reached",
                 "coupon_minimum_not_met",
             ):

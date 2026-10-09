@@ -219,6 +219,9 @@ DEMO_COUPONS: list[tuple[str, str, str, str, int | None, bool]] = [
     ("BOISHAKH15", "percentage", "15.00", "2000.00", 150, True),
 ]
 
+DEMO_SALE_CATEGORY = "Knitwear"
+DEMO_SALE_PERCENT = "15.00"
+
 DEMO_DISCOUNT_NAMES = (
     "Knitwear Season Offer",
     "Accessories Bundle Saver",

@@ -123,14 +123,44 @@ class ProductVariant(FullAuditModel):
             and not self.is_preorder_upcoming
         )
 
+    def _sale_offer(self) -> tuple:
+        """(sale, sale price) when a running sale undercuts list and discount
+        price, else (None, None). Stock items only."""
+        from apps.catalog.selectors.sales import PRIMED_SALES_ATTR, best_sale_for
+
+        if self.is_preorder_kind:
+            return None, None
+        sale = best_sale_for(self.product, getattr(self, PRIMED_SALES_ATTR, None))
+        if sale is None:
+            return None, None
+        sale_price = sale.price_for(self.price)
+        other_prices = [self.price]
+        if self.discount_price is not None:
+            other_prices.append(self.discount_price)
+        if sale_price >= min(other_prices):
+            return None, None
+        return sale, sale_price
+
+    @property
+    def applied_sale(self):
+        return self._sale_offer()[0]
+
+    @property
+    def sale_price(self) -> Decimal | None:
+        return self._sale_offer()[1]
+
     @property
     def effective_price(self) -> Decimal:
         """What the customer actually pays: the lowest of list price, discount
-        price (stock items only) and, while pre-order is open, pre-order price. A
-        discount at or above list price is ignored, so a typo can't raise the charged amount."""
+        price and running sale price (stock items only) and, while pre-order is
+        open, pre-order price. A discount at or above list price is ignored, so
+        a typo can't raise the charged amount."""
         candidates = [self.price]
         if self.discount_price is not None and not self.is_preorder_kind:
             candidates.append(self.discount_price)
+        sale_price = self.sale_price
+        if sale_price is not None:
+            candidates.append(sale_price)
         if self.is_preorder_active and self.preorder_price is not None:
             candidates.append(self.preorder_price)
         return min(candidates)

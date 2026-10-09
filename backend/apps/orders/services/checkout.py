@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.catalog.selectors.bundles import expand_variant
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
@@ -17,11 +18,7 @@ from apps.orders.services.carts import (
     compute_line_tax,
     ensure_purchasable,
 )
-from apps.orders.services.coupons import (
-    COUPON_STOCK_ONLY_MESSAGE,
-    _compute_discount,
-    revalidate_applied_coupon,
-)
+from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
 from apps.risk.services import blocklist, ip_blocklist
 
@@ -36,6 +33,14 @@ def order_weight(order: SalesOrder) -> Decimal:
     return weight
 
 
+def order_subtotal_now(order: SalesOrder) -> Decimal:
+    """The subtotal checkout would charge: every line at today's price, since
+    a cart keeps the price it was added at until checkout re-prices it."""
+    lines = list(order.lines.select_related("variant__product__category"))
+    prime_running_sales([line.variant for line in lines])
+    return sum((line.variant.effective_price * line.quantity for line in lines), Decimal("0"))
+
+
 def _is_preorder_line(line) -> bool:
     return line.variant.is_preorder_kind
 
@@ -43,6 +48,7 @@ def _is_preorder_line(line) -> bool:
 def _reprice_lines(order: SalesOrder, lines) -> None:
     """A cart can outlive a price change or the end of an offer. The order is
     charged at today's price, which is the one the storefront is showing."""
+    prime_running_sales([line.variant for line in lines])
     repriced = False
     for line in lines:
         unit_price = line.variant.effective_price
@@ -51,12 +57,8 @@ def _reprice_lines(order: SalesOrder, lines) -> None:
             line.tax_amount = compute_line_tax(unit_price=unit_price, quantity=line.quantity)
             line.save(update_fields=["unit_price", "tax_amount"])
             repriced = True
-    if not repriced:
-        return
-    order.recalculate_totals()
-    if order.coupon is not None:
-        order.discount_total = _compute_discount(order.coupon, order.subtotal)
-        order.save(update_fields=["discount_total", "updated_at"])
+    if repriced:
+        order.recalculate_totals()
 
 
 def _settle_coupon(order: SalesOrder, lines) -> None:
@@ -158,7 +160,11 @@ def checkout(
                 code="no_shipping_zone",
             )
         order.shipping_total = quote_shipping(
-            zone=zone, weight=order_weight(order), kind=order.order_type, carrier=carrier
+            zone=zone,
+            weight=order_weight(order),
+            kind=order.order_type,
+            carrier=carrier,
+            subtotal=sum((line.unit_price * line.quantity for line in lines), Decimal("0")),
         )
     else:
         order.shipping_total = Decimal("0")

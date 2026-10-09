@@ -8,7 +8,7 @@ from django.core.management import CommandError, call_command
 from apps.accounts.constants import UserRole
 from apps.accounts.models import User
 from apps.business.models import HeroSlide, PromoLine
-from apps.catalog.models import Brand, BundleItem, ProductQuestion, WishlistItem
+from apps.catalog.models import Brand, BundleItem, ProductQuestion, Sale, WishlistItem
 from apps.common.services.demo_seed.constants import DEMO_DOMAIN, DEMO_PASSWORD
 from apps.common.services.demo_seed.wipe import wipe_demo_data
 from apps.inventory.models import StockItem
@@ -46,6 +46,7 @@ def _extras_counts() -> dict[str, int]:
         "questions": ProductQuestion.objects.count(),
         "wishlist": WishlistItem.objects.count(),
         "preorders": SalesOrder.objects.filter(order_type=SalesOrder.OrderType.PREORDER).count(),
+        "sales": Sale.objects.count(),
     }
 
 
@@ -54,6 +55,9 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
 
     assert all(_extras_counts().values()), _extras_counts()
     assert is_payment_method_enabled("cod")
+    sale = Sale.objects.get()
+    assert sale.status == Sale.Status.RUNNING
+    assert set(sale.categories.values_list("category_type", flat=True)) == {"stock"}
     assert User.objects.get(email=f"admin@{DEMO_DOMAIN}").check_password(DEMO_PASSWORD)
     preorders = SalesOrder.objects.filter(order_type=SalesOrder.OrderType.PREORDER)
     assert set(preorders.values_list("status", flat=True)) == {

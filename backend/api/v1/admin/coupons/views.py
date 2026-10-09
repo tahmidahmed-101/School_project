@@ -53,7 +53,7 @@ class AdminCouponListCreateView(IncludeDeletedMixin, CouponsPermissionMixin, Gen
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response(
-            {"data": CouponSerializer(coupon).data, "message": "Success"},
+            {"data": CouponSerializer(get_coupon_by_id(coupon.id)).data, "message": "Success"},
             status=status.HTTP_201_CREATED,
         )
 
@@ -74,8 +74,13 @@ class AdminCouponDetailView(CouponsPermissionMixin, APIView):
             return not_found("coupon_not_found", "Coupon not found.")
         serializer = CouponUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        coupon = update_coupon(coupon=coupon, **serializer.validated_data)
-        return Response({"data": CouponSerializer(coupon).data, "message": "Success"})
+        try:
+            update_coupon(coupon=coupon, **serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
+        return Response(
+            {"data": CouponSerializer(get_coupon_by_id(coupon_id)).data, "message": "Success"}
+        )
 
     def delete(self, request, coupon_id) -> Response:
         coupon = get_coupon_by_id(coupon_id)

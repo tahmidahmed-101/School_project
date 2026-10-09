@@ -14,10 +14,18 @@ from django.utils import timezone
 
 from apps.catalog.factories import CategoryFactory, ProductFactory, ProductVariantFactory
 from apps.catalog.models import Category
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
 
 SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
+
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded():
+    """The sale list is read from the database once a minute, not per request,
+    so these counts are taken with it already in the cache."""
+    live_sales()
 
 
 def _catalog(products: int, variants_per_product: int) -> None:
@@ -52,6 +60,33 @@ def test_product_list_query_count_does_not_grow_with_the_catalog(api_client):
         assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
 
     assert len(large) == len(small)
+
+
+def test_product_list_prices_a_running_sale_without_a_query_per_variant(api_client):
+    from decimal import Decimal
+
+    from apps.catalog.services.sales import create_sale
+
+    _catalog(products=2, variants_per_product=2)
+    with CaptureQueriesContext(connection) as no_sale:
+        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
+
+    create_sale(
+        name="Storewide",
+        percent_off=Decimal("10.00"),
+        starts_at=timezone.now() - timedelta(days=1),
+    )
+    with CaptureQueriesContext(connection) as reload:
+        response = api_client.get("/api/v1/public/catalog/products/")
+    assert response.data["data"]["results"][0]["sale"]["name"] == "Storewide"
+
+    _catalog(products=6, variants_per_product=3)
+    with CaptureQueriesContext(connection) as large:
+        response = api_client.get("/api/v1/public/catalog/products/")
+    assert len(response.data["data"]["results"]) == 8
+
+    assert len(large) == len(no_sale)
+    assert len(reload) - len(no_sale) <= 4
 
 
 def test_product_list_query_count_does_not_grow_with_preorder_variants(api_client):
