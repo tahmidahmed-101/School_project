@@ -126,13 +126,19 @@ def test_order_overridden_to_shipped_without_shipments_cannot_be_marked_delivere
     _refuse_delivered(order)
 
 
-def test_shipped_order_with_a_consignment_in_transit_cannot_be_marked_delivered():
-    order, _ = _confirmed(2)
+def test_marking_a_shipped_order_delivered_delivers_its_consignment_in_transit():
+    order, (variant,) = _confirmed(2)
     shipment = _ship_all(order)
     update_shipment_status(shipment=shipment, status=Shipment.Status.OUT_FOR_DELIVERY)
     assert _status(order) == SalesOrder.Status.SHIPPED
 
-    _refuse_delivered(order)
+    set_order_status(order=order, new_status=SalesOrder.Status.DELIVERED)
+
+    shipment.refresh_from_db()
+    assert shipment.status == Shipment.Status.DELIVERED
+    assert shipment.delivered_at is not None
+    assert _status(order) == SalesOrder.Status.DELIVERED
+    assert _sales_out_total(variant) == 2  # stock left once, at shipment
 
 
 # 3. Normal flow ----------------------------------------------------------------
@@ -163,7 +169,6 @@ def test_partial_shipments_deliver_only_once_everything_is_shipped_and_delivered
 
     second = _ship(order, {line: 2})
     assert _status(order) == SalesOrder.Status.SHIPPED
-    _refuse_delivered(order)  # second consignment still in flight
 
     update_shipment_status(shipment=second, status=Shipment.Status.DELIVERED)
     assert _status(order) == SalesOrder.Status.DELIVERED

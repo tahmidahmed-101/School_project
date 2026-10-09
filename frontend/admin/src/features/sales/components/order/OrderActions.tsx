@@ -74,6 +74,31 @@ const COPY = {
   },
 }
 
+/** What the backend does when a status is set by hand (services/orders.py set_order_status). */
+function statusEffect(from: OrderStatus, to: OrderStatus): string {
+  const checksOut = from === "pending" ? "Checks the order out and holds its stock. " : ""
+  switch (to) {
+    case "awaiting_payment":
+      return "Checks the order out and holds its stock."
+    case "confirmed":
+      return from === "shipped"
+        ? "Nothing has shipped yet, so the order goes back to confirmed and can be shipped."
+        : `${checksOut}No payment is recorded — capture it separately.`
+    case "shipped":
+      return "Creates one shipment for every unit not shipped yet. Stock leaves now; no courier is booked."
+    case "delivered":
+      return from === "shipped"
+        ? "Marks every shipment that is on its way as delivered."
+        : "Only works once delivered shipments cover every unit."
+    case "cancelled":
+      return "Releases the stock held for the order. No refund is made."
+    case "closed":
+      return "Closes the order. Stock and payments are not touched."
+    default:
+      return ""
+  }
+}
+
 /** The manual status override (services/orders.py STATUS_OVERRIDES). Renders nothing when no move is allowed. */
 export function OrderStatusChanger({ order }: { order: Order }) {
   const dispatch = useAppDispatch()
@@ -126,6 +151,7 @@ export function OrderStatusChanger({ order }: { order: Order }) {
           Apply status
         </SubmitButton>
       </div>
+      {nextStatus && <p className="mt-2 text-xs text-muted-foreground">{statusEffect(order.status, nextStatus)}</p>}
     </div>
   )
 }

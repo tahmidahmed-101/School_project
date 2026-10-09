@@ -7,7 +7,13 @@ from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.options import variant_title
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
-from apps.orders.models import Payment, SalesOrder, SalesOrderLine, StockReservation
+from apps.orders.models import (
+    Payment,
+    SalesOrder,
+    SalesOrderLine,
+    Shipment,
+    StockReservation,
+)
 from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
 from apps.orders.services.carts import (
@@ -35,14 +41,26 @@ LINE_EDITABLE_STATUSES = frozenset(
 )
 
 
-# What the manual override may do. Checkout, payment capture and shipments
-# move an order forward because they also move stock and money; the override
-# only records what those have already done, so it can never skip one.
+# What the manual override may do. Every forward move runs the step it stands
+# for (checkout, shipment, delivery), so stock and money follow the status.
 STATUS_OVERRIDES: dict[str, frozenset[str]] = {
-    SalesOrder.Status.PENDING: frozenset({SalesOrder.Status.CANCELLED}),
-    SalesOrder.Status.AWAITING_PAYMENT: frozenset({SalesOrder.Status.CANCELLED}),
+    SalesOrder.Status.PENDING: frozenset(
+        {
+            SalesOrder.Status.AWAITING_PAYMENT,
+            SalesOrder.Status.CONFIRMED,
+            SalesOrder.Status.CANCELLED,
+        }
+    ),
+    SalesOrder.Status.AWAITING_PAYMENT: frozenset(
+        {SalesOrder.Status.CONFIRMED, SalesOrder.Status.CANCELLED}
+    ),
     SalesOrder.Status.CONFIRMED: frozenset(
-        {SalesOrder.Status.CANCELLED, SalesOrder.Status.DELIVERED, SalesOrder.Status.CLOSED}
+        {
+            SalesOrder.Status.SHIPPED,
+            SalesOrder.Status.DELIVERED,
+            SalesOrder.Status.CANCELLED,
+            SalesOrder.Status.CLOSED,
+        }
     ),
     SalesOrder.Status.SHIPPED: frozenset({SalesOrder.Status.DELIVERED, SalesOrder.Status.CLOSED}),
     SalesOrder.Status.DELIVERED: frozenset({SalesOrder.Status.CLOSED}),
@@ -51,8 +69,18 @@ STATUS_OVERRIDES: dict[str, frozenset[str]] = {
 }
 
 
+def _shipped_ahead_of_its_lines(order: SalesOrder) -> bool:
+    """A "shipped" order that still has units to ship: its status was set by
+    hand before the override ran the shipment. It may go back to confirmed."""
+    return order.status == SalesOrder.Status.SHIPPED and any(
+        line.shippable_quantity > 0 for line in order.lines.all()
+    )
+
+
 def allowed_status_overrides(order: SalesOrder) -> list[str]:
-    allowed = STATUS_OVERRIDES.get(order.status, frozenset())
+    allowed = set(STATUS_OVERRIDES.get(order.status, frozenset()))
+    if _shipped_ahead_of_its_lines(order):
+        allowed.add(SalesOrder.Status.CONFIRMED)
     return [value for value in SalesOrder.Status.values if value in allowed]
 
 
@@ -175,12 +203,58 @@ def update_order(*, order: SalesOrder, data: dict, actor=None) -> SalesOrder:
     return order
 
 
+def _check_out_by_hand(order: SalesOrder) -> None:
+    """Pending -> awaiting payment: the same checkout a shopper runs, so stock
+    is held and shipping is quoted for the address already on the order."""
+    from apps.orders.services.checkout import checkout
+
+    checkout(order=order, shipping_address=order.shipping_address)
+
+
+def _ship_remaining(order: SalesOrder) -> None:
+    """Confirmed -> shipped: one consignment for every unit not yet shipped,
+    through `create_shipment`, so stock leaves and the sale is posted."""
+    from apps.orders.services.shipments import create_shipment
+
+    lines = list(SalesOrderLine.objects.filter(order=order))
+    if any(line.quantity - line.shipped_quantity > line.shippable_quantity for line in lines):
+        raise BusinessRuleViolationError(
+            "Some pre-order units have no arrived stock set aside yet. Allocate arrived "
+            "stock first.",
+            code="preorder_not_allocated",
+        )
+    remaining = [
+        {"order_line": line, "quantity": line.shippable_quantity}
+        for line in lines
+        if line.shippable_quantity > 0
+    ]
+    if remaining:
+        create_shipment(order=order, lines=remaining)
+
+
+def _deliver_in_flight(order: SalesOrder, *, actor=None) -> None:
+    """Shipped -> delivered: every consignment still on its way is marked
+    delivered through `update_shipment_status`."""
+    from apps.orders.services.shipments import update_shipment_status
+
+    # A failed attempt is not on its way: it is retried or received back first.
+    in_flight = order.shipments.filter(deleted_at__isnull=True).exclude(
+        status__in=(*Shipment.TERMINAL_STATUSES, Shipment.Status.FAILED)
+    )
+    for shipment in in_flight:
+        update_shipment_status(shipment=shipment, status=Shipment.Status.DELIVERED, actor=actor)
+
+
 @transaction.atomic
 def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> SalesOrder:
     """Operator override for the status field.
 
-    Cancelling is delegated to `cancel_order` so stock reservations are
-    actually released rather than stranded. Reviving a cancelled order is
+    A forward move does the work the status stands for: awaiting payment and
+    confirmed check a pending order out (stock is reserved), shipped creates a
+    consignment for everything left to ship, delivered marks the consignments
+    of a shipped order delivered. No payment is recorded: money is captured
+    separately. Cancelling is delegated to `cancel_order` so stock reservations
+    are actually released rather than stranded. Reviving a cancelled order is
     refused: its holds are gone, and re-reserving may be impossible if the
     stock has since been sold.
     """
@@ -196,29 +270,40 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
             "released. Place a new order instead.",
             code="order_cancelled",
         )
+    previous = order.status
     # Delivery is reached by shipping and delivering consignments, which is
-    # where stock leaves and reservations are released. The override may only
-    # record it once that has already happened, never stand in for it.
-    if new_status == SalesOrder.Status.DELIVERED and not order_shipments_complete(order):
-        raise BusinessRuleViolationError(
-            "An order can only be marked delivered once delivered consignments cover "
-            "the full quantity of every line.",
-            code="shipments_incomplete",
-        )
+    # where stock leaves and reservations are released. The override delivers
+    # what is on its way, but never stands in for a consignment that is missing.
+    if new_status == SalesOrder.Status.DELIVERED:
+        if previous == SalesOrder.Status.SHIPPED:
+            _deliver_in_flight(order, actor=actor)
+        if not order_shipments_complete(order):
+            raise BusinessRuleViolationError(
+                "An order can only be marked delivered once delivered consignments cover "
+                "the full quantity of every line.",
+                code="shipments_incomplete",
+            )
 
-    if new_status not in STATUS_OVERRIDES[order.status]:
+    if new_status not in allowed_status_overrides(order):
         raise BusinessRuleViolationError(
             f"An order that is {order.get_status_display().lower()} cannot be set to "
-            f"{SalesOrder.Status(new_status).label.lower()} by hand. Capture the payment or "
-            "create the shipment instead.",
+            f"{SalesOrder.Status(new_status).label.lower()} by hand.",
             code="status_change_not_allowed",
         )
     if new_status == SalesOrder.Status.CANCELLED:
         return cancel_order(order=order, actor=actor)
-    previous = order.status
+
+    if previous == SalesOrder.Status.PENDING:
+        _check_out_by_hand(order)
+    if new_status == SalesOrder.Status.SHIPPED:
+        _ship_remaining(order)
     order.status = new_status
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
+    if new_status == SalesOrder.Status.CONFIRMED and previous != SalesOrder.Status.SHIPPED:
+        from apps.orders.services.payments import _assess_order_risk
+
+        _assess_order_risk(order)
     log_action(
         actor=actor,
         action="order.status_overridden",

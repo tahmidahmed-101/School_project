@@ -1,8 +1,8 @@
 """An order is not paid until someone has the money. These tests pin the
 rules that follow from that: a storefront order records what is owed rather
 than a captured payment, cash on delivery is captured later, and neither
-cancelling nor the manual status override can stand in for a payment or a
-shipment. They also pin the pre-order limit and checkout re-pricing.
+cancelling nor the manual status override can stand in for a payment or
+skip a step. They also pin the pre-order limit and checkout re-pricing.
 """
 
 from __future__ import annotations
@@ -156,14 +156,14 @@ def test_an_order_with_a_consignment_out_cannot_be_cancelled():
 @pytest.mark.parametrize(
     ("current", "target"),
     [
-        (SalesOrder.Status.AWAITING_PAYMENT, SalesOrder.Status.CONFIRMED),
-        (SalesOrder.Status.CONFIRMED, SalesOrder.Status.SHIPPED),
+        (SalesOrder.Status.AWAITING_PAYMENT, SalesOrder.Status.SHIPPED),
+        (SalesOrder.Status.PENDING, SalesOrder.Status.SHIPPED),
         (SalesOrder.Status.CONFIRMED, SalesOrder.Status.PENDING),
         (SalesOrder.Status.SHIPPED, SalesOrder.Status.CONFIRMED),
         (SalesOrder.Status.DELIVERED, SalesOrder.Status.PENDING),
     ],
 )
-def test_status_override_cannot_skip_payment_or_shipment_or_reopen_a_cart(current, target):
+def test_status_override_cannot_skip_a_step_or_reopen_a_cart(current, target):
     order = SalesOrderFactory(status=current)
 
     with pytest.raises(BusinessRuleViolationError) as exc:
@@ -269,7 +269,7 @@ def test_admin_order_shows_what_is_owed_and_which_lines_are_preorder(api_client)
     data = response.data["data"]
     assert data["paid_total"] == "0.00"
     assert data["balance_due"] == str(order.grand_total)
-    assert data["allowed_statuses"] == ["delivered", "cancelled", "closed"]
+    assert data["allowed_statuses"] == ["shipped", "delivered", "cancelled", "closed"]
     assert data["lines"][0]["is_preorder"] is False
 
     response = api_client.get("/api/v1/admin/orders/", {"order_type": "preorder"})
