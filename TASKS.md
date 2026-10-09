@@ -145,7 +145,9 @@
 
 ## Phase Q: promotions (change request, owner "go ahead build it" 2026-10-09)
 Stock only. A coupon still applies on top of a sale price, as today. Pre-order has no promotions.
-- [ ] Q1 API: timed sales (percent off; all stock, categories, brands or products), coupon start date, once-per-customer limit, maximum discount and category/brand scope, free delivery over an amount
-- [ ] Q2 Dashboard: Shop > Marketing > Sales, new coupon fields, free delivery amount in Shop settings
-- [ ] Q3 Storefront: sale price, badge and end date, offers filter, free delivery line, new coupon messages (en + bn)
-- [ ] Merge, full backend suite once, browser check of storefront, dashboard and API
+- [x] Q1 API: timed sales (percent off; all stock, categories, brands or products), coupon start date, once-per-customer limit, maximum discount and category/brand scope, free delivery over an amount
+- [x] Q2 Dashboard: Shop > Marketing > Sales, new coupon fields, free delivery amount in Shop settings
+- [x] Q3 Storefront: sale price, badge and end date, offers filter, free delivery line, new coupon messages (en + bn)
+- [x] Merge, full backend suite once (2424 passed, 3 failed; all three fixed and re-run by file), browser check of storefront, dashboard and API
+- [ ] Production: `migrate` only (three schema migrations, no data command), with the Phase P deploy
+- [ ] Not hand-tested: once-per-customer limit, a placed order with free delivery, sale on brands or picked products, Bangla pages, mobile

@@ -6,8 +6,14 @@ from django.test.utils import CaptureQueriesContext
 
 from apps.catalog.factories import CategoryFactory, ProductFactory, ProductVariantFactory
 from apps.catalog.models import Brand
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded(db):
+    live_sales()
 
 SIZES = ["S", "M", "L", "XL"]
 

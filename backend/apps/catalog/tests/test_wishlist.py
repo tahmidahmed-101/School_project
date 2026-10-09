@@ -6,8 +6,14 @@ from django.test.utils import CaptureQueriesContext
 
 from apps.accounts.tests.helpers import create_user
 from apps.catalog.factories import ProductFactory, ProductVariantFactory, WishlistItemFactory
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded(db):
+    live_sales()
 
 
 def test_customer_can_add_list_and_remove_wishlist_item(api_client):

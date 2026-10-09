@@ -11,7 +11,7 @@ def price_reports_list(
     *, product=None, status: str | None = None, kind: str | None = None
 ) -> QuerySet[PriceIssueReport]:
     queryset = PriceIssueReport.objects.select_related(
-        "reporter", "product", "variant", "resolved_by"
+        "reporter", "product__category", "variant__product__category", "resolved_by"
     )
     if product is not None:
         queryset = queryset.filter(product=product)

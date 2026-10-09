@@ -12,10 +12,16 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.catalog.factories import ProductFactory, ProductVariantFactory
+from apps.catalog.selectors.sales import live_sales
 
 pytestmark = pytest.mark.django_db
 
 SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
+
+
+@pytest.fixture(autouse=True)
+def _live_sales_already_loaded():
+    live_sales()
 
 
 def _product(variants: int):
