@@ -154,7 +154,9 @@ Stock only. A coupon still applies on top of a sale price, as today. Pre-order h
 
 ## Phase R: product options and variants (change request, owner "generic options setup" 2026-10-09)
 Any option name with its own value list per product (up to 3); variants are combinations picked from those lists, never typed.
-- [ ] R1 API: options, values, variant combinations, rules, order-line snapshot, images per option value, specs and highlights, import/export, dry-run command `move_colour_size_to_options`
-- [ ] R2 Dashboard: options editor, combinations table, images per option value, specifications editor
-- [ ] R3 Storefront: generic picker with per-combination availability, photos follow the option, variant title in cart, checkout and order history (en + bn)
-- [ ] Merge, run the command on the local DB, full backend suite once, browser check of storefront, dashboard and API
+- [x] R1 API: options, values, variant combinations, rules, order-line snapshot, images per option value, specs and highlights, import/export, dry-run command `move_colour_size_to_options`
+- [x] R2 Dashboard: options editor, combinations table, images per option value, specifications editor
+- [x] R3 Storefront: generic picker with per-combination availability, photos follow the option, variant title in cart, checkout and order history (en + bn)
+- [x] Merge, run the command on the local DB, full backend suite once, browser check of storefront, dashboard and API
+- [ ] Production: deploy API before the storefront; `migrate`, then `move_colour_size_to_options` (dry run, then `--apply`) after a backup and the owner's go-ahead
+- [ ] Not hand-tested: Bangla picker strings, images per option value, pre-order product with options, variant import/export, order history title
