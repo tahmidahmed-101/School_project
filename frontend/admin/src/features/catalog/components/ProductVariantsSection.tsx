@@ -28,7 +28,7 @@ import {
   updateVariant,
 } from "../api"
 import type { Combination, Product, ProductVariant, ProductVariantPayload, VariantBulkUpdatePayload } from "../types"
-import { refusalMessage } from "../lib/options"
+import { refusalMessage, settleInOrder } from "../lib/options"
 import { savedOptionsOf } from "../lib/useOptionDrafts"
 import { VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
@@ -150,7 +150,7 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       const res = await generateVariants(productId, valueIds ? { combinations: valueIds } : {})
       const sibling = variants.find((v) => v.is_preorder_enabled)
       if (!isStock && sibling) {
-        const results = await Promise.allSettled(res.created.map((v) => updateVariant(v.id, orderingWindowOf(sibling))))
+        const results = await settleInOrder(res.created, (v) => updateVariant(v.id, orderingWindowOf(sibling)))
         if (results.some((r) => r.status === "rejected")) {
           toast.warning("Created, but the ordering dates could not be copied to every new variant. Edit them to set the dates.")
         }

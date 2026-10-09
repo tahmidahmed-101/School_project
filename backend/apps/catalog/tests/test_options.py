@@ -411,6 +411,18 @@ def test_the_last_live_variant_cannot_be_deleted():
     assert _code(exc) == "last_variant"
 
 
+def test_a_variant_used_in_a_bundle_cannot_be_deleted():
+    from apps.catalog.models import BundleItem
+
+    variant = ProductVariantFactory()
+    ProductVariantFactory(product=variant.product, sku="SECOND-SKU")
+    BundleItem.objects.create(bundle_variant=ProductVariantFactory(), component_variant=variant)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        delete_variant(variant=variant)
+    assert _code(exc) == "variant_in_bundle"
+
+
 def test_a_variant_with_stock_cannot_be_deleted():
     product = _tee()
     variant = product.variants.get(title="Red / S")

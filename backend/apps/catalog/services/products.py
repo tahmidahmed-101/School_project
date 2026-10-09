@@ -592,6 +592,11 @@ def delete_variant(*, variant: ProductVariant, actor=None) -> ProductVariant:
             code="last_variant",
         )
     _ensure_no_stock(product, variant=variant)
+    if variant.used_in_bundles.filter(bundle_variant__deleted_at__isnull=True).exists():
+        raise BusinessRuleViolationError(
+            "This variant is part of a bundle. Take it out of the bundle first.",
+            code="variant_in_bundle",
+        )
     soft_delete_instance(variant, actor=actor)
     variant.is_active = False
     variant.save(update_fields=["is_active"])

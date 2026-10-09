@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo } from "react"
+import { settleInOrder } from "../lib/options"
 import { FormProvider, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -145,9 +146,7 @@ export function PreorderProductForm({
         payload.is_active = values.is_active
         await updateProduct(product.id, payload)
         if (SETTINGS_FIELDS.some((f) => dirtyFields[f])) {
-          const results = await Promise.allSettled(
-            product.variants.map((v) => updateVariant(v.id, settingsPayload(values)))
-          )
+          const results = await settleInOrder(product.variants, (v) => updateVariant(v.id, settingsPayload(values)))
           const failed = results.find((r) => r.status === "rejected")
           if (failed) {
             toast.error(getApiErrorMessage(failed.reason, "Pre-order settings could not be saved on every variant"))
@@ -165,9 +164,7 @@ export function PreorderProductForm({
       if (options.active.length > 0) {
         created = await createProduct({ ...payload, ...pricing, ...optionsCreatePayload(options) })
         // The product endpoint makes the variants; the ordering window is then set on each of them.
-        const results = await Promise.allSettled(
-          created.variants.map((v) => updateVariant(v.id, settingsPayload(values)))
-        )
+        const results = await settleInOrder(created.variants, (v) => updateVariant(v.id, settingsPayload(values)))
         const rejected = results.filter((r) => r.status === "rejected")
         if (rejected.length) {
           failed.push(`the ordering window of ${rejected.length} variant${rejected.length === 1 ? "" : "s"}`)

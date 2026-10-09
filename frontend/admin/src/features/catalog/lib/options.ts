@@ -103,6 +103,7 @@ export const OPTION_REFUSALS: Record<string, string> = {
   variant_combination_exists: "A variant with this combination already exists.",
   variant_in_use: "This variant is on an order, so its options and SKU cannot be changed.",
   last_variant: "A product needs at least one variant, so the last one cannot be deleted.",
+  variant_in_bundle: "This variant is part of a bundle. Take it out of the bundle first, then delete it.",
   bundle_no_options: "A bundle cannot have options.",
   invalid_target: "That value belongs to another product.",
   product_stock_in_use: "This variant still has stock or reservations. Write the stock off first.",
@@ -115,4 +116,17 @@ export function refusalMessage(err: unknown, fallback: string): string {
     if (typeof message === "string" && message.trim()) return message
   }
   return fallback
+}
+
+// One at a time: each variant write locks its product, so a burst of them only queues up on the server.
+export async function settleInOrder<T, R>(items: T[], run: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = []
+  for (const item of items) {
+    try {
+      results.push({ status: "fulfilled", value: await run(item) })
+    } catch (reason) {
+      results.push({ status: "rejected", reason })
+    }
+  }
+  return results
 }
