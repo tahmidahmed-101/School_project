@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.logistics.services.rates import is_free_delivery
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import SalesOrder
 from apps.orders.selectors.payments import order_deposit_due
@@ -85,6 +86,7 @@ def quote_staff_order(
             "subtotal": order.subtotal,
             "tax_total": order.tax_total,
             "shipping_total": order.shipping_total,
+            "free_delivery": is_free_delivery(kind=order.order_type, subtotal=order.subtotal),
             "grand_total": order.grand_total,
             "deposit_due": order_deposit_due(order),
         }

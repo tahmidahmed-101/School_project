@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from apps.business.selectors.business_profile import get_business_profile
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.params import KIND_STOCK
 from apps.common.services.soft_delete import soft_delete_instance
@@ -30,12 +31,18 @@ def calculate_shipping_rate(
     return rate.base_charge + increments * rate.increment_charge
 
 
-def try_quote_shipping(
-    *, zone: ShippingZone | None, weight: Decimal, kind: str, carrier=None
+def is_free_delivery(*, kind: str, subtotal: Decimal | None) -> bool:
+    """The shop's free-delivery rule: a stock order whose subtotal (sale prices
+    in, coupon not yet off) reaches the configured amount. Never a pre-order."""
+    if kind != KIND_STOCK or subtotal is None:
+        return False
+    threshold = get_business_profile().free_delivery_min_amount
+    return bool(threshold) and subtotal >= threshold
+
+
+def _rate_quote(
+    *, zone: ShippingZone | None, weight: Decimal, kind: str, carrier
 ) -> Decimal | None:
-    """Quote shipping from this kind's rates only, or None when nothing
-    matches — for pickers and previews that show "unavailable" rather than
-    blocking. Checkout must use `quote_shipping`, which refuses to guess."""
     if zone is None:
         return None
     # Any active carrier that has a rate here, not merely the first one — picking
@@ -51,12 +58,39 @@ def try_quote_shipping(
     return None
 
 
+def try_quote_shipping(
+    *,
+    zone: ShippingZone | None,
+    weight: Decimal,
+    kind: str,
+    carrier=None,
+    subtotal: Decimal | None = None,
+) -> Decimal | None:
+    """Quote shipping from this kind's rates only, or None when nothing
+    matches — for pickers and previews that show "unavailable" rather than
+    blocking. Checkout must use `quote_shipping`, which refuses to guess.
+
+    With `subtotal`, a destination that can be delivered to is quoted at zero
+    once the order qualifies for free delivery."""
+    quote = _rate_quote(zone=zone, weight=weight, kind=kind, carrier=carrier)
+    if quote is not None and is_free_delivery(kind=kind, subtotal=subtotal):
+        return Decimal("0.00")
+    return quote
+
+
 def quote_shipping(
-    *, zone: ShippingZone | None, weight: Decimal, kind: str, carrier=None
+    *,
+    zone: ShippingZone | None,
+    weight: Decimal,
+    kind: str,
+    carrier=None,
+    subtotal: Decimal | None = None,
 ) -> Decimal:
     """Refuses rather than returning None: a missing rate used to be coerced to
     zero, which shipped orders free."""
-    quote = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
+    quote = try_quote_shipping(
+        zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+    )
     if quote is None:
         raise BusinessRuleViolationError(
             "No shipping rate is configured for this destination and weight.",
@@ -188,13 +222,17 @@ def update_rate(*, rate: ShippingRate, **fields) -> ShippingRate:
     return rate
 
 
-def shipping_options(*, zone: ShippingZone | None, weight: Decimal, kind: str) -> list[dict]:
+def shipping_options(
+    *, zone: ShippingZone | None, weight: Decimal, kind: str, subtotal: Decimal | None = None
+) -> list[dict]:
     """Quotes for every selectable carrier, so a storefront picker shows the
     same numbers checkout will charge. `cost` is None when nothing matches."""
     return [
         {
             "carrier": carrier,
-            "cost": try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier),
+            "cost": try_quote_shipping(
+                zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+            ),
         }
         for carrier in carriers_list().filter(is_active=True)
     ]

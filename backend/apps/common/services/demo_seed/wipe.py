@@ -13,13 +13,16 @@ from apps.catalog.models import (
     Product,
     ProductImage,
     ProductVariant,
+    Sale,
 )
+from apps.catalog.selectors.sales import clear_live_sales_cache
 from apps.common.services.demo_seed.constants import (
     AUDIT_MARKER,
     CARRIER_MARKER,
     DEMO_BLOCKED_IPS,
     DEMO_BLOCKED_PHONES,
     DEMO_COUPONS,
+    DEMO_DISCOUNT_NAMES,
     DEMO_DOMAIN,
     DEMO_FRAUD_CASE_PREFIX,
     EXPENSE_CATEGORY_NOTE,
@@ -129,6 +132,10 @@ def _wipe_config() -> None:
 def _wipe_extras(*, variants) -> None:
     """Shop settings (profile, payment methods) are left alone: they hold no
     demo marker and a real shop may have edited them since."""
+    Sale.objects.filter(
+        name=DEMO_DISCOUNT_NAMES[0], categories__slug__startswith=SLUG_PREFIX
+    ).delete()
+    clear_live_sales_cache()
     BundleItem.objects.filter(bundle_variant__in=variants).delete()
     FraudCase.objects.filter(case_number__startswith=DEMO_FRAUD_CASE_PREFIX).delete()
     ExpenseCategory.objects.filter(description=EXPENSE_CATEGORY_NOTE).delete()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import ClassVar
 
 from drf_spectacular.utils import extend_schema
@@ -23,13 +24,18 @@ from apps.logistics.selectors.rates import (
     get_zone_by_id,
     zones_list,
 )
-from apps.logistics.services.rates import shipping_options, try_quote_shipping
+from apps.logistics.services.rates import (
+    is_free_delivery,
+    shipping_options,
+    try_quote_shipping,
+)
 from apps.orders.selectors.basket_kind import kind_for_items
 from apps.orders.selectors.coupons import storefront_coupons
 from apps.orders.services.coupons import preview_coupon
 from apps.orders.services.guest_checkout import (
     guest_checkout,
     items_hold_preorder,
+    priced_lines_for_items,
     subtotal_for_items,
     weight_for_items,
 )
@@ -131,9 +137,12 @@ class ShippingQuoteView(APIView):
 
         try:
             weight = weight_for_items(data["items"])
+            subtotal = subtotal_for_items(data["items"])
         except DomainError as exc:
             return error_from_exception(exc)
-        quote = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
+        quote = try_quote_shipping(
+            zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+        )
         return Response(
             {
                 "data": {
@@ -141,6 +150,7 @@ class ShippingQuoteView(APIView):
                     "weight": str(weight),
                     "carrier_id": str(carrier.id) if carrier else None,
                     "shipping_total": str(quote) if quote is not None else None,
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                 },
                 "message": "Success",
             }
@@ -170,6 +180,7 @@ class ShippingOptionListView(APIView):
 
         try:
             weight = weight_for_items(data["items"])
+            subtotal = subtotal_for_items(data["items"])
         except DomainError as exc:
             return error_from_exception(exc)
 
@@ -177,13 +188,16 @@ class ShippingOptionListView(APIView):
 
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(zone=zone, weight=weight, kind=kind)
+            for option in shipping_options(
+                zone=zone, weight=weight, kind=kind, subtotal=subtotal
+            )
         ]
         return Response(
             {
                 "data": {
                     "zone": zone.name,
                     "weight": str(weight),
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                     "options": ShippingOptionSerializer(options, many=True).data,
                 },
                 "message": "Success",
@@ -225,11 +239,16 @@ class CouponValidationView(APIView):
         data = serializer.validated_data
 
         try:
-            subtotal = subtotal_for_items(data["items"])
+            priced_lines = priced_lines_for_items(data["items"])
+            subtotal = sum((amount for _product, amount in priced_lines), Decimal("0"))
             result = preview_coupon(
                 code=data["code"],
                 subtotal=subtotal,
                 holds_preorder=items_hold_preorder(data["items"]),
+                priced_lines=priced_lines,
+                customer=request.user if request.user.is_authenticated else None,
+                phone=data.get("phone", ""),
+                email=data.get("email", ""),
             )
         except DomainError as exc:
             return error_from_exception(exc)

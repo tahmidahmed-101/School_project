@@ -22,7 +22,11 @@ from apps.logistics.selectors.rates import (
     get_zone_by_id,
     zones_list,
 )
-from apps.logistics.services.rates import shipping_options, try_quote_shipping
+from apps.logistics.services.rates import (
+    is_free_delivery,
+    shipping_options,
+    try_quote_shipping,
+)
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.basket_kind import kind_for_order
 from apps.orders.selectors.payments import deposit_percent_context
@@ -39,7 +43,7 @@ from apps.orders.services.carts import (
     set_cart_contact_phone,
     update_line,
 )
-from apps.orders.services.checkout import checkout, order_weight
+from apps.orders.services.checkout import checkout, order_subtotal_now, order_weight
 from apps.orders.services.coupons import apply_coupon, remove_coupon
 from apps.orders.services.orders import cancel_order
 from apps.orders.services.returns import create_rma
@@ -297,7 +301,10 @@ class CartShippingQuoteView(APIView):
                 return not_found("carrier_not_found", "Carrier not found.")
 
         weight = order_weight(cart)
-        quote = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
+        subtotal = order_subtotal_now(cart)
+        quote = try_quote_shipping(
+            zone=zone, weight=weight, kind=kind, carrier=carrier, subtotal=subtotal
+        )
         return Response(
             {
                 "data": {
@@ -305,6 +312,7 @@ class CartShippingQuoteView(APIView):
                     "weight": str(weight),
                     "carrier_id": str(carrier.id) if carrier else None,
                     "shipping_total": str(quote) if quote is not None else None,
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                 },
                 "message": "Success",
             }
@@ -341,15 +349,19 @@ class CartShippingOptionListView(APIView):
             )
 
         weight = order_weight(cart)
+        subtotal = order_subtotal_now(cart)
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(zone=zone, weight=weight, kind=kind)
+            for option in shipping_options(
+                zone=zone, weight=weight, kind=kind, subtotal=subtotal
+            )
         ]
         return Response(
             {
                 "data": {
                     "zone": zone.name,
                     "weight": str(weight),
+                    "free_delivery": is_free_delivery(kind=kind, subtotal=subtotal),
                     "options": ShippingOptionSerializer(options, many=True).data,
                 },
                 "message": "Success",

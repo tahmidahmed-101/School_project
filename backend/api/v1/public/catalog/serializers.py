@@ -5,6 +5,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.catalog.selectors.bundles import bundle_available_quantities
+from apps.catalog.selectors.sales import prime_running_sales
 from apps.inventory.selectors.stock import available_quantities_for_variants
 from apps.orders.services.carts import get_preordered_quantities
 
@@ -41,6 +42,7 @@ def stock_context_for_products(products) -> dict:
     pre-order capacity, each resolved in one query for the whole page rather
     than once per variant."""
     variants = [variant for product in products for variant in active_variants_of(product)]
+    prime_running_sales(variants)
     return {
         STOCK_CONTEXT_KEY: stock_by_variant(variants),
         PREORDER_CONTEXT_KEY: get_preordered_quantities(variants),
@@ -84,6 +86,7 @@ class PublicProductVariantSerializer(serializers.Serializer):
     compare_at_price = serializers.SerializerMethodField()
     discount_price = serializers.SerializerMethodField()
     effective_price = serializers.SerializerMethodField()
+    sale_price = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
     color = serializers.CharField()
     size = serializers.CharField()
@@ -131,6 +134,11 @@ class PublicProductVariantSerializer(serializers.Serializer):
         """The price the customer actually pays (pre-order price if active,
         else discount price if valid)."""
         return str(obj.effective_price)
+
+    def get_sale_price(self, obj) -> str | None:
+        """Set only while a running sale is what the customer pays."""
+        sale_price = obj.sale_price
+        return None if sale_price is None else str(sale_price)
 
     def get_in_stock(self, obj) -> bool:
         # A pre-order item is never sold from stock, in or out of its window.
@@ -249,7 +257,22 @@ class PublicProductListSerializer(serializers.Serializer):
     badge = serializers.CharField(read_only=True)
     specs = serializers.JSONField(read_only=True)
     variants = serializers.SerializerMethodField()
+    sale = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
+
+    def get_sale(self, obj) -> dict | None:
+        """The running sale that sets the price of at least one variant."""
+        for variant in active_variants_of(obj):
+            sale = variant.applied_sale
+            if sale is not None:
+                return {
+                    "name": sale.name,
+                    "percent_off": str(sale.percent_off),
+                    "ends_at": serializers.DateTimeField().to_representation(sale.ends_at)
+                    if sale.ends_at
+                    else None,
+                }
+        return None
 
     def get_variants(self, obj) -> list[dict]:
         return PublicProductVariantSerializer(

@@ -274,7 +274,14 @@ class AdminOrderQuoteView(APIView):
             )
         except DomainError as exc:
             return error_from_exception(exc)
-        return Response({"data": {key: str(value) for key, value in quote.items()}})
+        return Response(
+            {
+                "data": {
+                    key: value if isinstance(value, bool) else str(value)
+                    for key, value in quote.items()
+                }
+            }
+        )
 
 
 @extend_schema(tags=["Orders"])

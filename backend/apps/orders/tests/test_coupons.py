@@ -284,6 +284,8 @@ def test_storefront_lists_only_coupons_flagged_for_it(api_client):
             "discount_type": "percentage",
             "value": "10.00",
             "min_order_amount": "500.00",
+            "max_discount_amount": None,
+            "starts_at": None,
             "expires_at": None,
         }
     ]

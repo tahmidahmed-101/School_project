@@ -31,6 +31,7 @@ from apps.catalog.models import (
     ProductQuestion,
     ProductReview,
     ProductVariant,
+    Sale,
     WishlistItem,
 )
 from apps.catalog.services.brands import create_brand
@@ -40,6 +41,7 @@ from apps.catalog.services.price_reports import report_price_issue, update_price
 from apps.catalog.services.products import create_product, create_product_image, create_variant
 from apps.catalog.services.questions import ask_question, moderate_question
 from apps.catalog.services.reviews import create_review
+from apps.catalog.services.sales import create_sale
 from apps.catalog.services.wishlist import add_to_wishlist
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.params import KIND_PREORDER, KINDS
@@ -48,10 +50,13 @@ from apps.common.services.demo_seed.constants import (
     BUNDLE_SKU,
     DEMO_BRANDS,
     DEMO_DEPOSIT_PERCENT,
+    DEMO_DISCOUNT_NAMES,
     DEMO_DOMAIN,
     DEMO_FRAUD_CASE_PREFIX,
     DEMO_PASSWORD,
     DEMO_PAY_TO,
+    DEMO_SALE_CATEGORY,
+    DEMO_SALE_PERCENT,
     DEMO_STOREFRONT_METHODS,
     DEMO_TEAM,
     EXPENSE_CATEGORY_NOTE,
@@ -107,6 +112,7 @@ class DemoExtras:
         self.seed_feedback()
         self.seed_expense_categories()
         self.seed_fraud_cases()
+        self.seed_sale()
 
     # ---- logins and settings ---------------------------------------------
 
@@ -428,6 +434,23 @@ class DemoExtras:
             except BusinessRuleViolationError:
                 continue
             self.bump("reviews")
+
+    def seed_sale(self) -> None:
+        """Runs last: the orders seeded above keep the prices they were placed at."""
+        name = DEMO_DISCOUNT_NAMES[0]
+        category = Category.objects.filter(
+            slug=f"{SLUG_PREFIX}{slugify(DEMO_SALE_CATEGORY)}"
+        ).first()
+        if category is None or Sale.objects.filter(name=name).exists():
+            return
+        create_sale(
+            name=name,
+            percent_off=Decimal(DEMO_SALE_PERCENT),
+            starts_at=timezone.now() - timedelta(days=1),
+            applies_to=Sale.AppliesTo.CATEGORIES,
+            category_ids=[category.id],
+        )
+        self.bump("sales")
 
     # ---- back office -------------------------------------------------------
 

@@ -53,6 +53,15 @@ class BusinessProfile(TimeStampedModel):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
 
+    # Stock orders with a subtotal at or above this ship free. Blank or 0 = off.
+    free_delivery_min_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
     about_en = models.TextField(blank=True)
     about_bn = models.TextField(blank=True)
 

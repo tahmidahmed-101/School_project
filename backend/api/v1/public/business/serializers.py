@@ -18,6 +18,9 @@ class PublicBusinessProfileSerializer(serializers.Serializer):
     google_maps_url = serializers.CharField(allow_blank=True)
     opening_hours = serializers.CharField(allow_blank=True)
     address = serializers.CharField(source="formatted_address", allow_blank=True)
+    free_delivery_min_amount = serializers.DecimalField(
+        max_digits=14, decimal_places=2, allow_null=True
+    )
     social = serializers.SerializerMethodField()
     about = serializers.SerializerMethodField()
 

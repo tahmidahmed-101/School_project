@@ -9,14 +9,14 @@ from apps.orders.models import Coupon
 
 
 def coupons_list(*, include_deleted: bool = False) -> QuerySet[Coupon]:
-    queryset = Coupon.objects.all()
+    queryset = Coupon.objects.prefetch_related("categories", "brands")
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.order_by("-created_at")
 
 
 def get_coupon_by_id(coupon_id: str | UUID, *, include_deleted: bool = False) -> Coupon | None:
-    queryset = Coupon.objects.all()
+    queryset = Coupon.objects.prefetch_related("categories", "brands")
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.filter(id=coupon_id).first()
@@ -36,6 +36,7 @@ def storefront_coupons() -> QuerySet[Coupon]:
         Coupon.objects.filter(
             show_on_storefront=True, is_active=True, deleted_at__isnull=True
         )
+        .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=timezone.now()))
         .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         .filter(Q(usage_limit__isnull=True) | Q(times_used__lt=F("usage_limit")))
         .order_by("min_order_amount", "code")

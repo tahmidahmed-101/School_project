@@ -153,3 +153,22 @@ def test_public_endpoint_needs_no_auth_and_hides_registration_data(api_client, a
     assert "tax_id" not in data
     assert "trade_licence_no" not in data
     assert data["social"]["tiktok"] == "https://tiktok.com/@ip"
+
+
+def test_free_delivery_amount_is_set_by_staff_and_read_by_the_storefront(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    assert api_client.get(ENDPOINT).data["data"]["free_delivery_min_amount"] is None
+
+    saved = api_client.patch(ENDPOINT, {"free_delivery_min_amount": "2500.00"}, format="json")
+    negative = api_client.patch(ENDPOINT, {"free_delivery_min_amount": "-1"}, format="json")
+    api_client.force_authenticate(user=None)
+    public = api_client.get("/api/v1/public/business-profile/")
+
+    assert saved.status_code == 200, saved.data
+    assert saved.data["data"]["free_delivery_min_amount"] == "2500.00"
+    assert negative.status_code == 400
+    assert public.data["data"]["free_delivery_min_amount"] == "2500.00"
+
+    api_client.force_authenticate(user=admin_user)
+    cleared = api_client.patch(ENDPOINT, {"free_delivery_min_amount": None}, format="json")
+    assert cleared.data["data"]["free_delivery_min_amount"] is None
