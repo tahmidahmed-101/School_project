@@ -8,8 +8,8 @@ interface PreOrderModalContextType {
   isOpen: boolean;
   product: Product | null;
   quantity: number;
-  selectedVariant?: Record<string, string>;
-  openPreOrderModal: (product: Product, quantity?: number, selectedVariant?: Record<string, string>) => void;
+  variantId?: string;
+  openPreOrderModal: (product: Product, quantity?: number, variantId?: string) => void;
   closePreOrderModal: () => void;
   confirmPreOrder: () => void;
 }
@@ -20,14 +20,14 @@ export function PreOrderModalProvider({ children }: { children: React.ReactNode 
   const [isOpen, setIsOpen] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<Record<string, string> | undefined>(undefined);
+  const [variantId, setVariantId] = useState<string | undefined>(undefined);
 
   const { addItem, openDrawer } = useCart();
 
-  const openPreOrderModal = useCallback((prod: Product, qty: number = 1, variant?: Record<string, string>) => {
+  const openPreOrderModal = useCallback((prod: Product, qty: number = 1, variant?: string) => {
     setProduct(prod);
     setQuantity(qty);
-    setSelectedVariant(variant);
+    setVariantId(variant);
     setIsOpen(true);
   }, []);
 
@@ -38,13 +38,13 @@ export function PreOrderModalProvider({ children }: { children: React.ReactNode 
 
   const confirmPreOrder = useCallback(() => {
     if (product) {
-      addItem(product, quantity, selectedVariant);
+      addItem(product, quantity, variantId);
       setIsOpen(false);
       setProduct(null);
       // Open the existing cart drawer so user sees their pre-order item immediately
       openDrawer();
     }
-  }, [product, quantity, selectedVariant, addItem, openDrawer]);
+  }, [product, quantity, variantId, addItem, openDrawer]);
 
   return (
     <PreOrderModalContext.Provider
@@ -52,7 +52,7 @@ export function PreOrderModalProvider({ children }: { children: React.ReactNode 
         isOpen,
         product,
         quantity,
-        selectedVariant,
+        variantId,
         openPreOrderModal,
         closePreOrderModal,
         confirmPreOrder,

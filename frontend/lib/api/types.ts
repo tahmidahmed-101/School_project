@@ -42,6 +42,13 @@ interface ApiProductImage {
   url: string;
   alt_text: string;
   sort_order: number;
+  option_value_id?: string | null;
+}
+
+export interface ApiProductOption {
+  id: string;
+  name: string;
+  values: { id: string; value: string }[];
 }
 
 interface ApiBundleComponent {
@@ -62,8 +69,9 @@ export interface ApiVariant {
   /** Price under a running sale; null when no sale covers this variant. `effective_price` already includes it. */
   sale_price?: string | null;
   in_stock: boolean;
-  color: string;
-  size: string;
+  /** Optional: absent on an API deployed before product options existed. */
+  title?: string;
+  option_value_ids?: string[];
   components: ApiBundleComponent[];
   is_bundle: boolean;
   is_preorder_enabled: boolean;
@@ -104,6 +112,8 @@ export interface ApiProduct {
   new_arrival: boolean;
   badge: string;
   specs: Record<string, unknown>;
+  options?: ApiProductOption[];
+  highlights?: string[];
   variants: ApiVariant[];
   images: ApiProductImage[];
   /** Stock products only. Absent on an API deployed before sales existed. */
@@ -186,8 +196,7 @@ export interface ApiCustomerOrder {
     product_id: string;
     product_name: string;
     product_slug: string;
-    color: string;
-    size: string;
+    variant_title?: string;
   }[];
 }
 
@@ -353,6 +362,7 @@ export interface ApiShippingQuote {
 interface ApiOrderLine {
   id: string;
   product_name: string;
+  variant_title?: string;
   variant_sku: string;
   quantity: number;
   unit_price: string;
@@ -395,7 +405,14 @@ export interface ApiTrackOrder {
   order_number: string;
   status: ApiTrackStatus;
   created_at: string;
-  items: { id: string; product_name: string; variant_sku: string; quantity: number; unit_price: string }[];
+  items: {
+    id: string;
+    product_name: string;
+    variant_title?: string;
+    variant_sku: string;
+    quantity: number;
+    unit_price: string;
+  }[];
   shipments: ApiShipment[];
   delivery_info: {
     full_name: string;

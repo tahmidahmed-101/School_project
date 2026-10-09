@@ -21,7 +21,9 @@ export function getSaleOffer(product: Product): ProductSale | null {
 }
 
 /** True for a pre-order that is marked sold out or has reached its reservation cap. */
-export function isPreOrderSoldOut(product: Product): boolean {
+export function isPreOrderSoldOut(
+  product: Pick<Product, "isPreOrder" | "preorderStatus" | "maxPreorderQuantity" | "currentPreorderQuantity">,
+): boolean {
   if (!product.isPreOrder) return false;
   if (product.preorderStatus === "sold-out") return true;
   // A cap of 0 or nothing reserved yet are real values, so compare against undefined rather than truthiness.

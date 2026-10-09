@@ -9,16 +9,16 @@ import { getDiscountPercent } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
-export function ProductGallery({ product }: { product: Product }) {
+export function ProductGallery({ product, images }: { product: Product; images: string[] }) {
   const { t } = useLang();
-  const [activeImage, setActiveImage] = useState(product.image);
+  const [activeImage, setActiveImage] = useState(images[0] ?? product.image);
   const discountPercent = getDiscountPercent(product);
 
   return (
     <div className="flex w-full flex-col-reverse gap-4 sm:flex-row">
-      {product.gallery.length > 1 && (
+      {images.length > 1 && (
         <div className="flex flex-shrink-0 gap-3 overflow-x-auto sm:w-20 sm:flex-col sm:overflow-y-auto">
-          {product.gallery.map((img, i) => (
+          {images.map((img, i) => (
             <button
               key={img}
               type="button"

@@ -18,7 +18,10 @@ interface ProductActionsProps {
   product: Product;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
-  selectedVariants: Record<string, string>;
+  /** The SKU the picker resolved to; undefined while an option is still to be picked. */
+  variantId?: string;
+  /** What to pick next, shown while the purchase buttons wait for it. */
+  hint?: string;
   isSoldOut: boolean;
   /** The chosen SKU can't be bought right now (a regular product with no stock). */
   isOutOfStock?: boolean;
@@ -29,7 +32,8 @@ export function ProductActions({
   product,
   quantity,
   onQuantityChange,
-  selectedVariants,
+  variantId,
+  hint,
   isSoldOut,
   isOutOfStock = false,
 }: ProductActionsProps) {
@@ -52,8 +56,12 @@ export function ProductActions({
   const isWishlisted = isInWishlist(product.id);
   const maxQuantity = getMaxOrderQuantity(product);
 
+  const canBuy = !isOutOfStock && !(product.isPreOrder && isSoldOut);
+  const waiting = !variantId;
+  const hintId = waiting && hint && canBuy ? "option-hint" : undefined;
+
   const buyNow = () => {
-    if (addItem(product, quantity, selectedVariants, { openDrawer: false })) router.push("/checkout");
+    if (addItem(product, quantity, variantId, { openDrawer: false })) router.push("/checkout");
   };
 
   const buyNowButton = (
@@ -61,6 +69,8 @@ export function ProductActions({
       {...CTA}
       variant={product.isPreOrder ? "secondary" : "primary"}
       onClick={buyNow}
+      disabled={waiting}
+      aria-describedby={hintId}
       leadingIcon={<Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />}
     >
       {ui("buyNow")}
@@ -100,7 +110,9 @@ export function ProductActions({
           ) : (
             <Button
               {...CTA}
-              onClick={() => openPreOrderModal(product, quantity, selectedVariants)}
+              onClick={() => openPreOrderModal(product, quantity, variantId)}
+              disabled={waiting}
+              aria-describedby={hintId}
               leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
             >
               {ui("preOrderNow")}
@@ -111,7 +123,9 @@ export function ProductActions({
             <Button
               {...CTA}
               variant="secondary"
-              onClick={() => addItem(product, quantity, selectedVariants)}
+              onClick={() => addItem(product, quantity, variantId)}
+              disabled={waiting}
+              aria-describedby={hintId}
               leadingIcon={<ShoppingCart className="h-4 w-4 text-gold-400" />}
             >
               {ui("addToCart")}
@@ -120,7 +134,12 @@ export function ProductActions({
           </>
         )}
       </div>
-      {!isOutOfStock && !(product.isPreOrder && isSoldOut) && (
+      {hintId && (
+        <p id={hintId} role="status" className="mt-2.5 text-xs font-semibold text-gold-800">
+          {hint}
+        </p>
+      )}
+      {canBuy && (
         <div
           inert={ctaVisible}
           className={`fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom,0px))] z-30 border-t border-ink-200 bg-white/95 px-4 py-2.5 shadow-bar backdrop-blur-sm transition-[transform,opacity] duration-200 lg:hidden ${
@@ -132,7 +151,9 @@ export function ProductActions({
             {product.isPreOrder ? (
               <Button
                 size="md"
-                onClick={() => openPreOrderModal(product, quantity, selectedVariants)}
+                onClick={() => openPreOrderModal(product, quantity, variantId)}
+                disabled={waiting}
+                aria-describedby={hintId}
                 leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
               >
                 {ui("preOrderNow")}
@@ -142,13 +163,21 @@ export function ProductActions({
                 <Button
                   size="md"
                   variant="secondary"
-                  onClick={() => addItem(product, quantity, selectedVariants)}
+                  onClick={() => addItem(product, quantity, variantId)}
+                  disabled={waiting}
+                  aria-describedby={hintId}
                   aria-label={ui("addToCart")}
                   className="w-11 px-0"
                 >
                   <ShoppingCart className="h-5 w-5 shrink-0 text-gold-400" />
                 </Button>
-                <Button size="md" onClick={buyNow} leadingIcon={<Zap className="h-4 w-4 fill-current" />}>
+                <Button
+                  size="md"
+                  onClick={buyNow}
+                  disabled={waiting}
+                  aria-describedby={hintId}
+                  leadingIcon={<Zap className="h-4 w-4 fill-current" />}
+                >
                   {ui("buyNow")}
                 </Button>
               </>

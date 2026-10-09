@@ -19,8 +19,6 @@ const variant = (overrides: Partial<ApiVariant> = {}): ApiVariant => ({
   discount_price: null,
   effective_price: "1000.00",
   in_stock: true,
-  color: "",
-  size: "",
   components: [],
   is_bundle: false,
   is_preorder_enabled: false,

@@ -21,6 +21,7 @@ export function forListing(product: Product): Product {
     ...product,
     longDescription: { en: "", bn: "" },
     gallery: [product.image],
+    galleryByValue: undefined,
     specs: undefined,
     highlights: undefined,
     metaKeywords: undefined,
