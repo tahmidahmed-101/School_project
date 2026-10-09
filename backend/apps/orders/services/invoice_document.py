@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+from apps.catalog.selectors.options import line_variant_title
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payments import order_deposit_due
 from apps.orders.services.address_snapshot import snapshot_or_live
@@ -63,6 +64,7 @@ def build_invoice_context(order: SalesOrder) -> dict[str, Any]:
         lines.append(
             {
                 "name": line.product_name or variant.product.name,
+                "variant_title": line_variant_title(line),
                 "sku": line.variant_sku or variant.sku,
                 "quantity": line.quantity,
                 "unit_price": line.unit_price,

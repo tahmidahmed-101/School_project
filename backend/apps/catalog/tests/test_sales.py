@@ -286,7 +286,6 @@ def test_public_product_carries_the_sale_and_each_variant_its_sale_price(api_cli
     on_sale = _variant("1000.00")
     discounted_lower = ProductVariantFactory(
         product=on_sale.product,
-        size="L",
         price=Decimal("1000.00"),
         discount_price=Decimal("500.00"),
     )

@@ -15,7 +15,6 @@ pytestmark = pytest.mark.django_db
 def _live_sales_already_loaded(db):
     live_sales()
 
-SIZES = ["S", "M", "L", "XL"]
 
 
 def _url(product, **params) -> str:
@@ -27,8 +26,8 @@ def _url(product, **params) -> str:
 
 def _product(variants: int = 1, **kwargs):
     product = ProductFactory(**{"is_active": True, **kwargs})
-    for index in range(variants):
-        ProductVariantFactory(product=product, size=SIZES[index])
+    for _ in range(variants):
+        ProductVariantFactory(product=product)
     return product
 
 

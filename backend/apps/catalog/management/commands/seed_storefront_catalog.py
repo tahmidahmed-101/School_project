@@ -7,7 +7,16 @@ from typing import Any
 from django.core.management.base import BaseCommand, CommandParser
 from django.utils.text import slugify
 
-from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+from apps.catalog.models import (
+    Category,
+    Product,
+    ProductImage,
+    ProductOption,
+    ProductOptionValue,
+    ProductVariant,
+)
+from apps.catalog.services.options import build_title
+from apps.common.utils.money import quantize
 from apps.inventory.models import StockItem
 
 PRODUCTS: list[dict[str, Any]] = [
@@ -196,11 +205,29 @@ VARIANT_AXES: dict[str, list[dict[str, str]]] = {
     "perfume": [{"size": "50ml"}, {"size": "100ml", "price_factor": "1.6"}],
 }
 
+OPTION_NAMES = {"color": "Colour", "size": "Size"}
+
 BRAND = "LaunchCart"
 
 
 class Command(BaseCommand):
     help = "Seed the catalog with 4 categories, 4 products per category, and 3 images per product."
+
+    def _create_options(self, product: Product, specs: list[dict[str, str]]) -> dict:
+        """Option values of one product, keyed by (axis key, text)."""
+        product.options.all().delete()
+        values = {}
+        axes = [key for key in OPTION_NAMES if any(key in spec for spec in specs)]
+        for position, key in enumerate(axes):
+            option = ProductOption.objects.create(
+                product=product, name=OPTION_NAMES[key], position=position
+            )
+            texts = list(dict.fromkeys(spec[key] for spec in specs))
+            for value_position, text in enumerate(texts):
+                values[key, text] = ProductOptionValue.objects.create(
+                    option=option, value=text, position=value_position
+                )
+        return values
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("--image-base-url", default="")
@@ -284,28 +311,21 @@ class Command(BaseCommand):
                     "category": categories[item["category"]],
                     "name": item["name"].title(),
                     "description": f"{item['name'].title()} — a signature {BRAND} piece.",
-                    "product_type": (
-                        Product.ProductType.VARIANT
-                        if len(specs) > 1
-                        else Product.ProductType.SIMPLE
-                    ),
+                    "product_type": Product.ProductType.VARIANT,
                 },
             )
+            values = self._create_options(product, specs)
 
             for spec in specs:
-                color = spec.get("color", "")
-                size = spec.get("size", "")
-                combo = slugify(f"{color} {size}").upper()
+                picked = [values[key, spec[key]] for key in OPTION_NAMES if key in spec]
+                combo = slugify(" ".join(value.value for value in picked)).upper()
                 price = Decimal(item["price"]) * Decimal(spec.get("price_factor", "1"))
                 variant, _ = ProductVariant.objects.update_or_create(
                     product=product,
                     sku=f"SKU-{slug.upper()}-{combo}",
-                    defaults={
-                        "price": price.quantize(Decimal("0.01")),
-                        "color": color,
-                        "size": size,
-                    },
+                    defaults={"price": quantize(price), "title": build_title(picked)},
                 )
+                variant.option_values.set(picked)
                 StockItem.objects.update_or_create(
                     variant=variant,
                     defaults={

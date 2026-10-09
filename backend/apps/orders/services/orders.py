@@ -4,6 +4,7 @@ from django.db import transaction
 
 from apps.audit.services.audit import log_action
 from apps.catalog.selectors.bundles import expand_variant
+from apps.catalog.selectors.options import variant_title
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import Payment, SalesOrder, SalesOrderLine, StockReservation
@@ -334,6 +335,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         tax_amount=compute_line_tax(unit_price=unit_price, quantity=quantity),
         product_name=variant.product.name,
         variant_sku=variant.sku,
+        variant_title=variant_title(variant),
         is_preorder=is_preorder,
     )
     if order.status != SalesOrder.Status.PENDING and not is_preorder:

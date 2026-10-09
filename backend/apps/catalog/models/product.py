@@ -46,7 +46,8 @@ class Product(FullAuditModel):
         max_length=20, choices=ProductType.choices, default=ProductType.SIMPLE
     )
     highlights = models.JSONField(default=list, blank=True)
-    specs = models.JSONField(default=dict, blank=True)
+    # An ordered list of {name, value}; rows written before the specs editor hold a dict.
+    specs = models.JSONField(default=list, blank=True)
     featured = models.BooleanField(default=False)
     trending = models.BooleanField(default=False)
     new_arrival = models.BooleanField(default=False)

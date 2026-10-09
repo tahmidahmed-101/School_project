@@ -210,6 +210,9 @@ def add_line(
     variant,
     quantity: int,
 ) -> SalesOrderLine:
+    # Imported here: catalog models import this module.
+    from apps.catalog.selectors.options import variant_title
+
     _ensure_pending(order)
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
@@ -231,6 +234,7 @@ def add_line(
             "tax_amount": tax_amount,
             "product_name": variant.product.name,
             "variant_sku": variant.sku,
+            "variant_title": variant_title(variant),
             "is_preorder": is_preorder,
         },
     )

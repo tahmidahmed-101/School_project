@@ -15,6 +15,11 @@ from .category_views import (
     AdminCategoryRestoreView,
 )
 from .image_views import AdminProductImageDetailView, AdminProductImageListCreateView
+from .option_views import (
+    AdminOptionSuggestionsView,
+    AdminProductCombinationsView,
+    AdminProductOptionsView,
+)
 from .price_report_views import AdminPriceReportDetailView, AdminPriceReportListView
 from .product_views import (
     AdminProductBulkStatusView,
@@ -25,6 +30,7 @@ from .product_views import (
 from .question_views import AdminProductQuestionDetailView, AdminProductQuestionListView
 from .review_views import AdminProductReviewDetailView, AdminProductReviewListView
 from .variant_views import (
+    AdminProductVariantBulkUpdateView,
     AdminProductVariantDetailView,
     AdminProductVariantGenerateView,
     AdminProductVariantGlobalListView,
@@ -85,6 +91,22 @@ urlpatterns = [
         AdminProductVariantGenerateView.as_view(),
         name="product-variant-generate",
     ),
+    path(
+        "products/<uuid:product_id>/variants/bulk-update/",
+        AdminProductVariantBulkUpdateView.as_view(),
+        name="product-variant-bulk-update",
+    ),
+    path(
+        "products/<uuid:product_id>/options/",
+        AdminProductOptionsView.as_view(),
+        name="product-options",
+    ),
+    path(
+        "products/<uuid:product_id>/combinations/",
+        AdminProductCombinationsView.as_view(),
+        name="product-combinations",
+    ),
+    path("option-suggestions/", AdminOptionSuggestionsView.as_view(), name="option-suggestions"),
     path(
         "products/<uuid:product_id>/images/",
         AdminProductImageListCreateView.as_view(),

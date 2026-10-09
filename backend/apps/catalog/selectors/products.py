@@ -8,6 +8,10 @@ from django.utils import timezone
 
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 
+from .options import option_values_prefetch
+
+PRODUCT_OPTIONS_PREFETCH = "options__values"
+
 
 def _active_variants_prefetch() -> Prefetch:
     # `to_attr="active_variants"` so ProductSerializer reads a plain list
@@ -21,6 +25,7 @@ def _active_variants_prefetch() -> Prefetch:
             "images",
             "product__images",
             "bundle_components__component_variant",
+            option_values_prefetch(),
         ),
         to_attr="active_variants",
     )
@@ -90,7 +95,7 @@ def products_list(
     badge: str | None = None,
 ) -> QuerySet[Product]:
     queryset = Product.objects.select_related("category").prefetch_related(
-        _active_variants_prefetch(), "images"
+        _active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH
     )
     queryset = _filter_basic_product_fields(
         queryset,
@@ -136,7 +141,9 @@ def products_list(
 
 
 def get_product_by_id(product_id: str | UUID, *, include_deleted: bool = False) -> Product | None:
-    queryset = Product.objects.prefetch_related(_active_variants_prefetch(), "images")
+    queryset = Product.objects.prefetch_related(
+        _active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH
+    )
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.filter(id=product_id).first()
@@ -147,7 +154,7 @@ def _public_products() -> QuerySet[Product]:
     # whose serializer walks variants -> images/components.
     return (
         Product.objects.select_related("category")
-        .prefetch_related(_active_variants_prefetch(), "images")
+        .prefetch_related(_active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH)
         .filter(SELLABLE_VARIANT_FILTER, deleted_at__isnull=True, is_active=True)
     )
 
@@ -256,7 +263,7 @@ def variants_for_product(product: Product) -> QuerySet[ProductVariant]:
     return (
         ProductVariant.objects.filter(product=product, deleted_at__isnull=True)
         .select_related("product__category")
-        .prefetch_related("images", "product__images")
+        .prefetch_related("images", "product__images", option_values_prefetch())
         .order_by("sku")
     )
 
@@ -266,8 +273,6 @@ def variants_list(
     product=None,
     category=None,
     category_type: str | None = None,
-    color: str = "",
-    size: str = "",
     is_active: bool | None = None,
     preorder_only: bool = False,
     preorder_status: str | None = None,
@@ -279,7 +284,7 @@ def variants_list(
 
     queryset = (
         ProductVariant.objects.select_related("product", "product__category")
-        .prefetch_related("images", "product__images")
+        .prefetch_related("images", "product__images", option_values_prefetch())
         .filter(deleted_at__isnull=True)
     )
     if product is not None:
@@ -288,10 +293,6 @@ def variants_list(
         queryset = queryset.filter(product__category=category)
     if category_type:
         queryset = queryset.filter(product__category__category_type=category_type)
-    if color:
-        queryset = queryset.filter(color=color)
-    if size:
-        queryset = queryset.filter(size=size)
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
     if preorder_only or preorder_status:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.catalog.selectors.options import line_variant_title
 from apps.orders.models import SalesOrder, Shipment
 from apps.orders.selectors.payments import order_balance_due, order_paid_total
 
@@ -10,8 +11,12 @@ class PublicTrackOrderItemSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     product_name = serializers.CharField()
     variant_sku = serializers.CharField()
+    variant_title = serializers.SerializerMethodField()
     quantity = serializers.IntegerField()
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def get_variant_title(self, obj) -> str:
+        return line_variant_title(obj)
 
 
 class PublicTrackShipmentSerializer(serializers.Serializer):

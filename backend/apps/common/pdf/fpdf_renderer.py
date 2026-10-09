@@ -145,6 +145,8 @@ def _render_line_items(pdf: DocumentPDF, context: dict[str, Any], currency: str)
     lines = context.get("lines") or []
     for item in lines:
         name = str(item.get("name") or "Item")
+        if item.get("variant_title"):
+            name = f"{name} - {item['variant_title']}"
         sku = str(item.get("sku") or "—")
         qty = str(item.get("quantity") or 1)
         price_str = _format_currency(item.get("unit_price"), currency)

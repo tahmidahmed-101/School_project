@@ -473,25 +473,26 @@ def _simple_product(**kwargs):
     return create_product(category=CategoryFactory(), name=kwargs.pop("name", "Tee"), **kwargs)
 
 
-def test_variations_off_refuses_a_variant_product():
-    from apps.catalog.models import Product
+def test_variations_off_refuses_a_product_with_options():
+    from decimal import Decimal
 
     set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})
 
     with pytest.raises(BusinessRuleViolationError) as exc:
-        _simple_product(product_type=Product.ProductType.VARIANT)
+        _simple_product(price=Decimal("10.00"), options=[{"name": "Size", "values": ["S"]}])
     assert exc.value.code == "feature_disabled"
 
 
-def test_variations_off_refuses_promoting_a_product_to_variant():
-    from apps.catalog.models import Product
-    from apps.catalog.services.products import update_product
+def test_variations_off_refuses_adding_options_to_a_product():
+    from apps.catalog.services.options import set_product_options
 
     product = _simple_product()
     set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})
 
     with pytest.raises(BusinessRuleViolationError) as exc:
-        update_product(product=product, data={"product_type": Product.ProductType.VARIANT})
+        set_product_options(
+            product=product, options=[{"name": "Size", "values": [{"value": "S"}]}]
+        )
     assert exc.value.code == "feature_disabled"
 
 
@@ -500,10 +501,9 @@ def test_variations_off_refuses_a_second_variant_on_a_variant_product():
     catalog-wide one."""
     from decimal import Decimal
 
-    from apps.catalog.models import Product
     from apps.catalog.services.products import create_variant
 
-    product = _simple_product(product_type=Product.ProductType.VARIANT)
+    product = _simple_product()
     create_variant(product=product, sku="TEE-S", price=Decimal("10.00"))
     set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})
 
@@ -532,12 +532,12 @@ def test_variations_off_refuses_variant_generation():
     set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})
 
     with pytest.raises(BusinessRuleViolationError) as exc:
-        generate_variants(product=product, colors=["Black"], sizes=[], price=Decimal("10.00"))
+        generate_variants(product=product, price=Decimal("10.00"))
     assert exc.value.code == "feature_disabled"
 
 
 def test_variations_off_rejects_an_import_row_adding_a_second_sku():
-    """The importer writes rows directly, so it needs the rule of its own."""
+    """The importer goes through the variant service, so it inherits the rule."""
     import io
     from decimal import Decimal
 
@@ -552,18 +552,13 @@ def test_variations_off_rejects_an_import_row_adding_a_second_sku():
     result = import_variants(file=csv_file, fmt="csv")
 
     assert result.created == 0
-    assert "variations are switched off" in result.errors[0]["message"]
+    assert "Turn product variations on first" in result.errors[0]["message"]
 
 
 def test_variations_cannot_be_switched_off_while_a_product_has_two():
     from decimal import Decimal
 
-    from apps.catalog.models import Product
-    from apps.catalog.services.products import create_variant
-
-    product = _simple_product(product_type=Product.ProductType.VARIANT)
-    create_variant(product=product, sku="TEE-S", price=Decimal("10.00"), size="S")
-    create_variant(product=product, sku="TEE-M", price=Decimal("10.00"), size="M")
+    _simple_product(price=Decimal("10.00"), options=[{"name": "Size", "values": ["S", "M"]}])
 
     with pytest.raises(BusinessRuleViolationError) as exc:
         set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})

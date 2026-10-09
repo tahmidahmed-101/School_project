@@ -10,6 +10,8 @@ from apps.catalog.factories import (
     ProductFactory,
     ProductImageFactory,
     ProductVariantFactory,
+    make_options,
+    make_variant,
 )
 from apps.catalog.models import Brand, Product
 
@@ -211,21 +213,18 @@ def test_admin_can_generate_variants(api_client):
     admin = create_user(email="catalog-generate-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
     product = ProductFactory()
+    make_options(product, {"Colour": ["Red", "Blue"], "Size": ["M", "L"]})
 
     response = api_client.post(
         f"/api/v1/admin/catalog/products/{product.id}/variants/generate/",
-        {"colors": ["Red", "Blue"], "sizes": ["M", "L"], "price": "20.00"},
+        {"price": "20.00"},
         format="json",
     )
 
     assert response.status_code == 201
     created = response.data["data"]["created"]
-    assert {(item["color"], item["size"]) for item in created} == {
-        ("Red", "M"),
-        ("Red", "L"),
-        ("Blue", "M"),
-        ("Blue", "L"),
-    }
+    assert [item["title"] for item in created] == ["Red / M", "Red / L", "Blue / M", "Blue / L"]
+    assert {item["price"] for item in created} == {"20.00"}
 
 
 def test_global_variant_list_search_by_sku(api_client):
@@ -699,8 +698,9 @@ def test_public_product_exposes_variant_level_images(api_client):
 
 def test_public_product_detail_exposes_variant_colour_and_size(api_client):
     product = ProductFactory(product_type=Product.ProductType.VARIANT)
-    ProductVariantFactory(product=product, sku="PANJABI-NAVY-L", color="Navy", size="L")
-    ProductVariantFactory(product=product, sku="PANJABI-NAVY-XL", color="Navy", size="XL")
+    values = make_options(product, {"Colour": ["Navy"], "Size": ["L", "XL"]})
+    make_variant(product, [values["Navy"], values["L"]], sku="PANJABI-NAVY-L")
+    make_variant(product, [values["Navy"], values["XL"]], sku="PANJABI-NAVY-XL")
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 

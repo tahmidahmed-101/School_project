@@ -18,6 +18,13 @@ class ProductImage(TimeStampedModel):
     variant = models.ForeignKey(
         ProductVariant, on_delete=models.CASCADE, null=True, blank=True, related_name="images"
     )
+    option_value = models.ForeignKey(
+        "catalog.ProductOptionValue",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="images",
+    )
     url = models.CharField(max_length=500)
     alt_text = models.CharField(max_length=255, blank=True, default="")
     sort_order = models.PositiveIntegerField(default=0)

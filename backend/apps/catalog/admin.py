@@ -22,8 +22,7 @@ class ProductVariantInline(admin.TabularInline):
     fields = (
         "sku",
         "barcode",
-        "color",
-        "size",
+        "title",
         "price",
         "cost_price",
         "discount_price",
@@ -35,6 +34,7 @@ class ProductVariantInline(admin.TabularInline):
         "preorder_stock_limit",
         "is_active",
     )
+    readonly_fields = ("title",)
 
 
 class ProductImageInline(admin.TabularInline):
@@ -73,8 +73,7 @@ class ProductVariantAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
     list_display = (
         "sku",
         "product",
-        "color",
-        "size",
+        "title",
         "price",
         "cost_price",
         "discount_price",
@@ -86,8 +85,10 @@ class ProductVariantAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
         "is_active",
     )
     list_filter = ("is_active", "is_preorder_enabled")
-    search_fields = ("sku", "barcode", "product__name", "color", "size")
+    search_fields = ("sku", "barcode", "product__name", "title")
     autocomplete_fields = ("product",)
+    exclude = ("color", "size", "option_values")
+    readonly_fields = ("title",)
 
 
 @admin.register(BundleItem)

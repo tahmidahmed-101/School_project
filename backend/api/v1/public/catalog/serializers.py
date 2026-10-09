@@ -5,6 +5,15 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.catalog.selectors.bundles import bundle_available_quantities
+from apps.catalog.selectors.options import (
+    COLOUR_NAMES,
+    SIZE_NAMES,
+    product_options,
+    product_specs,
+    variant_legacy_field,
+    variant_option_values,
+    variant_title,
+)
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.inventory.selectors.stock import available_quantities_for_variants
 from apps.orders.services.carts import get_preordered_quantities
@@ -88,8 +97,10 @@ class PublicProductVariantSerializer(serializers.Serializer):
     effective_price = serializers.SerializerMethodField()
     sale_price = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
-    color = serializers.CharField()
-    size = serializers.CharField()
+    title = serializers.SerializerMethodField()
+    option_value_ids = serializers.SerializerMethodField()
+    color = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
     is_bundle = serializers.SerializerMethodField()
     # Wholesale fields
@@ -108,6 +119,18 @@ class PublicProductVariantSerializer(serializers.Serializer):
     preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
     preordered_quantity = serializers.SerializerMethodField()
     preorder_remaining = serializers.SerializerMethodField()
+
+    def get_title(self, obj) -> str:
+        return variant_title(obj)
+
+    def get_option_value_ids(self, obj) -> list[str]:
+        return [str(pair["value_id"]) for pair in variant_option_values(obj)]
+
+    def get_color(self, obj) -> str:
+        return variant_legacy_field(obj, COLOUR_NAMES)
+
+    def get_size(self, obj) -> str:
+        return variant_legacy_field(obj, SIZE_NAMES)
 
     def get_wholesale_price(self, obj) -> str | None:
         if obj.show_wholesale_price and obj.wholesale_price is not None:
@@ -255,7 +278,9 @@ class PublicProductListSerializer(serializers.Serializer):
     trending = serializers.BooleanField(read_only=True)
     new_arrival = serializers.BooleanField(read_only=True)
     badge = serializers.CharField(read_only=True)
-    specs = serializers.JSONField(read_only=True)
+    specs = serializers.SerializerMethodField()
+    highlights = serializers.ListField(child=serializers.CharField(), read_only=True)
+    options = serializers.SerializerMethodField()
     variants = serializers.SerializerMethodField()
     sale = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
@@ -273,6 +298,23 @@ class PublicProductListSerializer(serializers.Serializer):
                     else None,
                 }
         return None
+
+    def get_specs(self, obj) -> dict:
+        """Name to value, in the order staff set. The storefront reads it as an object."""
+        return {row["name"]: row["value"] for row in product_specs(obj)}
+
+    def get_options(self, obj) -> list[dict]:
+        return [
+            {
+                "id": str(option["id"]),
+                "name": option["name"],
+                "values": [
+                    {"id": str(value["id"]), "value": value["value"]}
+                    for value in option["values"]
+                ],
+            }
+            for option in product_options(obj, sellable_only=True)
+        ]
 
     def get_variants(self, obj) -> list[dict]:
         return PublicProductVariantSerializer(
@@ -297,7 +339,12 @@ class PublicProductListSerializer(serializers.Serializer):
         # would still land behind every product image.
         unique.sort(key=lambda image: image.sort_order)
         return [
-            {"url": image.url, "alt_text": image.alt_text, "sort_order": image.sort_order}
+            {
+                "url": image.url,
+                "alt_text": image.alt_text,
+                "sort_order": image.sort_order,
+                "option_value_id": str(image.option_value_id) if image.option_value_id else None,
+            }
             for image in unique
         ]
 
