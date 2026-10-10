@@ -24,7 +24,7 @@ const MAX_AREAS_SHOWN = 6
 
 const ShippingZonesList = () => {
   const kind = useKind()
-  const title = deliveryTitle(kind, "Delivery Zones")
+  const title = deliveryTitle(kind, "Delivery zones")
   useDocumentTitle(title)
 
   const navigate = useNavigate()

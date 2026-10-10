@@ -39,7 +39,7 @@ const PreorderSettings = () => {
         description={
           canManage
             ? undefined
-            : "You can view these settings; changing them needs the settings.manage permission."
+            : "You can view these settings but not change them."
         }
       />
       <PreorderDepositForm canManage={canManage} />

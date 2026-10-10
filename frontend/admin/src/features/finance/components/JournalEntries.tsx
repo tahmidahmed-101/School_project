@@ -53,7 +53,7 @@ const REFERENCE_TYPES: Record<BelongsTo, string[]> = {
 }
 
 const JournalEntries = () => {
-  useDocumentTitle("Journal Entries")
+  useDocumentTitle("Journal entries")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const listState = useAppSelector((state) => state.journalEntries)
@@ -125,7 +125,7 @@ const JournalEntries = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Journal Entries"
+        title="Journal entries"
         actions={
           canPost && (
             <Button size="action" onClick={() => setFormOpen(true)}>

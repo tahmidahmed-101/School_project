@@ -135,7 +135,7 @@ function CategoryFormDialog({
 }
 
 const ExpenseCategories = () => {
-  useDocumentTitle("Expense Categories")
+  useDocumentTitle("Expense categories")
   const dispatch = useAppDispatch()
   const listState = useAppSelector((state) => state.expenseCategories)
   const canPost = useCan("accounting.post")
@@ -188,7 +188,7 @@ const ExpenseCategories = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Expense Categories"
+        title="Expense categories"
         back={{ to: "/expenses", label: "Expenses" }}
         actions={
           canPost && (

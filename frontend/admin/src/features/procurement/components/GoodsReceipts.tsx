@@ -141,7 +141,7 @@ function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | n
 
 const GoodsReceiptsList = () => {
   const kind = useKind()
-  const title = purchasingTitle(kind, "Goods Receipts")
+  const title = purchasingTitle(kind, "Goods receipts")
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.goodsReceipts)

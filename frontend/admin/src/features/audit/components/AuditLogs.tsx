@@ -34,7 +34,7 @@ const ORDERING_OPTIONS: Option[] = [
 ]
 
 const AuditLogs = () => {
-  useDocumentTitle("Audit Logs")
+  useDocumentTitle("Audit logs")
 
   const dispatch = useAppDispatch()
   const logState = useAppSelector((state) => state.auditLogs)
@@ -98,7 +98,7 @@ const AuditLogs = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Audit Logs"
+        title="Audit logs"
         actions={<ExportButton onExport={handleExport} />}
       />
 

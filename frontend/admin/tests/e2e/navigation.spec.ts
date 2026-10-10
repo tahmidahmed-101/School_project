@@ -14,7 +14,7 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "Sales",
     items: [
       { title: "Orders", url: "/orders", heading: "Orders" },
-      { title: "Carts", url: "/carts", heading: "Customer Carts" },
+      { title: "Carts", url: "/carts", heading: "Carts" },
       { title: "Payments", url: "/payments", heading: "Payments" },
       { title: "Returns", url: "/returns", heading: "Returns" },
     ],
@@ -35,7 +35,7 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
       { title: "Customers", url: "/customers", heading: "Customers" },
       { title: "Reviews", url: "/reviews", heading: "Reviews" },
       { title: "Questions", url: "/questions", heading: "Questions" },
-      { title: "Price reports", url: "/price_reports", heading: "Price Reports" },
+      { title: "Price reports", url: "/price_reports", heading: "Price reports" },
       { title: "Fraud cases", url: "/fraud_cases", heading: "Fraud Cases" },
     ],
   },
@@ -43,8 +43,8 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "Goods",
     items: [
       { title: "Stock", url: "/inventory", heading: "Stock" },
-      { title: "Stock movements", url: "/inventory/ledger", heading: "Stock Ledger" },
-      { title: "Reservations", url: "/inventory/reservations", heading: "Stock Reservations" },
+      { title: "Stock movements", url: "/inventory/ledger", heading: "Stock movements" },
+      { title: "Reservations", url: "/inventory/reservations", heading: "Reservations" },
       { title: "Warehouses", url: "/warehouses", heading: "Warehouses" },
     ],
   },
@@ -52,16 +52,16 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "Delivery",
     items: [
       { title: "Shipments", url: "/shipments", heading: "Shipments" },
-      { title: "Delivery zones", url: "/shipping_zones", heading: "Delivery Zones" },
-      { title: "Shipping rates", url: "/shipping_rates", heading: "Shipping Rates" },
+      { title: "Delivery zones", url: "/shipping_zones", heading: "Delivery zones" },
+      { title: "Shipping rates", url: "/shipping_rates", heading: "Shipping rates" },
     ],
   },
   {
     section: "Purchasing",
     items: [
       { title: "Suppliers", url: "/purchasing/suppliers", heading: "Suppliers" },
-      { title: "Purchase orders", url: "/purchasing/orders", heading: "Purchase Orders" },
-      { title: "Goods receipts", url: "/purchasing/receipts", heading: "Goods Receipts" },
+      { title: "Purchase orders", url: "/purchasing/orders", heading: "Purchase orders" },
+      { title: "Goods receipts", url: "/purchasing/receipts", heading: "Goods receipts" },
       { title: "Supplier bills", url: "/purchasing/bills", heading: "Vendor Bills" },
       { title: "Supplier payments", url: "/purchasing/payments", heading: "Vendor Payments" },
     ],
@@ -69,40 +69,39 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
   {
     section: "Marketing",
     items: [
-      { title: "Sales", url: "/sales", heading: "Sales" },
+      { title: "Promotions", url: "/sales", heading: "Promotions" },
       { title: "Coupons", url: "/coupons", heading: "Coupons" },
     ],
   },
   {
     section: "Settings",
-    items: [{ title: "Shop settings", url: "/settings", heading: "Settings" }],
+    items: [{ title: "Shop settings", url: "/settings", heading: "Shop settings" }],
   },
   {
     section: "Accounting",
     items: [
       { title: "Financial reports", url: "/accounting/reports", heading: "Financial Reports" },
       { title: "Expenses", url: "/expenses", heading: "Expenses" },
-      { title: "Expense categories", url: "/expenses/categories", heading: "Expense Categories" },
-      { title: "Journal entries", url: "/accounting/journal-entries", heading: "Journal Entries" },
-      { title: "Chart of accounts", url: "/accounting/accounts", heading: "Chart of Accounts" },
-      { title: "Tax rates", url: "/accounting/tax-rates", heading: "Tax Rates" },
+      { title: "Expense categories", url: "/expenses/categories", heading: "Expense categories" },
+      { title: "Journal entries", url: "/accounting/journal-entries", heading: "Journal entries" },
+      { title: "Chart of accounts", url: "/accounting/accounts", heading: "Chart of accounts" },
+      { title: "Tax rates", url: "/accounting/tax-rates", heading: "Tax rates" },
     ],
   },
   {
     section: "Team",
     items: [
-      { title: "Staff", url: "/staffs", heading: "Staff Members" },
-      { title: "Audit logs", url: "/audit-logs", heading: "Audit Logs" },
-      { title: "Login history", url: "/login-history", heading: "Login History" },
+      { title: "Staff", url: "/staffs", heading: "Staff" },
+      { title: "Audit logs", url: "/audit-logs", heading: "Audit logs" },
+      { title: "Login history", url: "/login-history", heading: "Login history" },
     ],
   },
   {
-    section: "Set-up",
+    section: "Shared",
     items: [
-      { title: "Store policies", url: "/policies", heading: "Store Policies" },
       { title: "Carriers", url: "/carriers", heading: "Carriers" },
       { title: "Blocklists", url: "/blocklists", heading: "Blocklists" },
-      { title: "Subscribers", url: "/subscribers", heading: "Newsletter Subscribers" },
+      { title: "Subscribers", url: "/subscribers", heading: "Subscribers" },
     ],
   },
 ]
@@ -127,7 +126,7 @@ test.describe("Sidebar pages", () => {
     "SHOP SELLING": ["Home", "Sales", "Catalog", "Customers"],
     "SHOP OPERATIONS": ["Goods", "Delivery", "Purchasing", "Marketing", "Settings"],
     ACCOUNTING: ["Accounting"],
-    BUSINESS: ["Team", "Set-up"],
+    BUSINESS: ["Team", "Shared"],
   }
   for (const [group, sections] of Object.entries(GROUPS)) {
     test(`${group}: every sidebar link renders its page`, async ({ adminPage: page }) => {

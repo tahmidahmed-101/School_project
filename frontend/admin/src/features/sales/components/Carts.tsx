@@ -128,7 +128,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
 const CartsList = () => {
   const dispatch = useAppDispatch()
   const kind = useKind()
-  const title = kind === "preorder" ? "Pre-order carts" : "Customer Carts"
+  const title = kind === "preorder" ? "Pre-order carts" : "Carts"
   useDocumentTitle(title)
   const cartsState = useAppSelector((state) => state.customerCarts)
 

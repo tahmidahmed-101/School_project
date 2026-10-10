@@ -167,7 +167,7 @@ test.describe("Global search", () => {
     await input.fill("Journal")
     await page.getByRole("option", { name: /Journal entries/ }).click()
     await expect(page).toHaveURL(/\/accounting\/journal-entries$/)
-    await expectPageHeading(page, "Journal Entries")
+    await expectPageHeading(page, "Journal entries")
   })
 
   test("Ctrl+K finds an order by number from live data", async ({ adminPage: page }) => {
@@ -187,8 +187,8 @@ test.describe("Global search", () => {
 test.describe("Settings & analytics", () => {
   test("settings opens on the business profile tab and tabs sync to the URL", async ({ adminPage: page }) => {
     await page.goto("/settings")
-    await expectPageHeading(page, "Settings")
-    await expect(page.getByRole("tab", { name: "Business Profile" })).toHaveAttribute("aria-selected", "true")
+    await expectPageHeading(page, "Shop settings")
+    await expect(page.getByRole("tab", { name: "Business profile" })).toHaveAttribute("aria-selected", "true")
     await expect(page.getByLabel("Business name")).toBeVisible()
     await expect(page.getByText("Identity", { exact: true })).toBeVisible()
 

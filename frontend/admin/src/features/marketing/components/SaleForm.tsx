@@ -187,7 +187,7 @@ const SaleForm = () => {
 
   return (
     <div className="section-container space-y-6">
-      <PageHeader title={title} back={{ to: "/sales", label: "Back to sales" }} />
+      <PageHeader title={title} back={{ to: "/sales", label: "Back to promotions" }} />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Card>

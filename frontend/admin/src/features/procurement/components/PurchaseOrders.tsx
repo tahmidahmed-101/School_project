@@ -39,7 +39,7 @@ const SORT_OPTIONS: Option[] = [
 const PurchaseOrdersList = () => {
   const kind = useKind()
   const base = purchasingBase(kind)
-  const title = purchasingTitle(kind, "Purchase Orders")
+  const title = purchasingTitle(kind, "Purchase orders")
   useDocumentTitle(title)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()

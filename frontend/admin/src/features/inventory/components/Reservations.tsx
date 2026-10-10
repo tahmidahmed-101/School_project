@@ -43,7 +43,7 @@ const orderingOptions: Option[] = [
 ]
 
 const Reservations = () => {
-  useDocumentTitle("Stock Reservations")
+  useDocumentTitle("Reservations")
   const dispatch = useAppDispatch()
   // Reservations live in the orders app: list needs orders.view, release needs orders.manage.
   const canRelease = useCan("orders.manage")
@@ -135,7 +135,7 @@ const Reservations = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Stock Reservations" />
+      <PageHeader title="Reservations" />
 
       <FilterToolbar
         inlineCount={3}

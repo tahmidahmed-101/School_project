@@ -104,7 +104,7 @@ const Staffs = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Staff Members"
+        title="Staff"
         actions={
           <>
             <RestoreDeletedButton<AdminUser>

@@ -55,7 +55,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{kind === "preorder" ? "Pre-order payment methods" : "Payment Methods"}</CardTitle>
+        <CardTitle>{kind === "preorder" ? "Pre-order payment methods" : "Payment methods"}</CardTitle>
         <CardDescription>
           {kind === "preorder"
             ? "Methods switched off can't be chosen at a pre-order checkout or when recording a pre-order payment. Stock orders have their own list in Settings."

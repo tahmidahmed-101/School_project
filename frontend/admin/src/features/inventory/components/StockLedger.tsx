@@ -31,7 +31,7 @@ const ORDERING_OPTIONS: Option[] = [
 
 const StockLedgerList = () => {
   const kind = useKind()
-  const title = kind === "preorder" ? "Pre-order goods movements" : "Stock Ledger"
+  const title = kind === "preorder" ? "Goods movements" : "Stock movements"
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const ledgerState = useAppSelector((s) => s.inventoryLedger)

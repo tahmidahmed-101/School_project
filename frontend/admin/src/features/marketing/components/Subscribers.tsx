@@ -149,7 +149,7 @@ const Subscribers = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Newsletter Subscribers"
+        title="Subscribers"
         actions={
           <>
             <ExportButton onExport={handleExport} />

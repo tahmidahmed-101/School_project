@@ -136,7 +136,7 @@ function TaxRateFormDialog({
 }
 
 const TaxRates = () => {
-  useDocumentTitle("Tax Rates")
+  useDocumentTitle("Tax rates")
   const dispatch = useAppDispatch()
   const listState = useAppSelector((state) => state.taxRates)
   const canPost = useCan("accounting.post")
@@ -190,7 +190,7 @@ const TaxRates = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Tax Rates"
+        title="Tax rates"
         actions={
           canPost && (
             <>

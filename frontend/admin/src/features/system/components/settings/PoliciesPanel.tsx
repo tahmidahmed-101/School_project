@@ -2,14 +2,12 @@ import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Banknote, Truck, Undo2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPolicies } from "@/features/system/slices/businessSettingsSlice"
 import type { PolicyKind } from "@/features/system/types"
 import { useCan } from "@/hooks/use-can"
-import { useDocumentTitle } from "@/hooks/use-document-title"
-import { PolicyEditor } from "./policies/PolicyEditor"
-import { SectionState } from "./settings/SectionState"
+import { PolicyEditor } from "../policies/PolicyEditor"
+import { SectionState } from "./SectionState"
 
 // PolicyKind on the backend: one row per kind, created empty and unpublished.
 const TABS: { value: PolicyKind; label: string; icon: typeof Truck }[] = [
@@ -22,8 +20,7 @@ const TABS: { value: PolicyKind; label: string; icon: typeof Truck }[] = [
  * The shipping, return and refund policies customers read on the storefront. Each is written
  * in English and Bangla; the storefront shows a policy only while it is published.
  */
-const StorePolicies = () => {
-  useDocumentTitle("Store Policies")
+export function PoliciesPanel() {
   const dispatch = useAppDispatch()
   const canManage = useCan("settings.manage")
   const { data: policies, status, error } = useAppSelector((state) => state.businessSettings.policies)
@@ -37,15 +34,12 @@ const StorePolicies = () => {
   }, [dispatch])
 
   return (
-    <div className="section-container space-y-6">
-      <PageHeader
-        title="Store Policies"
-        description={
-          canManage
-            ? "Customers see a policy on the storefront only while it is published."
-            : "You can view these policies; changing them needs the settings.manage permission."
-        }
-      />
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {canManage
+          ? "Customers see a policy on the storefront only while it is published."
+          : "You can view these policies but not change them."}
+      </p>
 
       {policies.length === 0 ? (
         <SectionState
@@ -56,7 +50,7 @@ const StorePolicies = () => {
           label="store policies"
         />
       ) : (
-        <Tabs value={kind} onValueChange={(value) => setSearchParams({ kind: value }, { replace: true })}>
+        <Tabs value={kind} onValueChange={(value) => setSearchParams((prev) => ({ ...Object.fromEntries(prev), kind: value }), { replace: true })}>
           <div className="overflow-x-auto">
             <TabsList className="w-full md:w-fit bg-muted p-1">
               {TABS.map(({ value, label, icon: Icon }) => (
@@ -78,4 +72,3 @@ const StorePolicies = () => {
   )
 }
 
-export default StorePolicies

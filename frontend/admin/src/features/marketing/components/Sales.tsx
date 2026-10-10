@@ -45,7 +45,7 @@ function appliesToLabel(sale: Sale) {
 }
 
 const Sales = () => {
-  useDocumentTitle("Sales")
+  useDocumentTitle("Promotions")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -128,7 +128,7 @@ const Sales = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Sales"
+        title="Promotions"
         actions={
           canManage && (
             <Button variant="apply" size="action" onClick={() => navigate("/sale_form/new")}>
@@ -159,7 +159,7 @@ const Sales = () => {
         data={sales}
         {...list.tableProps}
         onRowClick={(sale) => navigate(`/sale_form/${sale.id}`)}
-        emptyTitle="No sales yet"
+        emptyTitle="No promotions yet"
         emptyDescription="Create a sale to take a percentage off items in stock for a set period."
         {...(canManage ? { emptyActionLabel: "Add Sale", onEmptyAction: () => navigate("/sale_form/new") } : {})}
         minWidth="1080px"

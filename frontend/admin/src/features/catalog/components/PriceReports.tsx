@@ -49,7 +49,7 @@ const ORDERING_OPTIONS: Option[] = [
  * on the storefront; staff check the price, then mark each report resolved or dismissed.
  */
 const PriceReports = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order price reports" : "Price Reports"
+  const title = kind === "preorder" ? "Pre-order price reports" : "Price reports"
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")

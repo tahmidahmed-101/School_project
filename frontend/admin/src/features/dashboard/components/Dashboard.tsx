@@ -12,7 +12,6 @@ import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hoo
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
 import { KpiCards } from "@/features/analytics/components/KpiCards"
 import { RevenueComparisonChart } from "@/features/analytics/components/RevenueComparisonChart"
-import { CategoryBreakdown } from "@/features/analytics/components/CategoryBreakdown"
 import { TopProductsTable } from "@/features/analytics/components/TopProductsTable"
 import { LowStockAlerts } from "@/features/analytics/components/LowStockAlerts"
 import { FulfillmentStatus } from "@/features/analytics/components/FulfillmentStatus"
@@ -65,10 +64,7 @@ const Dashboard = () => {
         <>
           <KpiCards kpis={d?.kpis} {...state} />
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <RevenueComparisonChart points={d?.revenue} {...state} className="xl:col-span-2" />
-            <CategoryBreakdown kind="stock" categories={d?.categories} {...state} />
-          </div>
+          <RevenueComparisonChart points={d?.revenue} {...state} />
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <TopProductsTable kind="stock" products={d?.top_products} {...state} className="xl:col-span-2" />

@@ -166,7 +166,7 @@ function AccountFormDialog({
 }
 
 const ChartOfAccounts = () => {
-  useDocumentTitle("Chart of Accounts")
+  useDocumentTitle("Chart of accounts")
   const dispatch = useAppDispatch()
   const listState = useAppSelector((state) => state.ledgerAccounts)
   const canPost = useCan("accounting.post")
@@ -248,7 +248,7 @@ const ChartOfAccounts = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title="Chart of Accounts"
+        title="Chart of accounts"
         actions={
           canPost && (
             <>

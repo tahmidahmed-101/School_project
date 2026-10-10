@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Boxes, CreditCard, Images, Plug, Store } from "lucide-react"
+import { Boxes, CreditCard, FileText, Images, Plug, Store } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch } from "@/app/hooks"
@@ -16,20 +16,22 @@ import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { BusinessProfileForm } from "./settings/BusinessProfileForm"
 import { ModulesPanel } from "./settings/ModulesPanel"
+import { PoliciesPanel } from "./settings/PoliciesPanel"
 import { PaymentMethodsPanel } from "./settings/PaymentMethodsPanel"
 import { IntegrationsPanel } from "./settings/IntegrationsPanel"
 import { StorefrontContentPanel } from "./settings/StorefrontContentPanel"
 
 const TABS = [
-  { value: "business", label: "Business Profile", icon: Store },
-  { value: "storefront", label: "Storefront Content", icon: Images },
+  { value: "business", label: "Business profile", icon: Store },
+  { value: "storefront", label: "Storefront content", icon: Images },
   { value: "modules", label: "Modules", icon: Boxes },
-  { value: "payments", label: "Payment Methods", icon: CreditCard },
+  { value: "payments", label: "Payment methods", icon: CreditCard },
+  { value: "policies", label: "Store policies", icon: FileText },
   { value: "integrations", label: "Integrations", icon: Plug },
 ] as const
 
 const Settings = () => {
-  useDocumentTitle("Settings")
+  useDocumentTitle("Shop settings")
   const dispatch = useAppDispatch()
   const canManage = useCan("settings.manage")
   const [searchParams, setSearchParams] = useSearchParams()
@@ -51,11 +53,11 @@ const Settings = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        title="Settings"
+        title="Shop settings"
         description={
           canManage
             ? undefined
-            : "You can view these settings; changing them needs the settings.manage permission."
+            : "You can view these settings but not change them."
         }
       />
 
@@ -80,6 +82,9 @@ const Settings = () => {
         </TabsContent>
         <TabsContent value="payments" className="mt-4">
           <PaymentMethodsPanel canManage={canManage} kind="stock" />
+        </TabsContent>
+        <TabsContent value="policies" className="mt-4">
+          <PoliciesPanel />
         </TabsContent>
         <TabsContent value="integrations" className="mt-4">
           <IntegrationsPanel />

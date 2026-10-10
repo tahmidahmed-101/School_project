@@ -590,10 +590,10 @@ function InventoryValuation() {
 }
 
 const FinancialReports = () => {
-  useDocumentTitle("Financial Reports")
+  useDocumentTitle("Financial reports")
   return (
     <div className="section-container space-y-6">
-      <PageHeading title="Financial Reports" />
+      <PageHeading title="Financial reports" />
       <p className="max-w-3xl text-sm text-muted-foreground">
         Each report shows stock or pre-order on its own, with the expenses marked for that half. Figures that belong to
         the whole business, such as cash, rent, salaries and net income, are in the Company view. A pre-order deposit is money held, not a sale: revenue is

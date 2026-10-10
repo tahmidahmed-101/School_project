@@ -12,6 +12,8 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
 import { TextCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { FreeDeliveryForm } from "@/features/system/components/settings/FreeDeliveryForm"
+import { fetchBusinessProfile } from "@/features/system/slices/businessSettingsSlice"
 import { deleteRate, fetchRates } from "@/features/shipping/slices/rateSlice"
 import { fetchZoneOptions } from "@/features/shipping/slices/zoneSlice"
 import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
@@ -28,11 +30,14 @@ import { RateFormDialog } from "./RateFormDialog"
 
 const ShippingRatesList = () => {
   const kind = useKind()
-  const title = deliveryTitle(kind, "Shipping Rates")
+  const title = deliveryTitle(kind, "Shipping rates")
   useDocumentTitle(title)
 
   const dispatch = useAppDispatch()
   const canUpdate = useCan("shipments.update")
+  const canSeeSettings = useCan("settings.view")
+  const canManageSettings = useCan("settings.manage")
+  const showFreeDelivery = kind === "stock" && canSeeSettings
   const rateState = useAppSelector((state) => state.shippingRates)
 
   // ?zone_id=… comes from the zones page's "N rate(s)" link.
@@ -55,6 +60,12 @@ const ShippingRatesList = () => {
       carrierReq.abort()
     }
   }, [dispatch, kind])
+
+  useEffect(() => {
+    if (!showFreeDelivery) return
+    const request = dispatch(fetchBusinessProfile())
+    return () => request.abort()
+  }, [dispatch, showFreeDelivery])
 
   const zoneNames = useMemo(() => new Map(zones.map((z) => [z.id, z.name])), [zones])
   const carrierNames = useMemo(() => new Map(carriers.map((c) => [c.id, c.name])), [carriers])
@@ -149,6 +160,8 @@ const ShippingRatesList = () => {
           )
         }
       />
+
+      {showFreeDelivery && <FreeDeliveryForm canManage={canManageSettings} />}
 
       <FilterToolbar
         filters={[

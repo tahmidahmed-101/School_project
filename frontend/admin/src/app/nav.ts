@@ -109,7 +109,7 @@ export const navSections: NavSection[] = [
     icon: Megaphone,
     group: "STOCK",
     items: [
-      { title: "Sales", url: "/sales", permission: ORDERS },
+      { title: "Promotions", url: "/sales", permission: ORDERS },
       { title: "Coupons", url: "/coupons", permission: ORDERS },
     ],
   },
@@ -226,11 +226,10 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    label: "Set-up",
+    label: "Shared",
     icon: Settings,
     group: "BUSINESS",
     items: [
-      { title: "Store policies", url: "/policies", permission: ["settings.view", "settings.manage"] },
       { title: "Carriers", url: "/carriers", permission: SHIPMENTS },
       { title: "Blocklists", url: "/blocklists", permission: "risk.view" },
       { title: "Subscribers", url: "/subscribers", permission: ["marketing.view", "marketing.manage"] },

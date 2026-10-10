@@ -8,7 +8,7 @@ import type { StorePolicyUpdate } from "@/features/system/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { SectionState } from "./SectionState"
 
-/** The pre-order rule of the return policy; the rest of that policy is edited under Store Policies. */
+/** The pre-order rule of the return policy; the rest of that policy is edited under Shop settings → Store policies. */
 export function PreorderReturnsCard({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
   const { data: policies, status, error } = useAppSelector((state) => state.businessSettings.policies)

@@ -21,7 +21,7 @@ const ORDERING_OPTIONS: Option[] = [
 const PAGE_SIZE = 25
 
 const LoginHistory = () => {
-  useDocumentTitle("Login History")
+  useDocumentTitle("Login history")
 
   const dispatch = useAppDispatch()
   const historyState = useAppSelector((state) => state.loginHistory)
@@ -65,7 +65,7 @@ const LoginHistory = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title="Login History" />
+      <PageHeader title="Login history" />
 
       <FilterToolbar
         searchPlaceholder="Search by email or IP address..."
