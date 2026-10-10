@@ -91,9 +91,20 @@ describe("mergeBrand", () => {
     expect(mergeBrand(profile({ phone: "01811-222333" })).about).toEqual({ en: "", bn: "" });
   });
 
-  it("does not take the tagline or the logo from the profile", () => {
-    const brand = mergeBrand(profile({ tagline: "#kullmart", logo_url: "https://cdn.test/logo.png" }));
-    expect(brand.tagline).toEqual(BRAND_INFO.tagline);
+  it("does not take the tagline from the profile", () => {
+    expect(mergeBrand(profile({ tagline: "#kullmart" })).tagline).toEqual(BRAND_INFO.tagline);
+  });
+
+  it("shows a logo uploaded in the dashboard in place of the built-in one", () => {
+    const brand = mergeBrand(profile({ logo_url: " https://cdn.test/logo.png " }));
+    expect(brand.logo).toBe("https://cdn.test/logo.png");
+    expect(brand.logoCart).toBe("https://cdn.test/logo.png");
+    expect(brand.logoMark).toBe(BRAND_INFO.logoMark);
+  });
+
+  it("keeps the built-in logo while none is uploaded", () => {
+    const brand = mergeBrand(profile({ logo_url: "" }));
     expect(brand.logo).toBe(BRAND_INFO.logo);
+    expect(brand.logoCart).toBe(BRAND_INFO.logoCart);
   });
 });

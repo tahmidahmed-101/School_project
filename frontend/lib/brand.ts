@@ -61,7 +61,7 @@ const realName = (value: string | undefined) => {
 
 /**
  * BRAND_INFO with the store's name, contact details, opening hours and about text from GET /business-profile/
- * laid over it. The logo, taglines and slogan stay static. A field is replaced only when the API actually has a
+ * laid over it. The taglines and slogan stay static. A field is replaced only when the API actually has a
  * value, so an empty field or an unreachable backend falls back to the static one.
  * A placeholder left over from setup (LaunchCart, admin@example.com, 01700000000) counts as empty.
  */
@@ -82,6 +82,8 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
   };
   const mapsUrl = profile.google_maps_url?.trim() ?? "";
   const freeDeliveryMin = profile.free_delivery_min_amount?.trim() ?? "";
+  // A logo uploaded in the dashboard replaces the built-in one in the header, the footer and search results.
+  const logo = /^https?:\/\//.test(profile.logo_url?.trim() ?? "") ? profile.logo_url.trim() : "";
   return {
     ...BRAND_INFO,
     ...(name && { name }),
@@ -95,6 +97,7 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     ...(email && { email }),
     ...(address && { address: { en: address, bn: address } }),
     ...(facebook && { facebook }),
+    ...(logo && { logo, logoCart: logo }),
     social,
     mapsUrl,
     openingHours: profile.opening_hours?.trim() ?? "",
