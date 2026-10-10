@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test"
 import { test, expect, expectPageHeading } from "./auth.helper"
 
-// Mirrors the nav entries in src/features/*/module.ts (admin sees every item).
+// Mirrors the Shop half and the Business sections of src/app/nav.ts (admin sees every item).
 const SIDEBAR: { section: string; items: { title: string; url: string; heading: string | RegExp }[] }[] = [
   {
     section: "Home",
@@ -27,77 +27,82 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
       { title: "Bundles", url: "/bundles", heading: "Bundles" },
       { title: "Categories", url: "/categories", heading: "Categories" },
       { title: "Brands", url: "/brands", heading: "Brands" },
-      { title: "Reviews", url: "/reviews", heading: "Reviews" },
-      { title: "Questions", url: "/questions", heading: "Questions" },
-      { title: "Price Reports", url: "/price_reports", heading: "Price Reports" },
     ],
   },
   {
-    section: "People",
+    section: "Customers",
     items: [
       { title: "Customers", url: "/customers", heading: "Customers" },
-      { title: "Staff", url: "/staffs", heading: "Staff Members" },
+      { title: "Reviews", url: "/reviews", heading: "Reviews" },
+      { title: "Questions", url: "/questions", heading: "Questions" },
+      { title: "Price reports", url: "/price_reports", heading: "Price Reports" },
+      { title: "Fraud cases", url: "/fraud_cases", heading: "Fraud Cases" },
     ],
   },
   {
-    section: "Marketing",
-    items: [
-      { title: "Coupons", url: "/coupons", heading: "Coupons" },
-      { title: "Subscribers", url: "/subscribers", heading: "Newsletter Subscribers" },
-    ],
-  },
-  {
-    section: "Inventory",
+    section: "Goods",
     items: [
       { title: "Stock", url: "/inventory", heading: "Stock" },
-      { title: "Stock Ledger", url: "/inventory/ledger", heading: "Stock Ledger" },
-      { title: "Warehouses", url: "/warehouses", heading: "Warehouses" },
+      { title: "Stock movements", url: "/inventory/ledger", heading: "Stock Ledger" },
       { title: "Reservations", url: "/inventory/reservations", heading: "Stock Reservations" },
+      { title: "Warehouses", url: "/warehouses", heading: "Warehouses" },
     ],
   },
   {
-    section: "Logistics",
+    section: "Delivery",
     items: [
       { title: "Shipments", url: "/shipments", heading: "Shipments" },
-      { title: "Carriers", url: "/carriers", heading: "Carriers" },
-      { title: "Delivery Zones", url: "/shipping_zones", heading: "Delivery Zones" },
-      { title: "Shipping Rates", url: "/shipping_rates", heading: "Shipping Rates" },
+      { title: "Delivery zones", url: "/shipping_zones", heading: "Delivery Zones" },
+      { title: "Shipping rates", url: "/shipping_rates", heading: "Shipping Rates" },
     ],
   },
   {
     section: "Purchasing",
     items: [
-      { title: "Purchase Orders", url: "/purchasing/orders", heading: "Purchase Orders" },
-      { title: "Goods Receipts", url: "/purchasing/receipts", heading: "Goods Receipts" },
       { title: "Suppliers", url: "/purchasing/suppliers", heading: "Suppliers" },
-      { title: "Vendor Bills", url: "/purchasing/bills", heading: "Vendor Bills" },
-      { title: "Vendor Payments", url: "/purchasing/payments", heading: "Vendor Payments" },
+      { title: "Purchase orders", url: "/purchasing/orders", heading: "Purchase Orders" },
+      { title: "Goods receipts", url: "/purchasing/receipts", heading: "Goods Receipts" },
+      { title: "Supplier bills", url: "/purchasing/bills", heading: "Vendor Bills" },
+      { title: "Supplier payments", url: "/purchasing/payments", heading: "Vendor Payments" },
     ],
+  },
+  {
+    section: "Marketing",
+    items: [
+      { title: "Sales", url: "/sales", heading: "Sales" },
+      { title: "Coupons", url: "/coupons", heading: "Coupons" },
+    ],
+  },
+  {
+    section: "Settings",
+    items: [{ title: "Shop settings", url: "/settings", heading: "Settings" }],
   },
   {
     section: "Accounting",
     items: [
-      { title: "Financial Reports", url: "/accounting/reports", heading: "Financial Reports" },
+      { title: "Financial reports", url: "/accounting/reports", heading: "Financial Reports" },
       { title: "Expenses", url: "/expenses", heading: "Expenses" },
-      { title: "Journal Entries", url: "/accounting/journal-entries", heading: "Journal Entries" },
-      { title: "Chart of Accounts", url: "/accounting/accounts", heading: "Chart of Accounts" },
-      { title: "Tax Rates", url: "/accounting/tax-rates", heading: "Tax Rates" },
+      { title: "Expense categories", url: "/expenses/categories", heading: "Expense Categories" },
+      { title: "Journal entries", url: "/accounting/journal-entries", heading: "Journal Entries" },
+      { title: "Chart of accounts", url: "/accounting/accounts", heading: "Chart of Accounts" },
+      { title: "Tax rates", url: "/accounting/tax-rates", heading: "Tax Rates" },
     ],
   },
   {
-    section: "System",
+    section: "Team",
     items: [
-      { title: "Settings", url: "/settings", heading: "Settings" },
-      { title: "Store Policies", url: "/policies", heading: "Store Policies" },
-      { title: "Audit Logs", url: "/audit-logs", heading: "Audit Logs" },
-      { title: "Login History", url: "/login-history", heading: "Login History" },
+      { title: "Staff", url: "/staffs", heading: "Staff Members" },
+      { title: "Audit logs", url: "/audit-logs", heading: "Audit Logs" },
+      { title: "Login history", url: "/login-history", heading: "Login History" },
     ],
   },
   {
-    section: "Risk",
+    section: "Set-up",
     items: [
-      { title: "Fraud Cases", url: "/fraud_cases", heading: "Fraud Cases" },
+      { title: "Store policies", url: "/policies", heading: "Store Policies" },
+      { title: "Carriers", url: "/carriers", heading: "Carriers" },
       { title: "Blocklists", url: "/blocklists", heading: "Blocklists" },
+      { title: "Subscribers", url: "/subscribers", heading: "Newsletter Subscribers" },
     ],
   },
 ]
@@ -117,12 +122,12 @@ async function clickSidebarLink(page: Page, section: string, title: string, url:
 }
 
 test.describe("Sidebar pages", () => {
-  // One test per sidebar group (MAIN / OPERATIONS / FINANCE / ADMIN).
+  // A few sections per test, so no single test outgrows its timeout.
   const GROUPS: Record<string, string[]> = {
-    MAIN: ["Home", "Sales", "Catalog", "People", "Marketing"],
-    OPERATIONS: ["Inventory", "Logistics", "Purchasing"],
-    FINANCE: ["Accounting"],
-    ADMIN: ["System", "Risk"],
+    "SHOP SELLING": ["Home", "Sales", "Catalog", "Customers"],
+    "SHOP OPERATIONS": ["Goods", "Delivery", "Purchasing", "Marketing", "Settings"],
+    ACCOUNTING: ["Accounting"],
+    BUSINESS: ["Team", "Set-up"],
   }
   for (const [group, sections] of Object.entries(GROUPS)) {
     test(`${group}: every sidebar link renders its page`, async ({ adminPage: page }) => {

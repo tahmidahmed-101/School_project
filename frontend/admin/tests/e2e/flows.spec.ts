@@ -19,18 +19,20 @@ async function pickComboOption(page: Page, placeholder: string, option: string) 
 
 async function firstOrderNumber(page: Page) {
   const row = await firstDataRow(page)
-  const orderNumber = (await row.getByRole("cell").first().innerText()).trim()
+  // The first cell is the row checkbox; the order number comes after it.
+  const cell = row.getByRole("cell").nth(1)
+  const orderNumber = (await cell.innerText()).trim()
   expect(orderNumber).toMatch(/^SO-/)
-  return { row, orderNumber }
+  return { cell, orderNumber }
 }
 
 test.describe("Orders", () => {
   test("list -> detail shows order number, lines and totals", async ({ adminPage: page }) => {
     await page.goto("/orders")
     await expectPageHeading(page, "Orders")
-    const { row, orderNumber } = await firstOrderNumber(page)
+    const { cell, orderNumber } = await firstOrderNumber(page)
 
-    await row.getByRole("cell").first().click()
+    await cell.click()
     await expect(page).toHaveURL(/\/order_detail\//)
     await expectPageHeading(page, orderNumber)
     await expect(page.getByText(/^Order lines \(\d+\)$/)).toBeVisible()
@@ -54,8 +56,8 @@ test.describe("Orders", () => {
     await pickComboOption(page, "Status", "Delivered")
     await listResponse
 
-    // Status is column 5 (ORDER #, CUSTOMER, TOTAL, PAYMENT, STATUS, ...).
-    const statusCells = page.locator("tbody tr td:nth-child(5)")
+    // Status is column 6 (checkbox, ORDER #, CUSTOMER, TOTAL, PAYMENT, STATUS, ...).
+    const statusCells = page.locator("tbody tr td:nth-child(6)")
     await expect(statusCells.first()).toHaveText(/delivered/i)
     await expect(async () => {
       const statuses = (await statusCells.allInnerTexts()).map((s) => s.trim().toLowerCase())
@@ -126,7 +128,7 @@ test.describe("Payments", () => {
       await expect(page.getByText("Outstanding", { exact: true })).toBeVisible()
       await page.getByRole("button", { name: "Refund" }).click()
 
-      const dialog = page.getByRole("dialog", { name: "Refund payment" })
+      const dialog = page.getByRole("alertdialog", { name: "Refund payment" })
       await expect(dialog).toBeVisible()
       const amount = dialog.getByLabel("Amount")
       const outstanding = Number(await amount.getAttribute("max"))
@@ -163,7 +165,7 @@ test.describe("Global search", () => {
     const input = page.getByRole("combobox", { name: "Search" }).first()
     await expect(input).toBeFocused()
     await input.fill("Journal")
-    await page.getByRole("option", { name: /Journal Entries/ }).click()
+    await page.getByRole("option", { name: /Journal entries/ }).click()
     await expect(page).toHaveURL(/\/accounting\/journal-entries$/)
     await expectPageHeading(page, "Journal Entries")
   })
