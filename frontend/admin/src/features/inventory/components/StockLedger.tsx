@@ -193,7 +193,7 @@ const StockLedgerList = () => {
         emptyTitle="No movements"
         emptyDescription="No ledger entries match these filters."
         minWidth="1140px"
-        columnWidths={["170px", "270px", "100px", "160px", "80px", "90px", "110px", "200px"]}
+        columnWidths={["210px", "270px", "100px", "160px", "80px", "90px", "110px", "200px"]}
       />
     </div>
   )

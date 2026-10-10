@@ -112,8 +112,8 @@ const ShipmentsList = () => {
             ? "Shipments are created from a confirmed pre-order once its items have arrived."
             : "Shipments are created from a confirmed order's detail page."
         }
-        minWidth="1150px"
-        columnWidths={["170px", "150px", "110px", "120px", "150px", "170px", "220px", "80px"]}
+        minWidth="1300px"
+        columnWidths={["230px", "150px", "110px", "120px", "150px", "210px", "190px", "80px"]}
       />
     </div>
   )

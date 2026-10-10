@@ -233,7 +233,7 @@ const CartsList = () => {
         emptyTitle="No open carts"
         emptyDescription="Carts with items that haven't been checked out show up here."
         minWidth="1050px"
-        columnWidths={["220px", "140px", "260px", "120px", "170px", "120px", "80px"]}
+        columnWidths={["220px", "140px", "260px", "120px", "210px", "120px", "80px"]}
         unlabelledColumns={["actions"]}
       />
 

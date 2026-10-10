@@ -91,7 +91,7 @@ const ShippingZonesList = () => {
           }}
         >
           <Truck className="size-4" />
-          {row.original.rates.length} rate(s)
+          {row.original.rates.length} {row.original.rates.length === 1 ? "rate" : "rates"}
         </Button>
       ),
     },

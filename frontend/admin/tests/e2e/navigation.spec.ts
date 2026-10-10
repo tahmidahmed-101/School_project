@@ -62,8 +62,8 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
       { title: "Suppliers", url: "/purchasing/suppliers", heading: "Suppliers" },
       { title: "Purchase orders", url: "/purchasing/orders", heading: "Purchase orders" },
       { title: "Goods receipts", url: "/purchasing/receipts", heading: "Goods receipts" },
-      { title: "Supplier bills", url: "/purchasing/bills", heading: "Vendor Bills" },
-      { title: "Supplier payments", url: "/purchasing/payments", heading: "Vendor Payments" },
+      { title: "Supplier bills", url: "/purchasing/bills", heading: "Supplier bills" },
+      { title: "Supplier payments", url: "/purchasing/payments", heading: "Supplier payments" },
     ],
   },
   {

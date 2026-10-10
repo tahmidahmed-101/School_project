@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PageHeading } from "@/components/common/PageHeading"
+import { PageHeader } from "@/components/common/PageHeader"
 import { api, extractApiError, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
 import { formatCurrency, formatDate, toISODate, todayLocalISODate } from "@/lib/format"
@@ -593,7 +593,7 @@ const FinancialReports = () => {
   useDocumentTitle("Financial reports")
   return (
     <div className="section-container space-y-6">
-      <PageHeading title="Financial reports" />
+      <PageHeader title="Financial reports" />
       <p className="max-w-3xl text-sm text-muted-foreground">
         Each report shows stock or pre-order on its own, with the expenses marked for that half. Figures that belong to
         the whole business, such as cash, rent, salaries and net income, are in the Company view. A pre-order deposit is money held, not a sale: revenue is

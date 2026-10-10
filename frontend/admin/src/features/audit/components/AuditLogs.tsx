@@ -117,7 +117,7 @@ const AuditLogs = () => {
         emptyTitle="No audit entries"
         emptyDescription="No logged actions match this search."
         minWidth="1000px"
-        columnWidths={["190px", "240px", "260px", "240px", "150px"]}
+        columnWidths={["210px", "240px", "260px", "240px", "150px"]}
       />
 
       <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>

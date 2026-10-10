@@ -81,7 +81,7 @@ const LoginHistory = () => {
         emptyTitle="No sign-ins found"
         emptyDescription="No sign-in attempts match this search."
         minWidth="720px"
-        columnWidths={["200px", "280px", "180px", "130px"]}
+        columnWidths={["210px", "280px", "180px", "130px"]}
       />
     </div>
   )

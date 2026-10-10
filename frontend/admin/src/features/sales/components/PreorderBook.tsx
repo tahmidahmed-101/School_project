@@ -43,7 +43,7 @@ export function PreorderBook({ canManage, onAllocated }: { canManage: boolean; o
         <div className="space-y-1">
           <CardTitle>Pre-order book</CardTitle>
           <CardDescription>
-            {summary.open_orders} open pre-order(s) worth {formatCurrency(summary.order_value)}. Received{" "}
+            {summary.open_orders} open {summary.open_orders === 1 ? "pre-order" : "pre-orders"} worth {formatCurrency(summary.order_value)}. Received{" "}
             {formatCurrency(summary.deposits_held)}, still owed {formatCurrency(summary.balances_outstanding)}.
           </CardDescription>
         </div>

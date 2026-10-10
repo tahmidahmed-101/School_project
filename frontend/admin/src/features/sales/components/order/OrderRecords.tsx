@@ -156,7 +156,7 @@ export function OrderRecords({ order, refresh }: { order: Order; refresh: () => 
                 </div>
                 {s.unresolved_damaged_quantity > 0 && (
                   <p role="alert" className="text-xs font-medium text-destructive">
-                    {s.unresolved_damaged_quantity} damaged unit(s) written off and still owed to the customer —{" "}
+                    {s.unresolved_damaged_quantity} damaged {s.unresolved_damaged_quantity === 1 ? "unit" : "units"} written off and still owed to the customer —{" "}
                     <Link to={`/shipment_detail/${s.id}`} className="underline">
                       replace them
                     </Link>

@@ -159,6 +159,7 @@ const Navbar = () => {
             variant="outline"
             size="icon-lg"
             onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
             className="rounded-[10px] text-gray-700 shadow-xs hover:bg-muted dark:hover:bg-accent dark:text-gray-300"
           >
             {theme === "light" ? (

@@ -177,7 +177,7 @@ const Bundles = () => {
         emptyActionLabel={canManage ? "New bundle" : undefined}
         onEmptyAction={canManage ? () => navigate("/bundles/new") : undefined}
         minWidth="980px"
-        columnWidths={["260px", "280px", "140px", "100px", "110px", "80px"]}
+        columnWidths={["240px", "340px", "140px", "100px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
     </div>

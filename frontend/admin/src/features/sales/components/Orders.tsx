@@ -242,10 +242,10 @@ const OrdersList = () => {
           onRowClick={(order) => navigate(withKind(`/order_detail/${order.id}`, kind))}
           emptyTitle={isPreorder ? "No pre-orders found" : "No orders found"}
           emptyDescription="Try adjusting the search or filters."
-          minWidth={isPreorder ? "1300px" : "1050px"}
+          minWidth={isPreorder ? "1200px" : "1050px"}
           columnWidths={
             isPreorder
-              ? ["140px", "220px", "120px", "120px", "120px", "200px", "130px", "120px", "80px"]
+              ? ["140px", "200px", "120px", "110px", "110px", "160px", "130px", "110px", "80px"]
               : ["140px", "220px", "120px", "130px", "130px", "120px", "80px"]
           }
         />

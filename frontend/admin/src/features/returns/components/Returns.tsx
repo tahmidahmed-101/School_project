@@ -53,7 +53,10 @@ const ReturnsList = () => {
       header: "UNITS",
       cell: ({ row }) => (
         <span className="text-sm">
-          {row.original.lines.reduce((n, l) => n + l.quantity, 0)} in {row.original.lines.length} line(s)
+          {row.original.lines.reduce((n, l) => n + l.quantity, 0)}
+          {row.original.lines.length > 1 && (
+            <span className="text-muted-foreground"> in {row.original.lines.length} lines</span>
+          )}
         </span>
       ),
     },

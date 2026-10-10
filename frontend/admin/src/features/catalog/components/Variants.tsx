@@ -271,8 +271,8 @@ const Variants = ({ kind }: { kind: Kind }) => {
         minWidth="1000px"
         columnWidths={
           isStock
-            ? ["280px", "130px", "150px", "120px", "100px", "110px", "80px"]
-            : ["280px", "130px", "120px", "150px", "110px", "80px"]
+            ? ["250px", "210px", "140px", "110px", "100px", "110px", "80px"]
+            : ["250px", "210px", "120px", "140px", "110px", "80px"]
         }
       />
 

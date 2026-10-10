@@ -158,7 +158,7 @@ const Sales = () => {
         emptyDescription="Create a promotion to take a percentage off items in stock for a set period."
         {...(canManage ? { emptyActionLabel: "Add Promotion", onEmptyAction: () => navigate("/sale_form/new") } : {})}
         minWidth="1080px"
-        columnWidths={["200px", "110px", "140px", "160px", "160px", "110px", "90px", "80px"]}
+        columnWidths={["200px", "110px", "140px", "130px", "130px", "110px", "80px"]}
       />
     </div>
   )
