@@ -38,7 +38,7 @@ const saleSchema = z
       .trim()
       .regex(/^\d{1,3}(\.\d{1,2})?$/, PERCENT_MESSAGE)
       .refine((value) => Number(value) > 0 && Number(value) < 100, PERCENT_MESSAGE),
-    starts_at: z.string().min(1, "Choose when the sale starts"),
+    starts_at: z.string().min(1, "Choose when the promotion starts"),
     ends_at: z.string(),
     is_active: z.boolean(),
     applies_to: z.enum(["all", "categories", "brands", "products"]),
@@ -98,7 +98,7 @@ const SaleForm = () => {
   const existing = isEditing && singleData?.id === id ? (singleData as Sale) : null
   const readOnly = !canManage
 
-  useDocumentTitle(existing ? `${existing.name} — Sale` : isEditing ? "Sale" : "Add Sale")
+  useDocumentTitle(existing ? `${existing.name} — Promotion` : isEditing ? "Promotion" : "Add Promotion")
 
   const {
     control,
@@ -143,7 +143,7 @@ const SaleForm = () => {
     return (
       <DetailPageState
         state={pageState}
-        entity="Sale"
+        entity="Promotion"
         backTo="/sales"
         backLabel="Back to Sales"
         error={singleError}
@@ -169,21 +169,21 @@ const SaleForm = () => {
     try {
       if (existing) {
         await dispatch(patchData({ id: existing.id, payload: payload as Partial<Sale> })).unwrap()
-        toast.success(`Sale ${payload.name} updated`)
+        toast.success(`Promotion ${payload.name} updated`)
       } else {
         await dispatch(postData({ payload: payload as Partial<Sale> })).unwrap()
-        toast.success(`Sale ${payload.name} created`)
+        toast.success(`Promotion ${payload.name} created`)
       }
       navigate("/sales")
     } catch (err) {
       const { code, message } = err as Partial<ApiError>
       const targetField = TARGET_FIELDS[target]
       if (code === "sale_target_required" && targetField && message) setError(targetField, { message })
-      reportFormError(err, { setError, fields: FORM_FIELDS, fieldMap: API_FIELDS, fallback: "Couldn't save this sale" })
+      reportFormError(err, { setError, fields: FORM_FIELDS, fieldMap: API_FIELDS, fallback: "Couldn't save this promotion" })
     }
   }
 
-  const title = readOnly ? "Sale Details" : isEditing ? "Edit Sale" : "Add Sale"
+  const title = readOnly ? "Promotion Details" : isEditing ? "Edit Promotion" : "Add Promotion"
 
   return (
     <div className="section-container space-y-6">
@@ -192,8 +192,8 @@ const SaleForm = () => {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Card>
           <CardHeader>
-            <CardTitle>Sale Details</CardTitle>
-            <CardDescription>A sale takes a percentage off items in stock while it runs.</CardDescription>
+            <CardTitle>Promotion Details</CardTitle>
+            <CardDescription>A promotion takes a percentage off items in stock while it runs.</CardDescription>
           </CardHeader>
           <CardContent>
             <fieldset disabled={readOnly} className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -241,7 +241,7 @@ const SaleForm = () => {
                     )}
                   />
                 </div>
-                <FieldDescription>A sale that is switched off changes no prices.</FieldDescription>
+                <FieldDescription>A promotion that is switched off changes no prices.</FieldDescription>
               </div>
 
               {appliesTo === "categories" && (
@@ -331,7 +331,7 @@ const SaleForm = () => {
                         open={pickingProduct}
                         onOpenChange={setPickingProduct}
                         kind="stock"
-                        title="Add a product to the sale"
+                        title="Add a product to the promotion"
                         onPick={(product) => {
                           if (!field.value.some((p) => p.id === product.id)) {
                             field.onChange([...field.value, { id: product.id, name: product.name }])
@@ -350,7 +350,7 @@ const SaleForm = () => {
           <FormActions
             sticky
             onCancel={() => navigate("/sales")}
-            submitLabel={isEditing ? "Save Changes" : "Create Sale"}
+            submitLabel={isEditing ? "Save Changes" : "Create Promotion"}
             submitting={isSubmitting}
             submitDisabled={isEditing && !isDirty}
           />

@@ -64,9 +64,9 @@ const Sales = () => {
   const handleDelete = async (sale: Sale) => {
     try {
       await dispatch(deleteData(sale.id)).unwrap()
-      toast.success(`Sale ${sale.name} deleted`)
+      toast.success(`Promotion ${sale.name} deleted`)
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't delete this sale"))
+      toast.error(getApiErrorMessage(err, "Couldn't delete this promotion"))
     }
   }
 
@@ -89,14 +89,14 @@ const Sales = () => {
     {
       accessorKey: "starts_at",
       header: "STARTS",
-      cell: ({ row }) => <DateCell value={row.original.starts_at} withTime className="text-muted-foreground" />,
+      cell: ({ row }) => <DateCell value={row.original.starts_at} className="text-muted-foreground" />,
     },
     {
       accessorKey: "ends_at",
       header: "ENDS",
       cell: ({ row }) =>
         row.original.ends_at ? (
-          <DateCell value={row.original.ends_at} withTime className="text-muted-foreground" />
+          <DateCell value={row.original.ends_at} className="text-muted-foreground" />
         ) : (
           <span className="text-sm text-muted-foreground">Until switched off</span>
         ),
@@ -105,11 +105,6 @@ const Sales = () => {
       id: "status",
       header: "STATUS",
       cell: ({ row }) => <StatusBadge status={row.original.status} tone={STATUS_TONES[row.original.status]} />,
-    },
-    {
-      accessorKey: "is_active",
-      header: "ON/OFF",
-      cell: ({ row }) => <span className="text-sm">{row.original.is_active ? "On" : "Off"}</span>,
     },
     {
       id: "actions",
@@ -132,7 +127,7 @@ const Sales = () => {
         actions={
           canManage && (
             <Button variant="apply" size="action" onClick={() => navigate("/sale_form/new")}>
-              <PlusIcon className="size-5" /> Add Sale
+              <PlusIcon className="size-5" /> Add Promotion
             </Button>
           )
         }
@@ -153,15 +148,15 @@ const Sales = () => {
         columns={columns}
         bulk={
           canManage
-            ? { noun: "sale", deleteRow: (s) => dispatch(deleteData(s.id)).unwrap(), onDone: list.reload }
+            ? { noun: "promotion", deleteRow: (s) => dispatch(deleteData(s.id)).unwrap(), onDone: list.reload }
             : undefined
         }
         data={sales}
         {...list.tableProps}
         onRowClick={(sale) => navigate(`/sale_form/${sale.id}`)}
         emptyTitle="No promotions yet"
-        emptyDescription="Create a sale to take a percentage off items in stock for a set period."
-        {...(canManage ? { emptyActionLabel: "Add Sale", onEmptyAction: () => navigate("/sale_form/new") } : {})}
+        emptyDescription="Create a promotion to take a percentage off items in stock for a set period."
+        {...(canManage ? { emptyActionLabel: "Add Promotion", onEmptyAction: () => navigate("/sale_form/new") } : {})}
         minWidth="1080px"
         columnWidths={["200px", "110px", "140px", "160px", "160px", "110px", "90px", "80px"]}
       />

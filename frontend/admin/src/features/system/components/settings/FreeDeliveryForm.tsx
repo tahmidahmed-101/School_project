@@ -65,7 +65,7 @@ export function FreeDeliveryForm({ canManage }: { canManage: boolean }) {
         <CardTitle>Free delivery</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col items-start gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <MoneyField
             showCurrency
             label="Free delivery on orders of at least"

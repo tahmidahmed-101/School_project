@@ -116,8 +116,10 @@ const ShippingRatesList = () => {
       header: "BASE",
       cell: ({ row }) => (
         <span className="text-sm">
-          {formatCurrency(row.original.base_charge)}{" "}
-          <span className="text-muted-foreground">up to {Number(row.original.base_weight)} kg</span>
+          {formatCurrency(row.original.base_charge)}
+          {Number(row.original.base_weight) > 0 && (
+            <span className="text-muted-foreground"> up to {Number(row.original.base_weight)} kg</span>
+          )}
         </span>
       ),
     },
@@ -126,8 +128,14 @@ const ShippingRatesList = () => {
       header: "EACH EXTRA",
       cell: ({ row }) => (
         <span className="text-sm">
-          {formatCurrency(row.original.increment_charge)}{" "}
-          <span className="text-muted-foreground">per {Number(row.original.increment_weight)} kg</span>
+          {Number(row.original.increment_charge) > 0 ? (
+            <>
+              {formatCurrency(row.original.increment_charge)}{" "}
+              <span className="text-muted-foreground">per {Number(row.original.increment_weight)} kg</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">None</span>
+          )}
         </span>
       ),
     },
