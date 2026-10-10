@@ -13,7 +13,7 @@ export function getDiscountPercent(product: Product): number | null {
   return Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100);
 }
 
-/** The sale to name on the product, or null: pre-orders never show one, nor does a SKU the sale leaves out. */
+/** The sale running on the product, or null: pre-orders never show one, nor does a SKU the sale leaves out. */
 export function getSaleOffer(product: Product): ProductSale | null {
   if (productKind(product) !== "stock" || product.isPreOrder) return null;
   if (!product.sale || product.salePrice === undefined) return null;

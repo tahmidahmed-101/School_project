@@ -7,9 +7,8 @@ import type { Product } from "@/lib/types";
 import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, getSaleOffer } from "@/lib/product";
+import { getDiscountPercent } from "@/lib/product";
 import { soleVariant } from "@/lib/variants";
-import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 import { Button, buttonClass } from "@/design-system/ui/Button";
 
@@ -18,7 +17,6 @@ export function ProductListItem({ product }: { product: Product }) {
   const { t, ui, money } = useLang();
   const { addItem } = useCart();
   const discountPercent = getDiscountPercent(product);
-  const sale = getSaleOffer(product);
   const href = `/product/${product.slug}`;
 
   return (
@@ -40,7 +38,6 @@ export function ProductListItem({ product }: { product: Product }) {
       <div className="w-full min-w-0 flex-1 space-y-1 text-left">
         <div className="flex items-center gap-2 text-2xs font-semibold text-gold-800">
           <span>{t(product.categoryName)}</span>
-          {sale && <SaleLabel name={sale.name} />}
         </div>
 
         <Link href={href}>

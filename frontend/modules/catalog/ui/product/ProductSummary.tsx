@@ -4,8 +4,6 @@ import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { getDiscountPercent, getSaleOffer, unavailableLabel } from "@/lib/product";
-import { SaleLabel } from "@/design-system/patterns/SaleLabel";
-import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 interface ProductSummaryProps {
   product: Product;
@@ -31,20 +29,14 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
         {discountPercent && product.compareAtPrice && (
           <span className="text-base text-fg-subtle line-through">{money(product.compareAtPrice)}</span>
         )}
-        {discountPercent && <DiscountBadge percent={discountPercent} size="md" tone="soft" />}
         <span className="h-5 w-px bg-surface-strong" aria-hidden="true" />
         <div className="text-xs">
           <Availability product={product} isSoldOut={isSoldOut} />
         </div>
       </div>
 
-      {sale && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-          <SaleLabel name={sale.name} size="md" />
-          {sale.endsAt && (
-            <span className="font-medium text-fg-muted">{ui("saleEnds").replace("{date}", t(sale.endsAt))}</span>
-          )}
-        </div>
+      {sale?.endsAt && (
+        <p className="mt-3 text-xs font-medium text-fg-muted">{ui("saleEnds").replace("{date}", t(sale.endsAt))}</p>
       )}
 
       {product.reviewCount > 0 && (

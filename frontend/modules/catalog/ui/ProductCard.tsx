@@ -10,9 +10,8 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, getSaleOffer, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
 import { soleVariant } from "@/lib/variants";
-import { SaleLabel } from "@/design-system/patterns/SaleLabel";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 import { Button, buttonClass } from "@/design-system/ui/Button";
@@ -32,7 +31,6 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const isWishlisted = isInWishlist(product.id);
 
   const discountPercent = getDiscountPercent(product);
-  const sale = getSaleOffer(product);
   const isSoldOut = isPreOrderSoldOut(product);
   const isOutOfStock = !product.isPreOrder && !product.inStock;
   const needsChoice = !soleVariant(product);
@@ -62,10 +60,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {product.isPreOrder ? (
             <PreOrderBadge status={product.preorderStatus} size="sm" />
           ) : (
-            <>
-              {discountPercent && <DiscountBadge percent={discountPercent} />}
-              {sale && <SaleLabel name={sale.name} />}
-            </>
+            discountPercent && <DiscountBadge percent={discountPercent} />
           )}
         </div>
 

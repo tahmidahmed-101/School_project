@@ -8,7 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
-import { getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent, getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
@@ -147,7 +147,12 @@ export function ProductActions({
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <span className="mr-auto shrink-0 text-base font-bold text-gold-800">{money(product.price)}</span>
+            <span className="mr-auto flex shrink-0 flex-col leading-tight">
+              <span className="text-base font-bold text-gold-800">{money(product.price)}</span>
+              {getDiscountPercent(product) && product.compareAtPrice && (
+                <span className="text-2xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
+              )}
+            </span>
             {product.isPreOrder ? (
               <Button
                 size="md"
