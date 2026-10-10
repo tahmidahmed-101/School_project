@@ -60,9 +60,9 @@ function ShowsForItems({ options }: { options: ProductOption[] }) {
 export function ProductImagesSection({ productId, options, variants, canManage, onChanged }: Props) {
   const [images, setImages] = useState<ProductImage[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
   const [reordering, setReordering] = useState(false)
-  const [target, setTarget] = useState<string>(EVERY_CHOICE)
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null)
+  const [followId, setFollowId] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -96,26 +96,26 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
     .map((variant) => ({ variant, list: [...variant.images].sort(byOrder) }))
     .filter((group) => group.list.length > 0)
 
-  const handleFiles = async (files: File[]) => {
-    if (!files.length || uploading) return
-    setUploading(true)
+  const handleFiles = async (files: File[], optionValueId: string | null) => {
+    if (!files.length || uploadingKey) return
+    setUploadingKey(optionValueId ?? EVERY_CHOICE)
     let ok = 0
-    const showsFor = options.some((o) => o.values.some((v) => v.id === target)) ? target : null
+    const top = images.reduce((max, img) => Math.max(max, img.sort_order), -1) + 1
     for (const [i, file] of files.entries()) {
       try {
         const url = await uploadMedia(file)
         await createProductImage(productId, {
           url,
           alt_text: file.name.replace(/\.[^/.]+$/, ""),
-          sort_order: images.length + i,
-          option_value_id: showsFor,
+          sort_order: top + i,
+          option_value_id: optionValueId,
         })
         ok += 1
       } catch (err) {
         toast.error(`${file.name}: ${getApiErrorMessage(err, "upload failed")}`)
       }
     }
-    setUploading(false)
+    setUploadingKey(null)
     if (ok) {
       toast.success(`${ok} image${ok === 1 ? "" : "s"} added`)
       refresh()
@@ -167,7 +167,7 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
   }
 
   /** One saved image. `list` is the ordered list it belongs to and `index` its place in it. */
-  const tile = (img: ProductImage, list: ProductImage[], index: number, sku?: string) => (
+  const tile = (img: ProductImage, list: ProductImage[], index: number, label?: string, relink = false) => (
     <ImageOrderTile
       key={img.id}
       remote
@@ -175,7 +175,7 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
       alt={img.alt_text || "Product image"}
       index={index}
       count={list.length}
-      badgePrefix={sku}
+      badgePrefix={label}
       name={img.alt_text || "image"}
       onMove={canManage ? (to) => void move(list, index, to) : undefined}
       busy={reordering}
@@ -209,7 +209,7 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
             className="h-7 cursor-pointer truncate border-transparent bg-transparent px-1.5 py-0 text-center text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:cursor-text focus-visible:bg-field-bg focus-visible:text-foreground dark:bg-transparent dark:focus-visible:bg-field-bg"
             onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
           />
-          {options.length > 0 && (
+          {relink && (
             <Select
               value={img.option_value_id ?? EVERY_CHOICE}
               onValueChange={(v) => void saveField(img, { option_value_id: v === EVERY_CHOICE ? null : v })}
@@ -236,6 +236,33 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
     </ImageOrderTile>
   )
 
+  const manyOptions = options.length > 1
+  const imagesPerValue = (option: ProductOption) =>
+    option.values.reduce((sum, value) => sum + gallery.filter((img) => img.option_value_id === value.id).length, 0)
+  const driver =
+    options.find((option) => option.id === followId) ??
+    [...options].sort((a, b) => imagesPerValue(b) - imagesPerValue(a))[0]
+  const driverValueIds = new Set(driver?.values.map((value) => value.id))
+  const shared = gallery.filter((img) => !img.option_value_id)
+  const elsewhere = gallery.filter((img) => img.option_value_id && !driverValueIds.has(img.option_value_id))
+
+  const group = (key: string, title: string, hint: string, list: ProductImage[], optionValueId: string | null, label?: string) => (
+    <section key={key} className="space-y-3 rounded-lg border border-border p-3">
+      <div>
+        <h3 className="text-sm font-medium">{title}</h3>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+      {list.length > 0 && <ImageOrderGrid>{list.map((img, i) => tile(img, list, i, label))}</ImageOrderGrid>}
+      {canManage && (
+        <ImageDropzone
+          compact
+          onFiles={(files) => void handleFiles(files, optionValueId)}
+          uploading={uploadingKey === (optionValueId ?? EVERY_CHOICE)}
+        />
+      )}
+    </section>
+  )
+
   return (
     <Card>
       <CardHeader>
@@ -243,43 +270,79 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
           <ImageIcon className="size-4" /> Images
         </CardTitle>
         <CardDescription>
-          {canManage
-            ? options.length > 0
-              ? "The first image is the main one. Use the arrows to change the order. Under each image, choose the value it shows for, like Colour: Red."
-              : "The first image is the main one. Use the arrows to change the order."
-            : "The first image is the main one."}
+          {driver
+            ? `Add photos for each ${driver.name.toLowerCase()}. Customers see them when they pick it. Photos for every choice are always shown. The first image overall is the main one.`
+            : "The first image is the main one. Use the arrows to change the order."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canManage && options.length > 0 && (
+        {canManage && manyOptions && (
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-            <label htmlFor="new-uploads-show-for" className="text-sm text-muted-foreground">
-              New uploads show for
+            <label htmlFor="photos-follow" className="text-sm text-muted-foreground">
+              Photos change with
             </label>
-            <Select value={target} onValueChange={setTarget}>
-              <SelectTrigger id="new-uploads-show-for" className="h-9 w-full sm:w-56">
+            <Select value={driver?.id} onValueChange={setFollowId}>
+              <SelectTrigger id="photos-follow" className="h-9 w-full sm:w-56">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <ShowsForItems options={options} />
+                {options.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-        )}
-        {canManage && (
-          <ImageDropzone onFiles={(files) => void handleFiles(files)} uploading={uploading} />
         )}
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Loading images…
           </div>
-        ) : gallery.length === 0 && variantGroups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No images yet.</p>
+        ) : !driver ? (
+          <>
+            {canManage && <ImageDropzone onFiles={(files) => void handleFiles(files, null)} uploading={uploadingKey !== null} />}
+            {gallery.length === 0 && variantGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No images yet.</p>
+            ) : (
+              <ImageOrderGrid>
+                {gallery.map((img, i) => tile(img, gallery, i))}
+                {variantGroups.map(({ variant, list }) => list.map((img, i) => tile(img, list, i, variant.sku)))}
+              </ImageOrderGrid>
+            )}
+          </>
         ) : (
-          <ImageOrderGrid>
-            {gallery.map((img, i) => tile(img, gallery, i))}
-            {variantGroups.map(({ variant, list }) => list.map((img, i) => tile(img, list, i, variant.sku)))}
-          </ImageOrderGrid>
+          <>
+            {group("all", "Every choice", "Shown whatever the customer picks.", shared, null)}
+            {driver.values.map((value) =>
+              group(
+                value.id,
+                `${driver.name}: ${value.value}`,
+                `Shown first when ${value.value} is picked.`,
+                gallery.filter((img) => img.option_value_id === value.id),
+                value.id,
+                value.value
+              )
+            )}
+            {elsewhere.length > 0 && (
+              <section className="space-y-3 rounded-lg border border-border p-3">
+                <div>
+                  <h3 className="text-sm font-medium">Set for another option</h3>
+                  <p className="text-xs text-muted-foreground">
+                    These photos are tied to a value of a different option. Move them under {driver.name} or keep them.
+                  </p>
+                </div>
+                <ImageOrderGrid>
+                  {elsewhere.map((img, i) => tile(img, elsewhere, i, valueLabel.get(img.option_value_id ?? ""), true))}
+                </ImageOrderGrid>
+              </section>
+            )}
+            {variantGroups.length > 0 && (
+              <ImageOrderGrid>
+                {variantGroups.map(({ variant, list }) => list.map((img, i) => tile(img, list, i, variant.sku)))}
+              </ImageOrderGrid>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

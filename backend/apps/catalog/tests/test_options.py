@@ -16,6 +16,7 @@ from apps.catalog.factories import (
     make_variant,
 )
 from apps.catalog.models import Product, ProductOptionValue, ProductVariant
+from apps.catalog.selectors.images import variant_image_url
 from apps.catalog.selectors.options import (
     missing_combination_count,
     product_combinations,
@@ -222,6 +223,20 @@ def test_a_value_no_live_variant_uses_can_be_removed():
     set_product_options(product=product, options=[colour, size])
 
     assert [value["value"] for value in product_options(product)[0]["values"]] == ["Red"]
+
+
+def test_removing_a_value_that_still_has_a_photo_is_refused():
+    product = _tee()
+    for variant in product.variants.filter(title__startswith="Blue"):
+        delete_variant(variant=variant)
+    colour, size = product_options(product)
+    blue = ProductOptionValue.objects.get(option_id=colour["id"], value="Blue")
+    ProductImageFactory(product=product, option_value=blue, url="https://cdn.test/blue.jpg")
+    colour["values"] = [value for value in colour["values"] if value["value"] != "Blue"]
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        set_product_options(product=product, options=[colour, size])
+    assert _code(exc) == "option_value_has_images"
 
 
 def test_removing_an_option_that_would_leave_two_same_variants_is_refused():
@@ -1181,3 +1196,23 @@ def test_make_variant_helper_matches_the_service_title():
     values = make_options(product, {"Colour": ["Red"], "Size": ["M"]})
 
     assert make_variant(product, [values["M"], values["Red"]]).title == "Red / M"
+
+
+def test_a_variant_thumbnail_is_the_photo_set_for_its_option_value():
+    product = _tee()
+    colour, _size = product_options(product)
+    blue = ProductOptionValue.objects.get(option_id=colour["id"], value="Blue")
+    ProductImageFactory(product=product, url="https://cdn.test/red.jpg", sort_order=0)
+    ProductImageFactory(
+        product=product, option_value=blue, url="https://cdn.test/blue.jpg", sort_order=1
+    )
+    variants = list(
+        ProductVariant.objects.filter(product=product).prefetch_related(
+            "images", "product__images", "option_values"
+        )
+    )
+
+    thumbs = {variant.title: variant_image_url(variant) for variant in variants}
+
+    assert thumbs["Blue / S"] == "https://cdn.test/blue.jpg"
+    assert thumbs["Red / S"] == "https://cdn.test/red.jpg"

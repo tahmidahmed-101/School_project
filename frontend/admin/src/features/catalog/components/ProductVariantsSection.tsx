@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { MoneyCell, TextCell } from "@/components/common/cells"
+import { MoneyCell, TextCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
 import type { Kind } from "@/hooks/use-kind"
@@ -236,17 +236,20 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       id: "variant",
       header: "VARIANT",
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="truncate font-medium">{row.original.title}</div>
-          {row.original.variant ? (
-            <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant.sku}</div>
-          ) : (
-            !row.original.created && (
-              <Badge variant="secondary" className="mt-0.5">
-                Not created
-              </Badge>
-            )
-          )}
+        <div className="flex min-w-0 items-center gap-3">
+          {row.original.variant && <Thumbnail src={row.original.variant.primary_image} className="size-9 rounded" />}
+          <div className="min-w-0">
+            <div className="truncate font-medium">{row.original.title}</div>
+            {row.original.variant ? (
+              <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant.sku}</div>
+            ) : (
+              !row.original.created && (
+                <Badge variant="secondary" className="mt-0.5">
+                  Not created
+                </Badge>
+              )
+            )}
+          </div>
         </div>
       ),
     },

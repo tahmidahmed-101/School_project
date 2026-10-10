@@ -7,7 +7,13 @@ from django.db import transaction
 from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.services.modules import require_feature
-from apps.catalog.models import Product, ProductOption, ProductOptionValue, ProductVariant
+from apps.catalog.models import (
+    Product,
+    ProductImage,
+    ProductOption,
+    ProductOptionValue,
+    ProductVariant,
+)
 from apps.catalog.selectors.options import LEGACY_PREFIX, label_key, normalise_label
 from apps.common.exceptions import BusinessRuleViolationError
 
@@ -246,6 +252,17 @@ def set_product_options(*, product: Product, options: list[dict], actor=None) ->
         raise BusinessRuleViolationError(
             "A variant still uses a value you removed. Delete or change that variant first.",
             code="option_value_in_use",
+        )
+    gone_values = removed_values | {
+        value.id
+        for key, option in existing.items()
+        if key not in kept_option_ids
+        for value in option.values.all()
+    }
+    if ProductImage.objects.filter(option_value_id__in=gone_values).exists():
+        raise BusinessRuleViolationError(
+            "A photo is set for a value you removed. Remove or move that photo first.",
+            code="option_value_has_images",
         )
     _check_defaults(options, has_variants=bool(live))
     remaining = {

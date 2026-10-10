@@ -9,10 +9,12 @@ interface Props {
   onFiles: (files: File[]) => void
   /** Shows a spinner and blocks further picks while the caller is uploading. */
   uploading?: boolean
+  /** A short one-line zone, for several on one page. */
+  compact?: boolean
 }
 
 /** Drag-and-drop / click-to-browse zone for product images. */
-export function ImageDropzone({ onFiles, uploading = false }: Props) {
+export function ImageDropzone({ onFiles, uploading = false, compact = false }: Props) {
   const [isDragging, setIsDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -55,13 +57,14 @@ export function ImageDropzone({ onFiles, uploading = false }: Props) {
         }}
         onDrop={handleDrop}
         className={cn(
-          "flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-8 text-center transition-colors",
+          "flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 text-center transition-colors",
+          compact ? "py-3" : "flex-col py-8",
           "hover:border-primary/60 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           "disabled:pointer-events-none disabled:opacity-70",
           isDragging && "border-primary bg-primary/5"
         )}
       >
-        <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <span className={cn("flex items-center justify-center rounded-full bg-muted text-muted-foreground", compact ? "size-7" : "size-10")}>
           {uploading ? <Loader2 className="size-5 animate-spin" /> : <UploadCloud className="size-5" />}
         </span>
         <span className="text-sm font-medium">
@@ -71,11 +74,11 @@ export function ImageDropzone({ onFiles, uploading = false }: Props) {
             "Drop images to upload"
           ) : (
             <>
-              Drag and drop images here, or <span className="text-primary underline underline-offset-2">browse</span>
+              {compact ? "Drag images here, or " : "Drag and drop images here, or "}<span className="text-primary underline underline-offset-2">browse</span>
             </>
           )}
         </span>
-        <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF, AVIF or HEIC</span>
+        {!compact && <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF, AVIF or HEIC</span>}
       </button>
     </>
   )

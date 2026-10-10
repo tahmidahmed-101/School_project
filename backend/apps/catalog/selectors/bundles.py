@@ -16,6 +16,7 @@ def bundle_variants_list(*, include_deleted: bool = False) -> QuerySet[ProductVa
             "product__images",
             "bundle_components__component_variant__images",
             "bundle_components__component_variant__product__images",
+            "bundle_components__component_variant__option_values",
         )
         .filter(product__product_type=Product.ProductType.BUNDLE)
     )
@@ -33,6 +34,7 @@ def get_bundle_variant_by_id(
             "product__images",
             "bundle_components__component_variant__images",
             "bundle_components__component_variant__product__images",
+            "bundle_components__component_variant__option_values",
         )
         .filter(id=variant_id, product__product_type=Product.ProductType.BUNDLE)
     )
@@ -46,6 +48,7 @@ def public_bundle_variants_list() -> QuerySet[ProductVariant]:
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related(
             "bundle_components__component_variant__product__images",
+            "bundle_components__component_variant__option_values",
             "bundle_components__component_variant__product__variants__images",
         )
         .filter(
@@ -63,6 +66,7 @@ def get_public_bundle_variant_by_slug(slug: str) -> ProductVariant | None:
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related(
             "bundle_components__component_variant__product__images",
+            "bundle_components__component_variant__option_values",
             "bundle_components__component_variant__product__variants__images",
         )
         .filter(

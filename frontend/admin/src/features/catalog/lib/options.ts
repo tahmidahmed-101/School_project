@@ -97,6 +97,7 @@ export const OPTION_REFUSALS: Record<string, string> = {
   option_needs_value: "Every option needs at least one value.",
   option_default_required: "Choose the value your existing variants get for the new option.",
   option_value_in_use: "A variant still uses that value. Delete the variant first, then remove the value.",
+  option_value_has_images: "A photo is set for that value. Remove or move the photo first, then remove the value.",
   option_removal_makes_duplicates:
     "Removing this option would leave two variants that are exactly the same. Delete the extra variants first.",
   variant_options_incomplete: "A variant needs one value for every option of the product.",

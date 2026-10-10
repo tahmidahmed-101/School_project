@@ -159,4 +159,4 @@ Any option name with its own value list per product (up to 3); variants are comb
 - [x] R3 Storefront: generic picker with per-combination availability, photos follow the option, variant title in cart, checkout and order history (en + bn)
 - [x] Merge, run the command on the local DB, full backend suite once, browser check of storefront, dashboard and API
 - [ ] Production: deploy API before the storefront; `migrate`, then `move_colour_size_to_options` (dry run, then `--apply`) after a backup and the owner's go-ahead
-- [ ] Not hand-tested: Bangla picker strings, images per option value, pre-order product with options, variant import/export, order history title
+- [ ] Not hand-tested: Bangla picker strings, pre-order product with options, variant import/export, order history title

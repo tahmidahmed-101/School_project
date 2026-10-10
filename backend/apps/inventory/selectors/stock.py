@@ -29,7 +29,7 @@ def stock_items_list(
 ) -> QuerySet[StockItem]:
     queryset = (
         StockItem.objects.select_related("variant__product", "warehouse")
-        .prefetch_related("variant__images", "variant__product__images")
+        .prefetch_related("variant__images", "variant__product__images", "variant__option_values")
         .filter(variant__deleted_at__isnull=True)
     )
     if variant is not None:
@@ -92,7 +92,7 @@ def ledger_entries_list(
 ) -> QuerySet[StockLedgerEntry]:
     queryset = StockLedgerEntry.objects.select_related(
         "variant__product", "warehouse"
-    ).prefetch_related("variant__images", "variant__product__images")
+    ).prefetch_related("variant__images", "variant__product__images", "variant__option_values")
     if variant is not None:
         queryset = queryset.filter(variant=variant)
     if warehouse is not None:

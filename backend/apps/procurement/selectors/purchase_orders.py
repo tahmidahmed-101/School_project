@@ -21,6 +21,7 @@ def purchase_orders_list(
             "lines__variant__product",
             "lines__variant__images",
             "lines__variant__product__images",
+            "lines__variant__option_values",
         )
         .filter(deleted_at__isnull=True)
     )
@@ -40,6 +41,7 @@ def get_purchase_order_by_id(po_id: str | UUID) -> PurchaseOrder | None:
             "lines__variant__product",
             "lines__variant__images",
             "lines__variant__product__images",
+            "lines__variant__option_values",
         )
         .filter(id=po_id, deleted_at__isnull=True)
         .first()
@@ -60,6 +62,7 @@ def get_purchase_order_for_document(po_id: str | UUID) -> PurchaseOrder | None:
             "lines__variant__product",
             "lines__variant__images",
             "lines__variant__product__images",
+            "lines__variant__option_values",
         )
         .filter(id=po_id, deleted_at__isnull=True)
         .first()
