@@ -9,7 +9,7 @@ import { PlusIcon, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { FieldDescription, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormActions } from "@/components/common/FormActions"
@@ -218,20 +218,6 @@ const SaleForm = () => {
                 {...register("ends_at")}
               />
 
-              <Field orientation="horizontal" className="md:col-span-2">
-                <FieldContent>
-                  <FieldLabel htmlFor="is_active">On</FieldLabel>
-                  <FieldDescription>A sale that is switched off changes no prices.</FieldDescription>
-                </FieldContent>
-                <Controller
-                  control={control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
-                  )}
-                />
-              </Field>
-
               <SelectField
                 control={control}
                 name="applies_to"
@@ -240,6 +226,23 @@ const SaleForm = () => {
                 disabled={readOnly}
                 options={TARGET_OPTIONS}
               />
+
+              {/* Beside "Applies To": the label with its switch on one line, the note under them. */}
+              <div className="flex flex-col gap-1.5 md:self-end md:pb-0.5">
+                <div className="flex items-center gap-3">
+                  <FieldLabel htmlFor="is_active" className="w-auto">
+                    On
+                  </FieldLabel>
+                  <Controller
+                    control={control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
+                    )}
+                  />
+                </div>
+                <FieldDescription>A sale that is switched off changes no prices.</FieldDescription>
+              </div>
 
               {appliesTo === "categories" && (
                 <Controller

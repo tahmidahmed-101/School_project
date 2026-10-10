@@ -147,8 +147,8 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
       <OrderHeader order={order} badges={<Badge variant="secondary">Pre-order</Badge>} />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StageCard order={order} canManage={canManage} />
         <MoneyCard order={order} />
+        <StageCard order={order} canManage={canManage} />
       </div>
 
       <Card className="shadow-sm">

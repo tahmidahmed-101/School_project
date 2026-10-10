@@ -199,7 +199,15 @@ function OptionRow({
             ))}
           </datalist>
         </FormField>
-        <Button type="button" variant="ghost" size="icon" aria-label={`Remove option ${index + 1}`} onClick={onRemove}>
+        {/* As tall as the input it sits beside. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-11 shrink-0"
+          aria-label={`Remove option ${index + 1}`}
+          onClick={onRemove}
+        >
           <Trash2 className="size-4" />
         </Button>
       </div>
@@ -234,7 +242,7 @@ function OptionRow({
               add(typed)
             }}
           />
-          <Button type="button" variant="outline" size="lg" onClick={() => add(typed)}>
+          <Button type="button" variant="outline" size="lg" className="h-11 shrink-0 px-4" onClick={() => add(typed)}>
             <Plus /> Add
           </Button>
         </div>

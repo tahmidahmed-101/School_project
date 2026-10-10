@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ImageIcon, Loader2, Trash2 } from "lucide-react"
 
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DeleteModal } from "@/components/common/DeleteModal"
-import { ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
+import { IMAGE_OVERLAY_BUTTON_CLASS, ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
 import { getApiErrorMessage } from "@/lib/api/client"
 
 import { createProductImage, deleteProductImage, listProductImages, updateProductImage, uploadMedia } from "../api"
@@ -189,7 +189,7 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
               <button
                 type="button"
                 aria-label="Remove image"
-                className="rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
+                className={`${IMAGE_OVERLAY_BUTTON_CLASS} hover:bg-red-600`}
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -199,14 +199,14 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
       }
     >
       {canManage ? (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Input
             aria-label="Alt text"
             defaultValue={img.alt_text}
             placeholder="Alt text"
-            title="Alt text (click to edit)"
-            // Looks like the plain caption on the add page; the field outline only appears while editing.
-            className="h-6 truncate border-transparent bg-transparent px-1 py-0 text-center text-xs text-muted-foreground shadow-none dark:bg-transparent"
+            title="Click to edit the name"
+            // Reads as a plain centred caption; the field only shows while it is being edited.
+            className="h-7 cursor-pointer truncate border-transparent bg-transparent px-1.5 py-0 text-center text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:cursor-text focus-visible:bg-field-bg focus-visible:text-foreground dark:bg-transparent dark:focus-visible:bg-field-bg"
             onBlur={(e) => e.target.value !== img.alt_text && void saveField(img, { alt_text: e.target.value })}
           />
           {options.length > 0 && (
@@ -214,7 +214,7 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
               value={img.option_value_id ?? EVERY_CHOICE}
               onValueChange={(v) => void saveField(img, { option_value_id: v === EVERY_CHOICE ? null : v })}
             >
-              <SelectTrigger className="h-7 w-full text-xs" aria-label="Shows for" title="Shows for">
+              <SelectTrigger className="h-8 w-full px-2.5 text-xs" aria-label="Shows for" title="Shows for">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -225,9 +225,9 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
         </div>
       ) : (
         <>
-          {img.alt_text && <p className="truncate text-center text-xs text-muted-foreground">{img.alt_text}</p>}
+          {img.alt_text && <p className="truncate px-0.5 text-xs text-muted-foreground">{img.alt_text}</p>}
           {valueLabel.get(img.option_value_id ?? "") && (
-            <p className="truncate text-center text-xs text-muted-foreground">
+            <p className="truncate px-0.5 text-xs text-muted-foreground">
               Shows for {valueLabel.get(img.option_value_id ?? "")}
             </p>
           )}
@@ -249,20 +249,23 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
               : "The first image is the main one. Use the arrows to change the order."
             : "The first image is the main one."}
         </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {canManage && options.length > 0 && (
-          <CardAction>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <label htmlFor="new-uploads-show-for" className="text-sm text-muted-foreground">
+              New uploads show for
+            </label>
             <Select value={target} onValueChange={setTarget}>
-              <SelectTrigger className="h-7 w-44 text-xs" aria-label="New uploads show for" title="New uploads show for">
+              <SelectTrigger id="new-uploads-show-for" className="h-9 w-full sm:w-56">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <ShowsForItems options={options} />
               </SelectContent>
             </Select>
-          </CardAction>
+          </div>
         )}
-      </CardHeader>
-      <CardContent className="space-y-4">
         {canManage && (
           <ImageDropzone onFiles={(files) => void handleFiles(files)} uploading={uploading} />
         )}

@@ -2,7 +2,6 @@ import { Clock, Tag, Wallet } from "lucide-react"
 
 import type { Order } from "@/features/sales/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { DetailRow } from "@/components/common/DetailRow"
 import { useCan } from "@/hooks/use-can"
 import { formatCurrency } from "@/lib/format"
@@ -34,8 +33,8 @@ export function StockOrderDetail({ order, refresh }: { order: Order; refresh: ()
             </DetailRow>
             <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>
             <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>
-            <Separator className="my-2" />
-            <div className="flex items-center justify-between font-bold text-lg">
+            {/* The Tax row above already draws the dividing line. */}
+            <div className="flex items-center justify-between pt-2 text-lg font-bold">
               <span>Grand total</span>
               <span className="text-primary">{formatCurrency(order.grand_total)}</span>
             </div>

@@ -192,12 +192,19 @@ const PreorderArrivals = () => {
         actions={
           <>
             {canAdjust && (
-              <Button size="action" onClick={() => setMovement({ mode: "intake" })}>
+              <Button size="action" className="max-sm:col-span-2" onClick={() => setMovement({ mode: "intake" })}>
                 <ArrowDownToLine className="size-5" /> Receive goods
               </Button>
             )}
             {canAllocate && (
-              <Button variant="primary" size="action" disabled={allocating} onClick={allocate}>
+              <Button
+                variant="primary"
+                size="action"
+                // Too long for half a phone row, so both buttons take a full row there.
+                className="max-sm:col-span-2"
+                disabled={allocating}
+                onClick={allocate}
+              >
                 <PackageCheck className="size-5" /> Set aside for orders
               </Button>
             )}
@@ -225,6 +232,7 @@ const PreorderArrivals = () => {
               emptyIcon={ShoppingCart}
               emptyTitle="Nothing to buy"
               emptyDescription="No pre-order is waiting for goods."
+              columnWidths={["40%", "20%", "20%", "20%"]}
             />
           </CardContent>
         </Card>
@@ -264,7 +272,8 @@ const PreorderArrivals = () => {
             emptyIcon={PackageCheck}
             emptyTitle="No pre-order items"
             emptyDescription="Nothing matches these filters."
-            minWidth="900px"
+            minWidth="1000px"
+            columnWidths={["320px", "180px", "110px", "190px", "170px", ...(canAdjust ? ["80px"] : [])]}
             unlabelledColumns={["actions"]}
           />
         </CardContent>

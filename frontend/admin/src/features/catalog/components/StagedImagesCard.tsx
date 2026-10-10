@@ -1,7 +1,7 @@
 import { ImageIcon, X } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
+import { IMAGE_OVERLAY_BUTTON_CLASS, ImageOrderGrid, ImageOrderTile } from "@/components/common/ImageOrderTile"
 
 import type { StagedImage } from "../lib/stagedImages"
 import { ImageDropzone } from "./ImageDropzone"
@@ -47,13 +47,13 @@ export function StagedImagesCard({
                     type="button"
                     aria-label={`Remove ${img.file.name}`}
                     onClick={() => onRemove(i)}
-                    className="rounded-full bg-red-600/90 p-1.5 text-white hover:bg-red-700"
+                    className={`${IMAGE_OVERLAY_BUTTON_CLASS} hover:bg-red-600`}
                   >
                     <X className="size-3.5" />
                   </button>
                 }
               >
-                <p className="truncate text-center text-xs text-muted-foreground" title={img.file.name}>
+                <p className="truncate px-0.5 text-xs text-muted-foreground" title={img.file.name}>
                   {img.file.name}
                 </p>
               </ImageOrderTile>

@@ -123,9 +123,9 @@ export function AppSidebar() {
         </NavLink>
       </SidebarHeader>
 
-      {/* CONTENT */}
-      <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
-        <div className="mb-4 flex gap-1 rounded-lg bg-muted p-[3px] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:flex-col">
+      {/* HALF SWITCH — outside the scrolling content, so it stays put while the nav scrolls */}
+      <div className="shrink-0 px-3 pb-3 group-data-[collapsible=icon]:px-0">
+        <div className="flex gap-1 rounded-lg bg-muted p-[3px] dark:border dark:border-border group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:flex-col">
           {HALVES.map((option) => (
             <Link
               key={option.kind}
@@ -135,7 +135,7 @@ export function AppSidebar() {
               aria-current={option.kind === kind ? "true" : undefined}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:px-0 ${
                 option.kind === kind
-                  ? "bg-background text-primary-500 shadow-sm"
+                  ? "bg-background text-primary-500 shadow-sm dark:bg-primary-500/15"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -144,7 +144,10 @@ export function AppSidebar() {
             </Link>
           ))}
         </div>
+      </div>
 
+      {/* CONTENT */}
+      <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
         {navGroups.map((group) => (
           <div key={group.label} className="mb-4 last:mb-0">
             {group.label === "BUSINESS" && (

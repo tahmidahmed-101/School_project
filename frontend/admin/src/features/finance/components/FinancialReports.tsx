@@ -169,11 +169,29 @@ function DateField({
   max?: string
 }) {
   return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+    <div className="min-w-0 flex-1 space-y-1 sm:flex-none">
+      <label htmlFor={id} className="block text-xs font-medium text-muted-foreground">
         {label}
       </label>
-      <Input id={id} type="date" value={value} min={min} max={max} onChange={(e) => onChange(e.target.value)} className="w-[160px]" />
+      <Input
+        id={id}
+        type="date"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        className="sm:w-[160px]"
+      />
+    </div>
+  )
+}
+
+/** The stock / pre-order / company switch, labelled and as tall as the date inputs beside it. */
+function ViewField({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full space-y-1 sm:w-auto [&_[data-slot=tabs-list]]:h-11! [&_[data-slot=tabs-list]]:w-full sm:[&_[data-slot=tabs-list]]:w-fit [&_[data-slot=tabs-trigger]]:px-4">
+      <span className="block text-xs font-medium text-muted-foreground">Show figures for</span>
+      {children}
     </div>
   )
 }
@@ -314,7 +332,9 @@ function ProfitAndLoss() {
       }
       controls={
         <>
-          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          <ViewField>
+            <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          </ViewField>
           <DateField id="pnl-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="pnl-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
@@ -414,7 +434,9 @@ function BalanceSheet() {
       onDownload={params ? () => downloadCsv("balance-sheet/", params, `balance-sheet_${view}_${asOf}.csv`) : undefined}
       controls={
         <>
-          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          <ViewField>
+            <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          </ViewField>
           <DateField id="bs-asof" label="As of" value={asOf} onChange={setAsOf} />
         </>
       }
@@ -503,7 +525,9 @@ function CashFlow() {
       onDownload={params ? () => downloadCsv("cash-flow/", params, `cash-flow_${view}_${start}_${end}.csv`) : undefined}
       controls={
         <>
-          <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          <ViewField>
+            <BelongsToSwitch label="Show figures for" value={view} onChange={setView} />
+          </ViewField>
           <DateField id="cf-start" label="From" value={start} onChange={setStart} max={end} />
           <DateField id="cf-end" label="To" value={end} onChange={setEnd} min={start} />
         </>
@@ -554,7 +578,11 @@ function InventoryValuation() {
     <ReportCard
       title="Inventory Valuation"
       description="Goods on hand valued at moving average cost, right now."
-      controls={<KindSwitch value={kind} onChange={setKind} />}
+      controls={
+        <ViewField>
+          <KindSwitch value={kind} onChange={setKind} />
+        </ViewField>
+      }
     >
       <KindValuation key={kind} kind={kind} />
     </ReportCard>
@@ -572,7 +600,8 @@ const FinancialReports = () => {
         recorded when the goods are shipped.
       </p>
       <Tabs defaultValue="pnl" className="space-y-4">
-        <TabsList>
+        {/* Four names do not fit one phone row, so they sit two by two there. */}
+        <TabsList className="grid h-auto! w-full grid-cols-2 gap-1 sm:inline-flex sm:h-8! sm:w-fit sm:gap-0 [&_[data-slot=tabs-trigger]]:py-1.5 sm:[&_[data-slot=tabs-trigger]]:py-0.5">
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
           <TabsTrigger value="cash">Cash Flow</TabsTrigger>

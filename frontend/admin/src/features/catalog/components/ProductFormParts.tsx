@@ -23,7 +23,7 @@ import type { BaseValues } from "../lib/productFormBase"
 import { productListPath } from "../lib/productKind"
 import type { useStagedImages } from "../lib/stagedImages"
 import type { CategoryOption } from "../lib/useCategoryOptions"
-import { CategoryTreeSelect } from "./CategoryTreeSelect"
+import { CategoryTreeCombobox } from "./CategoryTreeSelect"
 import { ProductImagesSection } from "./ProductImagesSection"
 import { StagedImagesCard } from "./StagedImagesCard"
 
@@ -119,7 +119,7 @@ export function BasicsCard({
         <Field>
           <FieldLabel htmlFor="category_id">Category</FieldLabel>
           <FieldContent>
-            <CategoryTreeSelect
+            <CategoryTreeCombobox
               control={control}
               name="category_id"
               id="category_id"
@@ -130,7 +130,7 @@ export function BasicsCard({
           </FieldContent>
         </Field>
 
-        <FormField label="Brand" htmlFor="brand_id" description="Optional. Type to search.">
+        <FormField label="Brand" htmlFor="brand_id">
           <Controller
             control={control}
             name="brand_id"
@@ -145,19 +145,6 @@ export function BasicsCard({
             )}
           />
         </FormField>
-
-        <div className="self-center">
-          <SwitchField control={control} name="featured" label="Featured" />
-        </div>
-
-        <TextField
-          className="md:col-span-2"
-          label="Meta keywords"
-          id="meta_keywords"
-          placeholder="comma, separated, keywords"
-          error={errors.meta_keywords}
-          {...register("meta_keywords")}
-        />
 
         <TextareaField
           className="md:col-span-2"
@@ -178,14 +165,31 @@ export function BasicsCard({
           {...register("highlights")}
         />
 
-        {isEditing && (
-          <SwitchField
-            control={control}
-            name="is_active"
-            label="Active"
-            description="Inactive products are hidden from the storefront."
-          />
-        )}
+        <TextField
+          className="md:col-span-2"
+          label="Meta keywords"
+          id="meta_keywords"
+          placeholder="comma, separated, keywords"
+          error={errors.meta_keywords}
+          {...register("meta_keywords")}
+        />
+
+        {/* The switches share one row, lined up with the keywords input. */}
+        <div className="grid grid-cols-1 gap-4 self-end sm:grid-cols-2 md:col-span-2">
+          <div className="py-2">
+            <SwitchField control={control} name="featured" label="Featured" />
+          </div>
+          {isEditing && (
+            <div className="py-2">
+              <SwitchField
+                control={control}
+                name="is_active"
+                label="Active"
+                description="Inactive products are hidden from the storefront."
+              />
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

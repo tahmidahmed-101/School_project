@@ -203,8 +203,8 @@ const Reservations = () => {
         emptyIcon={Lock}
         emptyTitle="No reservations"
         emptyDescription="No stock holds match these filters."
-        minWidth="980px"
-        columnWidths={["240px", "140px", "70px", "150px", "170px", "170px", ...(canRelease ? ["80px"] : [])]}
+        minWidth="1020px"
+        columnWidths={["280px", "140px", "70px", "150px", "170px", "170px", ...(canRelease ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
       />
 

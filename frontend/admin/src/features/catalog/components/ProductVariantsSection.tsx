@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
+import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { History, Layers, Loader2, PencilIcon, PlusIcon, Tags } from "lucide-react"
 
@@ -8,10 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { MoneyCell } from "@/components/common/cells"
+import { MoneyCell, TextCell } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
 import type { Kind } from "@/hooks/use-kind"
@@ -205,6 +206,113 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
     />
   )
 
+  /** A cell of a combination that is not created yet has nothing to show. */
+  const forVariant = (row: Row, render: (variant: ProductVariant) => ReactNode) =>
+    row.variant ? render(row.variant) : <TextCell value={null} />
+
+  // The same table as the list pages; a combination that is not created yet is a row with a tick box.
+  // The tick column only exists while there is a combination left to create.
+  const showTicks = canManage && missing.length > 0
+  const columns: ColumnDef<Row>[] = [
+    ...(showTicks
+      ? [
+          {
+            id: "tick",
+            header: "",
+            cell: ({ row }: { row: { original: Row } }) =>
+              !row.original.created && (
+                <Checkbox
+                  aria-label={`Create ${row.original.title}`}
+                  checked={ticked.includes(row.original.key)}
+                  onCheckedChange={(on) =>
+                    setTicked((prev) => (on ? [...prev, row.original.key] : prev.filter((k) => k !== row.original.key)))
+                  }
+                />
+              ),
+          } as ColumnDef<Row>,
+        ]
+      : []),
+    {
+      id: "variant",
+      header: "VARIANT",
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium">{row.original.title}</div>
+          {row.original.variant ? (
+            <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant.sku}</div>
+          ) : (
+            !row.original.created && (
+              <Badge variant="secondary" className="mt-0.5">
+                Not created
+              </Badge>
+            )
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "price",
+      header: "PRICE",
+      cell: ({ row }) => forVariant(row.original, (v) => <MoneyCell value={v.price} emphasis />),
+    },
+    ...(isStock
+      ? [
+          {
+            id: "discount_price",
+            header: "DISCOUNT PRICE",
+            cell: ({ row }: { row: { original: Row } }) =>
+              forVariant(row.original, (v) => <MoneyCell value={v.discount_price} />),
+          } as ColumnDef<Row>,
+        ]
+      : []),
+    {
+      id: "cost",
+      header: "COST",
+      cell: ({ row }) =>
+        forVariant(row.original, (v) => <MoneyCell value={v.cost_price} className="text-muted-foreground" />),
+    },
+    {
+      id: "availability",
+      header: isStock ? "AVAILABLE" : "ORDERING",
+      cell: ({ row }) =>
+        forVariant(row.original, (v) =>
+          isStock ? <VariantStockCell variant={v} showLow /> : <VariantOrderingCell variant={v} />
+        ),
+    },
+    {
+      id: "active",
+      header: "ACTIVE",
+      cell: ({ row }) =>
+        forVariant(row.original, (v) =>
+          canManage ? (
+            <Switch
+              aria-label={`${row.original.title} is active`}
+              checked={v.is_active}
+              onCheckedChange={(on) => void setActive(v, on)}
+            />
+          ) : (
+            <StatusBadge status={v.is_active ? "active" : "inactive"} />
+          )
+        ),
+    },
+    {
+      id: "actions",
+      header: "ACTIONS",
+      cell: ({ row }) => row.original.variant && actionsFor(row.original.variant),
+    },
+  ]
+  // VARIANT is the widest entry, so it takes whatever the others leave.
+  const columnWidths = [
+    ...(showTicks ? ["44px"] : []),
+    "260px",
+    "120px",
+    ...(isStock ? ["150px"] : []),
+    "120px",
+    isStock ? "150px" : "220px",
+    "90px",
+    "80px",
+  ]
+
   const body = isLoading ? (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin" /> Loading variants…
@@ -223,80 +331,17 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       onAdd={canManage ? () => openEditor(null) : undefined}
     />
   ) : (
-    <Table className="min-w-[760px]">
-      <TableHeader>
-        <TableRow>
-          {canManage && <TableHead className="w-10" />}
-          <TableHead>Variant</TableHead>
-          <TableHead>Price</TableHead>
-          {isStock && <TableHead>Discount price</TableHead>}
-          <TableHead>Cost</TableHead>
-          <TableHead>{isStock ? "Available" : "Ordering"}</TableHead>
-          <TableHead>Active</TableHead>
-          <TableHead className="w-12" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => {
-          const v = row.variant
-          return (
-            <TableRow key={row.key}>
-              {canManage && (
-                <TableCell>
-                  {!row.created && (
-                    <Checkbox
-                      aria-label={`Create ${row.title}`}
-                      checked={ticked.includes(row.key)}
-                      onCheckedChange={(on) =>
-                        setTicked((prev) => (on ? [...prev, row.key] : prev.filter((k) => k !== row.key)))
-                      }
-                    />
-                  )}
-                </TableCell>
-              )}
-              <TableCell>
-                <div className="font-medium">{row.title}</div>
-                {v && <div className="font-mono text-xs text-muted-foreground">{v.sku}</div>}
-              </TableCell>
-              {v ? (
-                <>
-                  <TableCell>
-                    <MoneyCell value={v.price} emphasis />
-                  </TableCell>
-                  {isStock && (
-                    <TableCell>
-                      <MoneyCell value={v.discount_price} />
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <MoneyCell value={v.cost_price} className="text-muted-foreground" />
-                  </TableCell>
-                  <TableCell>
-                    {isStock ? <VariantStockCell variant={v} showLow /> : <VariantOrderingCell variant={v} />}
-                  </TableCell>
-                  <TableCell>
-                    {canManage ? (
-                      <Switch
-                        aria-label={`${row.title} is active`}
-                        checked={v.is_active}
-                        onCheckedChange={(on) => void setActive(v, on)}
-                      />
-                    ) : (
-                      <StatusBadge status={v.is_active ? "active" : "inactive"} />
-                    )}
-                  </TableCell>
-                  <TableCell>{actionsFor(v)}</TableCell>
-                </>
-              ) : (
-                <TableCell colSpan={isStock ? 6 : 5}>
-                  {!row.created && <Badge variant="secondary">Not created</Badge>}
-                </TableCell>
-              )}
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <DataTable
+      embedded
+      columns={columns}
+      data={rows}
+      showPagination={false}
+      minWidth={isStock ? "900px" : "860px"}
+      columnWidths={columnWidths}
+      unlabelledColumns={["tick", "actions"]}
+      emptyTitle="No variants yet"
+      emptyDescription="Add options under Edit product to create them."
+    />
   )
 
   const onlyVariant = single ? (variants[0] ?? null) : null

@@ -114,12 +114,13 @@ function InlineVariantPicker({
     return (
       <div
         className={cn(
-          "flex h-9 items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm",
+          // Same height and padding as <Input>, so picking a variant does not shrink the field.
+          "flex h-11 items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-4 text-sm",
           className
         )}
       >
         <span className="min-w-0 truncate">
-          <span className="font-medium">{value.product_name}</span>{" "}
+          <span className="font-medium">{value.label ?? value.product_name}</span>{" "}
           <span className="text-muted-foreground font-mono text-xs">{value.sku}</span>
         </span>
         <button

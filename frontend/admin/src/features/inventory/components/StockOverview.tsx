@@ -297,8 +297,8 @@ const StockOverview = () => {
         emptyIcon={Package}
         emptyTitle="No stock items"
         emptyDescription="Nothing matches these filters."
-        minWidth="1060px"
-        columnWidths={["260px", "170px", "90px", "90px", "100px", "130px", "110px", "80px"]}
+        minWidth="1100px"
+        columnWidths={["300px", "170px", "90px", "90px", "100px", "130px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
 

@@ -163,13 +163,11 @@ const PurchaseOrderCreate = () => {
                       name={`lines.${index}.variant`}
                       render={({ field }) => (
                         <VariantPicker
-                          variant="combobox"
                           filters={{ category_type: kind }}
                           value={field.value}
-                          invalid={!!lineErrors?.variant}
                           onChange={(v) => {
                             field.onChange(v)
-                            if (v.cost_price && !line?.unit_cost) {
+                            if (v?.cost_price && !line?.unit_cost) {
                               setValue(`lines.${index}.unit_cost`, Number(v.cost_price).toFixed(2))
                             }
                           }}

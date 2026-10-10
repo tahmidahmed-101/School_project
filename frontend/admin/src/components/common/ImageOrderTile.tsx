@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 /** Grid that lays out <ImageOrderTile>s; the order shown is the order saved. */
 export function ImageOrderGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{children}</div>
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(160px,190px))]">{children}</div>
 }
 
 /** Badge text for an image's place in its list: "1 · Main", "2", … or "SKU · 2" with a prefix. */
@@ -12,8 +12,9 @@ function imagePositionLabel(index: number, prefix?: string) {
   return index === 0 ? "1 · Main" : String(index + 1)
 }
 
-const MOVE_BUTTON_CLASS =
-  "rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+/** Round control drawn over the picture: the earlier / later arrows and the tile's corner action. */
+export const IMAGE_OVERLAY_BUTTON_CLASS =
+  "flex size-7 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80 disabled:invisible"
 
 interface ImageOrderTileProps {
   src: string
@@ -31,7 +32,7 @@ interface ImageOrderTileProps {
   busy?: boolean
   /** Top-right control, usually a remove button (or a confirm dialog wrapping one). */
   action?: ReactNode
-  /** What sits under the image, between the arrows: a file name, an alt-text input, … */
+  /** What sits under the image: a file name, an alt-text input, … */
   children?: ReactNode
   /** Already-saved images load lazily and hide themselves if the file is missing. */
   remote?: boolean
@@ -39,7 +40,7 @@ interface ImageOrderTileProps {
 
 /**
  * One image in an ordered gallery: the picture with its position badge, an optional action in
- * the corner, and earlier / later arrows around a caption. Shared by the product image pickers on
+ * the corner and earlier / later arrows on it, then a caption underneath. Shared by the product image pickers on
  * the add, edit and detail pages so ordering looks and works the same everywhere.
  */
 export function ImageOrderTile({
@@ -55,8 +56,9 @@ export function ImageOrderTile({
   children,
   remote = false,
 }: ImageOrderTileProps) {
+  const isMain = index === 0 && !badgePrefix
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="relative aspect-square bg-muted">
         <img
           src={src}
@@ -69,37 +71,40 @@ export function ImageOrderTile({
           })}
         />
         {/* Position in its list; the first gallery image is the product's main image. */}
-        <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+        <span
+          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium text-white ${
+            isMain ? "bg-primary" : "bg-black/60 backdrop-blur-sm"
+          }`}
+        >
           {imagePositionLabel(index, badgePrefix)}
         </span>
-        {action && <div className="absolute right-1.5 top-1.5">{action}</div>}
+        {action && <div className="absolute right-2 top-2">{action}</div>}
+        {/* The arrows sit on the picture, so the caption below keeps the tile's full width. */}
+        {onMove && (
+          <div className="absolute inset-x-2 bottom-2 flex justify-between">
+            <button
+              type="button"
+              aria-label={`Move ${name} earlier`}
+              disabled={index === 0 || busy}
+              onClick={() => onMove(index - 1)}
+              className={IMAGE_OVERLAY_BUTTON_CLASS}
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${name} later`}
+              disabled={index === count - 1 || busy}
+              onClick={() => onMove(index + 1)}
+              className={IMAGE_OVERLAY_BUTTON_CLASS}
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {onMove ? (
-        <div className="flex items-center gap-1 p-1.5">
-          <button
-            type="button"
-            aria-label={`Move ${name} earlier`}
-            disabled={index === 0 || busy}
-            onClick={() => onMove(index - 1)}
-            className={MOVE_BUTTON_CLASS}
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <div className="min-w-0 flex-1">{children}</div>
-          <button
-            type="button"
-            aria-label={`Move ${name} later`}
-            disabled={index === count - 1 || busy}
-            onClick={() => onMove(index + 1)}
-            className={MOVE_BUTTON_CLASS}
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-      ) : (
-        children && <div className="p-2">{children}</div>
-      )}
+      {children && <div className="p-2">{children}</div>}
     </div>
   )
 }

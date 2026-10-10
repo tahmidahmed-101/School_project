@@ -1,4 +1,12 @@
 import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form"
+import {
+  Combobox as ComboboxRoot,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CategoryOption } from "../lib/useCategoryOptions"
 
@@ -38,6 +46,48 @@ export function CategoryTreeSelect<T extends FieldValues>({
             ))}
           </SelectContent>
         </Select>
+      )}
+    />
+  )
+}
+
+/** The same picker with a search box: type to narrow the list, which stays indented by depth. */
+export function CategoryTreeCombobox<T extends FieldValues>({
+  control,
+  name,
+  id,
+  options,
+  placeholder,
+}: {
+  control: Control<T>
+  name: FieldPath<T>
+  id?: string
+  options: CategoryOption[]
+  placeholder?: string
+}) {
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <ComboboxRoot
+          items={options}
+          itemToStringValue={(item: CategoryOption) => item.label}
+          value={options.find((o) => o.value === field.value) ?? null}
+          onValueChange={(option: CategoryOption | null) => field.onChange(option?.value ?? "")}
+        >
+          <ComboboxInput id={id} placeholder={placeholder} showClear />
+          <ComboboxContent>
+            <ComboboxEmpty>No categories found.</ComboboxEmpty>
+            <ComboboxList>
+              {(item: CategoryOption) => (
+                <ComboboxItem key={item.value} value={item}>
+                  <span style={{ paddingLeft: `${item.depth * 0.75}rem` }}>{item.label}</span>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </ComboboxRoot>
       )}
     />
   )

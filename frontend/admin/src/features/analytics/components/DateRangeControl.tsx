@@ -39,12 +39,12 @@ export function DateRangeControl({ preset, range, onPreset, onCustom, busy }: Da
 
   return (
     <div className="flex flex-col items-stretch gap-2 sm:items-end">
-      <div className="flex flex-wrap items-center gap-2">
-        {busy && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Updating" />}
+      {/* On phones the presets and the custom button each fill a row; from `sm` up they sit side by side. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <div
           role="radiogroup"
           aria-label="Report period"
-          className="inline-flex flex-wrap rounded-lg border border-border bg-card p-0.5"
+          className="flex rounded-lg border border-border bg-card p-0.5 sm:inline-flex"
         >
           {RANGE_PRESETS.map((p) => (
             <button
@@ -54,7 +54,7 @@ export function DateRangeControl({ preset, range, onPreset, onCustom, busy }: Da
               aria-checked={preset === p.value}
               onClick={() => onPreset(p.value)}
               className={cn(
-                "h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+                "h-8 flex-1 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-7 sm:flex-none text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
                 preset === p.value && "bg-primary text-primary-foreground hover:text-primary-foreground"
               )}
             >
@@ -68,7 +68,7 @@ export function DateRangeControl({ preset, range, onPreset, onCustom, busy }: Da
             <Button
               variant="outline"
               size="default"
-              className={cn("font-normal", preset === "custom" && "border-primary text-primary")}
+              className={cn("w-full font-normal sm:w-auto", preset === "custom" && "border-primary text-primary")}
               aria-label="Choose a custom date range"
             >
               <CalendarIcon aria-hidden />
@@ -98,7 +98,8 @@ export function DateRangeControl({ preset, range, onPreset, onCustom, busy }: Da
           </PopoverContent>
         </Popover>
       </div>
-      <p className="text-xs text-muted-foreground sm:text-right" aria-live="polite">
+      <p className="flex items-center gap-2 text-xs text-muted-foreground sm:justify-end" aria-live="polite">
+        {busy && <Loader2 className="size-3.5 animate-spin" aria-label="Updating" />}
         {longDay(range.start)} – {longDay(range.end)}
       </p>
     </div>

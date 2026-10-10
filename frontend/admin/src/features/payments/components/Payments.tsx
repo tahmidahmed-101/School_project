@@ -34,20 +34,22 @@ function PreorderMoney() {
   if (!report) return null
   const { summary } = report
   return (
-    <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg bg-muted/40 p-4 sm:grid-cols-3">
-      <div>
+    <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="rounded-xl border border-border bg-card p-4">
         <span className="block text-xs text-muted-foreground">Open pre-orders</span>
-        <span className="font-semibold text-foreground">
+        <span className="mt-1 block text-lg font-semibold text-foreground">
           {summary.open_orders} worth {formatCurrency(summary.order_value)}
         </span>
       </div>
-      <div>
+      <div className="rounded-xl border border-border bg-card p-4">
         <span className="block text-xs text-muted-foreground">Received so far</span>
-        <span className="font-semibold text-foreground">{formatCurrency(summary.deposits_held)}</span>
+        <span className="mt-1 block text-lg font-semibold text-foreground">{formatCurrency(summary.deposits_held)}</span>
       </div>
-      <div>
+      <div className="rounded-xl border border-border bg-card p-4">
         <span className="block text-xs text-muted-foreground">Still owed by customers</span>
-        <span className="font-semibold text-foreground">{formatCurrency(summary.balances_outstanding)}</span>
+        <span className="mt-1 block text-lg font-semibold text-foreground">
+          {formatCurrency(summary.balances_outstanding)}
+        </span>
       </div>
     </div>
   )
