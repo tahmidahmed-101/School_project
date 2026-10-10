@@ -24,6 +24,7 @@ from apps.reporting.selectors.dashboards import (
     low_stock_counts,
     low_stock_summary,
     recent_orders,
+    revenue_series,
     sales_trend,
     stock_turnover,
 )
@@ -226,3 +227,19 @@ def test_order_count_and_revenue_share_one_order_population():
     # The frontend divides one by the other for AOV, so a mismatched population
     # would silently produce an average nobody can reconcile.
     assert revenue / orders_kpi["value"] == Decimal("250.00")
+
+
+def test_revenue_series_previous_matches_the_previous_window_the_kpi_compares_with():
+    today = date.today()
+    start, end = today - timedelta(days=6), today
+    inside_previous = SalesOrderFactory(status=SalesOrder.Status.CONFIRMED, grand_total=Decimal("400.00"))
+    SalesOrder.objects.filter(pk=inside_previous.pk).update(
+        created_at=inside_previous.created_at - timedelta(days=10)
+    )
+    SalesOrderFactory(status=SalesOrder.Status.CONFIRMED, grand_total=Decimal("100.00"))
+
+    series = revenue_series(start=start, end=end)
+    revenue_kpi = next(kpi for kpi in kpis(start=start, end=end) if kpi["label"] == "Revenue")
+
+    assert sum(point["previous"] for point in series) == 400.0
+    assert revenue_kpi["delta_pct"] == -75.0

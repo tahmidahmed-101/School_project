@@ -189,12 +189,13 @@ def revenue_series(
     previous window, aligned per calendar day for the area chart."""
     memo = {} if _memo is None else _memo
     current, previous = _window_trends(start, end, memo, kind)
+    prev_start, _prev_end = _previous_window(start, end)
     span = (end - start).days + 1
     return [
         {
             "label": (start + timedelta(days=offset)).isoformat(),
             "current": float(current[start + timedelta(days=offset)][0]),
-            "previous": float(previous.get(start + timedelta(days=offset), (Decimal("0"), 0))[0]),
+            "previous": float(previous[prev_start + timedelta(days=offset)][0]),
         }
         for offset in range(span)
     ]
