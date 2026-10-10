@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 import type { TickRow } from "../lib/stockTargets"
 
 /** Scrollable tick-list over a small reference list (categories, brands). */
@@ -9,6 +10,7 @@ export function TickList({
   disabled,
   isLoading,
   noun,
+  className,
 }: {
   rows: TickRow[]
   selected: string[]
@@ -17,9 +19,10 @@ export function TickList({
   isLoading: boolean
   /** Plural, e.g. "categories". */
   noun: string
+  className?: string
 }) {
   return (
-    <div className="max-h-64 overflow-y-auto rounded-lg border border-field-border p-2">
+    <div className={cn("max-h-64 overflow-y-auto rounded-lg border border-field-border p-2", className)}>
       {rows.length === 0 ? (
         <p className="p-2 text-sm text-muted-foreground">{isLoading ? `Loading ${noun}...` : `No ${noun} yet.`}</p>
       ) : (

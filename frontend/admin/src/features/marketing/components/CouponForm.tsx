@@ -326,21 +326,70 @@ const CouponForm = () => {
                 {...register("expires_at")}
               />
 
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
-                  <FieldDescription>Inactive coupons are rejected at checkout.</FieldDescription>
-                </FieldContent>
+              {/* Level with the input beside it: pushed down by the height of that field's label. The note
+                  sits under the box, like the one under Expires At. */}
+              <div className="flex flex-col gap-2 self-start md:mt-7">
+                <div className="flex h-11 items-center justify-between gap-3 rounded-lg border border-field-border px-4">
+                  <FieldLabel htmlFor="is_active" className="w-auto">
+                    Active
+                  </FieldLabel>
+                  <Controller
+                    control={control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
+                    )}
+                  />
+                </div>
+                <FieldDescription>Inactive coupons are rejected at checkout.</FieldDescription>
+              </div>
+
+              {/* Categories and brands share a row; the storefront switch follows them. */}
+              <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-2">
                 <Controller
                   control={control}
-                  name="is_active"
+                  name="category_ids"
                   render={({ field }) => (
-                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
+                    <FormField
+                      label={`Limit to Categories${field.value.length ? ` (${field.value.length})` : ""}`}
+                      error={errors.category_ids}
+                    >
+                      <TickList
+                        rows={categories.rows}
+                        selected={field.value}
+                        onChange={field.onChange}
+                        disabled={readOnly}
+                        isLoading={categories.isLoading}
+                        noun="categories"
+                        className="md:h-56 md:max-h-none"
+                      />
+                    </FormField>
                   )}
                 />
-              </Field>
 
-              <Field orientation="horizontal">
+                <Controller
+                  control={control}
+                  name="brand_ids"
+                  render={({ field }) => (
+                    <FormField
+                      label={`Limit to Brands${field.value.length ? ` (${field.value.length})` : ""}`}
+                      error={errors.brand_ids}
+                    >
+                      <TickList
+                        rows={brands.rows}
+                        selected={field.value}
+                        onChange={field.onChange}
+                        disabled={readOnly}
+                        isLoading={brands.isLoading}
+                        noun="brands"
+                        className="md:h-56 md:max-h-none"
+                      />
+                    </FormField>
+                  )}
+                />
+              </div>
+
+              <Field orientation="horizontal" className="items-center rounded-lg border border-field-border px-4 py-3 md:col-span-2">
                 <FieldContent>
                   <FieldLabel htmlFor="show_on_storefront">Show on storefront</FieldLabel>
                   <FieldDescription>
@@ -360,47 +409,6 @@ const CouponForm = () => {
                   )}
                 />
               </Field>
-
-              <Controller
-                control={control}
-                name="category_ids"
-                render={({ field }) => (
-                  <FormField
-                    label={`Limit to Categories${field.value.length ? ` (${field.value.length})` : ""}`}
-                    description="Items in stock only. Tick none, here and under brands, for a coupon on the whole order."
-                    error={errors.category_ids}
-                  >
-                    <TickList
-                      rows={categories.rows}
-                      selected={field.value}
-                      onChange={field.onChange}
-                      disabled={readOnly}
-                      isLoading={categories.isLoading}
-                      noun="categories"
-                    />
-                  </FormField>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="brand_ids"
-                render={({ field }) => (
-                  <FormField
-                    label={`Limit to Brands${field.value.length ? ` (${field.value.length})` : ""}`}
-                    error={errors.brand_ids}
-                  >
-                    <TickList
-                      rows={brands.rows}
-                      selected={field.value}
-                      onChange={field.onChange}
-                      disabled={readOnly}
-                      isLoading={brands.isLoading}
-                      noun="brands"
-                    />
-                  </FormField>
-                )}
-              />
             </fieldset>
           </CardContent>
         </Card>
