@@ -15,6 +15,7 @@ from apps.orders.constants import PAYMENT_METHODS_BY_KEY, PaymentMethodKey
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
 from apps.orders.selectors.payments import order_deposit_due
+from apps.orders.services.notifications import alert_order_placed
 from apps.orders.services.orders import lock_order
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
         _assess_order_risk(order)
+    alert_order_placed(order, method=method)
     return payment
 
 

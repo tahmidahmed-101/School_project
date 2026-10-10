@@ -20,6 +20,8 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # deploy time; tests never run that, so keep the counters in memory.
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+# A developer's .env may hold a real bot token; tests must never message it.
+TELEGRAM_BOT_TOKEN = ""
 
 # WhiteNoise serves the `collectstatic` output, which only the Docker image
 # builds. No test serves static files, and initialising it against the missing
