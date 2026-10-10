@@ -33,6 +33,17 @@ class IsCustomer(BasePermission):
         return bool(user and user.is_authenticated and user.role == "customer")
 
 
+def user_has_any_staff_permission(user, codes) -> bool:
+    """The one rule for "may this account do it": an admin always, a staff
+    member only with one of `codes` enabled. Shared by the permission classes
+    below and by callers that have a user but no request (the Telegram bot)."""
+    if user.is_superuser or user.role == "admin":
+        return True
+    if user.role != "staff" or not codes:
+        return False
+    return user.staff_permissions.filter(permission_code__in=codes, is_enabled=True).exists()
+
+
 class IsAdminOrStaffWithPermission(BasePermission):
     required_permission: str | None = None
 
@@ -41,17 +52,10 @@ class IsAdminOrStaffWithPermission(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        if user.is_superuser or user.role == "admin":
-            return True
-
         required_permission = getattr(view, "required_staff_permission", self.required_permission)
-        if user.role != "staff" or not required_permission:
-            return False
-
-        return user.staff_permissions.filter(
-            permission_code=required_permission,
-            is_enabled=True,
-        ).exists()
+        return user_has_any_staff_permission(
+            user, (required_permission,) if required_permission else ()
+        )
 
 
 def require_staff_permission(code: str) -> type[IsAdminOrStaffWithPermission]:
@@ -78,17 +82,8 @@ class IsAdminOrStaffWithAnyPermission(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        if user.is_superuser or user.role == "admin":
-            return True
-
         codes = getattr(view, "required_staff_permissions", self.required_permissions)
-        if user.role != "staff" or not codes:
-            return False
-
-        return user.staff_permissions.filter(
-            permission_code__in=codes,
-            is_enabled=True,
-        ).exists()
+        return user_has_any_staff_permission(user, codes)
 
 
 def require_any_staff_permission(*codes: str) -> type[IsAdminOrStaffWithAnyPermission]:

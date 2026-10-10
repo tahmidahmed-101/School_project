@@ -401,9 +401,11 @@ TWILIO_ACCOUNT_SID: str = config("TWILIO_ACCOUNT_SID", default="")
 TWILIO_AUTH_TOKEN: str = config("TWILIO_AUTH_TOKEN", default="")
 TWILIO_PHONE_NUMBER: str = config("TWILIO_PHONE_NUMBER", default="")
 
-# Telegram staff alerts (new order, high-risk order). Off while either is blank.
+# Telegram staff bot (order alerts and commands). Off while the token is blank.
 TELEGRAM_BOT_TOKEN: str = config("TELEGRAM_BOT_TOKEN", default="")
-TELEGRAM_ALERT_CHAT_ID: str = config("TELEGRAM_ALERT_CHAT_ID", default="")
+# Telegram sends this back in a header on every webhook call; a request
+# without it is refused. Any long random string.
+TELEGRAM_WEBHOOK_SECRET: str = config("TELEGRAM_WEBHOOK_SECRET", default="")
 
 # Modern Storages (Django 4.2+)
 STORAGES: dict[str, Any] = {

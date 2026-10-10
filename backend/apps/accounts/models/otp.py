@@ -23,6 +23,7 @@ class UserOTP(TimeStampedModel):
         PASSWORD_RESET = "password_reset", "Password reset"
         PHONE_VERIFICATION = "phone_verification", "Phone verification"
         PHONE_CHANGE = "phone_change", "Phone change"
+        TELEGRAM_LINK = "telegram_link", "Telegram link"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

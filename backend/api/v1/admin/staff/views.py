@@ -14,9 +14,16 @@ from api.v1.admin.users.views import (
     _admin_user_data,
     _AdminUserListSerializer,
 )
+from apps.accounts.constants import StaffPermissionCode
 from apps.accounts.selectors.staff_permissions import staff_permission_codes
+from apps.accounts.selectors.telegram_links import get_telegram_link
 from apps.accounts.selectors.users import get_user_by_id, staff_users
 from apps.accounts.services.staff_permissions import replace_staff_permissions
+from apps.accounts.services.telegram_links import (
+    LINK_CODE_EXPIRY_MINUTES,
+    create_telegram_link_code,
+    unlink_telegram_account,
+)
 from apps.accounts.services.users import (
     admin_update_user,
     create_staff_user,
@@ -26,7 +33,7 @@ from apps.accounts.services.users import (
 from apps.common.exceptions import DomainError
 from apps.common.generics import filter_search, list_response
 from apps.common.params import get_bool
-from apps.common.permissions import IsAdmin
+from apps.common.permissions import IsAdmin, require_any_staff_permission
 from apps.common.responses import error_from_exception, not_found
 
 from .serializers import (
@@ -328,3 +335,46 @@ class StaffPermissionsView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": _admin_user_data(user), "message": "Success"})
+
+
+OrdersStaffPermission = require_any_staff_permission(
+    StaffPermissionCode.ORDERS_VIEW, StaffPermissionCode.ORDERS_MANAGE
+)
+
+
+@extend_schema(tags=["Staff"])
+class StaffTelegramLinkView(APIView):
+    """The signed-in staff member's own Telegram link. POST hands back a
+    single-use code to send to the bot; the code is shown once and only its
+    hash is kept. The bot only serves order staff, so linking needs an order
+    permission."""
+
+    permission_classes: ClassVar[list] = [OrdersStaffPermission]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request) -> Response:
+        link = get_telegram_link(request.user)
+        return Response(
+            {
+                "data": {
+                    "linked": link is not None,
+                    "linked_at": link.updated_at if link else None,
+                },
+                "message": "Success",
+            }
+        )
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request) -> Response:
+        code = create_telegram_link_code(user=request.user)
+        return Response(
+            {
+                "data": {"code": code, "expires_in_minutes": LINK_CODE_EXPIRY_MINUTES},
+                "message": "Success",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request) -> Response:
+        unlink_telegram_account(user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

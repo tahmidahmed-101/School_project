@@ -78,6 +78,12 @@ class SalesOrder(FullAuditModel):
     preorder_stage = models.CharField(
         max_length=40, choices=PreorderStage.choices, blank=True, default="", db_index=True
     )
+    # Staff reached the customer and they still want a cash-on-delivery order.
+    # Says nothing about money: the payment stays pending until it is captured.
+    cod_verified_at = models.DateTimeField(null=True, blank=True)
+    cod_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     shipping_total = models.DecimalField(
