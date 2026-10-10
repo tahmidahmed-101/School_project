@@ -1,14 +1,17 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { MapPin, Package, Search, Trash2Icon, User, X, Check } from "lucide-react"
+import { CreditCard, Loader2, MapPin, Package, Search, Trash2Icon, User, Check } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
-import { ProductCell } from "@/components/common/cells"
+import { ProductCell, Thumbnail } from "@/components/common/cells"
+import { EmptyState } from "@/components/common/EmptyState"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
@@ -29,6 +32,7 @@ import { KIND_PATHS } from "@/features/sales/shared/kindPaths"
 import type { OrderQuote } from "@/features/sales/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useDebounced } from "@/hooks/use-debounced"
+import { useDebouncedSearch } from "@/hooks/use-debounced-search"
 import { useKind, withKind } from "@/hooks/use-kind"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapEnvelope, unwrapList } from "@/lib/api/envelope"
@@ -58,6 +62,7 @@ interface VariantHit {
   effective_price: string
   stock: number
   is_active: boolean
+  primary_image?: string | null
 }
 interface DraftLine {
   variant: VariantHit
@@ -65,32 +70,123 @@ interface DraftLine {
 }
 
 const NONE = "__none__"
+const CUSTOMER_PARAMS = { role: "customer" }
 
-/** Debounced search against a paginated admin list endpoint. */
-function useSearch<T>(url: string, query: string, extraParams: Record<string, string> = {}) {
-  const q = query.trim()
-  const debounced = useDebounced(q)
-  const paramsKey = JSON.stringify(extraParams)
-  const key = JSON.stringify([url, debounced, paramsKey])
-  const [result, setResult] = useState<{ key: string; items: T[] }>({ key: "", items: [] })
+const customerName = (c: CustomerHit) => c.display_name || c.email || c.phone
+const customerContact = (c: CustomerHit) => 
+  [c.email, c.phone].filter((part) => part && part !== customerName(c)).join(" · ")
 
-  useEffect(() => {
-    if (!debounced) return
-    const controller = new AbortController()
-    api
-      .get(url, {
-        params: { search: debounced, page: 1, page_size: 8, ...JSON.parse(paramsKey) },
-        signal: controller.signal,
+function CustomerAvatar({ customer }: { customer: CustomerHit }) {
+  return (
+    <Avatar className="size-9">
+      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+        {customerName(customer).trim().slice(0, 2).toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
+
+/**
+ * Search box over a paginated admin list endpoint. Its suggestions open as soon as the box is
+ * clicked, before anything is typed, and narrow as the user types.
+ */
+function SearchDropdown<T extends { id: string }>({
+  url,
+  params,
+  placeholder,
+  label,
+  emptyText,
+  onPick,
+  isDisabled,
+  renderItem,
+}: {
+  url: string
+  params: Record<string, string>
+  placeholder: string
+  label: string
+  emptyText: string
+  onPick: (item: T) => void
+  isDisabled?: (item: T) => boolean
+  renderItem: (item: T) => ReactNode
+}) {
+  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const paramsKey = JSON.stringify(params)
+  const { results, loading } = useDebouncedSearch({
+    query: query.trim(),
+    delay: 250,
+    enabled: open,
+    search: async (search, signal) => {
+      const res = await api.get(url, {
+        params: { ...(search ? { search } : {}), page: 1, page_size: 20, ...JSON.parse(paramsKey) },
+        signal,
       })
-      .then((res) => setResult({ key, items: unwrapList<T>(res.data, 1, 8).items }))
-      .catch(() => {
-        if (!controller.signal.aborted) setResult({ key, items: [] })
-      })
-    return () => controller.abort()
-  }, [url, debounced, paramsKey, key])
+      return unwrapList<T>(res.data, 1, 20).items
+    },
+    refetchKey: `${url}:${paramsKey}`,
+  })
 
-  // Stale hits from a previous query are hidden once the box is cleared.
-  return { results: q ? result.items : [], loading: !!q && !!debounced && result.key !== key }
+  return (
+    // The suggestions render in a popover (a portal on <body>), so the card can't clip them.
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <div ref={boxRef} className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder={placeholder}
+            aria-label={label}
+            autoComplete="off"
+            value={query}
+            onFocus={() => setOpen(true)}
+            onClick={() => setOpen(true)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setOpen(true)
+            }}
+          />
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        // Typing continues in the search box; the list must not take focus.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        // A click back in the search box is not "outside".
+        onInteractOutside={(e) => {
+          if (boxRef.current?.contains(e.target as Node)) e.preventDefault()
+        }}
+        className="max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto p-0"
+      >
+        {loading && results.length === 0 ? (
+          <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Searching…
+          </div>
+        ) : results.length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">{emptyText}</div>
+        ) : (
+          <ul role="listbox" className="p-1">
+            {results.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  disabled={isDisabled?.(item)}
+                  className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-50"
+                  onClick={() => {
+                    onPick(item)
+                    setOpen(false)
+                    setQuery("")
+                  }}
+                >
+                  {renderItem(item)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 /** What the pre-order will come to, worked out by the server the same way it places the order. */
@@ -126,20 +222,16 @@ const CreateOrder = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const [customerQuery, setCustomerQuery] = useState("")
   const [customer, setCustomer] = useState<CustomerHit | null>(null)
   const [addresses, setAddresses] = useState<AddressHit[]>([])
   const [addressId, setAddressId] = useState(NONE)
   const [carriers, setCarriers] = useState<Carrier[]>([])
   const [carrierId, setCarrierId] = useState(NONE)
-  const [variantQuery, setVariantQuery] = useState("")
   const [lines, setLines] = useState<DraftLine[]>([])
   const [capture, setCapture] = useState(true)
   const [method, setMethod] = useState<PaymentMethod>("cod")
   const [submitting, setSubmitting] = useState(false)
 
-  const customerSearch = useSearch<CustomerHit>("/admin/users/", customer ? "" : customerQuery, { role: "customer" })
-  const variantSearch = useSearch<VariantHit>("/admin/catalog/variants/", variantQuery, { category_type: kind })
 
   useEffect(() => {
     const request = dispatch(fetchCarrierOptions())
@@ -180,7 +272,6 @@ const CreateOrder = () => {
         ? prev.map((l) => (l.variant.id === variant.id ? { ...l, quantity: String(Number(l.quantity) + 1) } : l))
         : [...prev, { variant, quantity: "1" }]
     )
-    setVariantQuery("")
   }
 
   const linesValid = lines.length > 0 && lines.every((l) => Number.isInteger(Number(l.quantity)) && Number(l.quantity) >= 1)
@@ -228,7 +319,12 @@ const CreateOrder = () => {
     {
       id: "product",
       header: "Product",
-      cell: ({ row }) => <ProductCell name={row.original.variant.product_name} sku={row.original.variant.sku} />,
+      cell: ({ row: { original: l } }) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <Thumbnail src={l.variant.primary_image} className="size-10" />
+          <ProductCell name={l.variant.product_name} sub={l.variant.title} sku={l.variant.sku} />
+        </div>
+      ),
     },
     {
       id: "price",
@@ -245,13 +341,23 @@ const CreateOrder = () => {
           type="number"
           min={1}
           step={1}
-          className="h-8 text-right"
+          className="ml-auto h-9 w-20 text-right"
           aria-label={`Quantity for ${l.variant.product_name}`}
           value={l.quantity}
           onChange={(e) =>
             setLines((prev) => prev.map((x) => (x.variant.id === l.variant.id ? { ...x, quantity: e.target.value } : x)))
           }
         />
+      ),
+    },
+    {
+      id: "total",
+      header: "Total",
+      meta: { align: "right" },
+      cell: ({ row: { original: l } }) => (
+        <span className="text-sm font-semibold">
+          {formatCurrency(Number(l.variant.effective_price) * Number(l.quantity || 0))}
+        </span>
       ),
     },
     {
@@ -288,56 +394,36 @@ const CreateOrder = () => {
                 Customer
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               {customer ? (
-                <div className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                  <div>
-                    <p className="font-semibold">{customer.display_name || customer.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {customer.email}
-                      {customer.phone && ` · ${customer.phone}`}
-                    </p>
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
+                  <CustomerAvatar customer={customer} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{customerName(customer)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{customerContact(customer)}</p>
                   </div>
-                  <Button variant="ghost" size="icon" aria-label="Change customer" onClick={() => selectCustomer(null)}>
-                    <X className="size-4" />
+                  <Button variant="outline" size="sm" onClick={() => selectCustomer(null)}>
+                    Change
                   </Button>
                 </div>
               ) : (
-                <>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      className="pl-9"
-                      placeholder="Search customers by name, email or phone..."
-                      aria-label="Search customers"
-                      value={customerQuery}
-                      onChange={(e) => setCustomerQuery(e.target.value)}
-                    />
-                  </div>
-                  {customerSearch.loading && <p className="text-xs text-muted-foreground">Searching…</p>}
-                  {customerSearch.results.length > 0 && (
-                    <ul className="divide-y rounded-lg border">
-                      {customerSearch.results.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-                            onClick={() => selectCustomer(c)}
-                          >
-                            <span className="font-medium">{c.display_name || c.email}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {c.email}
-                              {c.phone && ` · ${c.phone}`}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                <SearchDropdown<CustomerHit>
+                  url="/admin/users/"
+                  params={CUSTOMER_PARAMS}
+                  placeholder="Search customers by name, email or phone..."
+                  label="Search customers"
+                  emptyText="No customers match."
+                  onPick={selectCustomer}
+                  renderItem={(c) => (
+                    <>
+                      <CustomerAvatar customer={c} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{customerName(c)}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{customerContact(c)}</span>
+                      </span>
+                    </>
                   )}
-                  {!customerSearch.loading && customerQuery.trim() && customerSearch.results.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No customers match.</p>
-                  )}
-                </>
+                />
               )}
             </CardContent>
           </Card>
@@ -355,43 +441,36 @@ const CreateOrder = () => {
                   : "Prices, tax and discounts are calculated by the server at checkout."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder={isPreorder ? "Search pre-order items by name or SKU..." : "Search products by name or SKU..."}
-                  aria-label="Search products"
-                  value={variantQuery}
-                  onChange={(e) => setVariantQuery(e.target.value)}
-                />
-              </div>
-              {variantSearch.results.length > 0 && (
-                <ul className="max-h-64 divide-y overflow-y-auto rounded-lg border">
-                  {variantSearch.results.map((v) => (
-                    <li key={v.id}>
-                      <button
-                        type="button"
-                        disabled={!v.is_active}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
-                        onClick={() => addVariant(v)}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">
-                            {v.product_name}
-                            {v.title && <span className="text-muted-foreground"> · {v.title}</span>}
-                          </span>
-                          <span className="font-mono text-xs text-muted-foreground">{v.sku}</span>
+            <CardContent className="space-y-4">
+              <SearchDropdown<VariantHit>
+                url="/admin/catalog/variants/"
+                params={{ category_type: kind }}
+                placeholder={isPreorder ? "Search pre-order items by name or SKU..." : "Search products by name or SKU..."}
+                label="Search products"
+                emptyText={isPreorder ? "No pre-order items match." : "No products match."}
+                onPick={addVariant}
+                isDisabled={(v) => !v.is_active}
+                renderItem={(v) => (
+                  <>
+                    <Thumbnail src={v.primary_image} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">
+                        {v.product_name}
+                        {v.title && <span className="font-normal text-muted-foreground"> · {v.title}</span>}
+                      </span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">{v.sku}</span>
+                    </span>
+                    <span className="shrink-0 text-right text-xs">
+                      <span className="block text-sm font-semibold">{formatCurrency(v.effective_price)}</span>
+                      {!isPreorder && (
+                        <span className={v.stock > 0 ? "text-muted-foreground" : "text-destructive"}>
+                          {v.stock > 0 ? `${v.stock} in stock` : "Out of stock"}
                         </span>
-                        <span className="shrink-0 text-right text-xs">
-                          <span className="block font-semibold">{formatCurrency(v.effective_price)}</span>
-                          {!isPreorder && <span className="text-muted-foreground">{v.stock} in stock</span>}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      )}
+                    </span>
+                  </>
+                )}
+              />
 
               {lines.length > 0 ? (
                 <DataTable
@@ -401,20 +480,23 @@ const CreateOrder = () => {
                   columns={lineColumns}
                   data={lines}
                   minWidth="0px"
-                  columnWidths={["auto", "120px", "100px", "64px"]}
+                  columnWidths={["auto", "110px", "110px", "120px", "56px"]}
                   unlabelledColumns={["remove"]}
                 />
               ) : (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  {isPreorder ? "No items added yet." : "No products added yet."}
-                </p>
+                <EmptyState
+                  icon={Package}
+                  title={isPreorder ? "No items added yet" : "No products added yet"}
+                  description="Click the search box above and pick an item to add it to the order."
+                  className="rounded-lg border border-dashed py-8"
+                />
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Delivery & payment */}
-        <div className="space-y-6">
+        {/* Delivery & payment: stays in view while a long list of lines scrolls. */}
+        <div className="space-y-6 lg:sticky lg:top-0 lg:self-start">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -470,7 +552,10 @@ const CreateOrder = () => {
 
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Payment</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                Payment
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isPreorder ? (
@@ -562,8 +647,10 @@ const CreateOrder = () => {
                     </Field>
                   )}
                   <div className="flex items-center justify-between border-t pt-3 text-sm">
-                    <span className="text-muted-foreground">Items (before tax & shipping)</span>
-                    <span className="font-semibold">{formatCurrency(estimate)}</span>
+                    <span className="text-muted-foreground">
+                      {lines.length} {lines.length === 1 ? "item" : "items"} (before tax & shipping)
+                    </span>
+                    <span className="text-base font-semibold">{formatCurrency(estimate)}</span>
                   </div>
                 </>
               )}
