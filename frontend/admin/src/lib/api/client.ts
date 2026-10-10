@@ -149,7 +149,8 @@ export function extractApiError(err: unknown): ApiError {
  */
 export function getApiErrorMessage(err: unknown, fallback = "Something went wrong. Please try again."): string {
   if (err && typeof err === "object") {
-    const e = err as Partial<ApiError> & Record<string, unknown>
+    // A direct `api.post(...)` rejects with the raw axios error, whose own message is only "Request failed…".
+    const e = (axios.isAxiosError(err) ? extractApiError(err) : err) as Partial<ApiError> & Record<string, unknown>
     const firstField = e.fields ? Object.entries(e.fields).find(([, msgs]) => msgs?.length) : undefined
     if (firstField) {
       const [field, msgs] = firstField
