@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { CornerDownRight, FolderTree, PlusIcon } from "lucide-react"
+import { FolderTree, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -27,7 +27,7 @@ const Categories = ({ kind }: { kind: Kind }) => {
   useDocumentTitle(title)
   const navigate = useNavigate()
   const canManage = useCan("catalog.manage")
-  const { options, isLoading, error, reload } = useCategoryOptions(kind)
+  const { options, nameById, isLoading, error, reload } = useCategoryOptions(kind)
   const [search, setSearch] = useState("")
 
   // CSV import (stock page only). Parents are looked up by name/slug; categories created earlier
@@ -64,7 +64,6 @@ const Categories = ({ kind }: { kind: Kind }) => {
       (o) => !q || o.category.name.toLowerCase().includes(q) || o.category.slug.toLowerCase().includes(q)
     )
   }, [options, search])
-  const flat = Boolean(search.trim())
 
   const handleDelete = async (o: CategoryOption) => {
     try {
@@ -81,20 +80,26 @@ const Categories = ({ kind }: { kind: Kind }) => {
     {
       id: "name",
       header: "CATEGORY",
+      cell: ({ row }) => (
+        <div className="flex min-w-0 items-center gap-2">
+          {row.original.category.image ? (
+            <img loading="lazy" decoding="async"
+              src={row.original.category.image}
+              alt=""
+              className="size-8 shrink-0 rounded-md border border-border object-cover"
+            />
+          ) : null}
+          <span className="truncate text-sm font-medium">{row.original.label}</span>
+        </div>
+      ),
+    },
+    {
+      id: "parent",
+      header: "ROOT CATEGORY",
       cell: ({ row }) => {
-        const depth = flat ? 0 : row.original.depth
+        const parentId = row.original.category.parent_id
         return (
-          <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: depth * 20 }}>
-            {depth > 0 && <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" />}
-            {row.original.category.image ? (
-              <img loading="lazy" decoding="async"
-                src={row.original.category.image}
-                alt=""
-                className="size-8 shrink-0 rounded-md border border-border object-cover"
-              />
-            ) : null}
-            <span className="truncate text-sm font-medium">{row.original.label}</span>
-          </div>
+          <span className="truncate text-sm text-muted-foreground">{(parentId && nameById.get(parentId)) || "—"}</span>
         )
       },
     },
@@ -190,8 +195,8 @@ const Categories = ({ kind }: { kind: Kind }) => {
         emptyIcon={FolderTree}
         emptyTitle="No categories"
         emptyDescription="Create a root category, then nest subcategories under it."
-        minWidth="650px"
-        columnWidths={["320px", "200px", "110px", "80px"]}
+        minWidth="820px"
+        columnWidths={["280px", "200px", "200px", "110px", "80px"]}
         unlabelledColumns={["actions"]}
       />
     </div>
