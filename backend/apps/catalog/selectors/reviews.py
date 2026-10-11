@@ -38,12 +38,14 @@ def get_review_by_id(review_id: str | UUID) -> ProductReview | None:
 
 
 def product_review_summary(product: Product) -> dict:
-    result = ProductReview.objects.filter(product=product).aggregate(
-        average_rating=Avg("rating"), review_count=Count("id")
-    )
+    reviews = ProductReview.objects.filter(product=product)
+    result = reviews.aggregate(average_rating=Avg("rating"), review_count=Count("id"))
+    # Reviews per star, every star present: {"5": 3, "4": 0, ...}.
+    counts = dict(reviews.values_list("rating").annotate(total=Count("id")))
     return {
         "average_rating": (
             round(result["average_rating"], 2) if result["average_rating"] is not None else None
         ),
         "review_count": result["review_count"] or 0,
+        "rating_counts": {str(star): counts.get(star, 0) for star in range(5, 0, -1)},
     }

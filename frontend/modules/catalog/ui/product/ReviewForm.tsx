@@ -44,37 +44,14 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-2 border-t border-ink-100 pt-4">
-      <p className="text-xs font-bold text-fg">{ui("reviewsWriteTitle")}</p>
+    <form onSubmit={handleSubmit} noValidate className="space-y-2">
+      <p className="text-sm font-bold text-fg">{ui("reviewsWriteTitle")}</p>
       {sent && <SentNote>{ui("reviewsSent")}</SentNote>}
       {error && <FormAlert>{error}</FormAlert>}
 
-      <div role="radiogroup" aria-label={ui("reviewsRatingLabel")} className="flex items-center gap-1">
-        {RATINGS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={rating === value}
-            aria-label={`${n(value)} ${ui("reviewsStars")}`}
-            onClick={() => {
-              setRating(value);
-              clearSent();
-            }}
-            className="cursor-pointer rounded p-0.5 transition-transform hover:scale-110"
-          >
-            <Star
-              className={`h-6 w-6 ${value <= rating ? "fill-gold-400 text-gold-400" : "fill-ink-100 text-ink-300"}`}
-            />
-          </button>
-        ))}
-      </div>
-
-      <label htmlFor="product-review" className="block text-xs font-semibold text-fg">
-        {ui("reviewsCommentLabel")}
-      </label>
       <textarea
         id="product-review"
+        aria-label={ui("reviewsCommentLabel")}
         rows={3}
         maxLength={2000}
         value={comment}
@@ -83,11 +60,34 @@ export function ReviewForm({ productId, onPosted }: { productId: string; onPoste
           clearSent();
         }}
         placeholder={ui("reviewsCommentPlaceholder")}
-        className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}
+        className={inputClass({ padding: "px-3 py-2", className: "resize-y text-sm" })}
       />
-      <Button type="submit" size="sm" loading={submitting}>
-        {ui("reviewsSubmit")}
-      </Button>
+      {/* Rating on the left, submit on the right */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div role="radiogroup" aria-label={ui("reviewsRatingLabel")} className="flex items-center gap-1">
+          {RATINGS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={rating === value}
+              aria-label={`${n(value)} ${ui("reviewsStars")}`}
+              onClick={() => {
+                setRating(value);
+                clearSent();
+              }}
+              className="cursor-pointer rounded p-0.5 transition-transform hover:scale-110"
+            >
+              <Star
+                className={`h-6 w-6 ${value <= rating ? "fill-gold-400 text-gold-400" : "fill-ink-100 text-ink-300"}`}
+              />
+            </button>
+          ))}
+        </div>
+        <Button type="submit" size="sm" loading={submitting}>
+          {ui("reviewsSubmit")}
+        </Button>
+      </div>
     </form>
   );
 }

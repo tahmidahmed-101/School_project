@@ -1,5 +1,6 @@
-import type { Product } from "@/lib/types";
+import type { CategoryInfo, Product } from "@/lib/types";
 import { getDiscountPercent, isPreOrderShopProduct, matchesQuery } from "@/lib/product";
+import { categoryFamily } from "./category-tree";
 
 export interface FilterState {
   category: string;
@@ -83,12 +84,10 @@ function matchesSearch(product: Product, rawQuery: string): boolean {
   );
 }
 
-function matchesFilters(product: Product, filters: FilterState): boolean {
+function matchesFilters(product: Product, filters: FilterState, family: Set<string> | null): boolean {
   if (!matchesSearch(product, filters.searchQuery)) return false;
 
-  if (filters.category !== "all" && product.category.toLowerCase() !== filters.category.toLowerCase()) {
-    return false;
-  }
+  if (family && !family.has(product.category.toLowerCase())) return false;
 
   if (filters.stockType === "normal" && isPreOrderShopProduct(product)) return false;
   if (filters.stockType === "preorder" && !isPreOrderShopProduct(product)) return false;
@@ -124,6 +123,12 @@ function compareProducts(sort: string): (a: Product, b: Product) => number {
 
 const savings = (p: Product) => (p.compareAtPrice ? p.compareAtPrice - p.price : 0);
 
-export function filterAndSortProducts(products: Product[], filters: FilterState): Product[] {
-  return products.filter((p) => matchesFilters(p, filters)).sort(compareProducts(filters.sort));
+/** `categories` lets a main category also list the products of its subcategories. */
+export function filterAndSortProducts(
+  products: Product[],
+  filters: FilterState,
+  categories: CategoryInfo[] = [],
+): Product[] {
+  const family = filters.category === "all" ? null : categoryFamily(categories, filters.category);
+  return products.filter((p) => matchesFilters(p, filters, family)).sort(compareProducts(filters.sort));
 }

@@ -11,5 +11,6 @@ export { WithActiveCategory } from "./ui/WithActiveCategory";
 export { WithPageKind } from "./ui/WithPageKind";
 export { ProductDetailSkeleton, ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";
 export { ContactButtons } from "./ui/ContactButtons";
-export { forListing, relatedForProduct } from "./domain/listing";
+export { categoryGroups, categoryTree, type CategoryGroup, type CategoryNode } from "./domain/category-tree";
+export { forListing, moreForProduct, relatedForProduct } from "./domain/listing";
 export { shopKindFor } from "./domain/shop-filters";

@@ -1,35 +1,34 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Suspense, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { photo } from "@/lib/photo";
+import { shopListing } from "@/lib/product";
 import { useLang } from "@/lib/i18n";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Container } from "@/design-system/ui/Container";
 import { SectionHeading } from "@/design-system/ui/SectionHeading";
 import { useCatalog } from "../context";
+import { categoryGroups } from "../domain/category-tree";
 
 /** Auto-slide speed, in pixels per second. */
 const SLIDE_SPEED = 40;
 /** How long the row stays still after the visitor lets go of it. */
 const RESUME_DELAY_MS = 1500;
 
-type ScrollByPage = (direction: 1 | -1) => void;
-
 interface CategoryTrackProps {
-  scrollByPageRef: RefObject<ScrollByPage | null>;
   preorder: boolean;
   /** True when every category fits in the row at once, so there is nothing to slide or loop. */
   isStatic: boolean;
   onStaticChange: (isStatic: boolean) => void;
 }
 
-function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: CategoryTrackProps) {
+function CategoryTrack({ preorder, isStatic, onStaticChange }: CategoryTrackProps) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const { lang, n } = useLang();
+  const { lang, n, ui } = useLang();
   const searchParams = useSearchParams();
   const activeSlug = searchParams ? searchParams.get("category") : null;
 
@@ -66,7 +65,10 @@ function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: 
 
   const { categories: allCategories } = useCatalog();
   // Stock and pre-order are separate catalogues: the home page lists one, the pre-order page the other.
-  const categories = allCategories.filter((category) => category.type === (preorder ? "preorder" : "stock"));
+  // Main categories only, each counting its subcategories' products; the subcategories are in its shop page.
+  const categories = categoryGroups(
+    allCategories.filter((category) => category.type === (preorder ? "preorder" : "stock")),
+  );
   const count = categories.length;
 
   // The list is rendered several times in a row and the scroll position wraps by one list width,
@@ -155,23 +157,6 @@ function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: 
     hold.current.until = performance.now() + ms;
   };
 
-  useEffect(() => {
-    scrollByPageRef.current = (direction) => {
-      const track = trackRef.current;
-      if (!track) return;
-      const width = loopWidthRef.current();
-      const step = track.clientWidth * 0.8;
-      // The copies are identical, so jumping one list width is invisible; it makes room to go back.
-      if (direction === -1 && track.scrollLeft < step) track.scrollLeft += width;
-      if (direction === 1 && track.scrollLeft >= width) track.scrollLeft -= width;
-      hold.current.until = performance.now() + RESUME_DELAY_MS;
-      track.scrollBy({ left: direction * step, behavior: "smooth" });
-    };
-    return () => {
-      scrollByPageRef.current = null;
-    };
-  }, [scrollByPageRef, trackRef]);
-
   return (
     <div
       ref={trackRef}
@@ -218,16 +203,18 @@ function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: 
         isStatic ? "" : "lg:[mask-image:linear-gradient(to_right,transparent,#000_4%,#000_96%,transparent)]"
       } ${isDragging ? "cursor-grabbing select-none" : ""}`}
     >
-      {Array.from({ length: isStatic ? 1 : copies }, (_, copy) => categories.map((cat) => ({ cat, copy })))
+      {Array.from({ length: isStatic ? 1 : copies }, (_, copy) =>
+        categories.map(({ main: cat, subs, itemCount }) => ({ cat, subs, itemCount, copy })),
+      )
         .flat()
-        .map(({ cat, copy }) => {
+        .map(({ cat, subs, itemCount, copy }) => {
           // Only the first copy is announced and reachable by keyboard; the rest are visual repeats.
           const isRepeat = copy > 0;
           const isActive = Boolean(activeSlug && activeSlug === cat.slug);
           const countText =
             lang === "bn"
-              ? `${n(cat.itemCount)} টি প্রোডাক্ট`
-              : `${n(cat.itemCount)} ${cat.itemCount === 1 ? "Product" : "Products"}`;
+              ? `${n(itemCount)} টি প্রোডাক্ট`
+              : `${n(itemCount)} ${itemCount === 1 ? "Product" : "Products"}`;
 
           return (
             <div
@@ -270,6 +257,13 @@ function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: 
 
                 {/* Product Count (e.g. 28 Products) */}
                 <p className="mt-0.5 text-2xs font-medium text-fg-muted sm:text-xs">{countText}</p>
+
+                {/* How many subcategories sit inside this main category */}
+                {subs.length > 0 && (
+                  <p className="mt-1.5 rounded-full bg-gold-50 px-2 py-0.5 text-2xs font-semibold text-gold-800">
+                    {ui("subcategories")}: {n(subs.length)}
+                  </p>
+                )}
               </Link>
             </div>
           );
@@ -282,12 +276,6 @@ function CategoryTrack({ scrollByPageRef, preorder, isStatic, onStaticChange }: 
 export function CategoryShowcase({ preorder = false }: { preorder?: boolean }) {
   const { ui } = useLang();
   const [isStatic, setIsStatic] = useState(false);
-  const scrollByPageRef = useRef<ScrollByPage | null>(null);
-  const scrollTrack = (direction: 1 | -1) => scrollByPageRef.current?.(direction);
-
-  const arrowClass =
-    "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-canvas text-ink-700 shadow-2xs transition-colors hover:border-gold-500 hover:bg-gold-50 hover:text-gold-700";
-
   return (
     <section aria-label={ui("categoriesTitle")} className="border-b border-ink-100 bg-canvas py-6 sm:py-7 lg:py-8">
       <Container>
@@ -296,37 +284,24 @@ export function CategoryShowcase({ preorder = false }: { preorder?: boolean }) {
             className="mb-3 sm:mb-5"
             title={ui("categoriesTitle")}
             action={
-              <div className={`flex items-center gap-2 ${isStatic ? "hidden" : ""}`}>
-                <button
-                  type="button"
-                  onClick={() => scrollTrack(-1)}
-                  aria-label={ui("scrollCategoriesLeft")}
-                  className={arrowClass}
+              <div className="flex items-center gap-2">
+                {/* Stays inside the shop the section is on: stock on the home page, pre-order on the pre-order page */}
+                <Link
+                  href={shopListing(preorder ? "preorder" : "stock")}
+                  className="group mr-1 inline-flex items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-800 transition-colors hover:text-gold-900 sm:text-sm"
                 >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollTrack(1)}
-                  aria-label={ui("scrollCategoriesRight")}
-                  className={arrowClass}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
+                  <span>{ui("viewAllProducts")}</span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-1" />
+                </Link>
               </div>
             }
           />
         </ScrollReveal>
 
-        {/* Category track: slides on its own in a loop; arrows, swipe, drag or trackpad still move it */}
+        {/* Category track: slides on its own in a loop; swipe, drag or trackpad still move it */}
         <ScrollReveal>
           <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-surface-muted" />}>
-            <CategoryTrack
-              scrollByPageRef={scrollByPageRef}
-              preorder={preorder}
-              isStatic={isStatic}
-              onStaticChange={setIsStatic}
-            />
+            <CategoryTrack preorder={preorder} isStatic={isStatic} onStaticChange={setIsStatic} />
           </Suspense>
         </ScrollReveal>
       </Container>

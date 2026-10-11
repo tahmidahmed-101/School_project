@@ -12,7 +12,7 @@ import { getDiscountPercent, getMaxOrderQuantity, unavailableLabel } from "@/lib
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
-const CTA = { size: "lg", fullWidth: true, className: "sm:flex-1" } as const;
+const CTA = { size: "lg", fullWidth: true } as const;
 
 interface ProductActionsProps {
   product: Product;
@@ -79,63 +79,65 @@ export function ProductActions({
 
   return (
     <>
-      <div className="mt-7 flex items-center gap-3.5">
-        <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
+      {/* Quantity, the main button and the wishlist toggle share a row; "buy now" spans the full width below. */}
+      <div ref={ctaRef} className="mt-7 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
 
-        <button
-          type="button"
-          onClick={() => toggleItem(product)}
-          className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
-            isWishlisted
-              ? "shadow-xs border-red-500 bg-danger-surface text-danger"
-              : "border-ink-200 bg-canvas text-ink-700 hover:border-ink-900 hover:text-ink-950"
-          }`}
-          aria-label={ui("navWishlist")}
-          aria-pressed={isWishlisted}
-        >
-          <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-red-500" : ""}`} />
-        </button>
-      </div>
+          <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+            {isOutOfStock ? (
+              <Button {...CTA} variant="outline" disabled>
+                {ui(unavailableLabel(product))}
+              </Button>
+            ) : product.isPreOrder ? (
+              isSoldOut ? (
+                <Button {...CTA} variant="outline" disabled>
+                  {ui("preOrderUnavailable")}
+                </Button>
+              ) : (
+                <Button
+                  {...CTA}
+                  onClick={() => openPreOrderModal(product, quantity, variantId)}
+                  disabled={waiting}
+                  aria-describedby={hintId}
+                  leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
+                >
+                  {ui("preOrderNow")}
+                </Button>
+              )
+            ) : (
+              <Button
+                {...CTA}
+                variant="secondary"
+                onClick={() => addItem(product, quantity, variantId)}
+                disabled={waiting}
+                aria-describedby={hintId}
+                leadingIcon={<ShoppingCart className="h-4 w-4 text-gold-400" />}
+              >
+                {ui("addToCart")}
+              </Button>
+            )}
+          </div>
 
-      <div ref={ctaRef} className="mt-4 flex flex-col gap-3.5 sm:flex-row">
-        {isOutOfStock ? (
-          <Button {...CTA} variant="outline" disabled>
-            {ui(unavailableLabel(product))}
-          </Button>
-        ) : product.isPreOrder ? (
-          isSoldOut ? (
-            <Button {...CTA} variant="outline" disabled>
-              {ui("preOrderUnavailable")}
-            </Button>
-          ) : (
-            <Button
-              {...CTA}
-              onClick={() => openPreOrderModal(product, quantity, variantId)}
-              disabled={waiting}
-              aria-describedby={hintId}
-              leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
-            >
-              {ui("preOrderNow")}
-            </Button>
-          )
-        ) : (
-          <>
-            <Button
-              {...CTA}
-              variant="secondary"
-              onClick={() => addItem(product, quantity, variantId)}
-              disabled={waiting}
-              aria-describedby={hintId}
-              leadingIcon={<ShoppingCart className="h-4 w-4 text-gold-400" />}
-            >
-              {ui("addToCart")}
-            </Button>
-            {buyNowButton}
-          </>
-        )}
+          <button
+            type="button"
+            onClick={() => toggleItem(product)}
+            className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
+              isWishlisted
+                ? "shadow-xs border-red-500 bg-danger-surface text-danger"
+                : "border-ink-200 bg-canvas text-ink-700 hover:border-ink-900 hover:text-ink-950"
+            }`}
+            aria-label={ui("navWishlist")}
+            aria-pressed={isWishlisted}
+          >
+            <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-red-500" : ""}`} />
+          </button>
+        </div>
+
+        {!isOutOfStock && !product.isPreOrder && buyNowButton}
       </div>
       {hintId && (
-        <p id={hintId} role="status" className="mt-2.5 text-xs font-semibold text-gold-800">
+        <p id={hintId} role="status" className="sr-only">
           {hint}
         </p>
       )}

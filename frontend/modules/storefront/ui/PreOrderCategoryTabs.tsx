@@ -1,6 +1,7 @@
 "use client";
 
 import type { CategoryInfo } from "@/lib/types";
+import { categoryTree } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 
 interface PreOrderCategoryTabsProps {
@@ -33,7 +34,7 @@ export function PreOrderCategoryTabs({ categories, value, onChange }: PreOrderCa
       >
         {ui("filterAllCollections")}
       </button>
-      {categories.map((category) => (
+      {categoryTree(categories).map(({ category, parent }) => (
         <button
           key={category.id}
           type="button"
@@ -42,6 +43,8 @@ export function PreOrderCategoryTabs({ categories, value, onChange }: PreOrderCa
           onClick={() => onChange(category.id)}
           className={tabClass(value === category.id)}
         >
+          {/* A subcategory tab is prefixed with its main category */}
+          {parent && <span className="font-medium opacity-70">{t(parent.name)} › </span>}
           {t(category.name)}
         </button>
       ))}

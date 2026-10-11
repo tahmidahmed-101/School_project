@@ -38,7 +38,7 @@ function AskForm({ productId }: { productId: string }) {
     <form onSubmit={handleSubmit} noValidate className="space-y-2">
       {sent && <SentNote>{ui("questionsSent")}</SentNote>}
       {error && <FormAlert>{error}</FormAlert>}
-      <label htmlFor="product-question" className="block text-xs font-semibold text-fg">
+      <label htmlFor="product-question" className="block text-sm font-semibold text-fg">
         {ui("questionsLabel")}
       </label>
       <textarea
@@ -51,7 +51,7 @@ function AskForm({ productId }: { productId: string }) {
           clearSent();
         }}
         placeholder={ui("questionsPlaceholder")}
-        className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}
+        className={inputClass({ padding: "px-3 py-2", className: "resize-y text-sm" })}
       />
       <Button type="submit" size="sm" loading={submitting}>
         {ui("questionsSubmit")}
@@ -74,15 +74,15 @@ export function ProductQuestions({ slug, productId }: { slug: string; productId:
         <ul className="divide-y divide-ink-100">
           {items.map((item) => (
             <li key={item.id} className="space-y-1.5 py-3 first:pt-0">
-              <p className="flex gap-2 text-sm font-bold text-fg">
+              <p className="flex gap-2 text-base font-bold text-fg">
                 <span className="shrink-0 text-gold-800">{ui("questionsQ")}.</span>
                 <span className="whitespace-pre-line">{item.question}</span>
               </p>
-              <p className="flex gap-2 text-sm">
+              <p className="flex gap-2 text-base">
                 <span className="shrink-0 font-bold text-brand-800">{ui("questionsA")}.</span>
                 <span className="whitespace-pre-line">{item.answer}</span>
               </p>
-              <p className="text-2xs">
+              <p className="text-xs">
                 {item.customer_name} · {shortDate(item.created_at)}
               </p>
             </li>

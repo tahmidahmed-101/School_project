@@ -135,6 +135,7 @@ def test_public_can_list_product_reviews_with_summary(api_client):
     assert response.data["data"]["count"] == 2
     assert response.data["data"]["review_count"] == 2
     assert response.data["data"]["average_rating"] == 3.0
+    assert response.data["data"]["rating_counts"] == {"5": 0, "4": 1, "3": 0, "2": 1, "1": 0}
 
 
 def test_product_review_list_query_count_does_not_grow_with_reviews(api_client):

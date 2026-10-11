@@ -4,6 +4,7 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { mapsHref, socialLinks } from "./contactLinks";
 import { getBrand } from "@/modules/business/server";
+import { categoryGroups } from "@/modules/catalog";
 import { getShellCatalog } from "@/modules/catalog/server";
 import { isPolicyPublished } from "@/modules/policies/server";
 import { getServerText } from "@/lib/i18n.server";
@@ -19,7 +20,8 @@ export async function Footer() {
   ]);
   const about = BRAND_INFO.about[lang] || BRAND_INFO.about.en || BRAND_INFO.about.bn || ui("footerAboutText");
   // Pre-order has its own nav link and category rail; the footer covers the regular stock catalogue.
-  const categories = allCategories.filter((category) => category.type === "stock");
+  // Main categories only: their subcategories are one click away in the shop.
+  const categories = categoryGroups(allCategories.filter((category) => category.type === "stock"));
 
   return (
     <footer className="border-t border-brand-950 bg-brand-900 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] text-xs text-white/75 lg:pb-0">
@@ -71,7 +73,7 @@ export async function Footer() {
           <div className="space-y-3 lg:col-span-3">
             <h4 className="text-xs font-bold uppercase tracking-wide text-white">{ui("footerCategories")}</h4>
             <ul className="space-y-2">
-              {categories.map((cat) => (
+              {categories.map(({ main: cat }) => (
                 <li key={cat.id}>
                   <Link
                     href={`/shop?category=${cat.slug}`}

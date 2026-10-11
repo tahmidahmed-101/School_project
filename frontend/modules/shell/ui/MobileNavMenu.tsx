@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Store, Globe, Truck, Sparkles } from "lucide-react";
-import { useCatalog } from "@/modules/catalog";
+import { ChevronDown, CornerDownRight, X, Store, Globe, Truck, Sparkles } from "lucide-react";
+import { categoryGroups, useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { WithActiveCategory } from "@/modules/catalog";
@@ -32,7 +33,9 @@ export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMen
   const { lang, setLang, t, ui } = useLang();
   const { categories: allCategories } = useCatalog();
   // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
-  const categories = allCategories.filter((category) => category.type === "stock");
+  const groups = categoryGroups(allCategories.filter((category) => category.type === "stock"));
+  // Groups the visitor opened or closed by hand; the group of the category being viewed starts open.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
   const policyLinks = hasShippingPolicy ? [...POLICY_LINKS, SHIPPING_POLICY_LINK] : POLICY_LINKS;
 
@@ -114,20 +117,65 @@ export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMen
                         {ui("shopByCategories")}
                       </div>
 
-                      {categories.map((category) => (
-                        <Link
-                          key={category.id}
-                          href={`${SHOP_PATH}?category=${category.slug}`}
-                          onClick={onClose}
-                          className={`flex items-center rounded-xl px-3 py-2.5 pl-9 text-sm font-medium transition-colors ${
-                            activeCategory === category.slug
-                              ? "bg-white/10 font-bold text-gold-300"
-                              : "text-white/70 hover:bg-white/10 hover:text-white"
-                          }`}
-                        >
-                          <span className="truncate">{t(category.name)}</span>
-                        </Link>
-                      ))}
+                      {groups.map(({ main, subs }) => {
+                        const isOpenGroup =
+                          toggled[main.id] ?? subs.some(({ category }) => category.slug === activeCategory);
+                        // Only main categories show at first; the arrow opens the subcategories in a box below.
+                        return (
+                          <div key={main.id}>
+                            <div
+                              className={`flex items-stretch rounded-xl transition-colors ${
+                                activeCategory === main.slug ? "bg-white/10" : "hover:bg-white/10"
+                              }`}
+                            >
+                              <Link
+                                href={`${SHOP_PATH}?category=${main.slug}`}
+                                onClick={onClose}
+                                className={`flex min-w-0 flex-1 items-center py-2.5 pl-9 pr-3 text-sm font-semibold ${
+                                  activeCategory === main.slug
+                                    ? "font-bold text-gold-300"
+                                    : "text-white/85 hover:text-white"
+                                }`}
+                              >
+                                <span className="truncate">{t(main.name)}</span>
+                              </Link>
+                              {subs.length > 0 && (
+                                <button
+                                  type="button"
+                                  aria-expanded={isOpenGroup}
+                                  aria-label={`${ui("subcategories")}: ${t(main.name)}`}
+                                  onClick={() => setToggled((prev) => ({ ...prev, [main.id]: !isOpenGroup }))}
+                                  className="flex w-11 shrink-0 cursor-pointer items-center justify-center text-white/70 hover:text-white"
+                                >
+                                  <ChevronDown
+                                    className={`h-4 w-4 transition-transform duration-200 ${isOpenGroup ? "rotate-180" : ""}`}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                            {isOpenGroup && (
+                              <div className="mb-1.5 ml-9 mt-0.5 rounded-xl bg-white/5 py-1">
+                                {subs.map(({ category, depth }) => (
+                                  <Link
+                                    key={category.id}
+                                    href={`${SHOP_PATH}?category=${category.slug}`}
+                                    onClick={onClose}
+                                    style={{ paddingLeft: `${0.75 + (depth - 1) * 0.75}rem` }}
+                                    className={`flex items-center gap-2 py-2 pr-3 text-xs transition-colors ${
+                                      activeCategory === category.slug
+                                        ? "font-bold text-gold-300"
+                                        : "font-medium text-white/70 hover:text-white"
+                                    }`}
+                                  >
+                                    <CornerDownRight className="h-3 w-3 shrink-0 text-white/35" />
+                                    <span className="truncate">{t(category.name)}</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </>
                   )}
                 </WithActiveCategory>

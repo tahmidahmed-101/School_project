@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Product } from "@/lib/types";
 import { makeProduct } from "@/tests/fixtures";
-import { forListing, relatedForProduct } from "../domain/listing";
+import { forListing, moreForProduct, relatedForProduct } from "../domain/listing";
 
 describe("forListing", () => {
   it("keeps what cards and filters read and drops product-page detail", () => {
@@ -49,5 +49,22 @@ describe("relatedForProduct", () => {
 
   it("returns at most the asked count", () => {
     expect(relatedForProduct(product, [samePreorder, otherCategory], [], 1)).toHaveLength(1);
+  });
+});
+
+describe("moreForProduct", () => {
+  const product = makeProduct({ id: "p", kind: "stock" });
+  const related = makeProduct({ id: "r", kind: "stock" });
+  const other = makeProduct({ id: "a", category: "gadgets", kind: "stock" });
+  const another = makeProduct({ id: "b", kind: "stock" });
+  const preorder = makeProduct({ id: "c", kind: "preorder" });
+
+  it("lists the shop's other products, leaving out the product, its related picks and the other shop", () => {
+    const more = moreForProduct(product, [related], [product, related, other, preorder, another], 12);
+    expect(more.map((p) => p.id)).toEqual(["a", "b"]);
+  });
+
+  it("stops at the count", () => {
+    expect(moreForProduct(product, [], [other, another], 1).map((p) => p.id)).toEqual(["a"]);
   });
 });

@@ -8,20 +8,29 @@ import { CountBadge } from "@/design-system/ui/CountBadge";
 import { Home, Truck, Heart, User } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { UserAvatar, firstName, useAuth } from "@/modules/auth";
+import { useBrand } from "@/modules/catalog";
+import { FacebookIcon } from "@/design-system/icons/BrandIcons";
 import { useWishlist } from "@/modules/wishlist";
 import { WithShopCounts } from "./WithShopCounts";
+
+/**
+ * Top edge of the bar's middle piece (110 x 40): it curves down into a dip that holds the 46px Facebook button with
+ * a gap around it, and back up, with rounded shoulders where the dip meets the flat edge.
+ */
+const NOTCH_PATH = "M0 0H15C24 0 26 5 29 13C33 25 44 31 55 31C66 31 77 25 81 13C84 5 86 0 95 0H110V40H0Z";
 
 function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
   const pathname = usePathname();
   const { ui, n } = useLang();
   const { openWishlist, isWishlistOpen } = useWishlist();
   const { user } = useAuth();
+  const brand = useBrand();
 
   // Active tab index (-1 = none: the shop, product and pre-order pages have no tab of their own):
-  // 0 = Home, 1 = Track Order, 2 = Wishlist, 3 = Profile
+  // 0 = Home, 1 = Track Order, 2 = Facebook (a link out, never active), 3 = Wishlist, 4 = Profile
   const activeIndex = useMemo(() => {
-    if (isWishlistOpen) return 2;
-    if (pathname.startsWith("/login")) return 3;
+    if (isWishlistOpen) return 3;
+    if (pathname.startsWith("/login")) return 4;
     if (pathname.startsWith("/track-order")) return 1;
     if (pathname.startsWith("/pre-order")) return -1;
     if (pathname.startsWith("/shop") || pathname.startsWith("/product")) return -1;
@@ -36,6 +45,7 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
       id: "home",
       label: ui("navHome"),
       href: "/",
+      external: false,
       icon: Home,
       badge: 0,
       onClick: undefined,
@@ -44,7 +54,18 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
       id: "track",
       label: ui("tabTrack"),
       href: "/track-order",
+      external: false,
       icon: Truck,
+      badge: 0,
+      onClick: undefined,
+    },
+    {
+      // The shop's Facebook page, opened in a new tab.
+      id: "facebook",
+      label: ui("shareFacebook"),
+      href: brand.facebook,
+      external: true,
+      icon: FacebookIcon,
       badge: 0,
       onClick: undefined,
     },
@@ -52,6 +73,7 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
       id: "wishlist",
       label: ui("navWishlist"),
       href: undefined,
+      external: false,
       icon: Heart,
       badge: wishlistCount,
       onClick: openWishlist,
@@ -61,6 +83,7 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
       // Logged in: the tab shows the customer's avatar and first name instead of the generic icon and "Profile".
       label: (user && firstName(user)) || ui("navProfile"),
       href: "/login",
+      external: false,
       icon: User,
       badge: 0,
       onClick: undefined,
@@ -69,13 +92,26 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
 
   return (
     <nav aria-label={ui("bottomNav")} className="fixed inset-x-0 bottom-0 z-40 block w-full lg:hidden">
-      <div className="relative w-full border-t border-brand-900 bg-brand-800 shadow-bar pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="relative w-full pb-[env(safe-area-inset-bottom,0px)]">
+        {/* The bar itself: its top edge dips in the middle, bending around the floating Facebook button. */}
+        <div aria-hidden="true" className="absolute inset-0 drop-shadow-[0_-2px_6px_rgba(0,0,0,0.18)]">
+          <div className="flex h-full w-full text-brand-800">
+            <div className="flex-1 bg-current" />
+            <div className="-mx-px flex w-[110px] shrink-0 flex-col">
+              <svg viewBox="0 0 110 40" className="block h-10 w-full" fill="currentColor">
+                <path d={NOTCH_PATH} />
+              </svg>
+              <div className="-mt-px flex-1 bg-current" />
+            </div>
+            <div className="flex-1 bg-current" />
+          </div>
+        </div>
         {/* Navigation row with moving spotlight */}
         <div className="relative flex h-[60px] w-full items-center">
-          {/* Smooth moving spotlight beam & top glowing indicator (4 tabs -> w-1/4) */}
+          {/* Smooth moving spotlight beam & top glowing indicator (5 tabs -> w-1/5) */}
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/4 flex-col items-center justify-start overflow-hidden transition-[transform,opacity] duration-300 ${SLIDE_EASE}`}
+            className={`pointer-events-none absolute bottom-0 left-0 top-0 flex w-1/5 flex-col items-center justify-start overflow-hidden transition-[transform,opacity] duration-300 ${SLIDE_EASE}`}
             style={{ transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex === -1 ? 0 : 1 }}
           >
             {/* Top glowing bar flush with top border */}
@@ -138,6 +174,27 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
 
             const tabClass =
               "group relative z-10 flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 active:scale-95";
+
+            if (tab.href && tab.external) {
+              return (
+                <a
+                  key={tab.id}
+                  href={tab.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={ui("facebookLink")}
+                  className="group relative z-10 flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end pb-[12.5px]"
+                >
+                  {/* Floats half above the bar, inside the dip */}
+                  <span className="absolute left-1/2 top-0 flex h-[46px] w-[46px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-black/25 transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95">
+                    <Icon aria-hidden="true" className="h-5 w-5" />
+                  </span>
+                  <span className="max-w-full truncate px-0.5 text-2xs font-semibold leading-none text-white/75 transition-colors group-hover:text-white">
+                    {tab.label}
+                  </span>
+                </a>
+              );
+            }
 
             if (tab.href) {
               return (
