@@ -180,8 +180,9 @@ function OptionRow({
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">
-      <div className="flex items-end gap-2">
-        <FormField label={`Option ${index + 1}`} htmlFor={`${id}-name`} className="min-w-0 flex-1">
+      {/* The name and its values share one line; the name is the short one. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <FormField label={`Option ${index + 1}`} htmlFor={`${id}-name`} className="sm:w-44 sm:shrink-0">
           <Input
             id={`${id}-name`}
             list={`${id}-names`}
@@ -199,65 +200,64 @@ function OptionRow({
             ))}
           </datalist>
         </FormField>
-        {/* As tall as the input it sits beside. */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-11 shrink-0"
-          aria-label={`Remove option ${index + 1}`}
-          onClick={onRemove}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      </div>
 
-      <FormField label="Values" htmlFor={`${id}-value`}>
-        {option.values.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {option.values.map((v, i) => (
-              <ValueChip
-                key={v.id ?? `new-${v.value}`}
-                value={v.value}
-                onRename={(next) => rename(i, next)}
-                onRemove={() => remove(i)}
+        <FormField label="Values" htmlFor={`${id}-value`} className="min-w-0 flex-1">
+          <div className="flex gap-2">
+            {/* Looks like one input: the values already added sit inside it, before the typing area. */}
+            <div className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-field-border bg-field-bg px-2 py-1.5 transition-all focus-within:border-transparent focus-within:ring-2 focus-within:ring-primary">
+              {option.values.map((v, i) => (
+                <ValueChip
+                  key={v.id ?? `new-${v.value}`}
+                  value={v.value}
+                  onRename={(next) => rename(i, next)}
+                  onRemove={() => remove(i)}
+                />
+              ))}
+              <input
+                id={`${id}-value`}
+                autoComplete="off"
+                placeholder={option.values.length > 0 ? "Add another" : "Type a value and press Enter"}
+                value={typed}
+                className="h-7 min-w-32 flex-1 bg-transparent px-2 text-sm text-field-text outline-none placeholder:text-field-placeholder"
+                onChange={(e) => {
+                  setTyped(e.target.value)
+                  setNotice("")
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return
+                  e.preventDefault()
+                  add(typed)
+                }}
               />
-            ))}
+            </div>
+            <Button type="button" variant="outline" size="lg" className="h-11 shrink-0 px-4" onClick={() => add(typed)}>
+              <Plus /> Add
+            </Button>
+            {/* As tall as the inputs it sits beside. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-11 shrink-0"
+              aria-label={`Remove option ${index + 1}`}
+              onClick={onRemove}
+            >
+              <Trash2 className="size-4" />
+            </Button>
           </div>
-        )}
-        <div className="flex gap-2">
-          <Input
-            id={`${id}-value`}
-            autoComplete="off"
-            placeholder="Type a value and press Enter"
-            value={typed}
-            className="min-w-0 flex-1"
-            onChange={(e) => {
-              setTyped(e.target.value)
-              setNotice("")
-            }}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return
-              e.preventDefault()
-              add(typed)
-            }}
-          />
-          <Button type="button" variant="outline" size="lg" className="h-11 shrink-0 px-4" onClick={() => add(typed)}>
-            <Plus /> Add
-          </Button>
-        </div>
-        {unused.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">Used before:</span>
-            {unused.map((value) => (
-              <Button key={value} type="button" variant="outline" size="xs" onClick={() => add(value)}>
-                <Plus /> {value}
-              </Button>
-            ))}
-          </div>
-        )}
-        <FieldError errors={[notice ? { message: notice } : undefined]} />
-      </FormField>
+          {unused.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Used before:</span>
+              {unused.map((value) => (
+                <Button key={value} type="button" variant="outline" size="xs" onClick={() => add(value)}>
+                  <Plus /> {value}
+                </Button>
+              ))}
+            </div>
+          )}
+          <FieldError errors={[notice ? { message: notice } : undefined]} />
+        </FormField>
+      </div>
 
       {asksDefault && option.values.length > 0 && (
         <FormField
