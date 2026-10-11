@@ -129,6 +129,8 @@ export interface ApiReview {
   customer_name: string;
   rating: number;
   comment: string;
+  /** URLs of the pictures the customer attached, in the order they chose them. */
+  images?: string[];
   is_verified_purchase: boolean;
   created_at: string;
 }

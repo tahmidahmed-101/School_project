@@ -132,6 +132,29 @@ function ReviewPanel({ slug, productId, onPosted }: { slug: string; productId: s
                 </span>
               </div>
               {review.comment && <p className="whitespace-pre-line text-base">{review.comment}</p>}
+              {review.images && review.images.length > 0 && (
+                <ul className="flex flex-wrap gap-2 pt-1">
+                  {review.images.map((src, i) => (
+                    <li key={src}>
+                      {/* Opens the full picture; the thumbnail is the customer's own upload, served as stored. */}
+                      <a
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block h-20 w-20 overflow-hidden rounded-lg border border-ink-200 transition-opacity hover:opacity-80"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={`${ui("reviewsPhotoAlt")} ${n(i + 1)}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>

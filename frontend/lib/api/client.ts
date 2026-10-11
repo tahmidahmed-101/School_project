@@ -128,13 +128,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         method,
         headers: {
           Accept: "application/json",
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+          // A FormData body (file uploads) sets its own multipart Content-Type, boundary included.
+          ...(body !== undefined && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
           // Names this app to the account API, which keeps a separate refresh cookie per app: a storefront login
           // never replaces or ends a dashboard session in the same browser. It only selects the cookie.
           ...(scope === "customer" ? { "X-Auth-Client": "storefront" } : {}),
           ...headers,
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: body === undefined || body instanceof FormData ? body : JSON.stringify(body),
         signal: combined,
         // `next` is a Next.js extension of fetch (server only); the browser ignores it.
         ...(cacheable ? { next: { revalidate, tags } } : { cache: "no-store" as const }),
