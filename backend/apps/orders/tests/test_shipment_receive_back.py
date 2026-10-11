@@ -7,7 +7,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from django.db import IntegrityError, connection, transaction
+from django.db import connection
 from django.db.models import Sum
 from django.test.utils import CaptureQueriesContext
 
@@ -27,6 +27,7 @@ from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.checkout import checkout
 from apps.orders.services.orders import set_order_status
 from apps.orders.services.payments import capture_payment
+from apps.orders.services.reservations import release_stock_reservation
 from apps.orders.services.returns import create_rma
 from apps.orders.services.shipments import (
     create_shipment,
@@ -452,7 +453,7 @@ def _shrinkage_total(variant) -> Decimal:
     ).aggregate(total=Sum("debit"))["total"] or Decimal("0")
 
 
-def test_receiving_all_as_sellable_then_writing_off_breaks_the_stock_constraint():
+def test_receiving_all_as_sellable_then_writing_off_is_refused():
     """Why damaged units are disposed of at receive-back: once every unit is
     held again, a later write-off has no unreserved stock to take."""
     order, variant = _tight_order(2)
@@ -460,8 +461,10 @@ def test_receiving_all_as_sellable_then_writing_off_breaks_the_stock_constraint(
     _receive(shipment)
     assert _stock(variant) == (2, 2)
 
-    with pytest.raises(IntegrityError), transaction.atomic():
+    with pytest.raises(BusinessRuleViolationError) as exc:
         write_off_stock(variant=variant, quantity=1, reason="damaged")
+    assert exc.value.code == "stock_reserved"
+    assert _stock(variant) == (2, 2)
 
 
 def test_mixed_disposition_restocks_sellable_and_writes_off_damaged():
@@ -910,3 +913,21 @@ def test_order_shows_damaged_units_as_resolved_after_replacement(api_client, adm
 
     assert before["unresolved_damaged_quantity"] == 2
     assert (after["damaged_quantity"], after["unresolved_damaged_quantity"]) == (2, 0)
+
+
+def test_releasing_the_hold_of_a_partly_shipped_line_frees_only_the_unshipped_units():
+    """Shipping hands back each consignment's units but leaves the reservation
+    row at its full quantity, so the row says 3 while stock holds 2."""
+    order, variant = _tight_order(3)
+    line = order.lines.get()
+    _ship(order, {line: 1})
+    assert _stock(variant) == (2, 2)
+    reservation = StockReservation.objects.get(
+        order_line=line, status=StockReservation.Status.ACTIVE
+    )
+    assert reservation.quantity == 3
+
+    release_stock_reservation(reservation=reservation)
+
+    assert _stock(variant) == (2, 0)
+    assert reservation.status == StockReservation.Status.RELEASED

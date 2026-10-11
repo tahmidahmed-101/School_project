@@ -23,6 +23,7 @@ def _in_default_warehouse(queryset: QuerySet, warehouse) -> QuerySet:
 def stock_items_list(
     *,
     variant=None,
+    product=None,
     warehouse=None,
     low_stock_only: bool = False,
     kind: str | None = None,
@@ -34,6 +35,8 @@ def stock_items_list(
     )
     if variant is not None:
         queryset = queryset.filter(variant=variant)
+    if product is not None:
+        queryset = queryset.filter(variant__product=product)
     if warehouse is not None:
         queryset = queryset.filter(warehouse=warehouse)
     if kind:

@@ -20,7 +20,7 @@ from apps.catalog.services.products import create_quick_product
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import get_bool, get_choice, get_kind, get_related
+from apps.common.params import get_bool, get_choice, get_kind, get_related, get_uuid
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, not_found
 from apps.common.utils.export import CsvRenderer, csv_response
@@ -103,6 +103,7 @@ class AdminStockItemListView(GenericListAPIView):
             materialize_stock_items(variant=variant)
         return stock_items_list(
             variant=variant,
+            product=get_uuid(params, "product_id"),
             warehouse=warehouse,
             low_stock_only=low_stock_only,
             kind=get_kind(params),

@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
-import { Boxes, Package, PlusIcon } from "lucide-react"
+import { Boxes, Package, PlusIcon, SlidersHorizontal, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -17,18 +16,20 @@ import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
 import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
+import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
+import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
 import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
 import { productTypeOptions, type Product, type ProductPayload } from "../types"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { isBlockedByStock, stockLevelsPath } from "../deleteGuard"
+import { StockDeleteDialog } from "./StockDeleteDialog"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -105,6 +106,13 @@ const Products = ({ kind }: { kind: Kind }) => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
+  const canAdjust = useCan("inventory.adjust", "inventory.manage")
+  const { warehouses } = useWarehouses(kind)
+  const [deleting, setDeleting] = useState<Product | null>(null)
+  const [adjusting, setAdjusting] = useState<Product | null>(null)
+  // Kept mounted, still showing its product, while the delete dialog animates shut.
+  const deleteTarget = useLastValue(deleting)
+  const deleteMounted = useDelayedUnmount(deleting !== null)
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
   const { options: categoryOptions, nameById } = useCategoryOptions(kind)
@@ -161,22 +169,11 @@ const Products = ({ kind }: { kind: Kind }) => {
   })
 
 
-  const handleDelete = async (product: Product) => {
-    try {
-      await dispatch(deleteData(product.id)).unwrap()
-      toast.success(`${product.name} deleted`)
-    } catch (err) {
-      if (isStock && isBlockedByStock(err)) {
-        // Stock has to be cleared through the existing write-off flow first.
-        toast.error(getApiErrorMessage(err, "This product still has stock"), {
-          duration: 15000,
-          action: { label: "Open stock levels", onClick: () => navigate(stockLevelsPath(product.name)) },
-        })
-        return
-      }
-      toast.error(getApiErrorMessage(err, "Failed to delete product"))
-    }
-  }
+  // A one-variant product needs no picking; otherwise the picker lists this product's variants.
+  const adjustVariant = useMemo(() => {
+    const only = adjusting?.variants.length === 1 ? adjusting.variants[0] : null
+    return only ? { id: only.id, sku: only.sku, product_name: adjusting!.name } : null
+  }, [adjusting])
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -231,7 +228,16 @@ const Products = ({ kind }: { kind: Kind }) => {
             itemName={product.name}
             viewUrl={withKind(`/product_detail/${product.id}`, kind)}
             editUrl={canManage && product.product_type !== "bundle" ? withKind(`/product_form/${product.id}`, kind) : undefined}
-            onDelete={canManage ? () => handleDelete(product) : undefined}
+            actions={[
+              // A bundle holds no stock of its own; its components are adjusted instead.
+              ...(canAdjust && product.product_type !== "bundle"
+                ? [{ label: "Adjust", icon: SlidersHorizontal, onSelect: () => setAdjusting(product) }]
+                : []),
+              // The delete dialog does its own confirming, so it is not TableActions' onDelete.
+              ...(canManage
+                ? [{ label: "Delete", icon: Trash2Icon, destructive: true, onSelect: () => setDeleting(product) }]
+                : []),
+            ]}
           />
         )
       },
@@ -349,6 +355,29 @@ const Products = ({ kind }: { kind: Kind }) => {
         emptyDescription="Try a different search or filter, or add a new product."
         minWidth="1000px"
         columnWidths={widths}
+      />
+
+      {deleteMounted && deleteTarget && (
+        <StockDeleteDialog
+          key={deleteTarget.id}
+          open={deleting !== null}
+          name={deleteTarget.name}
+          scope={{ product_id: deleteTarget.id }}
+          kind={kind}
+          remove={() => dispatch(deleteData(deleteTarget.id)).unwrap()}
+          onDeleted={() => undefined}
+          onClose={() => setDeleting(null)}
+          onStockChanged={list.reload}
+        />
+      )}
+      <StockMovementDialog
+        mode={adjusting ? "adjust" : null}
+        onOpenChange={(open) => !open && setAdjusting(null)}
+        warehouses={warehouses}
+        variant={adjustVariant}
+        kind={kind}
+        productId={adjusting?.id}
+        onDone={list.reload}
       />
     </div>
   )

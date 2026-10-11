@@ -52,7 +52,6 @@ export const navSections: NavSection[] = [
     group: "STOCK",
     items: [
       { title: "Products", url: "/products", permission: CATALOG },
-      { title: "Variants", url: "/variants", permission: CATALOG },
       { title: "Bundles", url: "/bundles", permission: CATALOG },
       { title: "Categories", url: "/categories", permission: CATALOG },
       { title: "Brands", url: "/brands", permission: CATALOG },

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict"
 import { describe, test } from "node:test"
 
-import { isBlockedByStock, stockLevelsPath } from "../../src/features/catalog/deleteGuard.ts"
+import { isBlockedByStock, isDeletable, stockTotals } from "../../src/features/catalog/deleteGuard.ts"
 
 describe("isBlockedByStock", () => {
   test("recognises the backend's stock refusal", () => {
@@ -17,9 +17,24 @@ describe("isBlockedByStock", () => {
   })
 })
 
-describe("stockLevelsPath", () => {
-  test("links to Stock Levels searched for the product", () => {
-    assert.equal(stockLevelsPath("Silk Saree"), "/inventory?search=Silk%20Saree")
-    assert.equal(stockLevelsPath("Tea & Co"), "/inventory?search=Tea%20%26%20Co")
+describe("stockTotals", () => {
+  test("sums every variant and warehouse", () => {
+    const rows = [
+      { quantity_on_hand: 5, quantity_reserved: 2 },
+      { quantity_on_hand: 3, quantity_reserved: 0 },
+    ]
+    assert.deepEqual(stockTotals(rows), { onHand: 8, reserved: 2, available: 6 })
+    assert.deepEqual(stockTotals([]), { onHand: 0, reserved: 0, available: 0 })
+  })
+})
+
+describe("isDeletable", () => {
+  test("only with no stock, nothing reserved and no active reservation", () => {
+    const empty = [{ quantity_on_hand: 0, quantity_reserved: 0 }]
+    assert.equal(isDeletable(empty, 0), true)
+    assert.equal(isDeletable([], 0), true)
+    assert.equal(isDeletable([{ quantity_on_hand: 1, quantity_reserved: 0 }], 0), false)
+    // A bundle holds nothing itself; its orders hold its components.
+    assert.equal(isDeletable(empty, 1), false)
   })
 })

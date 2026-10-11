@@ -5,7 +5,6 @@ export const catalogModule: FeatureModule = {
     { path: "products", lazy: page(() => import("./components/Products")) },
     { path: "product_detail/:id", lazy: page(() => import("./components/ProductDetail")) },
     { path: "product_form/:id", lazy: page(() => import("./components/ProductForm")) },
-    { path: "variants", lazy: page(() => import("./components/Variants")) },
     { path: "bundles", lazy: page(() => import("./components/Bundles")) },
     { path: "bundles/:id", lazy: page(() => import("./components/BundleForm")) },
     { path: "categories", lazy: page(() => import("./components/Categories")) },

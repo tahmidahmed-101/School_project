@@ -24,6 +24,7 @@ from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
 from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement
 from apps.orders.factories import StockReservationFactory
+from apps.orders.models import StockReservation
 from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.checkout import checkout
 from apps.orders.services.orders import cancel_order
@@ -252,3 +253,142 @@ def test_write_off_validation_and_shrinkage_posting_are_unchanged(admin_client):
         account__code=ACCOUNT_CODES["inventory_shrinkage"],
     )
     assert sum(line.debit for line in shrinkage) == Decimal("20.00")
+
+
+# --- Clearing a product from the delete dialog -----------------------------------------
+
+STOCK_ITEMS_URL = "/api/v1/admin/inventory/stock-items/"
+RESERVATIONS_URL = "/api/v1/admin/orders/reservations/"
+ADJUSTMENT_URL = "/api/v1/admin/inventory/adjustments/"
+
+
+def _reserve(variant, quantity: int):
+    order = get_or_create_cart(CustomerUserFactory())
+    add_line(order=order, variant=variant, quantity=quantity)
+    checkout(order=order)
+    return order
+
+
+def _quantities(variant) -> tuple[int, int]:
+    item = StockItem.objects.get(variant=variant)
+    return item.quantity_on_hand, item.quantity_reserved
+
+
+def test_stock_and_reservations_can_be_listed_for_one_product(admin_client):
+    product, (first, second) = _product(variants=2)
+    _, (other,) = _product()
+    _stock_in(first, 3)
+    _stock_in(second, 1)
+    _stock_in(other, 5)
+    _reserve(first, 2)
+    _reserve(other, 1)
+
+    stock = admin_client.get(STOCK_ITEMS_URL, {"product_id": str(product.id)})
+    held = admin_client.get(RESERVATIONS_URL, {"product_id": str(product.id), "status": "active"})
+
+    assert stock.status_code == 200, stock.data
+    rows = {row["variant_id"]: row for row in stock.data["data"]["results"]}
+    assert set(rows) == {str(first.id), str(second.id)}
+    row = rows[str(first.id)]
+    assert (row["quantity_on_hand"], row["quantity_reserved"], row["available"]) == (3, 2, 1)
+    assert held.status_code == 200, held.data
+    assert [row["variant_id"] for row in held.data["data"]["results"]] == [str(first.id)]
+
+
+def test_a_bundles_reservations_are_listed_under_the_bundle(admin_client):
+    bundle = ProductFactory(is_active=True, product_type=Product.ProductType.BUNDLE)
+    bundle_variant = ProductVariantFactory(product=bundle)
+    component = ProductVariantFactory()
+    BundleItemFactory(bundle_variant=bundle_variant, component_variant=component, quantity=1)
+    _stock_in(component, 2)
+    _reserve(bundle_variant, 1)
+
+    held = admin_client.get(RESERVATIONS_URL, {"product_id": str(bundle.id), "status": "active"})
+
+    assert [row["variant_id"] for row in held.data["data"]["results"]] == [str(component.id)]
+
+
+@pytest.mark.parametrize(
+    ("url", "payload"),
+    [
+        (WRITE_OFF_URL, {"quantity": 2}),
+        (ADJUSTMENT_URL, {"quantity_delta": -2}),
+    ],
+)
+def test_reserved_units_cannot_be_removed_from_under_an_order(admin_client, url, payload):
+    seed_chart_of_accounts()
+    _, (variant,) = _product()
+    _stock_in(variant, 3)
+    _reserve(variant, 2)  # 3 on hand, 2 reserved, 1 available
+
+    response = admin_client.post(url, {"variant_id": str(variant.id), **payload}, format="json")
+
+    assert response.status_code == 400, response.data
+    assert response.data["error"]["code"] == "stock_reserved"
+    assert _quantities(variant) == (3, 2)
+    assert not StockLedgerEntry.objects.filter(variant=variant).exclude(
+        movement_type=MovementType.PURCHASE_IN
+    ).exists()
+
+
+def test_a_product_is_cleared_and_deleted_through_the_existing_endpoints(admin_client, admin_user):
+    seed_chart_of_accounts()
+    product, (variant,) = _product()
+    _stock_in(variant, 3)
+    _reserve(variant, 2)
+    reservation = StockReservation.objects.get(variant=variant)
+    assert admin_client.delete(_url(product)).status_code == 409
+
+    available = admin_client.post(
+        WRITE_OFF_URL, {"variant_id": str(variant.id), "quantity": 1}, format="json"
+    )
+    still_held = admin_client.delete(_url(product))
+    released = admin_client.post(f"{RESERVATIONS_URL}{reservation.id}/release/")
+    rest = admin_client.post(
+        WRITE_OFF_URL,
+        {"variant_id": str(variant.id), "quantity": 2, "reason": "Discontinued"},
+        format="json",
+    )
+    deleted = admin_client.delete(_url(product))
+
+    assert available.status_code == 201, available.data
+    assert still_held.status_code == 409
+    assert released.status_code == 200, released.data
+    assert rest.status_code == 201, rest.data
+    assert deleted.status_code == 200, deleted.data
+    assert _quantities(variant) == (0, 0)
+    write_offs = StockLedgerEntry.objects.filter(
+        variant=variant, movement_type=MovementType.WRITE_OFF
+    )
+    assert {entry.created_by_id for entry in write_offs} == {admin_user.id}
+    assert sum(entry.quantity for entry in write_offs) == 3
+
+
+def test_adjusting_stock_needs_an_inventory_permission(api_client, staff_user):
+    seed_chart_of_accounts()
+    _, (variant,) = _product()
+    _stock_in(variant, 2)
+    set_staff_permission(
+        staff_user=staff_user, permission_code=StaffPermissionCode.CATALOG_MANAGE, is_enabled=True
+    )
+    api_client.force_authenticate(user=staff_user)
+    payload = {"variant_id": str(variant.id), "quantity_delta": 4, "notes": "Recount"}
+
+    assert api_client.post(ADJUSTMENT_URL, payload, format="json").status_code == 403
+    set_staff_permission(
+        staff_user=staff_user,
+        permission_code=StaffPermissionCode.INVENTORY_ADJUST,
+        is_enabled=True,
+    )
+    response = api_client.post(ADJUSTMENT_URL, payload, format="json")
+
+    assert response.status_code == 201, response.data
+    assert _quantities(variant) == (6, 0)
+    entry = StockLedgerEntry.objects.get(variant=variant, movement_type=MovementType.ADJUSTMENT_IN)
+    assert (entry.quantity, entry.notes, entry.created_by_id) == (4, "Recount", staff_user.id)
+    too_many = api_client.post(
+        ADJUSTMENT_URL, {"variant_id": str(variant.id), "quantity_delta": -7}, format="json"
+    )
+    assert too_many.status_code == 400
+    assert too_many.data["error"]["code"] == "insufficient_stock"
+    assert _quantities(variant) == (6, 0)

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { History, Layers, Loader2, PencilIcon, PlusIcon, Tags } from "lucide-react"
+import { Layers, Loader2, PencilIcon, PlusIcon, SlidersHorizontal, Tags, Trash2Icon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,13 +11,18 @@ import { Switch } from "@/components/ui/switch"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
-import { MoneyCell, TextCell } from "@/components/common/cells"
+import { MoneyCell, TextCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
+import type { PickedVariant } from "@/components/common/VariantPicker"
+import { useCan } from "@/hooks/use-can"
+import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
 import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import { toPaisa } from "@/lib/money"
+import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
+import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import {
   bulkUpdateVariants,
@@ -33,13 +37,13 @@ import { refusalMessage, settleInOrder } from "../lib/options"
 import { savedOptionsOf } from "../lib/useOptionDrafts"
 import { VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
+import { StockDeleteDialog } from "./StockDeleteDialog"
 
 interface Props {
   product: Product
   /** The product's kind: a stock product shows stock and discount, a pre-order one its ordering window. */
   kind: Kind
   canManage: boolean
-  canViewInventory: boolean
   /** Called after any variant change so the parent can refresh product totals. */
   onChanged: () => void
 }
@@ -85,7 +89,7 @@ function buildRows(combinations: Combination[], variants: ProductVariant[]): Row
   return rows
 }
 
-export function ProductVariantsSection({ product, kind, canManage, canViewInventory, onChanged }: Props) {
+export function ProductVariantsSection({ product, kind, canManage, onChanged }: Props) {
   const isStock = kind === "stock"
   const productId = product.id
   const hasOptions = savedOptionsOf(product).length > 0
@@ -94,6 +98,13 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
   const [editing, setEditing] = useState<ProductVariant | null>(null)
+  const canAdjust = useCan("inventory.adjust", "inventory.manage")
+  const { warehouses } = useWarehouses(kind)
+  const [adjusting, setAdjusting] = useState<PickedVariant | null>(null)
+  const [deleting, setDeleting] = useState<ProductVariant | null>(null)
+  // Kept mounted, still showing its variant, while the delete dialog animates shut.
+  const deleteTarget = useLastValue(deleting)
+  const deleteMounted = useDelayedUnmount(deleting !== null)
   const [formOpen, setFormOpen] = useState(false)
   const [priceOpen, setPriceOpen] = useState(false)
   const [ticked, setTicked] = useState<string[]>([])
@@ -177,32 +188,23 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
     }
   }
 
-  const remove = async (variant: ProductVariant) => {
-    try {
-      await deleteVariant(variant.id)
-      toast.success(`${variant.title || variant.sku} deleted`)
-      afterChange()
-    } catch (err) {
-      toast.error(refusalMessage(err, "The variant could not be deleted"))
-    }
-  }
+
+  const adjust = (variant: ProductVariant) =>
+    setAdjusting({ id: variant.id, sku: variant.sku, product_name: product.name })
 
   const actionsFor = (variant: ProductVariant) => (
     <TableActions
       itemName={variant.title || variant.sku}
       actions={
-        isStock && canViewInventory
-          ? [
-              {
-                label: "Stock ledger",
-                icon: History,
-                to: `/inventory/ledger?variant_id=${variant.id}&sku=${encodeURIComponent(variant.sku)}`,
-              },
-            ]
-          : []
+        [
+          ...(canAdjust ? [{ label: "Adjust", icon: SlidersHorizontal, onSelect: () => adjust(variant) }] : []),
+          // The delete dialog does its own confirming, so it is not TableActions' onDelete.
+          ...(canManage && !single
+            ? [{ label: "Delete", icon: Trash2Icon, destructive: true, onSelect: () => setDeleting(variant) }]
+            : []),
+        ]
       }
       onEdit={canManage ? () => openEditor(variant) : undefined}
-      onDelete={canManage && !single ? () => remove(variant) : undefined}
     />
   )
 
@@ -236,17 +238,20 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       id: "variant",
       header: "VARIANT",
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="truncate font-medium">{row.original.title}</div>
-          {row.original.variant ? (
-            <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant.sku}</div>
-          ) : (
-            !row.original.created && (
-              <Badge variant="secondary" className="mt-0.5">
-                Not created
-              </Badge>
-            )
-          )}
+        <div className="flex min-w-0 items-center gap-3">
+          <Thumbnail src={row.original.variant?.primary_image ?? product.primary_image} />
+          <div className="min-w-0">
+            <div className="truncate font-medium">{row.original.title}</div>
+            {row.original.variant ? (
+              <div className="truncate font-mono text-xs text-muted-foreground">{row.original.variant.sku}</div>
+            ) : (
+              !row.original.created && (
+                <Badge variant="secondary" className="mt-0.5">
+                  Not created
+                </Badge>
+              )
+            )}
+          </div>
         </div>
       ),
     },
@@ -354,31 +359,31 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
           <CardTitle className="flex items-center gap-2">
             <Layers className="size-4" /> {single ? (isStock ? "Price and stock" : "Price and ordering") : "Variants"}
           </CardTitle>
-          <CardDescription>
-            {single
-              ? "This product has no options, so it sells as one item. To sell it in sizes or colours, switch on options under Edit product."
-              : hasOptions
-                ? "Every combination of this product's options. Tick the ones that are not created yet to start selling them; they begin at the price of the first variant."
+          {(single || !hasOptions) && (
+            <CardDescription>
+              {single
+                ? "This product has no options, so it sells as one item. To sell it in sizes or colours, switch on options under Edit product."
                 : "These variants were made before options existed. Add options under Edit product to describe them."}
-          </CardDescription>
+            </CardDescription>
+          )}
         </div>
-        {canManage && !isLoading && !error && (
+        {(canManage || canAdjust) && !isLoading && !error && (
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
             {onlyVariant && (
               <>
-                {isStock && canViewInventory && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/inventory/ledger?variant_id=${onlyVariant.id}&sku=${encodeURIComponent(onlyVariant.sku)}`}>
-                      <History /> Stock ledger
-                    </Link>
+                {canAdjust && (
+                  <Button variant="outline" size="sm" onClick={() => adjust(onlyVariant)}>
+                    <SlidersHorizontal /> Adjust
                   </Button>
                 )}
-                <Button size="sm" onClick={() => openEditor(onlyVariant)}>
-                  <PencilIcon /> Edit
-                </Button>
+                {canManage && (
+                  <Button size="sm" onClick={() => openEditor(onlyVariant)}>
+                    <PencilIcon /> Edit
+                  </Button>
+                )}
               </>
             )}
-            {!single && (
+            {canManage && !single && (
               <>
                 {ticked.length > 0 && (
                   <Button
@@ -408,6 +413,28 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       </CardHeader>
       <CardContent>{body}</CardContent>
 
+      {deleteMounted && deleteTarget && (
+        <StockDeleteDialog
+          key={deleteTarget.id}
+          open={deleting !== null}
+          name={deleteTarget.title ? `${product.name} — ${deleteTarget.title}` : deleteTarget.sku}
+          scope={{ variant_id: deleteTarget.id }}
+          kind={kind}
+          remove={() => deleteVariant(deleteTarget.id)}
+          onDeleted={afterChange}
+          onClose={() => setDeleting(null)}
+          onStockChanged={afterChange}
+        />
+      )}
+      <StockMovementDialog
+        mode={adjusting ? "adjust" : null}
+        onOpenChange={(open) => !open && setAdjusting(null)}
+        warehouses={warehouses}
+        variant={adjusting}
+        kind={kind}
+        productId={productId}
+        onDone={afterChange}
+      />
       <VariantFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}

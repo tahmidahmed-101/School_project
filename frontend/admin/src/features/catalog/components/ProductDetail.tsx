@@ -42,7 +42,6 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
-  const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
   const { nameById, categories, isLoading: categoriesLoading } = useCategoryOptions()
@@ -252,7 +251,6 @@ const ProductDetail = () => {
               product={product}
               kind={kind}
               canManage={canManage}
-              canViewInventory={canViewInventory}
               onChanged={refresh}
             />
           )}
