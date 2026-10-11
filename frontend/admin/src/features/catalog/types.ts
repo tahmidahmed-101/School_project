@@ -303,6 +303,8 @@ export interface ProductReview {
   /** 1 to 5. */
   rating: number
   comment: string
+  /** URLs of the pictures the customer attached, in upload order. */
+  images: string[]
   is_verified_purchase: boolean
   created_at: string
 }

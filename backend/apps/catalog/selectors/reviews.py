@@ -11,6 +11,7 @@ def reviews_for_product(product: Product) -> QuerySet[ProductReview]:
     return (
         ProductReview.objects.filter(product=product)
         .select_related("customer")
+        .prefetch_related("images")
         .order_by("-created_at")
     )
 
@@ -19,7 +20,9 @@ def reviews_list(
     *, product=None, rating: int | None = None, kind: str | None = None
 ) -> QuerySet[ProductReview]:
     """Every review, for the admin moderation list."""
-    queryset = ProductReview.objects.select_related("customer", "product")
+    queryset = ProductReview.objects.select_related("customer", "product").prefetch_related(
+        "images"
+    )
     if product is not None:
         queryset = queryset.filter(product=product)
     if rating is not None:

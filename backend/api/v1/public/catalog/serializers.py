@@ -293,9 +293,11 @@ class PublicProductListSerializer(serializers.Serializer):
                 return {
                     "name": sale.name,
                     "percent_off": str(sale.percent_off),
-                    "ends_at": serializers.DateTimeField().to_representation(sale.ends_at)
-                    if sale.ends_at
-                    else None,
+                    "ends_at": (
+                        serializers.DateTimeField().to_representation(sale.ends_at)
+                        if sale.ends_at
+                        else None
+                    ),
                 }
         return None
 
@@ -309,8 +311,7 @@ class PublicProductListSerializer(serializers.Serializer):
                 "id": str(option["id"]),
                 "name": option["name"],
                 "values": [
-                    {"id": str(value["id"]), "value": value["value"]}
-                    for value in option["values"]
+                    {"id": str(value["id"]), "value": value["value"]} for value in option["values"]
                 ],
             }
             for option in product_options(obj, sellable_only=True)
@@ -364,11 +365,17 @@ class PublicProductReviewSerializer(serializers.Serializer):
     customer_name = serializers.SerializerMethodField()
     rating = serializers.IntegerField(read_only=True)
     comment = serializers.CharField(read_only=True, allow_blank=True)
+    images = serializers.SerializerMethodField()
     is_verified_purchase = serializers.BooleanField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_customer_name(self, obj) -> str:
         return public_customer_name(obj.customer)
+
+    def get_images(self, obj) -> list[str]:
+        # `.all()` reads the list `reviews_for_product` prefetches; filtering or
+        # re-ordering here would query once per review.
+        return [item.image.url for item in obj.images.all()]
 
 
 class PublicProductQuestionSerializer(serializers.Serializer):

@@ -2,8 +2,30 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from PIL import Image, UnidentifiedImageError
 
 from apps.common.exceptions import BusinessRuleViolationError
+
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except ImportError:
+    pass
+
+# Keyed on the decoded format, never the filename or Content-Type: both are
+# caller-supplied, and matching them rejected ".jfif" and extensionless uploads.
+EXTENSION_BY_DECODED_FORMAT = {
+    "JPEG": ".jpg",
+    "PNG": ".png",
+    "WEBP": ".webp",
+    "GIF": ".gif",
+    "AVIF": ".avif",
+    "HEIF": ".heic",
+    "MPO": ".jpg",
+}
+
+SUPPORTED_FORMAT_LABEL = "JPG, PNG, WEBP, GIF, AVIF or HEIC"
 
 
 def unique_upload_path(instance, filename: str, subdir: str = "uploads") -> str:
@@ -28,6 +50,29 @@ def validate_upload_size(uploaded_file, *, max_bytes: int | None = None) -> None
             f"The maximum is {human_readable_size(limit)}.",
             code="file_too_large",
         )
+
+
+def validate_image_upload(uploaded_file) -> str:
+    """Check the size and the decoded bytes of an uploaded image, and return the
+    extension its real format should be stored under. SVG never decodes, so it
+    is rejected along with every other non-image."""
+    validate_upload_size(uploaded_file)
+    try:
+        image = Image.open(uploaded_file)
+        decoded_format = image.format
+        image.verify()
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
+        raise BusinessRuleViolationError(
+            "That file is not a readable image.", code="invalid_image"
+        ) from None
+    extension = EXTENSION_BY_DECODED_FORMAT.get(decoded_format or "")
+    if extension is None:
+        raise BusinessRuleViolationError(
+            f"Unsupported image type. Use {SUPPORTED_FORMAT_LABEL}.",
+            code="unsupported_media_type",
+        )
+    uploaded_file.seek(0)
+    return extension
 
 
 def human_readable_size(num_bytes: int) -> str:
