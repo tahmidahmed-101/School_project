@@ -107,7 +107,6 @@ export const DICT = {
   voucherMinSpend: { en: "Min. spend", bn: "সর্বনিম্ন খরচ" },
   voucherNoMinSpend: { en: "No minimum spend", bn: "সর্বনিম্ন খরচ নেই" },
   voucherCode: { en: "Code", bn: "কোড" },
-  voucherValidUntil: { en: "Valid until {date}", bn: "মেয়াদ {date} পর্যন্ত" },
   voucherMaxDiscount: { en: "Up to {amount} off", bn: "সর্বোচ্চ {amount} ছাড়" },
   saleEnds: { en: "Offer ends {date}", bn: "অফার চলবে {date} পর্যন্ত" },
   loginContinueShopping: { en: "Continue shopping", bn: "কেনাকাটা চালিয়ে যান" },

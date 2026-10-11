@@ -57,7 +57,6 @@ export function VoucherSection({ vouchers }: { vouchers: Voucher[] }) {
                           text.condition(v)
                         )}
                       </p>
-                      {text.validUntil(v) && <p className="text-2xs text-fg-subtle">{text.validUntil(v)}</p>}
                     </div>
                     <button
                       type="button"

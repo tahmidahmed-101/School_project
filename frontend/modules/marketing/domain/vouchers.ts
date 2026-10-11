@@ -26,6 +26,13 @@ export function toVoucher(coupon: ApiStorefrontCoupon): Voucher {
   };
 }
 
+/**
+ * Vouchers whose date has not passed. The API already leaves expired coupons out, but its answer is cached for a
+ * short while, so one that expires in that window is dropped here.
+ */
+export const unexpiredVouchers = (vouchers: Voucher[], now: number = Date.now()): Voucher[] =>
+  vouchers.filter((voucher) => !voucher.expiresAt || new Date(voucher.expiresAt).getTime() > now);
+
 /** Collected codes that the store still offers; a code that was withdrawn or ran out is dropped. */
 export const collectedVouchers = (vouchers: Voucher[], collectedCodes: string[]): Voucher[] =>
   vouchers.filter((voucher) => collectedCodes.includes(voucher.code));

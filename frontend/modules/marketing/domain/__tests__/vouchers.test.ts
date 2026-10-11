@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectedVouchers, toVoucher } from "../vouchers";
+import { collectedVouchers, toVoucher, unexpiredVouchers } from "../vouchers";
 
 const api = {
   code: "KULL10",
@@ -47,5 +47,19 @@ describe("collectedVouchers", () => {
   it("keeps only collected codes the store still offers", () => {
     const live = [toVoucher(api), toVoucher({ ...api, code: "EID25" })];
     expect(collectedVouchers(live, ["EID25", "WITHDRAWN"]).map((v) => v.code)).toEqual(["EID25"]);
+  });
+});
+
+describe("unexpiredVouchers", () => {
+  const now = new Date("2026-10-11T12:00:00Z").getTime();
+  const voucher = (code: string, expires_at: string | null) => toVoucher({ ...api, code, expires_at });
+
+  it("keeps vouchers with no end date or one still ahead, and drops the ones that have passed", () => {
+    const list = [
+      voucher("FOREVER", null),
+      voucher("LATER", "2026-10-31T17:59:59Z"),
+      voucher("PASSED", "2026-10-11T11:59:59Z"),
+    ];
+    expect(unexpiredVouchers(list, now).map((v) => v.code)).toEqual(["FOREVER", "LATER"]);
   });
 });
