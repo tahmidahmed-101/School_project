@@ -150,7 +150,7 @@ export function BasicsCard({
           className="md:col-span-2"
           label="Description"
           id="description"
-          rows={4}
+          rows={8}
           error={errors.description}
           {...register("description")}
         />
