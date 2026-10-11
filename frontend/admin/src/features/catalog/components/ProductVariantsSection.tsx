@@ -359,11 +359,9 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
           <CardTitle className="flex items-center gap-2">
             <Layers className="size-4" /> {single ? (isStock ? "Price and stock" : "Price and ordering") : "Variants"}
           </CardTitle>
-          {(single || !hasOptions) && (
+          {!single && !hasOptions && (
             <CardDescription>
-              {single
-                ? "This product has no options, so it sells as one item. To sell it in sizes or colours, switch on options under Edit product."
-                : "These variants were made before options existed. Add options under Edit product to describe them."}
+              These variants were made before options existed. Add options under Edit product to describe them.
             </CardDescription>
           )}
         </div>
