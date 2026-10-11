@@ -601,7 +601,7 @@ const FinancialReports = () => {
       </p>
       <Tabs defaultValue="pnl" className="space-y-4">
         {/* Four names do not fit one phone row, so they sit two by two there. */}
-        <TabsList className="grid h-auto! w-full grid-cols-2 gap-1 sm:inline-flex sm:h-8! sm:w-fit sm:gap-0 [&_[data-slot=tabs-trigger]]:py-1.5 sm:[&_[data-slot=tabs-trigger]]:py-0.5">
+        <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-fit">
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
           <TabsTrigger value="cash">Cash Flow</TabsTrigger>

@@ -175,7 +175,7 @@ const Profile = () => {
       </Card>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="w-full md:w-fit bg-muted p-1">
+        <TabsList className="w-full md:w-fit">
           <TabsTrigger value="general" className="min-w-max gap-2">
             <User className="h-4 w-4" /> General
           </TabsTrigger>

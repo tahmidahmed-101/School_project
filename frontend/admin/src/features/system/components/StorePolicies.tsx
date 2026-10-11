@@ -58,7 +58,7 @@ const StorePolicies = () => {
       ) : (
         <Tabs value={kind} onValueChange={(value) => setSearchParams({ kind: value }, { replace: true })}>
           <div className="overflow-x-auto">
-            <TabsList className="w-full md:w-fit bg-muted p-1">
+            <TabsList className="w-full md:w-fit">
               {TABS.map(({ value, label, icon: Icon }) => (
                 <TabsTrigger key={value} value={value} className="min-w-max gap-2">
                   <Icon className="h-4 w-4" /> {label}
