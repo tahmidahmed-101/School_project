@@ -1,14 +1,13 @@
 "use client";
 
 import { ShoppingCart, Zap, Heart, Sparkles } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
-import { getDiscountPercent, getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
+import { getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
@@ -37,17 +36,7 @@ export function ProductActions({
   isSoldOut,
   isOutOfStock = false,
 }: ProductActionsProps) {
-  const { ui, money } = useLang();
-  const ctaRef = useRef<HTMLDivElement>(null);
-  const [ctaVisible, setCtaVisible] = useState(true);
-
-  useEffect(() => {
-    const el = ctaRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => setCtaVisible(Boolean(entry?.isIntersecting)));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const { ui } = useLang();
   const router = useRouter();
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
@@ -82,7 +71,7 @@ export function ProductActions({
     <>
       {/* Quantity and the wishlist toggle share a row; below it, the main button and "buy now" sit side by side
           from tablet width up and stack on a phone. */}
-      <div ref={ctaRef} className="mt-7 flex flex-col gap-3">
+      <div className="mt-7 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
           <button
@@ -140,57 +129,6 @@ export function ProductActions({
         <p id={hintId} role="status" className="sr-only">
           {hint}
         </p>
-      )}
-      {canBuy && (
-        <div
-          inert={ctaVisible}
-          className={`fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom,0px))] z-30 border-t border-ink-200 bg-white/95 px-4 py-2.5 shadow-bar backdrop-blur-sm transition-[transform,opacity] duration-200 lg:hidden ${
-            ctaVisible ? "pointer-events-none translate-y-full opacity-0" : "translate-y-0 opacity-100"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="mr-auto flex shrink-0 flex-col leading-tight">
-              <span className="text-base font-bold text-gold-800">{money(product.price)}</span>
-              {getDiscountPercent(product) && product.compareAtPrice && (
-                <span className="text-2xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
-              )}
-            </span>
-            {product.isPreOrder ? (
-              <Button
-                size="md"
-                onClick={() => openPreOrderModal(product, quantity, variantId)}
-                disabled={waiting}
-                aria-describedby={hintId}
-                leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
-              >
-                {ui("preOrderNow")}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  size="md"
-                  variant="secondary"
-                  onClick={() => addItem(product, quantity, variantId)}
-                  disabled={waiting}
-                  aria-describedby={hintId}
-                  aria-label={ui("addToCart")}
-                  className="w-11 px-0"
-                >
-                  <ShoppingCart className="h-5 w-5 shrink-0 text-gold-400" />
-                </Button>
-                <Button
-                  size="md"
-                  onClick={buyNow}
-                  disabled={waiting}
-                  aria-describedby={hintId}
-                  leadingIcon={<Zap className="h-4 w-4 fill-current" />}
-                >
-                  {ui("buyNow")}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
       )}
     </>
   );
