@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, ShoppingCart } from "lucide-react";
+import { PackageCheck, ShoppingCart } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
@@ -73,7 +73,7 @@ export function ProductListItem({ product }: { product: Product }) {
             className={buttonClass({ size: "xs" })}
             aria-label={`${ui("orderNow")} - ${t(product.name)}`}
           >
-            <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+            <PackageCheck className="h-3.5 w-3.5 shrink-0" />
             {ui("orderNow")}
           </Link>
         )}
