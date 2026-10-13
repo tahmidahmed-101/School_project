@@ -74,6 +74,9 @@ else
     warn "SKIP_VHOST=1: Caddy vhost not touched"
 fi
 
+source "$LOCAL_ROOT/deploy/release-tag.sh"
+record_release prod || true
+
 step "Smoke test"
 for i in 1 2 3 4 5 6; do
     code=$(curl -s -o /dev/null -w '%{http_code}' "https://$SITE_HOST/health/" || true)
