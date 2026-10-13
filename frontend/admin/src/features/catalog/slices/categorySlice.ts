@@ -1,12 +1,12 @@
 import { createSliceFactory } from "@/lib/sliceFactory"
 import type { Category } from "../types"
 
-const { reducer, fetchAll, fetchSingle, patchData, deleteData } = createSliceFactory<Category>({
+const { reducer, fetchSingle } = createSliceFactory<Category>({
   name: "categories",
   endpoint: "/admin/catalog/categories/",
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle, patchData, deleteData }
+export { fetchSingle }
 
 export default reducer

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Boxes, Package, PlusIcon, SlidersHorizontal, Trash2Icon } from "lucide-react"
+import { Boxes, Package, PlusIcon, SlidersHorizontal, Star, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -9,7 +9,8 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
+import { SaveSwitch } from "@/components/common/SaveSwitch"
+import { ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
@@ -26,8 +27,9 @@ import { StockMovementDialog } from "@/features/inventory/components/StockMoveme
 import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
-import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
+import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct, updateProduct } from "../api"
 import { productTypeOptions, type Product, type ProductPayload } from "../types"
+import { variantCount } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { StockDeleteDialog } from "./StockDeleteDialog"
 
@@ -45,24 +47,6 @@ const orderingOptions: Option[] = [
 
 const preorderTypeOptions = productTypeOptions.filter((o) => o.value !== "bundle")
 
-const noPrice = <span className="text-sm text-muted-foreground">No price</span>
-
-const stockPriceColumn: ColumnDef<Product> = {
-  id: "price",
-  header: "PRICE",
-  cell: ({ row }) =>
-    row.original.price === null ? (
-      noPrice
-    ) : (
-      <div className="flex flex-col text-sm">
-        <span className="font-semibold">{formatCurrency(row.original.discount_price ?? row.original.price)}</span>
-        {row.original.discount_price && (
-          <span className="text-xs text-muted-foreground line-through">{formatCurrency(row.original.price)}</span>
-        )}
-      </div>
-    ),
-}
-
 const stockColumn: ColumnDef<Product> = {
   accessorKey: "total_stock",
   header: "STOCK",
@@ -71,17 +55,6 @@ const stockColumn: ColumnDef<Product> = {
       {row.original.total_stock ?? 0}
     </span>
   ),
-}
-
-const preorderPriceColumn: ColumnDef<Product> = {
-  id: "price",
-  header: "PRICE",
-  cell: ({ row }) =>
-    row.original.price === null ? (
-      noPrice
-    ) : (
-      <span className="text-sm font-semibold">{formatCurrency(row.original.price)}</span>
-    ),
 }
 
 const orderingColumn: ColumnDef<Product> = {
@@ -94,6 +67,42 @@ const orderingColumn: ColumnDef<Product> = {
       <div className="flex flex-col text-sm">
         <span>{variants.some((v) => v.is_preorder_active) ? "Open" : "Closed"}</span>
         <span className="text-xs text-muted-foreground">{closes ? `Until ${formatDate(closes)}` : "No dates set"}</span>
+      </div>
+    )
+  },
+}
+
+const addedByColumn: ColumnDef<Product> = {
+  id: "added_by",
+  header: "ADDED BY",
+  cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.added_by ?? "—"}</span>,
+}
+
+const infoColumn: ColumnDef<Product> = {
+  id: "info",
+  header: "INFO",
+  cell: ({ row }) => {
+    const { units_sold, price, average_rating, review_count } = row.original
+    return (
+      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+        <span>
+          Sales: <span className="font-medium text-foreground">{units_sold}</span>
+        </span>
+        <span>
+          Base price: <span className="font-medium text-foreground">{price === null ? "—" : formatCurrency(price)}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          Rating:
+          {average_rating === null ? (
+            <span>No reviews</span>
+          ) : (
+            <>
+              <Star className="size-3 fill-amber-400 text-amber-400" />
+              <span className="font-medium text-foreground">{average_rating.toFixed(1)}</span>
+              <span>({review_count})</span>
+            </>
+          )}
+        </span>
       </div>
     )
   },
@@ -197,13 +206,13 @@ const Products = ({ kind }: { kind: Kind }) => {
     {
       accessorKey: "name",
       header: "PRODUCT",
-      cell: ({ row }) => (
-        <ProductCell
-          name={row.original.name}
-          sub={`${row.original.variants.length} variant${row.original.variants.length === 1 ? "" : "s"}`}
-        />
-      ),
+      cell: ({ row }) => {
+        const count = variantCount(row.original)
+        return <ProductCell name={row.original.name} sub={count === 0 ? "No variants" : `${count} variant${count === 1 ? "" : "s"}`} />
+      },
     },
+    addedByColumn,
+    infoColumn,
     {
       id: "category",
       header: "CATEGORY",
@@ -211,12 +220,35 @@ const Products = ({ kind }: { kind: Kind }) => {
         <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-    isStock ? stockPriceColumn : preorderPriceColumn,
     isStock ? stockColumn : orderingColumn,
     {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
+      id: "published",
+      header: "PUBLISHED",
+      cell: ({ row }) => (
+        <SaveSwitch
+          // Remounted when the list brings a new value, e.g. after a bulk activate.
+          key={`${row.original.id}-${row.original.is_active}`}
+          label={`Published: ${row.original.name}`}
+          checked={row.original.is_active}
+          disabled={!canManage}
+          save={(next) => updateProduct(row.original.id, { is_active: next })}
+          failure={`Failed to update ${row.original.name}`}
+        />
+      ),
+    },
+    {
+      id: "featured",
+      header: "FEATURED",
+      cell: ({ row }) => (
+        <SaveSwitch
+          key={`${row.original.id}-${row.original.featured}`}
+          label={`Featured: ${row.original.name}`}
+          checked={row.original.featured}
+          disabled={!canManage}
+          save={(next) => updateProduct(row.original.id, { featured: next })}
+          failure={`Failed to update ${row.original.name}`}
+        />
+      ),
     },
     {
       id: "actions",
@@ -248,9 +280,11 @@ const Products = ({ kind }: { kind: Kind }) => {
     "70px",
     "240px",
     "150px",
-    "140px",
+    "180px",
+    "150px",
     isStock ? "80px" : "140px",
     "110px",
+    "100px",
     "80px",
   ]
 
@@ -353,7 +387,7 @@ const Products = ({ kind }: { kind: Kind }) => {
         emptyIcon={Package}
         emptyTitle="No products found"
         emptyDescription="Try a different search or filter, or add a new product."
-        minWidth="1000px"
+        minWidth="1300px"
         columnWidths={widths}
       />
 

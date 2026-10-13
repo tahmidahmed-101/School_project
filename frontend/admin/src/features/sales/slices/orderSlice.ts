@@ -10,13 +10,13 @@ import type { CreateShipmentPayload, Shipment } from "@/features/shipping/types"
 
 const ENDPOINT = "/admin/orders/"
 
-const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = createSliceFactory<Order>({
+const { reducer, fetchAll, fetchSingle, deleteData } = createSliceFactory<Order>({
   name: "orders",
   endpoint: ENDPOINT,
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle, postData, patchData, deleteData }
+export { fetchAll, fetchSingle, deleteData }
 
 /** The loaded order (state.orders.singleData). */
 export const selectOrderDetail = (state: RootState): Order | null =>

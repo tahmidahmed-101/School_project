@@ -1,6 +1,7 @@
 import productReducer from "./slices/productSlice"
 import categoryReducer from "./slices/categorySlice"
 import brandReducer from "./slices/brandSlice"
+import shopOptionReducer from "./slices/shopOptionSlice"
 import bundleReducer from "./slices/bundleSlice"
 import reviewReducer from "./slices/reviewSlice"
 import questionReducer from "./slices/questionSlice"
@@ -10,6 +11,7 @@ export const catalogReducers = {
   products: productReducer,
   categories: categoryReducer,
   brands: brandReducer,
+  shopOptions: shopOptionReducer,
   catalogBundles: bundleReducer,
   catalogReviews: reviewReducer,
   catalogQuestions: questionReducer,

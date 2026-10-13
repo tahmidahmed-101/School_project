@@ -20,9 +20,9 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
-import { productKind, productListPath } from "../lib/productKind"
+import { productKind, productListPath, variantCount } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { savedOptionsOf } from "../lib/useOptionDrafts"
+import { savedOptionsOf } from "../lib/productKind"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
 
@@ -202,7 +202,7 @@ const ProductDetail = () => {
                 <Row label="Pre-order limit">{settings?.preorder_stock_limit ?? "Unlimited"}</Row>
               </>
             )}
-            <Row label="Variants">{product.variants.length}</Row>
+            <Row label="Variants">{variantCount(product)}</Row>
             {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
             {product.highlights.length > 0 && (
               <Row label="Highlights">

@@ -128,9 +128,19 @@ export interface VariantBulkUpdatePayload {
   is_active?: boolean
 }
 
-export interface OptionSuggestions {
-  names: string[]
+/** An option of the Attributes page (Size, Colour, ...): owned by the shop, offered on the product form. */
+export interface ShopOption {
+  id: string
+  name: string
+  /** Off: kept in the list, but no longer offered when variants are generated. */
+  is_active: boolean
   values: string[]
+}
+
+export interface ShopOptionPayload {
+  name?: string
+  values?: string[]
+  is_active?: boolean
 }
 
 export interface ProductOptionsPayload {
@@ -145,12 +155,6 @@ export interface ProductOptionsPayload {
 export interface ProductOptionsResult {
   options: ProductOption[]
   missing_combinations: number
-}
-
-export interface VariantImportResult {
-  created: number
-  updated: number
-  errors: { row: number; sku: string; message: string }[]
 }
 
 /** CategorySerializer */
@@ -201,6 +205,12 @@ export interface Product {
   price: string | null
   cost_price: string | null
   discount_price: string | null
+  /** Name (or email) of the staff member who created the product; null when nobody is on record. */
+  added_by: string | null
+  /** Units ordered less returns; carts and cancelled orders are left out. */
+  units_sold: number
+  average_rating: number | null
+  review_count: number
 }
 
 /** ProductCreateSerializer (+ is_active on ProductUpdateSerializer; sku only on create). */

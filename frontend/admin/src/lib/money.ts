@@ -33,3 +33,6 @@ export function sumCostLines(lines: { unitCost: string | null | undefined; quant
   }
   return fromPaisa((total + BigInt(50)) / BigInt(100));
 }
+
+/** A typed amount: digits with up to two decimals, no sign. */
+export const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;

@@ -3,7 +3,7 @@ import type { ExpenseCategory } from "../types"
 
 const ENDPOINT = "/admin/accounting/expense-categories/"
 
-const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = createSliceFactory<ExpenseCategory>({
+const { reducer, fetchAll, postData, patchData, deleteData } = createSliceFactory<ExpenseCategory>({
   name: "expenseCategories",
   endpoint: ENDPOINT,
   initialSingleData: null,
@@ -11,7 +11,7 @@ const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = crea
 
 export const restoreExpenseCategory = createActionThunk<ExpenseCategory>("expenseCategories/restore", ENDPOINT, "restore")
 
-export { fetchAll, fetchSingle, postData, patchData, deleteData }
+export { fetchAll, postData, patchData, deleteData }
 
 export default withExtraCases(reducer, (builder) => {
   replaceOnFulfilled(builder, restoreExpenseCategory)

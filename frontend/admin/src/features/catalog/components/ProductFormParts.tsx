@@ -22,9 +22,11 @@ import type { Product } from "../types"
 import type { BaseValues } from "../lib/productFormBase"
 import { productListPath } from "../lib/productKind"
 import type { useStagedImages } from "../lib/stagedImages"
+import { savedOptionsOf } from "../lib/productKind"
 import type { CategoryOption } from "../lib/useCategoryOptions"
 import { CategoryTreeCombobox } from "./CategoryTreeSelect"
 import { ProductImagesSection } from "./ProductImagesSection"
+import { ProductVariantsSection } from "./ProductVariantsSection"
 import { StagedImagesCard } from "./StagedImagesCard"
 
 /** Brands for the searchable picker. A failed load just leaves the list empty: brand is optional. */
@@ -51,6 +53,7 @@ export function ProductFormShell({
   formId,
   onSubmit,
   submitting,
+  after,
   children,
 }: {
   kind: Kind
@@ -59,6 +62,8 @@ export function ProductFormShell({
   formId: string
   onSubmit: FormEventHandler<HTMLFormElement>
   submitting: boolean
+  /** Shown under the form but outside it: sections that save on their own, like the variants table. */
+  after?: ReactNode
   children: ReactNode
 }) {
   const navigate = useNavigate()
@@ -74,6 +79,7 @@ export function ProductFormShell({
       <form id={formId} onSubmit={onSubmit} className="space-y-6">
         {children}
       </form>
+      {after && <div className="mt-6">{after}</div>}
       <FormActions
         sticky
         form={formId}
@@ -87,11 +93,9 @@ export function ProductFormShell({
 
 export function BasicsCard({
   kind,
-  isEditing,
   categoryOptions,
 }: {
   kind: Kind
-  isEditing: boolean
   /** Categories of this form's kind only. */
   categoryOptions: CategoryOption[]
 }) {
@@ -159,7 +163,7 @@ export function BasicsCard({
           className="md:col-span-2"
           label="Highlights"
           id="highlights"
-          rows={4}
+          rows={8}
           placeholder="One highlight per line"
           error={errors.highlights}
           {...register("highlights")}
@@ -179,16 +183,9 @@ export function BasicsCard({
           <div className="py-2">
             <SwitchField control={control} name="featured" label="Featured" />
           </div>
-          {isEditing && (
-            <div className="py-2">
-              <SwitchField
-                control={control}
-                name="is_active"
-                label="Active"
-                description="Inactive products are hidden from the storefront."
-              />
-            </div>
-          )}
+          <div className="py-2">
+            <SwitchField control={control} name="is_active" label="Publish" />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -198,17 +195,14 @@ export function BasicsCard({
 /** The Pricing card: the form's own money fields as children, then the SKU of a new product's first variant. */
 export function PricingCard({
   isEditing,
-  withOptions,
   perVariant,
   simpleHint,
   children,
 }: {
   isEditing: boolean
-  /** The options switch is on. */
-  withOptions: boolean
   /** A saved product with options: each variant has its own prices, so there is nothing to enter here. */
   perVariant: boolean
-  /** Shown on a new product without options, where the price is required. */
+  /** Shown on a new product, where the price is required. */
   simpleHint: string
   children: ReactNode
 }) {
@@ -234,16 +228,12 @@ export function PricingCard({
       <CardHeader>
         <CardTitle>Pricing</CardTitle>
         <CardDescription>
-          {isEditing
-            ? "The price of this product."
-            : withOptions
-              ? "Required. Every variant starts at this price; change single prices on the product page afterwards."
-              : simpleHint}
+          {isEditing ? "The price of this product." : simpleHint}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {children}
-        {!isEditing && !withOptions && (
+        {!isEditing && (
           <TextField label="SKU" id="sku" placeholder="Auto-generated if blank" error={errors.sku} {...register("sku")} />
         )}
       </CardContent>
@@ -359,5 +349,21 @@ export function SpecsCard() {
         </Button>
       </CardContent>
     </Card>
+  )
+}
+
+/** The variants of a saved product, on its edit form. Each change here saves at once, apart from the form. */
+export function SavedVariants({ product, kind }: { product: Product; kind: Kind }) {
+  const dispatch = useAppDispatch()
+  return (
+    <ProductVariantsSection
+      key={savedOptionsOf(product)
+        .map((o) => o.id)
+        .join()}
+      product={product}
+      kind={kind}
+      canManage
+      onChanged={() => dispatch(fetchSingle(product.id))}
+    />
   )
 }

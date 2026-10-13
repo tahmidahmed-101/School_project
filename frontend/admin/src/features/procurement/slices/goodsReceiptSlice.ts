@@ -7,13 +7,13 @@ import { PURCHASE_ORDERS_ENDPOINT } from "./purchaseOrderSlice"
 const ENDPOINT = "/admin/procurement/goods-receipts/"
 
 // GRNs are immutable once recorded: list, detail and create only.
-const { reducer, fetchAll, fetchSingle } = createSliceFactory<GoodsReceipt>({
+const { reducer, fetchAll } = createSliceFactory<GoodsReceipt>({
   name: "goodsReceipts",
   endpoint: ENDPOINT,
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle }
+export { fetchAll }
 
 export const createGoodsReceipt = createApiThunk<GoodsReceiptCreatePayload, GoodsReceipt>(
   "goodsReceipts/create",
