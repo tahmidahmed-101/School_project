@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import UUID
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.common.utils.codes import hash_code
@@ -299,3 +299,14 @@ def possible_duplicate_orders(order: SalesOrder) -> list[SalesOrder]:
     )
     wanted = _line_quantities(order)
     return [other for other in candidates if _line_quantities(other) == wanted]
+
+
+def units_sold_by_product(product_ids: list) -> dict:
+    """Units ordered of each product, less returns. Carts and cancelled orders do not count."""
+    rows = (
+        SalesOrderLine.objects.filter(variant__product_id__in=product_ids)
+        .exclude(order__status__in=[SalesOrder.Status.PENDING, SalesOrder.Status.CANCELLED])
+        .values("variant__product_id")
+        .annotate(sold=Sum(F("quantity") - F("returned_quantity")))
+    )
+    return {row["variant__product_id"]: row["sold"] or 0 for row in rows}

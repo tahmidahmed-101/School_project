@@ -52,3 +52,19 @@ def product_review_summary(product: Product) -> dict:
         "review_count": result["review_count"] or 0,
         "rating_counts": {str(star): counts.get(star, 0) for star in range(5, 0, -1)},
     }
+
+
+def rating_summaries_for_products(product_ids: list) -> dict[UUID, dict]:
+    """Average rating and review count of each product that has a review."""
+    rows = (
+        ProductReview.objects.filter(product_id__in=product_ids)
+        .values("product_id")
+        .annotate(average_rating=Avg("rating"), review_count=Count("id"))
+    )
+    return {
+        row["product_id"]: {
+            "average_rating": round(row["average_rating"], 2),
+            "review_count": row["review_count"],
+        }
+        for row in rows
+    }

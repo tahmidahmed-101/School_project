@@ -315,3 +315,76 @@ def ensure_option_values(product: Product, pairs: list[tuple[str, str]]) -> list
             )
         ids.append(row.id)
     return ids
+
+
+def _shop_option_name(name, *, option: ProductOption | None = None) -> str:
+    name = normalise_label(name)
+    if not name:
+        raise BusinessRuleViolationError("An option needs a name.", code="validation_error")
+    taken = ProductOption.objects.filter(product__isnull=True, name__iexact=name)
+    if option is not None:
+        taken = taken.exclude(pk=option.pk)
+    if taken.exists():
+        raise BusinessRuleViolationError(
+            "There is already an option with this name.", code="option_name_exists"
+        )
+    return name
+
+
+def _write_shop_values(option: ProductOption, raw_values: list) -> None:
+    values = _clean_values([{"value": value} for value in raw_values or []])
+    # No variant or image points at a shop option's value, so a save replaces the list.
+    option.values.all().delete()
+    ProductOptionValue.objects.bulk_create(
+        ProductOptionValue(option=option, value=item["value"], position=position)
+        for position, item in enumerate(values)
+    )
+
+
+@transaction.atomic
+def create_shop_option(*, name: str, values: list, actor=None) -> ProductOption:
+    require_feature(ModuleKey.CATALOG, "product_variations")
+    option = ProductOption.objects.create(name=_shop_option_name(name))
+    _write_shop_values(option, values)
+    log_action(
+        actor=actor,
+        action="option.created",
+        target_type="ProductOption",
+        target_id=option.id,
+        metadata={"name": option.name},
+    )
+    return option
+
+
+@transaction.atomic
+def update_shop_option(*, option: ProductOption, data: dict, actor=None) -> ProductOption:
+    """Products that picked this option hold their own copy, so they do not change."""
+    require_feature(ModuleKey.CATALOG, "product_variations")
+    if "name" in data:
+        option.name = _shop_option_name(data["name"], option=option)
+        option.save(update_fields=["name"])
+    if "values" in data:
+        _write_shop_values(option, data["values"])
+    if "is_active" in data:
+        option.is_active = data["is_active"]
+        option.save(update_fields=["is_active"])
+    log_action(
+        actor=actor,
+        action="option.updated",
+        target_type="ProductOption",
+        target_id=option.id,
+        metadata={"fields": [field for field in ("name", "values", "is_active") if field in data]},
+    )
+    return option
+
+
+@transaction.atomic
+def delete_shop_option(*, option: ProductOption, actor=None) -> None:
+    log_action(
+        actor=actor,
+        action="option.deleted",
+        target_type="ProductOption",
+        target_id=option.id,
+        metadata={"name": option.name},
+    )
+    option.delete()

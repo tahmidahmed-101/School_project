@@ -13,6 +13,7 @@ from apps.catalog.selectors.options import (
     variant_option_values,
     variant_title,
 )
+from apps.catalog.selectors.products import added_by_label
 from apps.common.params import KINDS
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
@@ -367,6 +368,27 @@ class NewProductOptionSerializer(serializers.Serializer):
     values = serializers.ListField(child=OptionLabelField(), required=False)
 
 
+class ShopOptionSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField()
+    is_active = serializers.BooleanField()
+    values = serializers.SerializerMethodField()
+
+    def get_values(self, obj) -> list[str]:
+        return [value.value for value in obj.values.all()]
+
+
+class ShopOptionWriteSerializer(serializers.Serializer):
+    name = OptionLabelField()
+    values = serializers.ListField(child=OptionLabelField())
+
+
+class ShopOptionUpdateSerializer(serializers.Serializer):
+    name = OptionLabelField(required=False)
+    is_active = serializers.BooleanField(required=False)
+    values = serializers.ListField(child=OptionLabelField(), required=False)
+
+
 class SpecSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     value = serializers.CharField(max_length=500)
@@ -453,9 +475,28 @@ class ProductSerializer(serializers.Serializer):
     price = serializers.SerializerMethodField()
     cost_price = serializers.SerializerMethodField()
     discount_price = serializers.SerializerMethodField()
+    added_by = serializers.SerializerMethodField()
+    units_sold = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     def get_image(self, obj) -> str | None:
         return _image_url(obj, self.context)
+
+    def get_added_by(self, obj) -> str | None:
+        return added_by_label(obj)
+
+    # These three come from the view's batch lookups; a caller without them gets blanks.
+    def get_units_sold(self, obj) -> int:
+        return self.context.get("sold_by_product", {}).get(obj.id, 0)
+
+    def get_average_rating(self, obj) -> float | None:
+        summary = self.context.get("rating_by_product", {}).get(obj.id)
+        return summary["average_rating"] if summary else None
+
+    def get_review_count(self, obj) -> int:
+        summary = self.context.get("rating_by_product", {}).get(obj.id)
+        return summary["review_count"] if summary else 0
 
     def get_specs(self, obj) -> list[dict]:
         return product_specs(obj)
@@ -518,6 +559,8 @@ class ProductCreateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField()
     brand_id = serializers.UUIDField(required=False, allow_null=True)
     featured = serializers.BooleanField(required=False, default=False)
+    # Off creates the product unpublished, so it can be finished before the storefront shows it.
+    is_active = serializers.BooleanField(required=False, default=True)
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_blank=True)
     highlights = serializers.ListField(child=serializers.CharField(), required=False)
