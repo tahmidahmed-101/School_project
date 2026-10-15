@@ -94,7 +94,7 @@ def products_list(
     new_arrival: bool | None = None,
     badge: str | None = None,
 ) -> QuerySet[Product]:
-    queryset = Product.objects.select_related("category").prefetch_related(
+    queryset = Product.objects.select_related("category", "created_by").prefetch_related(
         _active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH
     )
     queryset = _filter_basic_product_fields(
@@ -318,3 +318,11 @@ def variants_list(
 
 def get_product_image_by_id(image_id: str | UUID) -> ProductImage | None:
     return ProductImage.objects.filter(id=image_id).first()
+
+
+def added_by_label(product: Product) -> str | None:
+    """Name, else email or phone, of the staff member who created the product."""
+    user = product.created_by
+    if user is None:
+        return None
+    return user.get_full_name() or user.email or user.phone or None

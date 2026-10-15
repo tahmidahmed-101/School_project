@@ -37,15 +37,9 @@ export function FloatingContact() {
   const open = openOn === pathname;
 
   if (pathname.startsWith("/checkout")) return null;
-  // The product page's sticky buy bar owns the bottom of the screen on mobile.
-  const hideOnMobile = pathname.startsWith("/product/");
 
   return (
-    <div
-      className={`fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] right-3 z-30 flex flex-col items-end gap-2 sm:right-5 lg:bottom-6 lg:gap-2.5 ${
-        hideOnMobile ? "max-lg:hidden" : ""
-      }`}
-    >
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] right-3 z-30 flex flex-col items-end gap-2 sm:right-5 lg:bottom-6 lg:gap-2.5">
       <div id="floating-contact-links" className={`flex-col gap-2 lg:flex lg:gap-2.5 ${open ? "flex" : "hidden"}`}>
         {links.map(({ id, href, label, icon: Icon, tint }) => (
           <a

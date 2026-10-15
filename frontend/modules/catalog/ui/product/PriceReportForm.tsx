@@ -66,7 +66,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
                 setExpectedPrice(e.target.value);
                 clearSent();
               }}
-              className={inputClass({ padding: "px-3 py-2", className: "text-xs sm:max-w-[200px]" })}
+              className={inputClass({ padding: "px-3 py-2", className: "text-sm sm:max-w-[200px]" })}
             />
           </FormField>
           <FormField htmlFor="price-report-comment" label={ui("priceReportComment")}>
@@ -80,7 +80,7 @@ export function PriceReportForm({ slug, productId, variantId, currentPrice }: Pr
                 clearSent();
               }}
               placeholder={ui("priceReportCommentPlaceholder")}
-              className={inputClass({ padding: "px-3 py-2", className: "resize-y text-xs" })}
+              className={inputClass({ padding: "px-3 py-2", className: "resize-y text-sm" })}
             />
           </FormField>
           <Button type="submit" size="sm" loading={submitting}>

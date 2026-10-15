@@ -110,6 +110,8 @@ export interface CategoryInfo {
   id: ProductCategory;
   /** Backend category UUID, for the API's `category_id` filter. */
   apiId?: string;
+  /** `id` of the category this one sits under; absent on a main category. */
+  parentId?: ProductCategory;
   slug: string;
   name: T;
   description: T;

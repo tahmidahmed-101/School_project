@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingCart, Zap, Sparkles, Calendar } from "lucide-react";
+import { Heart, PackageCheck, ShoppingCart, Zap, Sparkles, Calendar } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
@@ -127,9 +127,10 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             <Link
               href={`/product/${product.slug}`}
               className={buttonClass({ size: "xs", fullWidth: true })}
-              aria-label={`${ui("chooseOptions")} - ${t(product.name)}`}
+              aria-label={`${ui("orderNow")} - ${t(product.name)}`}
             >
-              {ui("chooseOptions")}
+              <PackageCheck className="h-3.5 w-3.5 shrink-0" />
+              {ui("orderNow")}
             </Link>
           ) : product.isPreOrder ? (
             isSoldOut ? (

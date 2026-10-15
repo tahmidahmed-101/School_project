@@ -1,11 +1,6 @@
-import { TextCell } from "@/components/common/cells"
 import { formatDate } from "@/lib/format"
 
 import type { ProductVariant } from "../types"
-
-export function VariantOptionsCell({ variant }: { variant: ProductVariant }) {
-  return <TextCell value={variant.title} />
-}
 
 export function VariantStockCell({ variant, showLow = false }: { variant: ProductVariant; showLow?: boolean }) {
   return (

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { Link } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { History, Layers, Loader2, PencilIcon, PlusIcon, Tags } from "lucide-react"
+import { Layers, Loader2, PlusIcon, SlidersHorizontal, Sparkles, Tags, Trash2Icon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,10 +14,14 @@ import { TableActions } from "@/components/common/TableActions"
 import { MoneyCell, TextCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
+import type { PickedVariant } from "@/components/common/VariantPicker"
+import { useCan } from "@/hooks/use-can"
+import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
 import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
-import { toPaisa } from "@/lib/money"
+import { AMOUNT_PATTERN, toPaisa } from "@/lib/money"
+import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
+import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import {
   bulkUpdateVariants,
@@ -30,16 +33,17 @@ import {
 } from "../api"
 import type { Combination, Product, ProductVariant, ProductVariantPayload, VariantBulkUpdatePayload } from "../types"
 import { refusalMessage, settleInOrder } from "../lib/options"
-import { savedOptionsOf } from "../lib/useOptionDrafts"
+import { savedOptionsOf } from "../lib/productKind"
 import { VariantOrderingCell, VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
+import { GenerateVariantsDialog } from "./GenerateVariantsDialog"
+import { StockDeleteDialog } from "./StockDeleteDialog"
 
 interface Props {
   product: Product
   /** The product's kind: a stock product shows stock and discount, a pre-order one its ordering window. */
   kind: Kind
   canManage: boolean
-  canViewInventory: boolean
   /** Called after any variant change so the parent can refresh product totals. */
   onChanged: () => void
 }
@@ -54,7 +58,6 @@ interface Row {
   variant: ProductVariant | null
 }
 
-const AMOUNT = /^\d+(\.\d{1,2})?$/
 
 /** A new pre-order variant opens and closes for ordering together with its siblings. */
 const orderingWindowOf = (sibling: ProductVariant): ProductVariantPayload => ({
@@ -66,7 +69,7 @@ const orderingWindowOf = (sibling: ProductVariant): ProductVariantPayload => ({
   preorder_stock_limit: sibling.preorder_stock_limit,
 })
 
-function buildRows(combinations: Combination[], variants: ProductVariant[]): Row[] {
+function buildRows(combinations: Combination[], variants: ProductVariant[], productName: string): Row[] {
   const byId = new Map(variants.map((v) => [v.id, v]))
   const placed = new Set<string>()
   const rows: Row[] = combinations.map((c) => {
@@ -80,12 +83,13 @@ function buildRows(combinations: Combination[], variants: ProductVariant[]): Row
     }
   })
   for (const v of variants) {
-    if (!placed.has(v.id)) rows.push({ key: v.id, title: v.title || v.sku, valueIds: null, created: true, variant: v })
+    // A product without options has one untitled variant: it goes by the product's name.
+    if (!placed.has(v.id)) rows.push({ key: v.id, title: v.title || productName, valueIds: null, created: true, variant: v })
   }
   return rows
 }
 
-export function ProductVariantsSection({ product, kind, canManage, canViewInventory, onChanged }: Props) {
+export function ProductVariantsSection({ product, kind, canManage, onChanged }: Props) {
   const isStock = kind === "stock"
   const productId = product.id
   const hasOptions = savedOptionsOf(product).length > 0
@@ -94,8 +98,18 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
   const [editing, setEditing] = useState<ProductVariant | null>(null)
+  const canAdjust = useCan("inventory.adjust", "inventory.manage")
+  const { warehouses } = useWarehouses(kind)
+  const [adjusting, setAdjusting] = useState<PickedVariant | null>(null)
+  const [deleting, setDeleting] = useState<ProductVariant | null>(null)
+  // Kept mounted, still showing its variant, while the delete dialog animates shut.
+  const deleteTarget = useLastValue(deleting)
+  const deleteMounted = useDelayedUnmount(deleting !== null)
   const [formOpen, setFormOpen] = useState(false)
   const [priceOpen, setPriceOpen] = useState(false)
+  // The generate dialog is mounted fresh for each opening, so it starts from the product as it is.
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [generateKey, setGenerateKey] = useState(0)
   const [ticked, setTicked] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -135,9 +149,11 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
     onChanged()
   }
 
-  const rows = buildRows(combinations, variants)
-  const missing = rows.filter((r) => !r.created)
+  // A product without options is sold as one item: its untitled variant holds the price and the
+  // stock, and is not listed as a variant. The first combination generated takes it over.
   const single = !hasOptions && variants.length <= 1
+  const rows = single ? [] : buildRows(combinations, variants, product.name)
+  const missing = rows.filter((r) => !r.created)
 
   const openEditor = (variant: ProductVariant | null) => {
     setEditing(variant)
@@ -145,10 +161,14 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
   }
 
   /** Creates the given combinations, or every missing one when none are given. */
-  const create = async (valueIds?: string[][]) => {
+  const create = async (
+    valueIds?: string[][],
+    pricing: { price?: string } = {},
+    finish?: (created: ProductVariant[]) => Promise<void>
+  ) => {
     setBusy(true)
     try {
-      const res = await generateVariants(productId, valueIds ? { combinations: valueIds } : {})
+      const res = await generateVariants(productId, { ...(valueIds ? { combinations: valueIds } : {}), ...pricing })
       const sibling = variants.find((v) => v.is_preorder_enabled)
       if (!isStock && sibling) {
         const results = await settleInOrder(res.created, (v) => updateVariant(v.id, orderingWindowOf(sibling)))
@@ -156,6 +176,7 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
           toast.warning("Created, but the ordering dates could not be copied to every new variant. Edit them to set the dates.")
         }
       }
+      if (finish) await finish(res.created)
       const n = res.created.length
       toast.success(`${n} variant${n === 1 ? "" : "s"} created`)
       afterChange()
@@ -177,32 +198,23 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
     }
   }
 
-  const remove = async (variant: ProductVariant) => {
-    try {
-      await deleteVariant(variant.id)
-      toast.success(`${variant.title || variant.sku} deleted`)
-      afterChange()
-    } catch (err) {
-      toast.error(refusalMessage(err, "The variant could not be deleted"))
-    }
-  }
+
+  const adjust = (variant: ProductVariant) =>
+    setAdjusting({ id: variant.id, sku: variant.sku, product_name: product.name })
 
   const actionsFor = (variant: ProductVariant) => (
     <TableActions
       itemName={variant.title || variant.sku}
       actions={
-        isStock && canViewInventory
-          ? [
-              {
-                label: "Stock ledger",
-                icon: History,
-                to: `/inventory/ledger?variant_id=${variant.id}&sku=${encodeURIComponent(variant.sku)}`,
-              },
-            ]
-          : []
+        [
+          ...(canAdjust ? [{ label: "Adjust", icon: SlidersHorizontal, onSelect: () => adjust(variant) }] : []),
+          // The delete dialog does its own confirming, so it is not TableActions' onDelete.
+          ...(canManage
+            ? [{ label: "Delete", icon: Trash2Icon, destructive: true, onSelect: () => setDeleting(variant) }]
+            : []),
+        ]
       }
       onEdit={canManage ? () => openEditor(variant) : undefined}
-      onDelete={canManage && !single ? () => remove(variant) : undefined}
     />
   )
 
@@ -327,12 +339,6 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
         Try again
       </Button>
     </div>
-  ) : single ? (
-    <SingleVariant
-      variant={variants[0] ?? null}
-      isStock={isStock}
-      onAdd={canManage ? () => openEditor(null) : undefined}
-    />
   ) : (
     <DataTable
       embedded
@@ -343,11 +349,9 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       columnWidths={columnWidths}
       unlabelledColumns={["tick", "actions"]}
       emptyTitle="No variants yet"
-      emptyDescription="Add options under Edit product to create them."
+      emptyDescription="Generate variants to sell this product in sizes, colours or other options."
     />
   )
-
-  const onlyVariant = single ? (variants[0] ?? null) : null
 
   return (
     <Card>
@@ -355,33 +359,15 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid min-w-0 gap-1">
           <CardTitle className="flex items-center gap-2">
-            <Layers className="size-4" /> {single ? (isStock ? "Price and stock" : "Price and ordering") : "Variants"}
+            <Layers className="size-4" /> Variants
           </CardTitle>
-          <CardDescription>
-            {single
-              ? "This product has no options, so it sells as one item. To sell it in sizes or colours, switch on options under Edit product."
-              : hasOptions
-                ? "Every combination of this product's options. Tick the ones that are not created yet to start selling them; they begin at the price of the first variant."
-                : "These variants were made before options existed. Add options under Edit product to describe them."}
-          </CardDescription>
+          {!single && !hasOptions && (
+            <CardDescription>These variants were made before options existed, so they have no option values.</CardDescription>
+          )}
         </div>
-        {canManage && !isLoading && !error && (
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            {onlyVariant && (
-              <>
-                {isStock && canViewInventory && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/inventory/ledger?variant_id=${onlyVariant.id}&sku=${encodeURIComponent(onlyVariant.sku)}`}>
-                      <History /> Stock ledger
-                    </Link>
-                  </Button>
-                )}
-                <Button size="sm" onClick={() => openEditor(onlyVariant)}>
-                  <PencilIcon /> Edit
-                </Button>
-              </>
-            )}
-            {!single && (
+        {(canManage || canAdjust) && !isLoading && !error && (
+          <div className="grid w-full grid-cols-2 gap-2 max-sm:[&>button]:min-w-0 max-sm:[&>button]:gap-1 max-sm:[&>button]:px-1.5 max-sm:[&>button]:text-xs sm:flex sm:w-auto sm:shrink-0 sm:flex-wrap sm:justify-end">
+            {canManage && !single && (
               <>
                 {ticked.length > 0 && (
                   <Button
@@ -406,11 +392,44 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
                 )}
               </>
             )}
+            {canManage && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setGenerateKey((key) => key + 1)
+                  setGenerateOpen(true)
+                }}
+              >
+                <Sparkles /> Generate variants
+              </Button>
+            )}
           </div>
         )}
       </CardHeader>
       <CardContent>{body}</CardContent>
 
+      {deleteMounted && deleteTarget && (
+        <StockDeleteDialog
+          key={deleteTarget.id}
+          open={deleting !== null}
+          name={deleteTarget.title ? `${product.name} — ${deleteTarget.title}` : deleteTarget.sku}
+          scope={{ variant_id: deleteTarget.id }}
+          kind={kind}
+          remove={() => deleteVariant(deleteTarget.id)}
+          onDeleted={afterChange}
+          onClose={() => setDeleting(null)}
+          onStockChanged={afterChange}
+        />
+      )}
+      <StockMovementDialog
+        mode={adjusting ? "adjust" : null}
+        onOpenChange={(open) => !open && setAdjusting(null)}
+        warehouses={warehouses}
+        variant={adjusting}
+        kind={kind}
+        productId={productId}
+        onDone={afterChange}
+      />
       <VariantFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -418,6 +437,17 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
         productId={productId}
         variant={editing}
         sibling={variants[0]}
+        onSaved={afterChange}
+      />
+      <GenerateVariantsDialog
+        key={generateKey}
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        product={product}
+        kind={kind}
+        variants={variants}
+        canSetStock={isStock && canAdjust}
+        generate={create}
         onSaved={afterChange}
       />
       <SetPriceDialog
@@ -429,52 +459,6 @@ export function ProductVariantsSection({ product, kind, canManage, canViewInvent
         onDone={afterChange}
       />
     </Card>
-  )
-}
-
-/** A product without options: the fields of its one variant, without a table. */
-function SingleVariant({
-  variant,
-  isStock,
-  onAdd,
-}: {
-  variant: ProductVariant | null
-  isStock: boolean
-  onAdd?: () => void
-}) {
-  if (!variant) {
-    return (
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        This product has no price yet, so it cannot be sold.
-        {onAdd && (
-          <Button size="sm" onClick={onAdd}>
-            <PlusIcon /> Set price
-          </Button>
-        )}
-      </div>
-    )
-  }
-  const cells: [string, ReactNode][] = [
-    ["SKU", <span className="break-all font-mono">{variant.sku}</span>],
-    ["Price", <span className="font-semibold">{formatCurrency(variant.price)}</span>],
-    ...(isStock
-      ? ([["Discount price", variant.discount_price ? formatCurrency(variant.discount_price) : "—"]] as [string, ReactNode][])
-      : []),
-    ["Cost", formatCurrency(variant.cost_price)],
-    isStock
-      ? ["Available", <VariantStockCell variant={variant} showLow />]
-      : ["Ordering", <VariantOrderingCell variant={variant} />],
-    ["Status", <StatusBadge status={variant.is_active ? "active" : "inactive"} />],
-  ]
-  return (
-    <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
-      {cells.map(([label, value]) => (
-        <div key={label} className="min-w-0">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
   )
 }
 
@@ -499,7 +483,7 @@ function SetPriceDialog({
   const [busy, setBusy] = useState(false)
 
   const typed = { price: price.trim(), discount_price: isStock ? discount.trim() : "", cost_price: cost.trim() }
-  const bad = (value: string) => (value !== "" && !AMOUNT.test(value) ? { message: "Enter a valid amount (max 2 decimals)" } : undefined)
+  const bad = (value: string) => (value !== "" && !AMOUNT_PATTERN.test(value) ? { message: "Enter a valid amount (max 2 decimals)" } : undefined)
   const discountTooHigh =
     typed.price !== "" && typed.discount_price !== "" && toPaisa(typed.discount_price) >= toPaisa(typed.price)
   const anyTyped = Object.values(typed).some(Boolean)

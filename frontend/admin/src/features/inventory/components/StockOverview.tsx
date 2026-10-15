@@ -2,7 +2,7 @@ import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Archive, ArrowDownToLine, Ban, CircleCheck, History, Lock, MinusCircle, Package, SlidersHorizontal, Truck, Undo2 } from "lucide-react"
+import { Archive, Ban, CircleCheck, History, Lock, MinusCircle, Package, SlidersHorizontal, Truck, Undo2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -217,17 +217,11 @@ const StockOverview = () => {
         actions={
           canAdjust && (
             <>
-              <Button size="action" onClick={() => setMovement({ mode: "intake" })}>
-                <ArrowDownToLine className="size-5" /> Receive stock
-              </Button>
               <Button variant="primary" size="action" onClick={() => setMovement({ mode: "adjust" })}>
                 <SlidersHorizontal className="size-5" /> Adjust
               </Button>
-              <Button variant="primary" size="action" onClick={() => setBulkOpen(true)}>
+              <Button size="action" onClick={() => setBulkOpen(true)}>
                 <SlidersHorizontal className="size-5" /> Bulk adjust
-              </Button>
-              <Button variant="primary" size="action" onClick={() => setMovement({ mode: "write_off" })}>
-                <MinusCircle className="size-5" /> Write off
               </Button>
             </>
           )

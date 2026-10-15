@@ -6,7 +6,7 @@ from .option import ProductOption, ProductOptionValue
 from .price_report import PriceIssueReport
 from .product import Product
 from .question import ProductQuestion
-from .review import ProductReview
+from .review import ProductReview, ProductReviewImage
 from .sale import Sale
 from .variant import ProductVariant
 from .wishlist import WishlistItem
@@ -22,6 +22,7 @@ __all__ = [
     "ProductOptionValue",
     "ProductQuestion",
     "ProductReview",
+    "ProductReviewImage",
     "ProductVariant",
     "Sale",
     "WishlistItem",

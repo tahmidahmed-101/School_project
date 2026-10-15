@@ -21,16 +21,19 @@ import {
   baseShape,
   baseValuesOf,
   checkSpecs,
-  optionsCreatePayload,
-  optionsReady,
   reportedRefusal,
-  saveOptionsIfChanged,
 } from "../lib/productFormBase"
-import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
 import type { CategoryOption } from "../lib/useCategoryOptions"
-import { useOptionDrafts } from "../lib/useOptionDrafts"
-import { BasicsCard, PricingCard, ProductFormImages, ProductFormShell, SpecsCard } from "./ProductFormParts"
-import { NewCombinationsCard, ProductOptionsCard } from "./ProductOptionsCard"
+import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
+import { savedOptionsOf } from "../lib/productKind"
+import {
+  BasicsCard,
+  PricingCard,
+  ProductFormImages,
+  ProductFormShell,
+  SavedVariants,
+  SpecsCard,
+} from "./ProductFormParts"
 
 const SETTINGS_FIELDS = [
   "preorder_price",
@@ -110,11 +113,12 @@ export function PreorderProductForm({
   const navigate = useNavigate()
   const formId = useId()
   const staged = useStagedImages()
-  const options = useOptionDrafts(product)
+  // Options and variants are managed on the product page; with options, each variant has its own price.
+  const hasOptions = savedOptionsOf(product).length > 0
 
   // A saved product with no variant has nowhere to keep the settings, so they are not asked for.
   const noVariants = isEditing && product?.variants.length === 0
-  const priceRequired = !options.hadOptions
+  const priceRequired = !hasOptions
   const resolver = useMemo(
     () => zodResolver(noVariants ? fields.superRefine(checkSpecs) : windowSchema(priceRequired)),
     [noVariants, priceRequired]
@@ -134,12 +138,11 @@ export function PreorderProductForm({
   }, [product, reset])
 
   const onSubmit = async (values: FormValues) => {
-    if (!optionsReady(options, isEditing)) return
     const payload = basePayload(values)
     try {
       if (product) {
         // With options the prices are per variant; without, only what was changed is sent.
-        if (!options.hadOptions) {
+        if (!hasOptions) {
           if (values.price && dirtyFields.price) payload.price = values.price
           if (values.cost_price && dirtyFields.cost_price) payload.cost_price = values.cost_price
         }
@@ -153,37 +156,24 @@ export function PreorderProductForm({
             return
           }
         }
-        if (!(await saveOptionsIfChanged(product.id, options))) return
         toast.success(`${values.name} updated`)
         navigate(`/product_detail/${product.id}`)
         return
       }
       const pricing = { price: values.price, ...(values.cost_price ? { cost_price: values.cost_price } : {}) }
       const failed: string[] = []
-      let created: Product
-      if (options.active.length > 0) {
-        created = await createProduct({ ...payload, ...pricing, ...optionsCreatePayload(options) })
-        // The product endpoint makes the variants; the ordering window is then set on each of them.
-        const results = await settleInOrder(created.variants, (v) => updateVariant(v.id, settingsPayload(values)))
-        const rejected = results.filter((r) => r.status === "rejected")
-        if (rejected.length) {
-          failed.push(`the ordering window of ${rejected.length} variant${rejected.length === 1 ? "" : "s"}`)
-          toast.error(getApiErrorMessage(rejected[0].reason, "Pre-order settings could not be saved on every variant"))
-        }
-      } else {
-        // The product endpoint cannot set pre-order settings on the variant it creates from a
-        // price, so the single variant is created here instead.
-        created = await createProduct(payload)
-        try {
-          await createVariant(created.id, {
-            ...pricing,
-            ...(values.sku ? { sku: values.sku } : {}),
-            ...settingsPayload(values),
-          })
-        } catch (err) {
-          failed.push("its price and ordering window")
-          toast.error(getApiErrorMessage(err, "The variant could not be created"))
-        }
+      // The product endpoint cannot set pre-order settings on the variant it creates from a
+      // price, so the single variant is created here instead.
+      const created = await createProduct({ ...payload, is_active: values.is_active })
+      try {
+        await createVariant(created.id, {
+          ...pricing,
+          ...(values.sku ? { sku: values.sku } : {}),
+          ...settingsPayload(values),
+        })
+      } catch (err) {
+        failed.push("its price and ordering window")
+        toast.error(getApiErrorMessage(err, "The variant could not be created"))
       }
       const failedImages = await uploadStagedImages(created.id, staged.images)
       if (failedImages) failed.push(`${failedImages} image${failedImages === 1 ? "" : "s"}`)
@@ -204,13 +194,12 @@ export function PreorderProductForm({
         formId={formId}
         onSubmit={handleSubmit(onSubmit)}
         submitting={isSubmitting}
+        after={product && <SavedVariants product={product} kind="preorder" />}
       >
-        <BasicsCard kind="preorder" isEditing={isEditing} categoryOptions={categoryOptions} />
-        <ProductOptionsCard state={options} kind="preorder" />
+        <BasicsCard kind="preorder" categoryOptions={categoryOptions} />
         <PricingCard
           isEditing={isEditing}
-          withOptions={options.enabled}
-          perVariant={options.hadOptions}
+          perVariant={hasOptions}
           simpleHint="Required. The price creates the product's first variant, so it can be ordered and shown on the storefront."
         >
           <MoneyField label="Price" showCurrency id="price" placeholder="0.00" error={errors.price} {...register("price")} />
@@ -222,7 +211,6 @@ export function PreorderProductForm({
             {...register("cost_price")}
           />
         </PricingCard>
-        {!isEditing && <NewCombinationsCard state={options} />}
 
         {noVariants ? (
           <Card>

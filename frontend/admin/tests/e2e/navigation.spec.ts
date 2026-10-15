@@ -23,7 +23,6 @@ const SIDEBAR: { section: string; items: { title: string; url: string; heading: 
     section: "Catalog",
     items: [
       { title: "Products", url: "/products", heading: "Products" },
-      { title: "Variants", url: "/variants", heading: "Variants" },
       { title: "Bundles", url: "/bundles", heading: "Bundles" },
       { title: "Categories", url: "/categories", heading: "Categories" },
       { title: "Brands", url: "/brands", heading: "Brands" },

@@ -229,6 +229,15 @@ def record_movement(
             raise BusinessRuleViolationError(
                 "Not enough stock on hand for this movement.", code="insufficient_stock"
             )
+        # Units held for orders cannot leave under them: the hold is released
+        # first (shipping does that itself), never overridden by a movement.
+        if stock_item.available < quantity:
+            raise BusinessRuleViolationError(
+                f"{stock_item.quantity_reserved} of the {stock_item.quantity_on_hand} on hand "
+                f"are reserved for orders, so only {stock_item.available} can be removed. "
+                "Release the reservations first.",
+                code="stock_reserved",
+            )
         stock_item.quantity_on_hand -= quantity
 
     stock_item.save(update_fields=["quantity_on_hand", "avg_cost", "updated_at"])

@@ -16,6 +16,8 @@ from .category_views import (
 )
 from .image_views import AdminProductImageDetailView, AdminProductImageListCreateView
 from .option_views import (
+    AdminOptionDetailView,
+    AdminOptionListCreateView,
     AdminOptionSuggestionsView,
     AdminProductCombinationsView,
     AdminProductOptionsView,
@@ -107,6 +109,8 @@ urlpatterns = [
         name="product-combinations",
     ),
     path("option-suggestions/", AdminOptionSuggestionsView.as_view(), name="option-suggestions"),
+    path("options/", AdminOptionListCreateView.as_view(), name="option-list"),
+    path("options/<uuid:option_id>/", AdminOptionDetailView.as_view(), name="option-detail"),
     path(
         "products/<uuid:product_id>/images/",
         AdminProductImageListCreateView.as_view(),

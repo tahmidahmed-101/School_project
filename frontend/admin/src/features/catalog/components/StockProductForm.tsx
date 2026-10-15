@@ -7,26 +7,28 @@ import { toast } from "sonner"
 
 import { moneySchema, reportFormError } from "@/lib/forms"
 
-import { bulkUpdateVariants, createProduct, updateProduct } from "../api"
+import { createProduct, updateProduct } from "../api"
 import type { Product } from "../types"
-import { refusalMessage } from "../lib/options"
 import {
   baseDefaults,
   basePayload,
   baseShape,
   baseValuesOf,
   checkSpecs,
-  optionsCreatePayload,
-  optionsReady,
   reportedRefusal,
-  saveOptionsIfChanged,
 } from "../lib/productFormBase"
-import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
 import type { CategoryOption } from "../lib/useCategoryOptions"
-import { useOptionDrafts } from "../lib/useOptionDrafts"
+import { uploadStagedImages, useStagedImages } from "../lib/stagedImages"
+import { savedOptionsOf } from "../lib/productKind"
 import { PricingFields } from "./PricingFields"
-import { BasicsCard, PricingCard, ProductFormImages, ProductFormShell, SpecsCard } from "./ProductFormParts"
-import { NewCombinationsCard, ProductOptionsCard } from "./ProductOptionsCard"
+import {
+  BasicsCard,
+  PricingCard,
+  ProductFormImages,
+  ProductFormShell,
+  SavedVariants,
+  SpecsCard,
+} from "./ProductFormParts"
 
 const schema = z
   .object({ ...baseShape, discount_price: moneySchema })
@@ -61,7 +63,8 @@ export function StockProductForm({
   const navigate = useNavigate()
   const formId = useId()
   const staged = useStagedImages()
-  const options = useOptionDrafts(product)
+  // Options and variants are managed on the product page; with options, each variant has its own price.
+  const hasOptions = savedOptionsOf(product).length > 0
 
   // Editing a product that already has variants: pricing lives on them, so a blank price is fine.
   const hasVariants = (product?.variants.length ?? 0) > 0
@@ -83,41 +86,28 @@ export function StockProductForm({
   }, [product, reset])
 
   const onSubmit = async (values: FormValues) => {
-    if (!optionsReady(options, isEditing)) return
     const payload = basePayload(values)
     try {
       if (product) {
         // With options the prices are per variant; without, only what was changed is sent.
-        if (!options.hadOptions) {
+        if (!hasOptions) {
           if (values.price && dirtyFields.price) payload.price = values.price
           if (values.cost_price && dirtyFields.cost_price) payload.cost_price = values.cost_price
           if (dirtyFields.discount_price) payload.discount_price = values.discount_price || null
         }
         payload.is_active = values.is_active
         await updateProduct(product.id, payload)
-        if (!(await saveOptionsIfChanged(product.id, options))) return
         toast.success(`${values.name} updated`)
         navigate(`/product_detail/${product.id}`)
         return
       }
-      const withOptions = options.active.length > 0
+      payload.is_active = values.is_active
       payload.price = values.price
       if (values.cost_price) payload.cost_price = values.cost_price
-      if (withOptions) Object.assign(payload, optionsCreatePayload(options))
-      else {
-        payload.discount_price = values.discount_price || null
-        if (values.sku) payload.sku = values.sku
-      }
+      payload.discount_price = values.discount_price || null
+      if (values.sku) payload.sku = values.sku
       const created = await createProduct(payload)
       const failed: string[] = []
-      if (withOptions && values.discount_price) {
-        try {
-          await bulkUpdateVariants(created.id, { discount_price: values.discount_price })
-        } catch (err) {
-          failed.push("the discount price")
-          toast.error(refusalMessage(err, "The discount price could not be set on the variants"))
-        }
-      }
       const failedImages = await uploadStagedImages(created.id, staged.images)
       if (failedImages) failed.push(`${failedImages} image${failedImages === 1 ? "" : "s"}`)
       if (failed.length) toast.warning(`${values.name} created, but ${failed.join(" and ")} could not be added`)
@@ -137,18 +127,16 @@ export function StockProductForm({
         formId={formId}
         onSubmit={handleSubmit(onSubmit)}
         submitting={isSubmitting}
+        after={product && <SavedVariants product={product} kind="stock" />}
       >
-        <BasicsCard kind="stock" isEditing={isEditing} categoryOptions={categoryOptions} />
-        <ProductOptionsCard state={options} kind="stock" />
+        <BasicsCard kind="stock" categoryOptions={categoryOptions} />
         <PricingCard
           isEditing={isEditing}
-          withOptions={options.enabled}
-          perVariant={options.hadOptions}
+          perVariant={hasOptions}
           simpleHint="Required. The price creates the product's first variant, so it can be stocked, sold and shown on the storefront."
         >
           <PricingFields register={register} errors={errors} />
         </PricingCard>
-        {!isEditing && <NewCombinationsCard state={options} />}
         <SpecsCard />
         <ProductFormImages product={product} staged={staged} />
       </ProductFormShell>

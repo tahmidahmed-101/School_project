@@ -102,6 +102,7 @@ def create_product(
     meta_keywords: str = "",
     brand=None,
     featured: bool = False,
+    is_active: bool = True,
     actor=None,
 ) -> Product:
     is_bundle = product_type == Product.ProductType.BUNDLE
@@ -123,6 +124,8 @@ def create_product(
         specs=_clean_specs(specs),
         meta_keywords=meta_keywords,
         slug=unique_slug_for(model=Product, text=name),
+        is_active=is_active,
+        created_by=actor,
     )
     product.save()
     if options:

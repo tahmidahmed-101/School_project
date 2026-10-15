@@ -22,7 +22,9 @@ export function VariantPicker({ product, selection, onSelect }: VariantPickerPro
           <span id={labelId} className="text-xs font-bold uppercase tracking-wider text-fg">
             {option.name}:{" "}
             <span className="font-normal text-gold-800">
-              {option.values.length === 1 ? option.values[0]?.value : picked?.value}
+              {option.values.length === 1
+                ? option.values[0]?.value
+                : (picked?.value ?? ui("optionChoose").replace("{option}", option.name))}
             </span>
           </span>
         );

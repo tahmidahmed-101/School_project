@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from django.db import transaction
+
 from apps.accounts.models import Notification
 from apps.accounts.services.notifications import notify
 from apps.business.selectors.business_profile import get_currency_symbol
-from apps.common.services.telegram import alert_staff
 from apps.orders.constants import PAYMENT_METHODS_BY_KEY
 from apps.orders.models import ReturnRMA, SalesOrder
 
@@ -22,12 +23,18 @@ def notify_return(rma: ReturnRMA, title: str) -> None:
 
 
 def alert_order_placed(order: SalesOrder, *, method: str) -> None:
-    """Tell staff on Telegram that an order was placed. Reads only what the
-    caller already loaded, so it adds no query to the checkout."""
-    contact = order.contact_phone or order.contact_email
-    alert_staff(
+    """Tell linked staff on Telegram that an order was placed. The message is
+    built from what the caller already loaded, and everything else waits for
+    the commit, so this adds no query to the checkout."""
+    text = (
         f"🛒 {order_label(order)} placed\n"
         f"Total: {get_currency_symbol()}{order.grand_total:,.2f}\n"
         f"Payment: {PAYMENT_METHODS_BY_KEY[method].label}"
-        + (f"\nContact: {contact}" if contact else "")
     )
+
+    def send() -> None:
+        from apps.orders.services.telegram_bot import send_order_alert
+
+        send_order_alert(order, text)
+
+    transaction.on_commit(send, robust=True)

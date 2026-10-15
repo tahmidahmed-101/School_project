@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ProductDetailView, relatedForProduct } from "@/modules/catalog";
+import { ProductDetailView, forListing, moreForProduct, relatedForProduct } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
 import { getCatalog, getProductBySlug, getRelatedProductsBySlug } from "@/modules/catalog/server";
@@ -13,6 +13,8 @@ interface ProductPageProps {
 }
 
 const RELATED_COUNT = 4;
+// Two pages of the "More products" rail.
+const MORE_COUNT = 12;
 
 // Known products are pre-rendered; a product added in the admin later is rendered on first request (dynamicParams
 // defaults to true) and an unknown slug still ends in a real 404 (notFound below).
@@ -50,6 +52,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
   }
 
   const relatedProducts = relatedForProduct(product, related, products, RELATED_COUNT);
+  const moreProducts = moreForProduct(product, relatedProducts, products, MORE_COUNT).map(forListing);
   const shop =
     product.kind === "preorder"
       ? { name: "Pre-order Collection", path: "/pre-order" }
@@ -65,7 +68,12 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
           { name: product.name.en, path: `/product/${product.slug}` },
         ])}
       />
-      <ProductDetailView key={product.id} product={product} relatedProducts={relatedProducts} />
+      <ProductDetailView
+        key={product.id}
+        product={product}
+        relatedProducts={relatedProducts}
+        moreProducts={moreProducts}
+      />
     </>
   );
 }

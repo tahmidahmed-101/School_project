@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCatalog, useProducts } from "../context";
 import { useLang } from "@/lib/i18n";
-import { shopHome } from "@/lib/product";
+import { shopHome, shopListing } from "@/lib/product";
 import {
   DEFAULT_FILTERS,
   filterAndSortProducts,
@@ -72,12 +72,16 @@ export function ShopCatalog() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const filteredProducts = useMemo(() => filterAndSortProducts(products, filters), [products, filters]);
+  const filteredProducts = useMemo(
+    () => filterAndSortProducts(products, filters, categories),
+    [products, filters, categories],
+  );
 
   const activeCategory = categories.find((c) => c.id === filters.category);
   const shopKind = filters.stockType === "preorder" ? "preorder" : "stock";
   const shopLabel = ui(shopKind === "preorder" ? "navPreOrder" : "navShop");
   const activeCategoryTitle = activeCategory ? t(activeCategory.name) : shopLabel;
+  const parentCategory = categories.find((c) => c.id === activeCategory?.parentId && c.type === activeCategory.type);
 
   return (
     <div className="min-h-screen w-full bg-ink-50/60">
@@ -88,7 +92,19 @@ export function ShopCatalog() {
               className="mb-4"
               items={
                 filters.category !== "all"
-                  ? [{ label: shopLabel, href: shopHome(shopKind) }, { label: activeCategoryTitle }]
+                  ? [
+                      { label: shopLabel, href: shopHome(shopKind) },
+                      // A subcategory shows the main category it sits under.
+                      ...(parentCategory
+                        ? [
+                            {
+                              label: t(parentCategory.name),
+                              href: shopListing(shopKind, { category: parentCategory.slug }),
+                            },
+                          ]
+                        : []),
+                      { label: activeCategoryTitle },
+                    ]
                   : [{ label: shopLabel }]
               }
             />

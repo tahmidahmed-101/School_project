@@ -1,7 +1,6 @@
 import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { fetchAllPages } from "@/lib/api/fetchAll"
-import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
 import type { Kind } from "@/hooks/use-kind"
 import type {
@@ -14,17 +13,17 @@ import type {
   CategoryPayload,
   Product,
   Combination,
-  OptionSuggestions,
   ProductImage,
   ProductOptionsPayload,
   ProductOptionsResult,
   ProductPayload,
   ProductVariant,
   ProductVariantPayload,
+  ShopOption,
+  ShopOptionPayload,
   VariantBulkUpdatePayload,
   VariantGeneratePayload,
   VariantGenerateResult,
-  VariantImportResult,
 } from "./types"
 
 /**
@@ -90,9 +89,12 @@ export const saveProductOptions = (productId: string, payload: ProductOptionsPay
   apiCall<ProductOptionsResult>(() => api.put(`${C}/products/${productId}/options/`, payload))
 export const listCombinations = (productId: string) =>
   apiCall<{ combinations: Combination[] }>(() => api.get(`${C}/products/${productId}/combinations/`))
-/** Option names used in the shop and, with `name`, the values used under it; most used first. */
-export const fetchOptionSuggestions = (name?: string) =>
-  apiCall<OptionSuggestions>(() => api.get(`${C}/option-suggestions/`, { params: name ? { name } : {} }))
+/** Every active attribute of the shop (all pages), for pickers. */
+export const fetchAllShopOptions = () => fetchAllPages<ShopOption>(`${C}/options/`, { is_active: true })
+export const createShopOption = (payload: ShopOptionPayload) =>
+  apiCall<ShopOption>(() => api.post(`${C}/options/`, payload))
+export const updateShopOption = (id: string, payload: ShopOptionPayload) =>
+  apiCall<ShopOption>(() => api.patch(`${C}/options/${id}/`, payload))
 
 // ---- variants ----
 /** Every variant of one product (all pages). */
@@ -107,30 +109,6 @@ export const generateVariants = (productId: string, payload: VariantGeneratePayl
   apiCall<VariantGenerateResult>(() => api.post(`${C}/products/${productId}/variants/generate/`, payload))
 export const bulkUpdateVariants = (productId: string, payload: VariantBulkUpdatePayload) =>
   apiCall<unknown>(() => api.post(`${C}/products/${productId}/variants/bulk-update/`, payload))
-
-/** GET /admin/catalog/variants/export/?file_format=csv|xlsx → triggers a browser download. */
-export async function downloadVariantsExport(
-  fileFormat: "csv" | "xlsx",
-  filters: { search?: string; product_id?: string; category_id?: string; category_type?: Kind } = {}
-) {
-  try {
-    const res = await api.get(`${C}/variants/export/`, {
-      params: { file_format: fileFormat, ...filters },
-      responseType: "blob",
-    })
-    saveBlob(res.data as Blob, `${filters.category_type === "preorder" ? "pre-order" : "stock"}-variants.${fileFormat}`)
-  } catch (err) {
-    throw extractApiError(await blobErrorToJson(err))
-  }
-}
-
-export async function importVariants(file: File, fileFormat: "csv" | "xlsx") {
-  const form = new FormData()
-  form.append("file", file)
-  return apiCall<VariantImportResult>(() =>
-    api.post(`${C}/variants/import/`, form, { params: { file_format: fileFormat } })
-  )
-}
 
 // ---- categories ----
 export const CATEGORIES_ENDPOINT = `${C}/categories/`

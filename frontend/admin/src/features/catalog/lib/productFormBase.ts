@@ -3,10 +3,8 @@ import { toast } from "sonner"
 
 import { moneySchema } from "@/lib/forms"
 
-import { saveProductOptions } from "../api"
 import type { Product, ProductPayload } from "../types"
-import { cleanOptionText, OPTION_REFUSALS, optionsBody, optionTextKey, refusalMessage } from "./options"
-import type { OptionDraftState } from "./useOptionDrafts"
+import { OPTION_REFUSALS, optionTextKey } from "./options"
 
 /** The fields the stock and the pre-order product form both have. */
 export const baseShape = {
@@ -92,42 +90,4 @@ export function reportedRefusal(err: unknown): boolean {
   if (typeof code !== "string" || !OPTION_REFUSALS[code]) return false
   toast.error(OPTION_REFUSALS[code])
   return true
-}
-
-/** False (after saying why) when the options on the form cannot be saved yet. */
-export function optionsReady(options: OptionDraftState, isEditing: boolean): boolean {
-  if (!options.check()) {
-    toast.error("Finish the Options section first.")
-    return false
-  }
-  if (!isEditing && options.enabled && options.ticked.length === 0) {
-    toast.error("Tick at least one variant to create.")
-    return false
-  }
-  return true
-}
-
-/** New product: its options and, unless every combination is ticked, the ones to create. */
-export function optionsCreatePayload(options: OptionDraftState): Pick<ProductPayload, "options" | "combinations"> {
-  if (options.active.length === 0) return {}
-  return {
-    options: options.active.map((o) => ({ name: cleanOptionText(o.name), values: o.values.map((v) => v.value) })),
-    ...(options.ticked.length < options.combinations.length ? { combinations: options.ticked } : {}),
-  }
-}
-
-/** Saved product: sends the option set when it changed. False (after saying why) when the server refuses it. */
-export async function saveOptionsIfChanged(productId: string, options: OptionDraftState): Promise<boolean> {
-  if (!options.changed) return true
-  try {
-    const res = await saveProductOptions(productId, optionsBody(options.active, options.needsDefault))
-    if (res.missing_combinations > 0) {
-      const n = res.missing_combinations
-      toast.info(`${n} combination${n === 1 ? " is" : "s are"} not created yet. Create them under Variants.`)
-    }
-    return true
-  } catch (err) {
-    toast.error(`The other changes were saved, but the options were not. ${refusalMessage(err, "Please try again.")}`)
-    return false
-  }
 }

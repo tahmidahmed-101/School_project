@@ -3,20 +3,6 @@
 
 export const MAX_OPTIONS = 3
 
-export interface OptionValueDraft {
-  id?: string
-  value: string
-}
-
-export interface OptionDraft {
-  key: string
-  id?: string
-  name: string
-  values: OptionValueDraft[]
-  /** The value the variants that already exist get when this option is new. */
-  default_value: string
-}
-
 export const cleanOptionText = (text: string) => text.trim().replace(/\s+/g, " ")
 
 export const optionTextKey = (text: string) => cleanOptionText(text).toLowerCase()
@@ -34,29 +20,6 @@ export function valueRefusal(existing: readonly string[], typed: string): string
   return clash ? `"${clash}" is already in this list.` : null
 }
 
-export function effectiveDefault(option: OptionDraft): string {
-  const picked = option.values.find((v) => optionTextKey(v.value) === optionTextKey(option.default_value))
-  if (picked) return picked.value
-  return option.values.length === 1 ? option.values[0].value : ""
-}
-
-/** By option key. `needsDefault`: the product has variants, so a new option must say which value they get. */
-export function optionProblems(options: readonly OptionDraft[], needsDefault: boolean): Record<string, string> {
-  const problems: Record<string, string> = {}
-  const seen = new Set<string>()
-  for (const option of options) {
-    const key = optionTextKey(option.name)
-    if (!key) problems[option.key] = "Give this option a name, like Size or Colour."
-    else if (seen.has(key)) problems[option.key] = `There is already an option called "${cleanOptionText(option.name)}".`
-    else if (option.values.length === 0) problems[option.key] = "Add at least one value."
-    else if (needsDefault && !option.id && !effectiveDefault(option)) {
-      problems[option.key] = "Choose the value your existing variants get."
-    }
-    if (key) seen.add(key)
-  }
-  return problems
-}
-
 /** Every combination of one value per option, in option order (the last option changes fastest). */
 export function buildCombinations(options: readonly (readonly string[])[]): string[][] {
   if (options.length === 0 || options.some((values) => values.length === 0)) return []
@@ -69,26 +32,6 @@ export function buildCombinations(options: readonly (readonly string[])[]): stri
 export const combinationKey = (values: readonly string[]) => values.map(optionTextKey).join("\u0001")
 
 export const combinationTitle = (values: readonly string[]) => values.join(" / ")
-
-export function optionsBody(options: readonly OptionDraft[], needsDefault: boolean) {
-  return {
-    options: options.map((option) => ({
-      ...(option.id ? { id: option.id } : {}),
-      name: cleanOptionText(option.name),
-      ...(needsDefault && !option.id ? { default_value: effectiveDefault(option) } : {}),
-      values: option.values.map((v) => ({ ...(v.id ? { id: v.id } : {}), value: v.value })),
-    })),
-  }
-}
-
-export function optionsChanged(
-  saved: readonly { id: string; name: string; values: readonly { id: string; value: string }[] }[],
-  drafts: readonly OptionDraft[]
-): boolean {
-  const shape = (rows: readonly { id?: string; name: string; values: readonly { id?: string; value: string }[] }[]) =>
-    JSON.stringify(rows.map((o) => [o.id ?? "", cleanOptionText(o.name), o.values.map((v) => [v.id ?? "", v.value])]))
-  return shape(saved) !== shape(drafts)
-}
 
 export const OPTION_REFUSALS: Record<string, string> = {
   option_limit_reached: "A product can have up to 3 options.",

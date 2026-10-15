@@ -23,6 +23,41 @@ export const fetchProductQuestions = (slug: string, page: number) =>
 export const questionPath = (productId: string) => `/questions/products/${productId}/`;
 /** POST { rating 1-5, comment? }: one review per product, only after a delivered order of it. */
 export const reviewPath = (productId: string) => `/reviews/products/${productId}/`;
+
+/** The backend's limits on a review's pictures (MAX_REVIEW_IMAGES, MAX_UPLOAD_SIZE). */
+export const MAX_REVIEW_PHOTOS = 5;
+export const MAX_REVIEW_PHOTO_BYTES = 10 * 1024 * 1024;
+
+export type PhotoRefusal = "tooMany" | "tooLarge" | "notImage";
+
+/**
+ * Which of the newly chosen files join a review that already has `current` photos, and why the rest were left
+ * out. A phone can hand over a HEIC with no MIME type, so a file with no type is let through for the backend,
+ * which decides by decoding it.
+ */
+export function acceptReviewPhotos(
+  current: number,
+  chosen: File[],
+): { accepted: File[]; refusal: PhotoRefusal | null } {
+  let refusal: PhotoRefusal | null = null;
+  const accepted: File[] = [];
+  for (const file of chosen) {
+    if (file.type && !file.type.startsWith("image/")) refusal ??= "notImage";
+    else if (file.size > MAX_REVIEW_PHOTO_BYTES) refusal ??= "tooLarge";
+    else if (current + accepted.length >= MAX_REVIEW_PHOTOS) refusal ??= "tooMany";
+    else accepted.push(file);
+  }
+  return { accepted, refusal };
+}
+
+/** The review as the multipart body the API takes when photos are attached. */
+export function reviewFormData(rating: number, comment: string, photos: File[]): FormData {
+  const form = new FormData();
+  form.append("rating", String(rating));
+  form.append("comment", comment);
+  for (const photo of photos) form.append("images", photo);
+  return form;
+}
 export const priceReportPath = (productId: string) => `/price-reports/products/${productId}/`;
 
 /**

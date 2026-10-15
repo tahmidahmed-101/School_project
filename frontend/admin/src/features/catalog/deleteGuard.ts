@@ -10,7 +10,20 @@ export function isBlockedByStock(err: unknown): boolean {
   return !!err && typeof err === "object" && (err as { code?: unknown }).code === PRODUCT_STOCK_IN_USE
 }
 
-/** Stock Levels filtered to this product, where the existing write-off dialog lives. */
-export function stockLevelsPath(productName: string): string {
-  return `/inventory?search=${encodeURIComponent(productName)}`
+export interface StockQuantities {
+  quantity_on_hand: number
+  quantity_reserved: number
+}
+
+/** A product's stock summed over its variants and warehouses. */
+export function stockTotals(rows: StockQuantities[]) {
+  const onHand = rows.reduce((sum, row) => sum + row.quantity_on_hand, 0)
+  const reserved = rows.reduce((sum, row) => sum + row.quantity_reserved, 0)
+  return { onHand, reserved, available: onHand - reserved }
+}
+
+/** The same rule the backend enforces: nothing on hand, nothing reserved, no active reservation. */
+export function isDeletable(rows: StockQuantities[], activeReservations: number): boolean {
+  const { onHand, reserved } = stockTotals(rows)
+  return onHand === 0 && reserved === 0 && activeReservations === 0
 }

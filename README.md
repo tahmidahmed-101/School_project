@@ -27,6 +27,22 @@ python -m venv .venv
 .\.venv\Scripts\pip install -e ".[dev]"
 ```
 
+### Telegram staff bot
+
+Optional. Linked staff get new-order and high-risk alerts in their private chat with the bot, and can use
+`/today`, `/pending`, `/order SO-XXXXXXXX` and the buttons under an alert (confirm, COD verified, cancel).
+
+1. Create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN` in `backend/.env`.
+2. Each staff member opens **Profile → Telegram** in the dashboard, gets a code and sends the bot `/start CODE`.
+3. Production: set `TELEGRAM_WEBHOOK_SECRET` to a long random string and register the webhook once:
+
+   ```bash
+   curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+     -d "url=https://<api-host>/api/v1/webhooks/telegram/" -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+   ```
+
+4. Local development (Telegram cannot reach localhost): run `manage.py telegram_poll` next to `runserver` instead.
+
 ## Frontend
 
 Node 20+. From `frontend/`:

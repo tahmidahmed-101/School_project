@@ -12,7 +12,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
 
-from apps.common.services.telegram import alert_staff
+from apps.accounts.constants import StaffPermissionCode
+from apps.accounts.services.telegram_links import alert_staff
 from apps.common.utils.codes import generate_document_number
 from apps.risk.models import FraudCase, RiskAssessment
 from apps.risk.services.blocklist import active_block
@@ -130,7 +131,8 @@ def assess_order_risk(*, order) -> RiskAssessment:
         )
         alert_staff(
             f"⚠️ High-risk order {order.order_number} (case {case_number})\n"
-            + "\n".join(f"• {reason}" for reason in risk_reasons)
+            + "\n".join(f"• {reason}" for reason in risk_reasons),
+            permissions=(StaffPermissionCode.ORDERS_VIEW, StaffPermissionCode.ORDERS_MANAGE),
         )
 
     return assessment

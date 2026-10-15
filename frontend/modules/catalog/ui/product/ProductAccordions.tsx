@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { FileText, Flag, ListChecks, MessageCircleQuestion, Share2, Star, Truck } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { ACCORDION_BODY, AccordionItem } from "@/design-system/ui/AccordionItem";
@@ -29,6 +30,8 @@ const ShippingReturns = dynamic(() => import("./ShippingReturns").then((m) => m.
   loading: PanelLoading,
 });
 
+const ICON = "h-4.5 w-4.5";
+
 interface ProductAccordionsProps {
   product: Product;
   /** The SKU currently selected in the picker and the price shown for it, for the price report. */
@@ -53,7 +56,7 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
     <>
       <div className="mt-8 divide-y divide-ink-100 border-b border-t border-ink-200 sm:mt-12">
         {(description || hasHighlights) && (
-          <AccordionItem title={ui("description")} defaultOpen>
+          <AccordionItem icon={<FileText className={ICON} />} title={ui("description")} defaultOpen>
             <div className={`space-y-3 ${ACCORDION_BODY}`}>
               {description && <p>{description}</p>}
               {product.highlights && product.highlights.length > 0 && (
@@ -71,8 +74,8 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
         )}
 
         {hasSpecs && (
-          <AccordionItem title={ui("specifications")}>
-            <ul className="list-disc space-y-1.5 pb-3 pl-4 pt-3 text-xs leading-relaxed text-fg-muted">
+          <AccordionItem icon={<ListChecks className={ICON} />} title={ui("specifications")}>
+            <ul className="list-disc space-y-1.5 pb-3 pl-4 pt-3 text-sm leading-relaxed text-fg-muted">
               {product.specs?.map((spec, i) => (
                 <li key={i}>
                   <strong className="text-ink-800">{t(spec.label)}:</strong> {t(spec.value)}
@@ -82,19 +85,19 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
           </AccordionItem>
         )}
 
-        <AccordionItem title={reviewsTitle}>
+        <AccordionItem icon={<Star className={ICON} />} title={reviewsTitle}>
           <ProductReviews slug={product.slug} productId={product.id} />
         </AccordionItem>
 
-        <AccordionItem title={ui("questionsTitle")}>
+        <AccordionItem icon={<MessageCircleQuestion className={ICON} />} title={ui("questionsTitle")}>
           <ProductQuestions slug={product.slug} productId={product.id} />
         </AccordionItem>
 
-        <AccordionItem title={ui("shippingReturnsTitle")}>
+        <AccordionItem icon={<Truck className={ICON} />} title={ui("shippingReturnsTitle")}>
           <ShippingReturns />
         </AccordionItem>
 
-        <AccordionItem title={ui("priceReportTitle")}>
+        <AccordionItem icon={<Flag className={ICON} />} title={ui("priceReportTitle")}>
           <PriceReportForm
             slug={product.slug}
             productId={product.id}
@@ -103,7 +106,7 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
           />
         </AccordionItem>
 
-        <AccordionItem title={ui("shareTitle")}>
+        <AccordionItem icon={<Share2 className={ICON} />} title={ui("shareTitle")}>
           <ProductShare slug={product.slug} name={t(product.name)} />
         </AccordionItem>
       </div>

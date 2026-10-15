@@ -26,11 +26,18 @@ class AdminProductReviewSerializer(serializers.Serializer):
     customer_name = serializers.SerializerMethodField()
     rating = serializers.IntegerField(read_only=True)
     comment = serializers.CharField(read_only=True, allow_blank=True)
+    images = serializers.SerializerMethodField()
     is_verified_purchase = serializers.BooleanField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_customer_name(self, obj) -> str:
         return user_label(obj.customer, "Customer")
+
+    def get_images(self, obj) -> list[str]:
+        # `.all()` reads the list `reviews_list` prefetches.
+        request = self.context.get("request")
+        urls = [item.image.url for item in obj.images.all()]
+        return [request.build_absolute_uri(url) for url in urls] if request else urls
 
 
 @extend_schema(tags=["Catalog"])

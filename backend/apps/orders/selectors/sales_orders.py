@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from uuid import UUID
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q, QuerySet, Sum
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet, Sum
+from django.utils import timezone
 
 from apps.common.utils.codes import hash_code
 from apps.common.utils.dates import day_after, day_start
 from apps.common.utils.money import ZERO, quantize
+from apps.common.utils.phone import local_bd_mobile
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.shipments import with_delivered_quantity
 
@@ -222,3 +224,90 @@ def get_order_for_document(order_id: str | UUID) -> SalesOrder | None:
         .filter(id=order_id, deleted_at__isnull=True)
         .first()
     )
+
+
+def get_order_by_number(order_number: str) -> SalesOrder | None:
+    """A placed order by its number, with its lines and payments loaded."""
+    return (
+        _placed_orders()
+        .prefetch_related("lines", "payments")
+        .filter(order_number=order_number)
+        .first()
+    )
+
+
+def orders_today_summary() -> dict:
+    """Counts for the staff daily summary, in one query. "New today" counts
+    placed orders by the day their cart was opened: an order has no separate
+    placed-at time."""
+    return _placed_orders().aggregate(
+        new_today=Count("id", filter=Q(created_at__gte=day_start(timezone.localdate()))),
+        awaiting_payment=Count("id", filter=Q(status=SalesOrder.Status.AWAITING_PAYMENT)),
+        awaiting_shipment=Count("id", filter=Q(status=SalesOrder.Status.CONFIRMED)),
+    )
+
+
+def orders_awaiting_payment() -> QuerySet[SalesOrder]:
+    """Placed orders still waiting for their payment, oldest first, with the
+    payments loaded so a list reads the method without a query per order."""
+    return (
+        _placed_orders()
+        .filter(status=SalesOrder.Status.AWAITING_PAYMENT)
+        .prefetch_related("payments")
+        .order_by("created_at")
+    )
+
+
+# Two open orders to the same phone with the same items inside this window are
+# flagged as a possible double submission. A warning only: nothing is blocked.
+DUPLICATE_ORDER_WINDOW = timedelta(hours=24)
+DUPLICATE_ORDER_STATUSES = (SalesOrder.Status.AWAITING_PAYMENT, SalesOrder.Status.CONFIRMED)
+
+
+def _order_phone(order: SalesOrder) -> str:
+    if order.contact_phone:
+        return order.contact_phone
+    return order.shipping_address.phone if order.shipping_address_id else ""
+
+
+def _line_quantities(order: SalesOrder) -> dict:
+    quantities: dict = {}
+    for line in order.lines.all():
+        quantities[line.variant_id] = quantities.get(line.variant_id, 0) + line.quantity
+    return quantities
+
+
+def possible_duplicate_orders(order: SalesOrder) -> list[SalesOrder]:
+    """Other open orders that look like the same purchase submitted twice:
+    same recipient phone, identical variants and quantities, placed within
+    `DUPLICATE_ORDER_WINDOW` of this one. Two queries however many match."""
+    phone = local_bd_mobile(_order_phone(order))
+    if not phone:
+        return []
+    # The same number is stored as typed: 01XXXXXXXXX, 8801XXXXXXXXX or +8801XXXXXXXXX.
+    spellings = {phone, f"88{phone}", f"+88{phone}"}
+    candidates = (
+        _placed_orders()
+        .filter(
+            Q(contact_phone__in=spellings)
+            | Q(contact_phone="", shipping_address__phone__in=spellings),
+            status__in=DUPLICATE_ORDER_STATUSES,
+            created_at__gte=order.created_at - DUPLICATE_ORDER_WINDOW,
+            created_at__lte=order.created_at + DUPLICATE_ORDER_WINDOW,
+        )
+        .exclude(pk=order.pk)
+        .prefetch_related("lines")
+    )
+    wanted = _line_quantities(order)
+    return [other for other in candidates if _line_quantities(other) == wanted]
+
+
+def units_sold_by_product(product_ids: list) -> dict:
+    """Units ordered of each product, less returns. Carts and cancelled orders do not count."""
+    rows = (
+        SalesOrderLine.objects.filter(variant__product_id__in=product_ids)
+        .exclude(order__status__in=[SalesOrder.Status.PENDING, SalesOrder.Status.CANCELLED])
+        .values("variant__product_id")
+        .annotate(sold=Sum(F("quantity") - F("returned_quantity")))
+    )
+    return {row["variant__product_id"]: row["sold"] or 0 for row in rows}

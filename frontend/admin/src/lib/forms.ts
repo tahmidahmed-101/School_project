@@ -2,6 +2,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import type { FieldPath, FieldValues, UseFormSetError } from "react-hook-form"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { AMOUNT_PATTERN } from "@/lib/money"
 
 /**
  * Reports a failed save: maps the backend's field errors onto the form (only for fields the
@@ -32,4 +33,4 @@ export function reportFormError<T extends FieldValues>(
 export const moneySchema = z
   .string()
   .trim()
-  .refine((v) => v === "" || /^\d+(\.\d{1,2})?$/.test(v), "Enter a valid amount (max 2 decimals)")
+  .refine((v) => v === "" || AMOUNT_PATTERN.test(v), "Enter a valid amount (max 2 decimals)")

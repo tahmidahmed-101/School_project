@@ -11,6 +11,7 @@ def reviews_for_product(product: Product) -> QuerySet[ProductReview]:
     return (
         ProductReview.objects.filter(product=product)
         .select_related("customer")
+        .prefetch_related("images")
         .order_by("-created_at")
     )
 
@@ -19,7 +20,9 @@ def reviews_list(
     *, product=None, rating: int | None = None, kind: str | None = None
 ) -> QuerySet[ProductReview]:
     """Every review, for the admin moderation list."""
-    queryset = ProductReview.objects.select_related("customer", "product")
+    queryset = ProductReview.objects.select_related("customer", "product").prefetch_related(
+        "images"
+    )
     if product is not None:
         queryset = queryset.filter(product=product)
     if rating is not None:
@@ -38,12 +41,30 @@ def get_review_by_id(review_id: str | UUID) -> ProductReview | None:
 
 
 def product_review_summary(product: Product) -> dict:
-    result = ProductReview.objects.filter(product=product).aggregate(
-        average_rating=Avg("rating"), review_count=Count("id")
-    )
+    reviews = ProductReview.objects.filter(product=product)
+    result = reviews.aggregate(average_rating=Avg("rating"), review_count=Count("id"))
+    # Reviews per star, every star present: {"5": 3, "4": 0, ...}.
+    counts = dict(reviews.values_list("rating").annotate(total=Count("id")))
     return {
         "average_rating": (
             round(result["average_rating"], 2) if result["average_rating"] is not None else None
         ),
         "review_count": result["review_count"] or 0,
+        "rating_counts": {str(star): counts.get(star, 0) for star in range(5, 0, -1)},
+    }
+
+
+def rating_summaries_for_products(product_ids: list) -> dict[UUID, dict]:
+    """Average rating and review count of each product that has a review."""
+    rows = (
+        ProductReview.objects.filter(product_id__in=product_ids)
+        .values("product_id")
+        .annotate(average_rating=Avg("rating"), review_count=Count("id"))
+    )
+    return {
+        row["product_id"]: {
+            "average_rating": round(row["average_rating"], 2),
+            "review_count": row["review_count"],
+        }
+        for row in rows
     }

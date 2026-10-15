@@ -123,10 +123,12 @@ function toBadge(badge: string): T | undefined {
   return plain(label);
 }
 
-export function toCategoryInfo(category: ApiCategory): CategoryInfo {
+export function toCategoryInfo(category: ApiCategory, all: ApiCategory[] = []): CategoryInfo {
+  const parent = category.parent_id ? all.find((c) => c.id === category.parent_id) : undefined;
   return {
     id: category.slug,
     apiId: category.id,
+    ...(parent && { parentId: parent.slug }),
     slug: category.slug,
     name: plain(category.name),
     // The API has no category description.

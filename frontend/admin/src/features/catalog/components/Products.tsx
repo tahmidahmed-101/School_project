@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
-import { Boxes, Package, PlusIcon } from "lucide-react"
+import { Boxes, Package, PlusIcon, SlidersHorizontal, Star, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -10,25 +9,29 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Combobox } from "@/components/common/ComboBox"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { ActiveStatusBadge, ProductCell } from "@/components/common/cells"
+import { SaveSwitch } from "@/components/common/SaveSwitch"
+import { ProductCell } from "@/components/common/cells"
 import { SortSelect } from "@/components/common/SortSelect"
 import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
+import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
 import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
+import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
+import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
-import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
+import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct, updateProduct } from "../api"
 import { productTypeOptions, type Product, type ProductPayload } from "../types"
+import { variantCount } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { isBlockedByStock, stockLevelsPath } from "../deleteGuard"
+import { StockDeleteDialog } from "./StockDeleteDialog"
 
 const statusOptions: Option[] = [
   { label: "Active", value: "true" },
@@ -44,24 +47,6 @@ const orderingOptions: Option[] = [
 
 const preorderTypeOptions = productTypeOptions.filter((o) => o.value !== "bundle")
 
-const noPrice = <span className="text-sm text-muted-foreground">No price</span>
-
-const stockPriceColumn: ColumnDef<Product> = {
-  id: "price",
-  header: "PRICE",
-  cell: ({ row }) =>
-    row.original.price === null ? (
-      noPrice
-    ) : (
-      <div className="flex flex-col text-sm">
-        <span className="font-semibold">{formatCurrency(row.original.discount_price ?? row.original.price)}</span>
-        {row.original.discount_price && (
-          <span className="text-xs text-muted-foreground line-through">{formatCurrency(row.original.price)}</span>
-        )}
-      </div>
-    ),
-}
-
 const stockColumn: ColumnDef<Product> = {
   accessorKey: "total_stock",
   header: "STOCK",
@@ -70,17 +55,6 @@ const stockColumn: ColumnDef<Product> = {
       {row.original.total_stock ?? 0}
     </span>
   ),
-}
-
-const preorderPriceColumn: ColumnDef<Product> = {
-  id: "price",
-  header: "PRICE",
-  cell: ({ row }) =>
-    row.original.price === null ? (
-      noPrice
-    ) : (
-      <span className="text-sm font-semibold">{formatCurrency(row.original.price)}</span>
-    ),
 }
 
 const orderingColumn: ColumnDef<Product> = {
@@ -98,6 +72,42 @@ const orderingColumn: ColumnDef<Product> = {
   },
 }
 
+const addedByColumn: ColumnDef<Product> = {
+  id: "added_by",
+  header: "ADDED BY",
+  cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.added_by ?? "—"}</span>,
+}
+
+const infoColumn: ColumnDef<Product> = {
+  id: "info",
+  header: "INFO",
+  cell: ({ row }) => {
+    const { units_sold, price, average_rating, review_count } = row.original
+    return (
+      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+        <span>
+          Sales: <span className="font-medium text-foreground">{units_sold}</span>
+        </span>
+        <span>
+          Base price: <span className="font-medium text-foreground">{price === null ? "—" : formatCurrency(price)}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          Rating:
+          {average_rating === null ? (
+            <span>No reviews</span>
+          ) : (
+            <>
+              <Star className="size-3 fill-amber-400 text-amber-400" />
+              <span className="font-medium text-foreground">{average_rating.toFixed(1)}</span>
+              <span>({review_count})</span>
+            </>
+          )}
+        </span>
+      </div>
+    )
+  },
+}
+
 const Products = ({ kind }: { kind: Kind }) => {
   const isStock = kind === "stock"
   const title = kind === "preorder" ? "Pre-order products" : "Products"
@@ -105,6 +115,13 @@ const Products = ({ kind }: { kind: Kind }) => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
+  const canAdjust = useCan("inventory.adjust", "inventory.manage")
+  const { warehouses } = useWarehouses(kind)
+  const [deleting, setDeleting] = useState<Product | null>(null)
+  const [adjusting, setAdjusting] = useState<Product | null>(null)
+  // Kept mounted, still showing its product, while the delete dialog animates shut.
+  const deleteTarget = useLastValue(deleting)
+  const deleteMounted = useDelayedUnmount(deleting !== null)
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
   const { options: categoryOptions, nameById } = useCategoryOptions(kind)
@@ -161,22 +178,11 @@ const Products = ({ kind }: { kind: Kind }) => {
   })
 
 
-  const handleDelete = async (product: Product) => {
-    try {
-      await dispatch(deleteData(product.id)).unwrap()
-      toast.success(`${product.name} deleted`)
-    } catch (err) {
-      if (isStock && isBlockedByStock(err)) {
-        // Stock has to be cleared through the existing write-off flow first.
-        toast.error(getApiErrorMessage(err, "This product still has stock"), {
-          duration: 15000,
-          action: { label: "Open stock levels", onClick: () => navigate(stockLevelsPath(product.name)) },
-        })
-        return
-      }
-      toast.error(getApiErrorMessage(err, "Failed to delete product"))
-    }
-  }
+  // A one-variant product needs no picking; otherwise the picker lists this product's variants.
+  const adjustVariant = useMemo(() => {
+    const only = adjusting?.variants.length === 1 ? adjusting.variants[0] : null
+    return only ? { id: only.id, sku: only.sku, product_name: adjusting!.name } : null
+  }, [adjusting])
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -200,13 +206,13 @@ const Products = ({ kind }: { kind: Kind }) => {
     {
       accessorKey: "name",
       header: "PRODUCT",
-      cell: ({ row }) => (
-        <ProductCell
-          name={row.original.name}
-          sub={`${row.original.variants.length} variant${row.original.variants.length === 1 ? "" : "s"}`}
-        />
-      ),
+      cell: ({ row }) => {
+        const count = variantCount(row.original)
+        return <ProductCell name={row.original.name} sub={count === 0 ? "No variants" : `${count} variant${count === 1 ? "" : "s"}`} />
+      },
     },
+    addedByColumn,
+    infoColumn,
     {
       id: "category",
       header: "CATEGORY",
@@ -214,12 +220,35 @@ const Products = ({ kind }: { kind: Kind }) => {
         <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-    isStock ? stockPriceColumn : preorderPriceColumn,
     isStock ? stockColumn : orderingColumn,
     {
-      id: "status",
-      header: "STATUS",
-      cell: ({ row }) => <ActiveStatusBadge deleted={row.original.deleted_at} active={row.original.is_active} />,
+      id: "published",
+      header: "PUBLISHED",
+      cell: ({ row }) => (
+        <SaveSwitch
+          // Remounted when the list brings a new value, e.g. after a bulk activate.
+          key={`${row.original.id}-${row.original.is_active}`}
+          label={`Published: ${row.original.name}`}
+          checked={row.original.is_active}
+          disabled={!canManage}
+          save={(next) => updateProduct(row.original.id, { is_active: next })}
+          failure={`Failed to update ${row.original.name}`}
+        />
+      ),
+    },
+    {
+      id: "featured",
+      header: "FEATURED",
+      cell: ({ row }) => (
+        <SaveSwitch
+          key={`${row.original.id}-${row.original.featured}`}
+          label={`Featured: ${row.original.name}`}
+          checked={row.original.featured}
+          disabled={!canManage}
+          save={(next) => updateProduct(row.original.id, { featured: next })}
+          failure={`Failed to update ${row.original.name}`}
+        />
+      ),
     },
     {
       id: "actions",
@@ -231,7 +260,16 @@ const Products = ({ kind }: { kind: Kind }) => {
             itemName={product.name}
             viewUrl={withKind(`/product_detail/${product.id}`, kind)}
             editUrl={canManage && product.product_type !== "bundle" ? withKind(`/product_form/${product.id}`, kind) : undefined}
-            onDelete={canManage ? () => handleDelete(product) : undefined}
+            actions={[
+              // A bundle holds no stock of its own; its components are adjusted instead.
+              ...(canAdjust && product.product_type !== "bundle"
+                ? [{ label: "Adjust", icon: SlidersHorizontal, onSelect: () => setAdjusting(product) }]
+                : []),
+              // The delete dialog does its own confirming, so it is not TableActions' onDelete.
+              ...(canManage
+                ? [{ label: "Delete", icon: Trash2Icon, destructive: true, onSelect: () => setDeleting(product) }]
+                : []),
+            ]}
           />
         )
       },
@@ -242,9 +280,11 @@ const Products = ({ kind }: { kind: Kind }) => {
     "70px",
     "240px",
     "150px",
-    "140px",
+    "180px",
+    "150px",
     isStock ? "80px" : "140px",
     "110px",
+    "100px",
     "80px",
   ]
 
@@ -347,8 +387,31 @@ const Products = ({ kind }: { kind: Kind }) => {
         emptyIcon={Package}
         emptyTitle="No products found"
         emptyDescription="Try a different search or filter, or add a new product."
-        minWidth="1000px"
+        minWidth="1300px"
         columnWidths={widths}
+      />
+
+      {deleteMounted && deleteTarget && (
+        <StockDeleteDialog
+          key={deleteTarget.id}
+          open={deleting !== null}
+          name={deleteTarget.name}
+          scope={{ product_id: deleteTarget.id }}
+          kind={kind}
+          remove={() => dispatch(deleteData(deleteTarget.id)).unwrap()}
+          onDeleted={() => undefined}
+          onClose={() => setDeleting(null)}
+          onStockChanged={list.reload}
+        />
+      )}
+      <StockMovementDialog
+        mode={adjusting ? "adjust" : null}
+        onOpenChange={(open) => !open && setAdjusting(null)}
+        warehouses={warehouses}
+        variant={adjustVariant}
+        kind={kind}
+        productId={adjusting?.id}
+        onDone={list.reload}
       />
     </div>
   )

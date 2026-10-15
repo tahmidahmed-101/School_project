@@ -33,7 +33,7 @@ export function ShippingReturns() {
 
   if (policies === null) {
     return (
-      <div role="status" className="flex items-center gap-2 pb-3 pt-3 text-xs text-fg-muted">
+      <div role="status" className="flex items-center gap-2 pb-3 pt-3 text-sm text-fg-muted">
         <Loader variant="inline" />
         <span>{ui("loading")}</span>
       </div>

@@ -52,10 +52,10 @@ export const navSections: NavSection[] = [
     group: "STOCK",
     items: [
       { title: "Products", url: "/products", permission: CATALOG },
-      { title: "Variants", url: "/variants", permission: CATALOG },
       { title: "Bundles", url: "/bundles", permission: CATALOG },
       { title: "Categories", url: "/categories", permission: CATALOG },
       { title: "Brands", url: "/brands", permission: CATALOG },
+      { title: "Attributes", url: "/attributes", permission: CATALOG },
     ],
   },
   {
@@ -148,6 +148,7 @@ export const navSections: NavSection[] = [
       { title: "Products", url: "/preorder_products", permission: CATALOG },
       { title: "Categories", url: "/preorder_categories", permission: CATALOG },
       { title: "Brands", url: "/preorder_brands", permission: CATALOG },
+      { title: "Attributes", url: "/preorder_attributes", permission: CATALOG },
     ],
   },
   {

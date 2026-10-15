@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from itertools import product as cartesian_product
 
-from django.db.models import Count, Min, Prefetch
+from django.db.models import Count, Min, Prefetch, QuerySet
 from django.db.models.functions import Lower
 
 from apps.catalog.models import Product, ProductOption, ProductOptionValue, ProductVariant
@@ -177,7 +177,8 @@ def product_specs(product: Product) -> list[dict]:
 
 
 def option_suggestions(*, name: str = "") -> dict:
-    """Names and values already used in the shop, most used first."""
+    """The shop options first, then names and values already used on products,
+    most used first."""
 
     def ranked(queryset, field: str) -> list[str]:
         rows = (
@@ -187,14 +188,44 @@ def option_suggestions(*, name: str = "") -> dict:
         )
         return [row["label"] for row in rows]
 
-    live = ProductOption.objects.filter(product__deleted_at__isnull=True)
+    def shop_first(shop: list[str], used: list[str]) -> list[str]:
+        seen = {label_key(label) for label in shop}
+        return [*shop, *(label for label in used if label_key(label) not in seen)]
+
+    live = ProductOption.objects.filter(product__isnull=False, product__deleted_at__isnull=True)
     values: list[str] = []
     name = normalise_label(name)
     if name:
-        values = ranked(
-            ProductOptionValue.objects.filter(
-                option__name__iexact=name, option__product__deleted_at__isnull=True
+        values = shop_first(
+            # A shop option's values keep the order they were typed in.
+            list(
+                ProductOptionValue.objects.filter(
+                    option__product__isnull=True, option__is_active=True, option__name__iexact=name
+                ).values_list("value", flat=True)
             ),
-            "value",
+            ranked(
+                ProductOptionValue.objects.filter(
+                    option__name__iexact=name,
+                    option__product__isnull=False,
+                    option__product__deleted_at__isnull=True,
+                ),
+                "value",
+            ),
         )
-    return {"names": ranked(live, "name"), "values": values}
+    names = shop_first(
+        list(shop_options(is_active=True).order_by("name").values_list("name", flat=True)),
+        ranked(live, "name"),
+    )
+    return {"names": names, "values": values}
+
+
+def shop_options(*, is_active: bool | None = None) -> QuerySet[ProductOption]:
+    """The options of the Attributes page: the ones no product owns."""
+    queryset = ProductOption.objects.filter(product__isnull=True).prefetch_related("values")
+    if is_active is not None:
+        queryset = queryset.filter(is_active=is_active)
+    return queryset
+
+
+def get_shop_option(option_id) -> ProductOption | None:
+    return shop_options().filter(id=option_id).first()

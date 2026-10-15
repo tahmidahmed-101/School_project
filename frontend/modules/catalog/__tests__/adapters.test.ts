@@ -36,6 +36,14 @@ describe("toCategoryInfo", () => {
     expect(info.itemCount).toBe(0);
     expect(info.image).toBe("brand/category-placeholder.png");
   });
+
+  it("names the parent of a subcategory by its slug", () => {
+    const child = { ...category, id: "c2", slug: "polos", parent_id: "c1", product_count: 0, image: null };
+    const all = [{ ...category, product_count: 0, image: null }, child];
+
+    expect(toCategoryInfo(child, all).parentId).toBe("shirts");
+    expect(toCategoryInfo(all[0]!, all).parentId).toBeUndefined();
+  });
 });
 
 describe("toProduct pre-order state", () => {

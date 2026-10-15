@@ -5,7 +5,7 @@ import { Boxes, Edit, Package, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge } from "@/components/common/cells"
@@ -20,9 +20,9 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
-import { productKind, productListPath } from "../lib/productKind"
+import { productKind, productListPath, variantCount } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
-import { savedOptionsOf } from "../lib/useOptionDrafts"
+import { savedOptionsOf } from "../lib/productKind"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
 
@@ -42,7 +42,6 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
-  const canViewInventory = useCan("inventory.view", "inventory.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
   const { nameById, categories, isLoading: categoriesLoading } = useCategoryOptions()
@@ -139,14 +138,20 @@ const ProductDetail = () => {
         }
       />
 
-      {/* Photo on the left; on the right a details table (title | value per row) that also holds the
-          description. On desktop the photo takes a third of the row and stretches to the table's
-          height, so both boxes are the same height. */}
+      {/* Photo on the left; on the right a details table (title | value per row). On desktop the photo takes a
+          third of the row and takes the table's height, so both boxes are the same height. The
+          description has its own full-width card below: inside the table, a long one stretched the photo. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <Card className="overflow-hidden p-0">
-          <div className="flex mx-auto aspect-square w-full max-w-64 items-center justify-center overflow-hidden bg-muted lg:aspect-auto lg:max-w-none lg:h-full lg:min-h-80">
+          <div className="relative flex mx-auto aspect-square w-full max-w-64 items-center justify-center overflow-hidden bg-muted lg:aspect-auto lg:max-w-none lg:h-full lg:min-h-80">
             {product.primary_image ? (
-              <img src={product.primary_image} alt={product.name} className="size-full object-cover" />
+              <img
+                src={product.primary_image}
+                alt={product.name}
+                // Out of the flow on desktop, so the row is as tall as the details table and the photo fills it;
+                // in the flow, a wide column made the square photo the taller of the two.
+                className="size-full object-cover lg:absolute lg:inset-0"
+              />
             ) : (
               <Package className="size-16 text-muted-foreground/40" />
             )}
@@ -197,11 +202,8 @@ const ProductDetail = () => {
                 <Row label="Pre-order limit">{settings?.preorder_stock_limit ?? "Unlimited"}</Row>
               </>
             )}
-            <Row label="Variants">{product.variants.length}</Row>
+            <Row label="Variants">{variantCount(product)}</Row>
             {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
-            <Row label="Description">
-              <p className="whitespace-pre-line">{product.description || "No description."}</p>
-            </Row>
             {product.highlights.length > 0 && (
               <Row label="Highlights">
                 <ul className="list-disc space-y-1 pl-5">
@@ -226,6 +228,15 @@ const ProductDetail = () => {
           </dl>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="whitespace-pre-line break-words text-sm">{product.description || "No description."}</p>
+        </CardContent>
+      </Card>
 
       {!product.deleted_at && (
         <>
@@ -252,7 +263,6 @@ const ProductDetail = () => {
               product={product}
               kind={kind}
               canManage={canManage}
-              canViewInventory={canViewInventory}
               onChanged={refresh}
             />
           )}

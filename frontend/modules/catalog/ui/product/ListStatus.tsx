@@ -14,11 +14,11 @@ interface ListStatusProps {
 /** Footer of an accordion list: spinner while a page loads, retry after a failure, otherwise "Show more". */
 export function ListStatus({ loading, failed, hasMore, onLoadMore, onRetry }: ListStatusProps) {
   const { ui } = useLang();
-  const linkClass = "cursor-pointer text-xs font-bold text-gold-800 hover:text-gold-900 hover:underline";
+  const linkClass = "cursor-pointer text-sm font-bold text-gold-800 hover:text-gold-900 hover:underline";
 
   if (loading) {
     return (
-      <div role="status" className="flex items-center gap-2 text-xs text-fg-muted">
+      <div role="status" className="flex items-center gap-2 text-sm text-fg-muted">
         <Loader variant="inline" />
         <span>{ui("loading")}</span>
       </div>
@@ -26,7 +26,7 @@ export function ListStatus({ loading, failed, hasMore, onLoadMore, onRetry }: Li
   }
   if (failed) {
     return (
-      <p className="text-xs text-fg-muted">
+      <p className="text-sm text-fg-muted">
         {ui("loadFailed")}{" "}
         <button type="button" onClick={onRetry} className={linkClass}>
           {ui("tryAgain")}
@@ -48,7 +48,7 @@ export function ListStatus({ loading, failed, hasMore, onLoadMore, onRetry }: Li
 export function PanelLoading() {
   const { ui } = useLang();
   return (
-    <div role="status" className="flex items-center gap-2 pb-3 pt-3 text-xs text-fg-muted">
+    <div role="status" className="flex items-center gap-2 pb-3 pt-3 text-sm text-fg-muted">
       <Loader variant="inline" />
       <span>{ui("loading")}</span>
     </div>

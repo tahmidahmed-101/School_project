@@ -12,6 +12,12 @@ export function relatedForProduct(
   return candidates.filter((p) => p.id !== product.id && productKind(p) === productKind(product)).slice(0, count);
 }
 
+/** The product page's "More products" rail: others from the same shop that "You may also like" doesn't show. */
+export function moreForProduct(product: Product, related: Product[], catalog: Product[], count: number): Product[] {
+  const shown = new Set([product.id, ...related.map((p) => p.id)]);
+  return catalog.filter((p) => !shown.has(p.id) && productKind(p) === productKind(product)).slice(0, count);
+}
+
 /**
  * A product as cards, filters and search need it. Listing pages send every product to the browser, so the parts
  * only the product page reads (extra photos, specs, highlights, the second copy of the description) are left out.

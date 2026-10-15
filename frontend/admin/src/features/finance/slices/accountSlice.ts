@@ -3,7 +3,7 @@ import type { Account } from "../types"
 
 const ENDPOINT = "/admin/accounting/accounts/"
 
-const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = createSliceFactory<Account>({
+const { reducer, fetchAll, postData, patchData, deleteData } = createSliceFactory<Account>({
   name: "ledgerAccounts",
   endpoint: ENDPOINT,
   initialSingleData: null,
@@ -11,7 +11,7 @@ const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = crea
 
 export const restoreAccount = createActionThunk<Account>("ledgerAccounts/restore", ENDPOINT, "restore")
 
-export { fetchAll, fetchSingle, postData, patchData, deleteData }
+export { fetchAll, postData, patchData, deleteData }
 
 export default withExtraCases(reducer, (builder) => {
   replaceOnFulfilled(builder, restoreAccount)

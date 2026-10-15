@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { TableActions } from "@/components/common/TableActions"
-import { DateCell, LinkCell } from "@/components/common/cells"
+import { DateCell, LinkCell, Thumbnail } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -86,12 +86,25 @@ const Reviews = ({ kind }: { kind: Kind }) => {
       id: "comment",
       header: "REVIEW",
       // Reviews are read in full here, so the text wraps instead of being cut off.
-      cell: ({ row }) =>
-        row.original.comment ? (
-          <p className="whitespace-normal break-words text-sm">{row.original.comment}</p>
-        ) : (
-          <span className="text-sm text-muted-foreground">No comment</span>
-        ),
+      cell: ({ row }) => (
+        <div className="space-y-1.5">
+          {row.original.comment ? (
+            <p className="whitespace-normal break-words text-sm">{row.original.comment}</p>
+          ) : (
+            <span className="text-sm text-muted-foreground">No comment</span>
+          )}
+          {row.original.images.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {row.original.images.map((url, index) => (
+                // Opens full size: a thumbnail is too small to moderate from.
+                <a key={url} href={url} target="_blank" rel="noreferrer" aria-label={`Open picture ${index + 1}`}>
+                  <Thumbnail src={url} className="size-12" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       id: "customer",

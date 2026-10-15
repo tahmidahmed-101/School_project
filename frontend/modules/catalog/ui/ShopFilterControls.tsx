@@ -2,6 +2,7 @@
 
 import { Layers, Sparkles } from "lucide-react";
 import { useCatalog, useProducts } from "../context";
+import { categoryTree } from "../domain/category-tree";
 import { useLang } from "@/lib/i18n";
 import {
   PRICE_STEP,
@@ -37,7 +38,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
 
   // Stock or pre-order is decided by the link that led here (`?type=`), not by the visitor: the shop
   // stays inside one catalogue, and so does its category list.
-  const visibleCategories = categories.filter((c) => c.type === (isPreorderShop ? "preorder" : "stock"));
+  const visibleCategories = categoryTree(categories.filter((c) => c.type === (isPreorderShop ? "preorder" : "stock")));
   const selectedCategory = categories.find((c) => c.id === filters.category);
   const collections = isPreorderShop ? COLLECTIONS.filter((c) => c.id !== "sale") : COLLECTIONS;
   const activeCollection = appliesCollection(filters, filters.collection) ? filters.collection : "all";
@@ -68,7 +69,7 @@ export function ShopFilterControls({ filters, onFilterChange }: ShopFilterContro
           triggerLabel={t(selectedCategory?.name ?? ALL_ITEMS)}
           options={[
             { id: "all", label: ui("filterAllCollections") },
-            ...visibleCategories.map((cat) => ({ id: cat.id, label: t(cat.name) })),
+            ...visibleCategories.map(({ category: cat, depth }) => ({ id: cat.id, label: t(cat.name), depth })),
           ]}
           value={filters.category}
           onChange={(id) => onFilterChange("category", id)}

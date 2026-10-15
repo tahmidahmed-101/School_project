@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
@@ -29,13 +29,43 @@ def release_stock_reservation(
             "This reservation has already been released.", code="already_released"
         )
 
-    release_reservation(variant=locked.variant, quantity=locked.quantity)
+    held = _units_still_held(locked)
+    if held:
+        release_reservation(variant=locked.variant, quantity=held)
     locked.status = StockReservation.Status.RELEASED
     locked.save(update_fields=["status", "updated_at"])
     _return_preorder_units_to_queue(locked)
 
     reservation.status = locked.status
     return reservation
+
+
+def _units_still_held(reservation: StockReservation) -> int:
+    """How many of the row's units stock still holds. `create_shipment` hands
+    back each consignment's units as it ships but leaves the row at its full
+    quantity until the line is fully shipped, so a partly shipped line holds
+    only its unshipped units."""
+    line = SalesOrderLine.objects.select_for_update().get(pk=reservation.order_line_id)
+    per_unit = next(
+        (
+            quantity
+            for component, quantity in expand_variant(line.variant, 1)
+            if component.id == reservation.variant_id
+        ),
+        1,
+    )
+    other_rows = (
+        StockReservation.objects.filter(
+            order_line=line,
+            variant_id=reservation.variant_id,
+            status=StockReservation.Status.ACTIVE,
+        )
+        .exclude(pk=reservation.pk)
+        .aggregate(total=Sum("quantity"))["total"]
+        or 0
+    )
+    unshipped = line.shippable_quantity * per_unit
+    return max(0, min(reservation.quantity, unshipped - other_rows))
 
 
 def _return_preorder_units_to_queue(reservation: StockReservation) -> None:

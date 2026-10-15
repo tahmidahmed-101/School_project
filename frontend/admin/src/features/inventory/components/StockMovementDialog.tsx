@@ -80,6 +80,8 @@ interface Props {
   warehouseId?: string | null
   /** Which half opened the dialog: sets the wording and which variants can be picked. */
   kind?: Kind
+  /** Limits the variant picker to one product (opened from that product's row). */
+  productId?: string
   onDone: () => void
 }
 
@@ -90,6 +92,7 @@ export function StockMovementDialog({
   variant,
   warehouseId,
   kind = "stock",
+  productId,
   onDone,
 }: Props) {
   const open = mode !== null
@@ -178,7 +181,7 @@ export function StockMovementDialog({
                 id="movement-variant"
                 value={field.value ?? null}
                 onChange={field.onChange}
-                filters={{ category_type: kind }}
+                filters={{ category_type: kind, product_id: productId }}
               />
             )}
           />

@@ -41,8 +41,9 @@ function ShowsForItems({ options }: { options: ProductOption[] }) {
       {options.map((option) => (
         <SelectGroup key={option.id}>
           <SelectLabel>{option.name}</SelectLabel>
+          {/* Set in from the option's name, like a subcategory under its category. */}
           {option.values.map((value) => (
-            <SelectItem key={value.id} value={value.id}>
+            <SelectItem key={value.id} value={value.id} className="pl-12">
               {value.value}
             </SelectItem>
           ))}

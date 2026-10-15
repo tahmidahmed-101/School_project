@@ -15,9 +15,9 @@ export function ProductGallery({ product, images }: { product: Product; images: 
   const discountPercent = getDiscountPercent(product);
 
   return (
-    <div className="flex w-full flex-col-reverse gap-4 sm:flex-row">
+    <div className="flex w-full flex-col-reverse gap-4">
       {images.length > 1 && (
-        <div className="flex flex-shrink-0 gap-3 overflow-x-auto sm:w-20 sm:flex-col sm:overflow-y-auto">
+        <div className="flex flex-shrink-0 gap-3 overflow-x-auto">
           {images.map((img, i) => (
             <button
               key={img}
@@ -46,7 +46,7 @@ export function ProductGallery({ product, images }: { product: Product; images: 
           fill
           preload
           fetchPriority="high"
-          sizes="(max-width: 1024px) 100vw, 45vw"
+          sizes="(max-width: 1024px) 100vw, 420px"
           className="object-cover object-center"
         />
 

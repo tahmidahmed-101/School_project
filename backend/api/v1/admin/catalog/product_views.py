@@ -14,6 +14,7 @@ from apps.catalog.selectors.products import (
     get_product_by_id,
     products_list,
 )
+from apps.catalog.selectors.reviews import rating_summaries_for_products
 from apps.catalog.services.products import (
     create_product,
     delete_product,
@@ -35,6 +36,7 @@ from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     reorder_points_for_variants,
 )
+from apps.orders.selectors.sales_orders import units_sold_by_product
 from apps.orders.services.carts import get_preordered_quantities
 
 from .permissions import (
@@ -54,11 +56,14 @@ def _product_serializer_context(request, products) -> dict:
     # keys ProductVariantSerializer falls back to a query per variant.
     variants = [v for product in products for v in product.active_variants]
     variant_ids = [v.id for v in variants]
+    product_ids = [product.id for product in products]
     return {
         "request": request,
         "stock_by_variant": available_quantities_for_variants(variant_ids),
         "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
         "preordered_by_variant": get_preordered_quantities(variants),
+        "sold_by_product": units_sold_by_product(product_ids),
+        "rating_by_product": rating_summaries_for_products(product_ids),
     }
 
 

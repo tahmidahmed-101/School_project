@@ -7,22 +7,9 @@ import {
   buildCombinations,
   cleanOptionText,
   combinationKey,
-  effectiveDefault,
-  optionProblems,
-  optionsBody,
-  optionsChanged,
   refusalMessage,
   valueRefusal,
-  type OptionDraft,
 } from "../../src/features/catalog/lib/options.ts"
-
-const option = (name: string, values: string[], extra: Partial<OptionDraft> = {}): OptionDraft => ({
-  key: name || "blank",
-  name,
-  values: values.map((value) => ({ value })),
-  default_value: "",
-  ...extra,
-})
 
 describe("value normalising", () => {
   test("trims and collapses inner spaces, keeping the casing typed", () => {
@@ -50,30 +37,6 @@ describe("valueRefusal", () => {
   })
 })
 
-describe("optionProblems", () => {
-  test("a complete set has none", () => {
-    assert.deepEqual(optionProblems([option("Size", ["S", "M"]), option("Colour", ["Red"])], false), {})
-  })
-
-  test("names must be present and different, and every option needs a value", () => {
-    const problems = optionProblems([option("Size", ["S"]), option("size ", ["M"], { key: "b" }), option("", ["x"])], false)
-    assert.match(problems.b, /already an option called "size"/)
-    assert.match(problems.blank, /name/)
-    assert.match(optionProblems([option("Size", [])], false).Size, /at least one value/)
-  })
-
-  test("a new option on a product with variants needs the value they get", () => {
-    assert.match(optionProblems([option("Size", ["S", "M"])], true).Size, /existing variants/)
-    assert.deepEqual(optionProblems([option("Size", ["S", "M"], { default_value: "M" })], true), {})
-    assert.deepEqual(optionProblems([option("Size", ["S", "M"], { id: "saved" })], true), {})
-  })
-
-  test("the only value is the default without asking", () => {
-    assert.equal(effectiveDefault(option("Size", ["One size"])), "One size")
-    assert.equal(effectiveDefault(option("Size", ["S", "M"], { default_value: "L" })), "")
-  })
-})
-
 describe("buildCombinations", () => {
   test("lists every combination in option order", () => {
     assert.deepEqual(buildCombinations([["Red", "Blue"], ["S", "M"]]), [
@@ -96,35 +59,6 @@ describe("buildCombinations", () => {
   test("keys tell combinations apart", () => {
     assert.equal(combinationKey(["Red", "S"]), combinationKey(["red ", "s"]))
     assert.notEqual(combinationKey(["Red", "S"]), combinationKey(["S", "Red"]))
-  })
-})
-
-describe("optionsBody", () => {
-  test("keeps ids, sends the default only for a new option", () => {
-    const saved = option("Colour", [], { id: "o1", values: [{ id: "v1", value: "Red" }, { value: "Blue" }] })
-    const added = option(" Size ", ["S", "M"], { default_value: "M" })
-    assert.deepEqual(optionsBody([saved, added], true), {
-      options: [
-        { id: "o1", name: "Colour", values: [{ id: "v1", value: "Red" }, { value: "Blue" }] },
-        { name: "Size", default_value: "M", values: [{ value: "S" }, { value: "M" }] },
-      ],
-    })
-    assert.equal("default_value" in optionsBody([added], false).options[0], false)
-  })
-})
-
-describe("optionsChanged", () => {
-  const saved = [{ id: "o1", name: "Colour", values: [{ id: "v1", value: "Red" }] }]
-  const draft = option("Colour", [], { id: "o1", values: [{ id: "v1", value: "Red" }] })
-
-  test("false while nothing differs", () => {
-    assert.equal(optionsChanged(saved, [draft]), false)
-  })
-
-  test("true after a rename, a new value or a removal", () => {
-    assert.equal(optionsChanged(saved, [{ ...draft, name: "Color" }]), true)
-    assert.equal(optionsChanged(saved, [{ ...draft, values: [...draft.values, { value: "Blue" }] }]), true)
-    assert.equal(optionsChanged(saved, []), true)
   })
 })
 

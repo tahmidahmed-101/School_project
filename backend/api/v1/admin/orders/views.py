@@ -622,6 +622,7 @@ class AdminReservationListView(GenericListAPIView):
         params = self.request.query_params
         return reservations_list(
             variant=get_uuid(params, "variant_id"),
+            product=get_uuid(params, "product_id"),
             order=get_uuid(params, "order_id"),
             status=get_choice(params, "status", StockReservation.Status.values),
             created_before=get_date(params, "created_before"),

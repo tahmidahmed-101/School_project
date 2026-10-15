@@ -7,7 +7,7 @@ import { FacebookIcon, WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { ACCORDION_BODY } from "@/design-system/ui/AccordionItem";
 
 const CHIP_CLASS =
-  "inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-ink-200 bg-canvas px-3.5 py-2 text-xs font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800";
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-ink-200 bg-canvas px-3.5 py-2 text-sm font-bold text-fg transition-colors hover:border-gold-400 hover:text-gold-800";
 
 /** Share links for a product. Plain links to each network's share page: no SDKs, nothing loaded until clicked. */
 export function ProductShare({ slug, name }: { slug: string; name: string }) {

@@ -6,4 +6,5 @@ app_name = "webhooks"
 
 urlpatterns: list[URLResolver | URLPattern] = [
     path("couriers/", include("api.v1.webhooks.couriers.urls")),
+    path("telegram/", include("api.v1.webhooks.telegram.urls")),
 ]

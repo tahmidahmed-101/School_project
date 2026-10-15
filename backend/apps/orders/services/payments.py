@@ -198,6 +198,36 @@ def capture_payment(
     return payment
 
 
+@transaction.atomic
+def record_cod_verification(*, order: SalesOrder, actor=None) -> SalesOrder:
+    """Record that staff reached the customer and the cash-on-delivery order
+    is wanted. It marks the order only: the payment stays pending and nothing
+    is posted, because no money has changed hands."""
+    lock_order(order)
+    if order.status not in (SalesOrder.Status.AWAITING_PAYMENT, SalesOrder.Status.CONFIRMED):
+        raise BusinessRuleViolationError(
+            f"An order that is {order.get_status_display().lower()} cannot be verified.",
+            code="invalid_order_status",
+        )
+    if not Payment.objects.filter(
+        order=order, method=PaymentMethodKey.COD, status=Payment.Status.PENDING
+    ).exists():
+        raise BusinessRuleViolationError(
+            "This order has no cash on delivery payment waiting.", code="not_cod"
+        )
+    if order.cod_verified_at is not None:
+        raise BusinessRuleViolationError(
+            "This order is already verified.", code="already_verified"
+        )
+    order.cod_verified_at = timezone.now()
+    order.cod_verified_by = actor
+    order.save(update_fields=["cod_verified_at", "cod_verified_by", "updated_at"])
+    log_action(
+        actor=actor, action="order.cod_verified", target_type="SalesOrder", target_id=order.id
+    )
+    return order
+
+
 def _assess_order_risk(order: SalesOrder) -> None:
     """Score the now-confirmed order for fraud risk. Never let a scoring bug
     undo a payment that already succeeded — but a swallowed failure still

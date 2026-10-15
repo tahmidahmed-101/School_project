@@ -1,12 +1,12 @@
 import { createSliceFactory } from "@/lib/sliceFactory"
 import type { Bundle } from "../types"
 
-const { reducer, fetchAll, fetchSingle, patchData, deleteData } = createSliceFactory<Bundle>({
+const { reducer, fetchAll, fetchSingle, deleteData } = createSliceFactory<Bundle>({
   name: "catalogBundles",
   endpoint: "/admin/catalog/bundles/",
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle, patchData, deleteData }
+export { fetchAll, fetchSingle, deleteData }
 
 export default reducer
