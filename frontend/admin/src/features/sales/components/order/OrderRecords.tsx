@@ -10,24 +10,13 @@ import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
 import { RECEIVABLE_BACK_STATUSES } from "@/features/shipping/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { IconLine } from "@/components/common/IconLine"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useCan } from "@/hooks/use-can"
 import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 const digits = (value: string) => value.replace(/\D/g, "")
-
-function IconLine({ icon: Icon, label, children }: { icon: ComponentType<{ className?: string }>; label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-3 text-sm">
-      <span title={label} className="mt-0.5 shrink-0 text-muted-foreground">
-        <Icon className="size-4" />
-        <span className="sr-only">{label}</span>
-      </span>
-      <div className="min-w-0 break-words">{children}</div>
-    </div>
-  )
-}
 
 /** Who ordered and where it goes, in one block; a name or phone already shown is not repeated. */
 function OrderCustomerSection({ order }: { order: Order }) {
