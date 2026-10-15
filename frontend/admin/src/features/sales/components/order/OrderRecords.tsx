@@ -28,8 +28,8 @@ function IconLine({ icon: Icon, label, children }: { icon: ComponentType<{ class
   )
 }
 
-/** Who ordered and where it goes, in one place; a name or phone already shown is not repeated. */
-export function OrderCustomerCard({ order }: { order: Order }) {
+/** Who ordered and where it goes, in one block; a name or phone already shown is not repeated. */
+export function OrderCustomerSection({ order }: { order: Order }) {
   const kind = order.order_type
   const address = order.shipping_address
   const name = order.customer_name
@@ -40,59 +40,55 @@ export function OrderCustomerCard({ order }: { order: Order }) {
   const ordersLabel = kind === "preorder" ? "All pre-orders from this customer" : "All orders from this customer"
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <User className="h-4 w-4 text-primary" />
-            {name || "Customer"}
-          </CardTitle>
-          {/* A guest cart has no customer to list orders for. */}
-          {order.customer_id && (
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={`${KIND_PATHS[kind].orders}?customer_id=${order.customer_id}`} title={ordersLabel} aria-label={ordersLabel}>
-                <ListOrdered className="size-4" />
-              </Link>
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2.5">
-        {order.customer_email && (
-          <IconLine icon={Mail} label="Email">
-            {order.customer_email}
-          </IconLine>
+    <section className="min-w-0 space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <User className="h-4 w-4 text-primary" />
+          {name || "Customer"}
+        </h3>
+        {/* A guest cart has no customer to list orders for. */}
+        {order.customer_id && (
+          <Button variant="ghost" size="icon" asChild>
+            <Link to={`${KIND_PATHS[kind].orders}?customer_id=${order.customer_id}`} title={ordersLabel} aria-label={ordersLabel}>
+              <ListOrdered className="size-4" />
+            </Link>
+          </Button>
         )}
-        {phone && (
-          <IconLine icon={Phone} label="Phone">
-            {phone}
-          </IconLine>
-        )}
-        <IconLine icon={MapPin} label="Ship to">
-          {address ? (
-            <>
-              {recipient && <p className="font-medium">{recipient}</p>}
-              {recipientPhone && <p className="text-muted-foreground">{recipientPhone}</p>}
-              {place.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
-            </>
-          ) : (
-            <span className="text-muted-foreground">No shipping address on this {orderNoun(kind)}.</span>
-          )}
+      </div>
+      {order.customer_email && (
+        <IconLine icon={Mail} label="Email">
+          {order.customer_email}
         </IconLine>
-        {address?.delivery_note && (
-          <IconLine icon={StickyNote} label="Delivery note">
-            {address.delivery_note}
-          </IconLine>
+      )}
+      {phone && (
+        <IconLine icon={Phone} label="Phone">
+          {phone}
+        </IconLine>
+      )}
+      <IconLine icon={MapPin} label="Ship to">
+        {address ? (
+          <>
+            {recipient && <p className="font-medium">{recipient}</p>}
+            {recipientPhone && <p className="text-muted-foreground">{recipientPhone}</p>}
+            {place.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </>
+        ) : (
+          <span className="text-muted-foreground">No shipping address on this {orderNoun(kind)}.</span>
         )}
-        {order.notes && (
-          <IconLine icon={MessageSquare} label="Notes">
-            <span className="whitespace-pre-line">{order.notes}</span>
-          </IconLine>
-        )}
-      </CardContent>
-    </Card>
+      </IconLine>
+      {address?.delivery_note && (
+        <IconLine icon={StickyNote} label="Delivery note">
+          {address.delivery_note}
+        </IconLine>
+      )}
+      {order.notes && (
+        <IconLine icon={MessageSquare} label="Notes">
+          <span className="whitespace-pre-line">{order.notes}</span>
+        </IconLine>
+      )}
+    </section>
   )
 }
 

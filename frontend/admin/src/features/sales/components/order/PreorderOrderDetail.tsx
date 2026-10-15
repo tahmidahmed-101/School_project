@@ -18,7 +18,7 @@ import { OrderActions, OrderStatusChanger } from "./OrderActions"
 import { OrderHeader } from "./OrderHeader"
 import { OrderLinesCard } from "./OrderLinesCard"
 import { CancelledNotice } from "./OrderProgress"
-import { OrderCustomerCard, OrderRecords } from "./OrderRecords"
+import { OrderCustomerSection, OrderRecords } from "./OrderRecords"
 
 /** Where the pre-order is on its way from the supplier; staff move it by hand. */
 function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
@@ -44,7 +44,7 @@ function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
   const placed = order.status !== "pending"
 
   return (
-    <Card className="md:col-span-2 shadow-sm">
+    <Card className="shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-primary" />
@@ -107,34 +107,28 @@ function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
   )
 }
 
-function MoneyCard({ order }: { order: Order }) {
+function MoneySection({ order }: { order: Order }) {
   return (
-    <Card className="md:col-span-1 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-primary" />
-          Deposit and balance
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <DetailRow label="Deposit needed to confirm">{formatCurrency(order.deposit_due)}</DetailRow>
-        <DetailRow label="Received so far">{formatCurrency(order.paid_total)}</DetailRow>
-        <div className="flex items-center justify-between font-bold text-lg">
-          <span>Balance still owed</span>
-          <span className="text-primary">{formatCurrency(order.balance_due)}</span>
-        </div>
-        <Separator className="my-2" />
-        <DetailRow label="Items">{formatCurrency(order.subtotal)}</DetailRow>
-        <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>
-        <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>
-        {Number(order.discount_total) > 0 && (
-          <DetailRow label="Discount">−{formatCurrency(order.discount_total)}</DetailRow>
-        )}
-        <DetailRow label="Pre-order total">
-          <span className="font-semibold">{formatCurrency(order.grand_total)}</span>
-        </DetailRow>
-      </CardContent>
-    </Card>
+    <section className="min-w-0 space-y-1">
+      <h3 className="flex items-center gap-2 pb-1 text-base font-semibold">
+        <Wallet className="h-4 w-4 text-primary" />
+        Deposit and balance
+      </h3>
+      <DetailRow label="Deposit needed to confirm">{formatCurrency(order.deposit_due)}</DetailRow>
+      <DetailRow label="Received so far">{formatCurrency(order.paid_total)}</DetailRow>
+      <div className="flex items-center justify-between font-bold text-lg">
+        <span>Balance still owed</span>
+        <span className="text-primary">{formatCurrency(order.balance_due)}</span>
+      </div>
+      <Separator className="my-2" />
+      <DetailRow label="Items">{formatCurrency(order.subtotal)}</DetailRow>
+      <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>
+      <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>
+      {Number(order.discount_total) > 0 && <DetailRow label="Discount">−{formatCurrency(order.discount_total)}</DetailRow>}
+      <DetailRow label="Pre-order total">
+        <span className="font-semibold">{formatCurrency(order.grand_total)}</span>
+      </DetailRow>
+    </section>
   )
 }
 
@@ -145,26 +139,24 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
     <div className="section-container space-y-6">
       <OrderHeader order={order} badges={<Badge variant="secondary">Pre-order</Badge>} />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <MoneyCard order={order} />
-        <StageCard order={order} canManage={canManage} />
-      </div>
+      <StageCard order={order} canManage={canManage} />
 
       <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" />
-            Status & actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <OrderStatusChanger order={order} />
-          <OrderActions order={order} refresh={refresh} />
+        <CardContent className="grid grid-cols-1 gap-8 pt-6 lg:grid-cols-3">
+          <MoneySection order={order} />
+          <OrderCustomerSection order={order} />
+          <section className="min-w-0 space-y-5">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
+              <Clock className="h-4 w-4 text-primary" />
+              Status & actions
+            </h3>
+            <OrderStatusChanger order={order} />
+            <OrderActions order={order} refresh={refresh} />
+          </section>
         </CardContent>
       </Card>
 
       <OrderLinesCard order={order} canManage={canManage} />
-      <OrderCustomerCard order={order} />
       <OrderRecords order={order} refresh={refresh} />
     </div>
   )
