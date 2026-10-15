@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Boxes, Edit, Package, RotateCcw } from "lucide-react"
+import { Banknote, Boxes, CalendarClock, Coins, Edit, FolderTree, Hash, Link2, Package, PackageCheck, RotateCcw, Tag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import { IconLine } from "@/components/common/IconLine"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge } from "@/components/common/cells"
@@ -20,22 +21,11 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
-import { productKind, productListPath, variantCount } from "../lib/productKind"
+import { productKind, productListPath } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { savedOptionsOf } from "../lib/productKind"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
-
-/** One line of the details table: the title on the left, its value on the right. */
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] text-sm sm:grid-cols-[11rem_minmax(0,1fr)]">
-      {/* Padding is on the cells, not the row, so the divider after the title runs the row's full height. */}
-      <dt className="border-r border-border px-4 py-3 font-medium text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words px-4 py-3 text-foreground">{children}</dd>
-    </div>
-  )
-}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -100,6 +90,7 @@ const ProductDetail = () => {
   const options = savedOptionsOf(product)
   const specs = Array.isArray(product.specs) ? product.specs : []
   const settings = product.variants.find((v) => v.is_preorder_enabled)
+  const price = isStock ? (product.price === null ? null : (product.discount_price ?? product.price)) : product.price
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
 
   const handleRestore = async () => {
@@ -116,7 +107,6 @@ const ProductDetail = () => {
     <div className="section-container space-y-6">
       <PageHeader
         title={product.name}
-        description={product.slug}
         back={{ to: productListPath(kind), label: isStock ? "Back to products" : "Back to pre-order products" }}
         actions={
           canManage &&
@@ -138,103 +128,99 @@ const ProductDetail = () => {
         }
       />
 
-      {/* Photo on the left; on the right a details table (title | value per row). On desktop the photo takes a
-          third of the row and takes the table's height, so both boxes are the same height. The
-          description has its own full-width card below: inside the table, a long one stretched the photo. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <Card className="overflow-hidden p-0">
-          <div className="relative flex mx-auto aspect-square w-full max-w-64 items-center justify-center overflow-hidden bg-muted lg:aspect-auto lg:max-w-none lg:h-full lg:min-h-80">
+      <Card>
+        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row">
+          <div className="flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
             {product.primary_image ? (
-              <img
-                src={product.primary_image}
-                alt={product.name}
-                // Out of the flow on desktop, so the row is as tall as the details table and the photo fills it;
-                // in the flow, a wide column made the square photo the taller of the two.
-                className="size-full object-cover lg:absolute lg:inset-0"
-              />
+              <img src={product.primary_image} alt={product.name} className="size-full object-cover" />
             ) : (
-              <Package className="size-16 text-muted-foreground/40" />
+              <Package className="size-10 text-muted-foreground/40" />
             )}
           </div>
-        </Card>
 
-        <Card className="p-0">
-          <dl className="divide-y divide-border">
-            <Row label="Status">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
               <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
-            </Row>
-            {isBundle ? (
-              <Row label="Type">
-                <Badge variant="secondary">Bundle</Badge>
-              </Row>
-            ) : (
-              <Row label="Options">
-                {options.length === 0
-                  ? "None"
-                  : options.map((o) => `${o.name}: ${o.values.map((v) => v.value).join(", ")}`).join(" · ")}
-              </Row>
-            )}
-            <Row label="Category">{nameById.get(product.category_id) ?? "—"}</Row>
-            <Row label="Brand">{brandName ?? "—"}</Row>
-            {isStock ? (
-              <>
-                <Row label="Price">
-                  <span className="font-semibold">
-                    {product.price === null ? "—" : formatCurrency(product.discount_price ?? product.price)}
-                  </span>
-                </Row>
-                {product.discount_price && <Row label="List price">{formatCurrency(product.price)}</Row>}
-                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
-                <Row label="Available stock">{product.total_stock}</Row>
-              </>
-            ) : (
-              <>
-                <Row label="Price">
-                  <span className="font-semibold">{product.price === null ? "—" : formatCurrency(product.price)}</span>
-                </Row>
-                {settings?.preorder_price && (
-                  <Row label="Pre-order price">{formatCurrency(settings.preorder_price)}</Row>
-                )}
-                <Row label="Cost">{product.cost_price === null ? "—" : formatCurrency(product.cost_price)}</Row>
-                <Row label="Pre-orders open">{formatDateTime(settings?.preorder_start_date)}</Row>
-                <Row label="Pre-orders close">{formatDateTime(settings?.preorder_end_date)}</Row>
-                <Row label="Release date">{formatDateTime(settings?.release_date)}</Row>
-                <Row label="Pre-order limit">{settings?.preorder_stock_limit ?? "Unlimited"}</Row>
-              </>
-            )}
-            <Row label="Variants">{variantCount(product)}</Row>
-            {product.deleted_at && <Row label="Deleted">{formatDateTime(product.deleted_at)}</Row>}
-            {product.highlights.length > 0 && (
-              <Row label="Highlights">
-                <ul className="list-disc space-y-1 pl-5">
-                  {product.highlights.map((h, i) => (
-                    <li key={i}>{h}</li>
-                  ))}
-                </ul>
-              </Row>
-            )}
-            {specs.length > 0 && (
-              <Row label="Specifications">
-                <ul className="space-y-1">
-                  {specs.map((spec, i) => (
-                    <li key={i}>
-                      <span className="text-muted-foreground">{spec.name}:</span> {spec.value}
-                    </li>
-                  ))}
-                </ul>
-              </Row>
-            )}
-            {product.meta_keywords && <Row label="Meta keywords">{product.meta_keywords}</Row>}
-          </dl>
-        </Card>
-      </div>
+              {isBundle && <Badge variant="secondary">Bundle</Badge>}
+              {product.deleted_at && <span className="text-xs text-muted-foreground">{formatDateTime(product.deleted_at)}</span>}
+            </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="whitespace-pre-line break-words text-sm">{product.description || "No description."}</p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <IconLine icon={FolderTree} label="Category">
+                {nameById.get(product.category_id) ?? "—"}
+              </IconLine>
+              {brandName && (
+                <IconLine icon={Tag} label="Brand">
+                  {brandName}
+                </IconLine>
+              )}
+              <IconLine icon={Link2} label="Slug">
+                <span className="font-mono text-xs">{product.slug}</span>
+              </IconLine>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {price !== null && (
+                <IconLine icon={Banknote} label="Price">
+                  <span className="font-semibold">{formatCurrency(price)}</span>
+                  {isStock && product.discount_price && (
+                    <span className="ml-2 text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+                  )}
+                </IconLine>
+              )}
+              {product.cost_price !== null && (
+                <IconLine icon={Coins} label="Cost">
+                  {formatCurrency(product.cost_price)}
+                </IconLine>
+              )}
+              {isStock && (
+                <IconLine icon={Boxes} label="Available stock">
+                  {product.total_stock}
+                </IconLine>
+              )}
+              {!isStock && settings?.preorder_start_date && (
+                <IconLine icon={CalendarClock} label="Pre-orders open">
+                  {formatDateTime(settings.preorder_start_date)}
+                  {settings.preorder_end_date && ` → ${formatDateTime(settings.preorder_end_date)}`}
+                </IconLine>
+              )}
+              {!isStock && settings?.release_date && (
+                <IconLine icon={PackageCheck} label="Release date">
+                  {formatDateTime(settings.release_date)}
+                </IconLine>
+              )}
+              {!isStock && settings?.preorder_stock_limit != null && (
+                <IconLine icon={Hash} label="Pre-order limit">
+                  {settings.preorder_stock_limit}
+                </IconLine>
+              )}
+            </div>
+
+            {product.description && (
+              <p className="whitespace-pre-line break-words border-t border-border pt-3 text-sm">{product.description}</p>
+            )}
+
+            {(product.highlights.length > 0 || specs.length > 0) && (
+              <div className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-border pt-3 text-sm sm:grid-cols-2">
+                {product.highlights.length > 0 && (
+                  <ul className="list-disc space-y-1 pl-5">
+                    {product.highlights.map((h, i) => (
+                      <li key={i}>{h}</li>
+                    ))}
+                  </ul>
+                )}
+                {specs.length > 0 && (
+                  <ul className="space-y-1">
+                    {specs.map((spec, i) => (
+                      <li key={i}>
+                        <span className="text-muted-foreground">{spec.name}:</span> {spec.value}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

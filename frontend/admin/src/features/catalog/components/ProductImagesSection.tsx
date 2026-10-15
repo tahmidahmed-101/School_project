@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ImageIcon, Loader2, Trash2 } from "lucide-react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -247,12 +247,9 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
   const shared = gallery.filter((img) => !img.option_value_id)
   const elsewhere = gallery.filter((img) => img.option_value_id && !driverValueIds.has(img.option_value_id))
 
-  const group = (key: string, title: string, hint: string, list: ProductImage[], optionValueId: string | null, label?: string) => (
-    <section key={key} className="space-y-3 rounded-lg border border-border p-3">
-      <div>
-        <h3 className="text-sm font-medium">{title}</h3>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      </div>
+  const group = (key: string, title: string, list: ProductImage[], optionValueId: string | null, label?: string) => (
+    <section key={key} className="space-y-2 rounded-lg border border-border p-2.5">
+      <h3 className="text-sm font-medium">{title}</h3>
       {list.length > 0 && <ImageOrderGrid>{list.map((img, i) => tile(img, list, i, label))}</ImageOrderGrid>}
       {canManage && (
         <ImageDropzone
@@ -270,13 +267,8 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
         <CardTitle className="flex items-center gap-2">
           <ImageIcon className="size-4" /> Images
         </CardTitle>
-        <CardDescription>
-          {driver
-            ? `Add photos for each ${driver.name.toLowerCase()}. Customers see them when they pick it. Photos for every choice are always shown. The first image overall is the main one.`
-            : "The first image is the main one. Use the arrows to change the order."}
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {canManage && manyOptions && (
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <label htmlFor="photos-follow" className="text-sm text-muted-foreground">
@@ -314,25 +306,19 @@ export function ProductImagesSection({ productId, options, variants, canManage, 
           </>
         ) : (
           <>
-            {group("all", "Every choice", "Shown whatever the customer picks.", shared, null)}
+            {group("all", "Every choice", shared, null)}
             {driver.values.map((value) =>
               group(
                 value.id,
                 `${driver.name}: ${value.value}`,
-                `Shown first when ${value.value} is picked.`,
                 gallery.filter((img) => img.option_value_id === value.id),
                 value.id,
                 value.value
               )
             )}
             {elsewhere.length > 0 && (
-              <section className="space-y-3 rounded-lg border border-border p-3">
-                <div>
-                  <h3 className="text-sm font-medium">Set for another option</h3>
-                  <p className="text-xs text-muted-foreground">
-                    These photos are tied to a value of a different option. Move them under {driver.name} or keep them.
-                  </p>
-                </div>
+              <section className="space-y-2 rounded-lg border border-border p-2.5">
+                <h3 className="text-sm font-medium">Other option</h3>
                 <ImageOrderGrid>
                   {elsewhere.map((img, i) => tile(img, elsewhere, i, valueLabel.get(img.option_value_id ?? ""), true))}
                 </ImageOrderGrid>
