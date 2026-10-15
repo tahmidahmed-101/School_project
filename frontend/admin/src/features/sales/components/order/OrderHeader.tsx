@@ -8,29 +8,16 @@ import { deleteData } from "@/features/sales/slices/orderSlice"
 import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
 import type { Order } from "@/features/sales/types"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { SubmitButton } from "@/components/common/FormActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useCan } from "@/hooks/use-can"
-import { useLastValue } from "@/hooks/use-dialog-presence"
 import { api, getApiErrorMessage } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
 import { downloadFile } from "@/lib/download"
-import { formatDateTime, humanize } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 import { OrderActions } from "./OrderActions"
 import { OrderEditDialog } from "./OrderEditDialog"
-
-/** POST /admin/risk/orders/{id}/assess/ — a fresh risk assessment of one order. */
-interface RiskAssessment {
-  risk_level: string
-  risk_score: string
-  risk_reasons: string[]
-  recommended_action: string
-  auto_blocked: boolean
-  guidance: string
-}
 
 const DELETE_WARNING = {
   stock:
@@ -49,8 +36,6 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
   const kind = order.order_type
   const noun = orderNoun(kind)
 
-  const [risk, setRisk] = useState<RiskAssessment | null>(null)
-  const riskShown = useLastValue(risk)
   const [checking, setChecking] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -68,8 +53,8 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
   const handleRiskCheck = async () => {
     setChecking(true)
     try {
-      const res = await api.post(`/admin/risk/orders/${order.id}/assess/`)
-      setRisk(unwrapItem<RiskAssessment>(res.data))
+      await api.post(`/admin/risk/orders/${order.id}/assess/`)
+      refresh()
       toast.success("Risk check complete")
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Risk check failed"))
@@ -144,39 +129,6 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
       />
 
       <OrderEditDialog order={order} open={editing} onOpenChange={setEditing} />
-
-      <Dialog open={!!risk} onOpenChange={(open) => !open && setRisk(null)}>
-        {riskShown && (
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                Risk check
-                <StatusBadge
-                  status={riskShown.risk_level}
-                  tone={riskShown.risk_level === "low" ? "success" : riskShown.risk_level === "high" ? "destructive" : "warning"}
-                />
-              </DialogTitle>
-              <DialogDescription>{riskShown.guidance}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 text-sm">
-              <p>
-                Score <span className="font-semibold tabular-nums">{riskShown.risk_score}</span> · recommended:{" "}
-                <span className="font-medium">{humanize(riskShown.recommended_action)}</span>
-                {riskShown.auto_blocked && " · automatically blocked"}
-              </p>
-              {riskShown.risk_reasons.length > 0 ? (
-                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                  {riskShown.risk_reasons.map((reason, i) => (
-                    <li key={i}>{reason}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground">No risk signals found.</p>
-              )}
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
     </>
   )
 }

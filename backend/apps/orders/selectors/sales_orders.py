@@ -127,6 +127,7 @@ def _orders_with_related() -> QuerySet[SalesOrder]:
         "lines__variant__product__images",
         "lines__variant__option_values",
         "payments",
+        "risk_assessments",
         "shipments__carrier",
         "shipments__lines",
         "rmas__lines",

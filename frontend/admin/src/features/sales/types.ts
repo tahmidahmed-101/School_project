@@ -14,6 +14,15 @@ export type OrderStatus =
   | "cancelled"
   | "closed"
 
+export interface OrderRisk {
+  risk_level: "low" | "medium" | "high"
+  risk_score: string
+  risk_reasons: string[]
+  recommended_action: string
+  auto_blocked: boolean
+  guidance: string
+}
+
 export const ORDER_STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
   { label: "Pending", value: "pending" },
   { label: "Awaiting payment", value: "awaiting_payment" },
@@ -137,6 +146,8 @@ export interface Order {
   payments: Payment[]
   shipments: Shipment[]
   rmas: Rma[]
+  /** The latest fraud assessment, null when the order was never scored. */
+  risk: OrderRisk | null
 }
 
 /** PATCH /admin/orders/{id}/ (AdminOrderUpdateSerializer) — correctable fields only. */

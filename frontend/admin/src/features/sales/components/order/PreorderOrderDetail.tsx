@@ -17,7 +17,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format"
 import { OrderHeader } from "./OrderHeader"
 import { OrderLinesCard } from "./OrderLinesCard"
 import { CancelledNotice } from "./OrderProgress"
-import { OrderCustomerSection, OrderRecordsSection } from "./OrderRecords"
+import { OrderSummaryCard } from "./OrderRecords"
 
 /** Where the pre-order is on its way from the supplier; staff move it by hand. */
 function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
@@ -140,15 +140,7 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
 
       <StageCard order={order} canManage={canManage} />
 
-      <Card className="shadow-sm">
-        <CardContent className="space-y-8 pt-6">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <OrderCustomerSection order={order} />
-            <MoneySection order={order} />
-          </div>
-          <OrderRecordsSection order={order} refresh={refresh} />
-        </CardContent>
-      </Card>
+      <OrderSummaryCard order={order} refresh={refresh} money={<MoneySection order={order} />} />
 
       <OrderLinesCard order={order} canManage={canManage} />
     </div>

@@ -26,6 +26,7 @@ from apps.orders.selectors.sales_orders import order_kind
 from apps.orders.selectors.shipments import attach_delivered_quantities
 from apps.orders.services.address_snapshot import snapshot_or_live
 from apps.orders.services.orders import allowed_status_overrides
+from apps.risk.services.guidance import describe
 
 
 class AdminSalesOrderLineSerializer(serializers.Serializer):
@@ -110,6 +111,7 @@ class AdminSalesOrderSerializer(serializers.Serializer):
     payments = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
     rmas = serializers.SerializerMethodField()
+    risk = serializers.SerializerMethodField()
 
     def get_order_type(self, obj) -> str:
         return order_kind(obj)
@@ -159,6 +161,19 @@ class AdminSalesOrderSerializer(serializers.Serializer):
             "delivery_note": snapshot.get("line2", ""),
             "postal_code": snapshot.get("postal_code", ""),
             "country": snapshot.get("country", ""),
+        }
+
+    def get_risk(self, obj) -> dict | None:
+        latest = next(iter(obj.risk_assessments.all()), None)
+        if latest is None:
+            return None
+        return {
+            "risk_level": latest.risk_level,
+            "risk_score": str(latest.risk_score),
+            "risk_reasons": latest.risk_reasons,
+            "recommended_action": latest.recommended_action,
+            "auto_blocked": latest.auto_blocked,
+            "guidance": describe(latest.risk_level, latest.recommended_action),
         }
 
     def get_lines(self, obj) -> list[dict]:
