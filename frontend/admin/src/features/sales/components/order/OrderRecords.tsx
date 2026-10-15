@@ -9,7 +9,6 @@ import { ReturnOutcome } from "@/features/shipping/components/ReturnOutcome"
 import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
 import { RECEIVABLE_BACK_STATUSES } from "@/features/shipping/types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useCan } from "@/hooks/use-can"
 import { formatCurrency } from "@/lib/format"
@@ -102,22 +101,14 @@ function SectionTitle({ icon: Icon, label, count }: { icon: ComponentType<{ clas
   )
 }
 
-/** The order's payments, shipments and returns in one card; a section with nothing in it is left out. */
-export function OrderRecords({ order, refresh }: { order: Order; refresh: () => void }) {
+/** The order's payments, shipments and returns; a section with nothing in it is left out, and so is the whole block when all are empty. */
+export function OrderRecordsSection({ order, refresh }: { order: Order; refresh: () => void }) {
   const canReturn = useCan("returns.manage")
   const canRefund = useCan("refunds.approve")
-  const none = order.payments.length === 0 && order.shipments.length === 0 && order.rmas.length === 0
+  if (order.payments.length === 0 && order.shipments.length === 0 && order.rmas.length === 0) return null
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CreditCard className="h-4 w-4 text-primary" />
-          Payments & shipping
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {none && <p className="text-sm text-muted-foreground">No payments or shipments yet.</p>}
+    <div className="space-y-6">
 
         {order.payments.length > 0 && (
           <section className="space-y-3">
@@ -129,8 +120,8 @@ export function OrderRecords({ order, refresh }: { order: Order; refresh: () => 
                     {formatCurrency(p.amount)} · {paymentMethodLabel(p.method)}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {p.gateway_reference ? `Ref ${p.gateway_reference}` : "No reference"}
-                    {Number(p.refunded_amount) > 0 && ` · Refunded ${formatCurrency(p.refunded_amount)}`}
+                    {p.gateway_reference && `Ref ${p.gateway_reference}`}
+                    {Number(p.refunded_amount) > 0 && `${p.gateway_reference ? " · " : ""}Refunded ${formatCurrency(p.refunded_amount)}`}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -158,15 +149,23 @@ export function OrderRecords({ order, refresh }: { order: Order; refresh: () => 
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link to={`/shipment_detail/${s.id}`} className="font-semibold hover:underline">
-                      {s.carrier_name || "Carrier not set"}
+                      {s.carrier_name || "Shipment"}
                     </Link>
-                    <p className="text-xs text-muted-foreground">
-                      Tracking <span className="font-mono">{s.tracking_number || "—"}</span>
-                      {s.courier_status && ` · ${s.courier_status}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Charge {formatCurrency(s.shipping_charge)} · COD {formatCurrency(s.cod_amount)}
-                    </p>
+                    {s.tracking_number && (
+                      <p className="text-xs text-muted-foreground">
+                        Tracking <span className="font-mono">{s.tracking_number}</span>
+                      </p>
+                    )}
+                    {(Number(s.shipping_charge) > 0 || Number(s.cod_amount) > 0) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[
+                          Number(s.shipping_charge) > 0 && `Charge ${formatCurrency(s.shipping_charge)}`,
+                          Number(s.cod_amount) > 0 && `COD ${formatCurrency(s.cod_amount)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <StatusBadge status={s.status} />
@@ -222,7 +221,6 @@ export function OrderRecords({ order, refresh }: { order: Order; refresh: () => 
             ))}
           </section>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }

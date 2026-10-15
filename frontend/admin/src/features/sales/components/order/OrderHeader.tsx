@@ -19,6 +19,7 @@ import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
 import { downloadFile } from "@/lib/download"
 import { formatDateTime, humanize } from "@/lib/format"
+import { OrderActions } from "./OrderActions"
 import { OrderEditDialog } from "./OrderEditDialog"
 
 /** POST /admin/risk/orders/{id}/assess/ — a fresh risk assessment of one order. */
@@ -39,7 +40,7 @@ const DELETE_WARNING = {
 }
 
 /** Title, back link and the buttons every order has: invoice, risk check, edit, delete. */
-export function OrderHeader({ order, badges }: { order: Order; badges?: ReactNode }) {
+export function OrderHeader({ order, refresh, badges }: { order: Order; refresh: () => void; badges?: ReactNode }) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const canManage = useCan("orders.manage")
@@ -105,6 +106,7 @@ export function OrderHeader({ order, badges }: { order: Order; badges?: ReactNod
         description={`Placed on ${formatDateTime(order.created_at)}`}
         actions={
           <>
+            <OrderActions order={order} refresh={refresh} />
             <SubmitButton type="button" loading={downloading} icon={FileText} variant="outline" onClick={handleInvoice}>
               Invoice PDF
             </SubmitButton>

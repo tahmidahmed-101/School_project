@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { CalendarClock, CheckCircle2, Clock, Wallet } from "lucide-react"
+import { CalendarClock, CheckCircle2, Wallet } from "lucide-react"
 
 import { useAppDispatch } from "@/app/hooks"
 import { updatePreorderStage } from "@/features/sales/slices/orderSlice"
@@ -14,11 +14,10 @@ import { SubmitButton } from "@/components/common/FormActions"
 import { useCan } from "@/hooks/use-can"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDateTime } from "@/lib/format"
-import { OrderActions, OrderStatusChanger } from "./OrderActions"
 import { OrderHeader } from "./OrderHeader"
 import { OrderLinesCard } from "./OrderLinesCard"
 import { CancelledNotice } from "./OrderProgress"
-import { OrderCustomerSection, OrderRecords } from "./OrderRecords"
+import { OrderCustomerSection, OrderRecordsSection } from "./OrderRecords"
 
 /** Where the pre-order is on its way from the supplier; staff move it by hand. */
 function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
@@ -122,8 +121,8 @@ function MoneySection({ order }: { order: Order }) {
       </div>
       <Separator className="my-2" />
       <DetailRow label="Items">{formatCurrency(order.subtotal)}</DetailRow>
-      <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>
-      <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>
+      {Number(order.shipping_total) > 0 && <DetailRow label="Shipping">{formatCurrency(order.shipping_total)}</DetailRow>}
+      {Number(order.tax_total) > 0 && <DetailRow label="Tax">{formatCurrency(order.tax_total)}</DetailRow>}
       {Number(order.discount_total) > 0 && <DetailRow label="Discount">−{formatCurrency(order.discount_total)}</DetailRow>}
       <DetailRow label="Pre-order total">
         <span className="font-semibold">{formatCurrency(order.grand_total)}</span>
@@ -137,27 +136,21 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
   const canManage = useCan("orders.manage")
   return (
     <div className="section-container space-y-6">
-      <OrderHeader order={order} badges={<Badge variant="secondary">Pre-order</Badge>} />
+      <OrderHeader order={order} refresh={refresh} badges={<Badge variant="secondary">Pre-order</Badge>} />
 
       <StageCard order={order} canManage={canManage} />
 
       <Card className="shadow-sm">
-        <CardContent className="grid grid-cols-1 gap-8 pt-6 lg:grid-cols-3">
-          <MoneySection order={order} />
-          <OrderCustomerSection order={order} />
-          <section className="min-w-0 space-y-5">
-            <h3 className="flex items-center gap-2 text-base font-semibold">
-              <Clock className="h-4 w-4 text-primary" />
-              Status & actions
-            </h3>
-            <OrderStatusChanger order={order} />
-            <OrderActions order={order} refresh={refresh} />
-          </section>
+        <CardContent className="space-y-8 pt-6">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <OrderCustomerSection order={order} />
+            <MoneySection order={order} />
+          </div>
+          <OrderRecordsSection order={order} refresh={refresh} />
         </CardContent>
       </Card>
 
       <OrderLinesCard order={order} canManage={canManage} />
-      <OrderRecords order={order} refresh={refresh} />
     </div>
   )
 }
