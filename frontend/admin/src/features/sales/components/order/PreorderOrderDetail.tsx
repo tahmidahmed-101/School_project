@@ -6,7 +6,7 @@ import { useAppDispatch } from "@/app/hooks"
 import { updatePreorderStage } from "@/features/sales/slices/orderSlice"
 import { PREORDER_STAGE_OPTIONS, preorderStageLabel, type Order } from "@/features/sales/types"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { DetailRow } from "@/components/common/DetailRow"
@@ -18,7 +18,7 @@ import { OrderActions, OrderStatusChanger } from "./OrderActions"
 import { OrderHeader } from "./OrderHeader"
 import { OrderLinesCard } from "./OrderLinesCard"
 import { CancelledNotice } from "./OrderProgress"
-import { OrderPartyCards, OrderRecords } from "./OrderRecords"
+import { OrderCustomerCard, OrderRecords } from "./OrderRecords"
 
 /** Where the pre-order is on its way from the supplier; staff move it by hand. */
 function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
@@ -50,7 +50,6 @@ function StageCard({ order, canManage }: { order: Order; canManage: boolean }) {
           <CalendarClock className="h-4 w-4 text-primary" />
           Stage
         </CardTitle>
-        <CardDescription>Where the items are on their way to the customer. Customers see it when they track the order.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {order.status === "cancelled" && <CancelledNotice>This pre-order was cancelled.</CancelledNotice>}
@@ -157,11 +156,6 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
             <Clock className="h-4 w-4 text-primary" />
             Status & actions
           </CardTitle>
-          <CardDescription>
-            {order.status === "cancelled"
-              ? "A cancelled pre-order can't be reopened."
-              : "The pre-order is confirmed once its deposit is received; the stage above is set separately."}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <OrderStatusChanger order={order} />
@@ -170,7 +164,7 @@ export function PreorderOrderDetail({ order, refresh }: { order: Order; refresh:
       </Card>
 
       <OrderLinesCard order={order} canManage={canManage} />
-      <OrderPartyCards order={order} />
+      <OrderCustomerCard order={order} />
       <OrderRecords order={order} refresh={refresh} />
     </div>
   )
