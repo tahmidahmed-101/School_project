@@ -232,7 +232,9 @@ def test_order_count_and_revenue_share_one_order_population():
 def test_revenue_series_previous_matches_the_previous_window_the_kpi_compares_with():
     today = date.today()
     start, end = today - timedelta(days=6), today
-    inside_previous = SalesOrderFactory(status=SalesOrder.Status.CONFIRMED, grand_total=Decimal("400.00"))
+    inside_previous = SalesOrderFactory(
+        status=SalesOrder.Status.CONFIRMED, grand_total=Decimal("400.00")
+    )
     SalesOrder.objects.filter(pk=inside_previous.pk).update(
         created_at=inside_previous.created_at - timedelta(days=10)
     )
