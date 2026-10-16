@@ -21,6 +21,7 @@ x-api: &api
 
 services:
   db:
+    init: true
     image: postgres:16-alpine
     container_name: kull-mart-db
     restart: unless-stopped
@@ -32,12 +33,15 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kullmart -d kullmart"]
-      interval: 10s
+      interval: 30s
+      start_period: 30s
+      start_interval: 2s
       timeout: 5s
       retries: 5
     networks: [internal]
 
   api:
+    init: true
     <<: *api
     container_name: kull-mart-api
     ports:
@@ -46,6 +50,7 @@ services:
 
   # Off by default: see scripts/reservation_sweeper.sh before enabling (`--profile sweeper`).
   sweeper:
+    init: true
     <<: *api
     container_name: kull-mart-sweeper
     profiles: [sweeper]
