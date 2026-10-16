@@ -123,7 +123,6 @@ force-exclude = "/migrations/"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
-addopts = "--cov=apps --cov-report=term-missing"
 
 [tool.mypy]
 python_version = "3.12"
