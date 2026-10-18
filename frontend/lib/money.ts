@@ -20,7 +20,7 @@ export const sumMoney = (values: (string | null | undefined)[]): string =>
 // ৳1,23,45,678.50: lakh/crore grouping, the same digits as money.py group_lakh.
 export function formatBdt(value: string | null | undefined): string {
   const paisa = toPaisa(value);
-  const [whole, cents] = fromPaisa(paisa < BigInt(0) ? -paisa : paisa).split(".");
+  const [whole = "", cents = ""] = fromPaisa(paisa < BigInt(0) ? -paisa : paisa).split(".");
   const head = whole.slice(0, -3);
   return `${paisa < BigInt(0) ? "-" : ""}৳${head ? `${head.replace(/\B(?=(\d{2})+$)/g, ",")},` : ""}${whole.slice(-3)}.${cents}`;
 }
