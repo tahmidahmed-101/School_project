@@ -28,3 +28,6 @@ Thumbs.db
 
 # Playwright MCP session output
 .playwright-mcp
+
+# Cloudflare deploy creds
+.env
