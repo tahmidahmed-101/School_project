@@ -9,7 +9,7 @@ export { ShopCatalog } from "./ui/ShopCatalog";
 export { TrendingSection } from "./ui/TrendingSection";
 export { WithActiveCategory } from "./ui/WithActiveCategory";
 export { WithPageKind } from "./ui/WithPageKind";
-export { ProductDetailSkeleton, ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";
+export { ProductGridSkeleton, ShopSkeleton } from "./ui/CatalogSkeletons";
 export { ContactButtons } from "./ui/ContactButtons";
 export { categoryGroups, categoryTree, type CategoryGroup, type CategoryNode } from "./domain/category-tree";
 export { forListing, moreForProduct, relatedForProduct } from "./domain/listing";
