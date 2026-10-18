@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 from pathlib import Path
 
 from django.conf import settings
@@ -53,6 +54,12 @@ if _frontend_assets.is_dir():
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
+# The slim image has no /etc/mime.types, so Python would serve these as application/octet-stream and
+# crawlers refuse them as og:image.
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/avif", ".avif")
 
 
 def media_serve(request, path):

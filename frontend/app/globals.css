@@ -103,23 +103,23 @@
   }
 }
 
-html.js [data-reveal] {
+html.reveal-ready [data-reveal] {
   transition:
     opacity var(--reveal-duration, 0.9s) cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s),
     transform var(--reveal-duration, 0.9s) cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
 }
 
-html.js [data-reveal]:not([data-shown]) {
+html.reveal-ready [data-reveal]:not([data-shown]) {
   opacity: 0;
   transform: translateY(var(--reveal-y, 24px));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.js [data-reveal] {
+  html.reveal-ready [data-reveal] {
     transition: none;
   }
 
-  html.js [data-reveal]:not([data-shown]) {
+  html.reveal-ready [data-reveal]:not([data-shown]) {
     transform: none;
   }
 }

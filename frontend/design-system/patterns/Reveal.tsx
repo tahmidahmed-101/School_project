@@ -26,10 +26,17 @@ function RevealBase({ children, delay, duration, y, className, viewport }: Revea
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const root = document.documentElement;
+    const { top, bottom } = el.getBoundingClientRect();
+    const onScreen = top < window.innerHeight && bottom > 0;
+    // Content in the first screen is never hidden: waiting for hydration to fade it in delays the largest paint.
+    if (onScreen || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.setAttribute("data-shown", "");
       setShown(true);
+      root.classList.add("reveal-ready");
       return;
     }
+    root.classList.add("reveal-ready");
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
@@ -43,7 +50,7 @@ function RevealBase({ children, delay, duration, y, className, viewport }: Revea
     return () => observer.disconnect();
   }, [margin, amount]);
 
-  // Hidden-state styles live in globals.css under html.js, so content stays visible without JS.
+  // Hidden-state styles live in globals.css under html.reveal-ready, so content stays visible until hydration and without JS.
   return (
     <div
       ref={ref}

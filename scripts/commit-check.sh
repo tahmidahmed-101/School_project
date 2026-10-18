@@ -4,7 +4,7 @@
 set -euo pipefail
 staged="${STAGED_FILES:-$(git diff --cached --name-only)}"
 if grep -qE '^backend/.*\.py$' <<<"$staged"; then
-  apps="$(grep -oE '^backend/apps/[a-z_]+/' <<<"$staged" | sed 's|^backend/||' | sort -u | tr '\n' ' ')"
+  apps="$({ grep -oE '^backend/apps/[a-z_]+/' <<<"$staged" || true; } | sed 's|^backend/||' | sort -u | tr '\n' ' ')"
   (cd backend && .venv/bin/ruff check . && .venv/bin/pytest -q -x ${apps:-tests})
 fi
 mapfile -t web < <(grep -E '^frontend/.*\.(ts|tsx|js|jsx)$' <<<"$staged" | sed 's|^frontend/||' || true)
