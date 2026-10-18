@@ -119,7 +119,8 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               }`}
             >
               <Clock className="h-5 w-5 shrink-0" />
-              <span className="text-xs font-semibold whitespace-nowrap">{ui("navPreOrder")}</span>
+              {/* Icon only on narrow phones, where the label would push the header past the screen edge */}
+              <span className="text-xs font-semibold whitespace-nowrap max-[379px]:hidden">{ui("navPreOrder")}</span>
             </Link>
 
             {/* Desktop only; on mobile the language toggle lives in the hamburger menu */}
