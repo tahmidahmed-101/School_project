@@ -33,8 +33,7 @@ def test_empty_store_answers_empty_lists_without_auth(api_client):
     assert response.data["data"] == {
         "hero_slides": [],
         "promo_lines": [],
-        "promotion_popup": None,
-        "preorder_popup": None,
+        "promotion_popups": [],
     }
 
 

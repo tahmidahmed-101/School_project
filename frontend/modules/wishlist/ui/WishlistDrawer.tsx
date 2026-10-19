@@ -104,22 +104,25 @@ export function WishlistDrawer() {
                   </div>
                 </DrawerItem>
               ))}
-              <Button
-                size="sm"
-                fullWidth
-                onClick={() => byKind[section.kind].forEach((item) => addItem(item))}
-                leadingIcon={<ShoppingCart className="h-4 w-4" />}
-              >
-                {ui(section.moveAllKey)}
-              </Button>
             </section>
           ))
         )}
       </DrawerBody>
 
       {items.length > 0 && (
+        // The move-all buttons sit in the footer, fixed below the scrolling list.
         <DrawerFooter backLabel={ui("backToShopping")} onBack={closeWishlist}>
-          {null}
+          {sections.map((section) => (
+            <Button
+              key={section.kind}
+              size="sm"
+              fullWidth
+              onClick={() => byKind[section.kind].forEach((item) => addItem(item))}
+              leadingIcon={<ShoppingCart className="h-4 w-4" />}
+            >
+              {ui(section.moveAllKey)}
+            </Button>
+          ))}
         </DrawerFooter>
       )}
     </Drawer>

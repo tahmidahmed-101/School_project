@@ -8,8 +8,7 @@ import { PlusIcon, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { FieldDescription, FieldLabel } from "@/components/ui/field"
+import { SwitchField } from "@/components/common/FormDialog"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FormActions } from "@/components/common/FormActions"
@@ -227,22 +226,16 @@ const SaleForm = () => {
                 options={TARGET_OPTIONS}
               />
 
-              {/* Beside "Applies To": the label with its switch on one line, the note under them. */}
-              <div className="flex flex-col gap-1.5 md:self-end md:pb-0.5">
-                <div className="flex items-center gap-3">
-                  <FieldLabel htmlFor="is_active" className="w-auto">
-                    On
-                  </FieldLabel>
-                  <Controller
-                    control={control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
-                    )}
-                  />
-                </div>
-                <FieldDescription>A promotion that is switched off changes no prices.</FieldDescription>
-              </div>
+              <SwitchField
+                control={control}
+                name="is_active"
+                label="Status"
+                onLabel="Active"
+                offLabel="Inactive"
+                disabled={readOnly}
+                description="A promotion that is switched off changes no prices."
+                className="self-start"
+              />
 
               {appliesTo === "categories" && (
                 <Controller

@@ -20,7 +20,6 @@ import {
   basePayload,
   baseShape,
   baseValuesOf,
-  checkSpecs,
   reportedRefusal,
 } from "../lib/productFormBase"
 import type { CategoryOption } from "../lib/useCategoryOptions"
@@ -32,7 +31,6 @@ import {
   ProductFormImages,
   ProductFormShell,
   SavedVariants,
-  SpecsCard,
 } from "./ProductFormParts"
 
 const SETTINGS_FIELDS = [
@@ -57,7 +55,7 @@ type FormValues = z.infer<typeof fields>
 
 /** `priceRequired` is off on a saved product with options, where each variant has its own price. */
 const windowSchema = (priceRequired: boolean) =>
-  fields.superRefine(checkSpecs).superRefine((v, ctx) => {
+  fields.superRefine((v, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message })
     if (priceRequired && !v.price) issue("price", "A pre-order product needs a price")
     // The storefront only takes pre-orders inside the open / close window, so both are required.
@@ -125,7 +123,7 @@ export function PreorderProductForm({
   const noVariants = isEditing && product?.variants.length === 0
   const priceRequired = !hasOptions
   const resolver = useMemo(
-    () => zodResolver(noVariants ? fields.superRefine(checkSpecs) : windowSchema(priceRequired)),
+    () => zodResolver(noVariants ? fields : windowSchema(priceRequired)),
     [noVariants, priceRequired]
   )
   const form = useForm<FormValues>({ resolver, defaultValues: { ...baseDefaults, ...settingsDefaults } })
@@ -272,7 +270,6 @@ export function PreorderProductForm({
           </Card>
         )}
 
-        <SpecsCard />
         <ProductFormImages product={product} staged={staged} />
       </ProductFormShell>
     </FormProvider>

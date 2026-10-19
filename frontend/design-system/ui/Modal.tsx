@@ -14,6 +14,8 @@ interface ModalProps {
   /** Backdrop tint + blur. */
   backdropClassName?: string;
   lockScroll?: boolean;
+  /** How long the backdrop fades, and how long the dialog stays mounted on close so its own exit can finish. */
+  durationMs?: number;
   /** The dialog box itself (its own motion/animation is left to the caller, since dialogs differ). */
   children: ReactNode;
 }
@@ -29,10 +31,11 @@ export function Modal({
   containerClassName = DEFAULT_CONTAINER_CLASS,
   backdropClassName = DEFAULT_BACKDROP_CLASS,
   lockScroll,
+  durationMs = 200,
   children,
 }: ModalProps) {
   useOverlay(open, onClose, lockScroll === undefined ? undefined : { lockScroll });
-  const { mounted, shown } = usePresence(open, 200);
+  const { mounted, shown } = usePresence(open, durationMs);
 
   // `data-shown` lets dialog content animate with `group-data-[shown=true]:` classes.
   return (
@@ -43,7 +46,8 @@ export function Modal({
             type="button"
             tabIndex={-1}
             onClick={onClose}
-            className={`fixed inset-0 cursor-default transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"} ${backdropClassName}`}
+            style={{ transitionDuration: `${durationMs}ms` }}
+            className={`fixed inset-0 cursor-default transition-opacity ${shown ? "opacity-100" : "opacity-0"} ${backdropClassName}`}
             aria-label={label}
           />
           {children}

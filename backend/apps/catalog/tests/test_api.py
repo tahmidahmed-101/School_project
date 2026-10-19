@@ -37,6 +37,21 @@ def test_admin_can_create_category(api_client):
     assert response.data["data"]["slug"] == "electronics"
 
 
+@pytest.mark.parametrize(("payload", "expected"), [({}, True), ({"is_active": False}, False)])
+@pytest.mark.parametrize("fmt", ["json", "multipart"])
+def test_admin_can_create_a_category_switched_off(api_client, payload, expected, fmt):
+    admin = create_user(email="catalog-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.post(
+        "/api/v1/admin/catalog/categories/", {"name": "Electronics", **payload}, format=fmt
+    )
+
+    assert response.status_code == 201, response.data
+    # Left out, even of a multipart form, the category is created switched on.
+    assert response.data["data"]["is_active"] is expected
+
+
 def test_staff_without_permission_is_forbidden(api_client):
     staff = create_user(email="catalog-staff@example.com", role=UserRole.STAFF)
     api_client.force_authenticate(user=staff)

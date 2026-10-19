@@ -7,7 +7,7 @@ import { toast } from "sonner"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
+import { SwitchField } from "@/components/common/FormDialog"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -326,23 +326,16 @@ const CouponForm = () => {
                 {...register("expires_at")}
               />
 
-              {/* Level with the input beside it: pushed down by the height of that field's label. The note
-                  sits under the box, like the one under Expires At. */}
-              <div className="flex flex-col gap-2 self-start md:mt-7">
-                <div className="flex h-11 items-center justify-between gap-3 rounded-lg border border-field-border px-4">
-                  <FieldLabel htmlFor="is_active" className="w-auto">
-                    Active
-                  </FieldLabel>
-                  <Controller
-                    control={control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
-                    )}
-                  />
-                </div>
-                <FieldDescription>Inactive coupons are rejected at checkout.</FieldDescription>
-              </div>
+              <SwitchField
+                control={control}
+                name="is_active"
+                label="Status"
+                onLabel="Active"
+                offLabel="Inactive"
+                disabled={readOnly}
+                description="Inactive coupons are rejected at checkout."
+                className="self-start"
+              />
 
               {/* Categories and brands share a row; the storefront switch follows them. */}
               <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-2">
@@ -389,26 +382,14 @@ const CouponForm = () => {
                 />
               </div>
 
-              <Field orientation="horizontal" className="items-center rounded-lg border border-field-border px-4 py-3 md:col-span-2">
-                <FieldContent>
-                  <FieldLabel htmlFor="show_on_storefront">Show on storefront</FieldLabel>
-                  <FieldDescription>
-                    Advertises this code in the shop's "Collect vouchers" strip. Leave off for private codes.
-                  </FieldDescription>
-                </FieldContent>
-                <Controller
-                  control={control}
-                  name="show_on_storefront"
-                  render={({ field }) => (
-                    <Switch
-                      id="show_on_storefront"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={readOnly}
-                    />
-                  )}
-                />
-              </Field>
+              <SwitchField
+                control={control}
+                name="show_on_storefront"
+                label="Show on storefront"
+                disabled={readOnly}
+                description={`Advertises this code in the shop's "Collect vouchers" strip. Leave off for private codes.`}
+                className="md:col-span-2"
+              />
             </fieldset>
           </CardContent>
         </Card>

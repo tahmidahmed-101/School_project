@@ -1,5 +1,5 @@
-"""The storefront-content `promotion_popup`: the newest switched-on shop popup
-whose sale is running, as its image, link and sale."""
+"""The storefront's view of promotion popups: which campaigns are live now,
+where clicking each goes, and the order the storefront picks from."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from apps.catalog.services.sales import delete_sale, update_sale
+from apps.catalog.factories import CategoryFactory, ProductFactory
+from apps.catalog.models import Category
 
-from .promotions import CONTENT, png, popup, sale
+from .promotions import CONTENT, popup, sale
 
 pytestmark = pytest.mark.django_db
 
@@ -20,115 +21,98 @@ def _media_root(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
 
 
-def _popup_data(api_client):
+def _popups(api_client) -> list[dict]:
     response = api_client.get(CONTENT)
     assert response.status_code == 200
-    return response.data["data"]["promotion_popup"]
+    return response.data["data"]["promotion_popups"]
 
 
-def test_no_popup_keeps_the_existing_response_and_adds_null(api_client):
-    data = api_client.get(CONTENT).data["data"]
+def test_a_live_popup_carries_where_when_and_how_it_shows(api_client):
+    ends = timezone.now() + timedelta(days=2)
+    row = popup(shop="preorder", ends_at=ends)
 
-    assert data == {
-        "hero_slides": [],
-        "promo_lines": [],
-        "promotion_popup": None,
-        "preorder_popup": None,
-    }
+    [item] = _popups(api_client)
 
-
-def test_an_eligible_popup_carries_image_link_and_sale(api_client):
-    offer = sale("25.00", name="Eid offer")
-    row = popup(offer, link_url="/shop?collection=sale")
-
-    data = _popup_data(api_client)
-
-    assert data == {
-        "id": str(row.id),
-        "image": f"http://testserver{row.image.url}",
-        "link_url": "/shop?collection=sale",
-        "sale": {
-            "name": "Eid offer",
-            "percent_off": "25.00",
-            "ends_at": data["sale"]["ends_at"],
-        },
-    }
-    assert data["sale"]["ends_at"]
+    assert item["id"] == str(row.id)
+    assert item["image"] == f"http://testserver{row.image.url}"
+    assert item["href"] == "/shop"
+    assert item["shop"] == "preorder"
+    assert item["starts_at"] is None
+    assert item["ends_at"] is not None
+    assert item["sale"] is None
+    # Staff-only fields stay in the dashboard.
+    assert "name" not in item
+    assert "description" not in item
 
 
-def test_a_popup_without_a_link_sends_an_empty_link(api_client):
-    popup(sale())
+def test_a_switched_off_campaign_never_shows(api_client):
+    popup(is_active=False)
 
-    assert _popup_data(api_client)["link_url"] == ""
-
-
-def test_a_switched_off_popup_is_hidden(api_client):
-    popup(sale(), is_active=False)
-
-    assert _popup_data(api_client) is None
+    assert _popups(api_client) == []
 
 
-def test_a_popup_is_hidden_when_its_sale_is_not_running(api_client, admin_user):
-    popup(sale(starts_in_days=2))
-    assert _popup_data(api_client) is None
-
-    popup(sale(starts_in_days=-5, ends_in_days=-1))
-    assert _popup_data(api_client) is None
-
-    switched_off = sale()
-    popup(switched_off)
-    update_sale(sale=switched_off, is_active=False)
-    assert _popup_data(api_client) is None
-
-    deleted = sale()
-    popup(deleted)
-    delete_sale(sale=deleted, actor=admin_user)
-    assert _popup_data(api_client) is None
-
-
-def test_the_newest_popup_wins(api_client):
-    offer = sale()
-    popup(offer)
-    newest = popup(offer)
-
-    assert _popup_data(api_client)["id"] == str(newest.id)
-
-
-def test_a_newer_popup_whose_sale_is_not_running_gives_way(api_client):
-    live = popup(sale())
-    popup(sale(starts_in_days=2))
-
-    assert _popup_data(api_client)["id"] == str(live.id)
-
-
-def test_hero_and_promo_shapes_are_unchanged_beside_a_popup(api_client):
-    from apps.business.models import HeroSlide, PromoLine
-
-    HeroSlide.objects.create(image=png(), title_en="Banner")
-    PromoLine.objects.create(text_en="Free delivery")
-    popup(sale())
-
-    data = api_client.get(CONTENT).data["data"]
-
-    assert set(data) == {"hero_slides", "promo_lines", "promotion_popup", "preorder_popup"}
-    assert set(data["hero_slides"][0]) == {
-        "id",
-        "image",
-        "alt",
-        "tag",
-        "title",
-        "link_url",
-        "placement",
-    }
-    assert set(data["promo_lines"][0]) == {"id", "text", "placement"}
-
-
-def test_a_running_sale_that_ends_hides_the_popup(api_client):
-    offer = sale(ends_in_days=1)
-    popup(offer)
-    assert _popup_data(api_client) is not None
-
-    update_sale(
-        sale=offer, ends_at=timezone.now() - timedelta(minutes=1), starts_at=offer.starts_at
+def test_only_campaigns_inside_their_schedule_show(api_client):
+    now = timezone.now()
+    popup(name="Later", starts_at=now + timedelta(hours=1))
+    popup(name="Over", ends_at=now - timedelta(minutes=1))
+    running = popup(
+        name="Now", starts_at=now - timedelta(hours=1), ends_at=now + timedelta(hours=1)
     )
-    assert _popup_data(api_client) is None
+
+    assert [item["id"] for item in _popups(api_client)] == [str(running.id)]
+
+
+def test_highest_priority_comes_first_then_newest(api_client):
+    older = popup(priority=1)
+    newer = popup(priority=1)
+    top = popup(priority=7)
+
+    assert [item["id"] for item in _popups(api_client)] == [
+        str(top.id),
+        str(newer.id),
+        str(older.id),
+    ]
+
+
+def test_a_popup_without_a_destination_shows_with_no_link(api_client):
+    popup(destination_type="none", link_url="")
+
+    [item] = _popups(api_client)
+
+    assert item["href"] is None
+
+
+def test_product_destination_opens_the_product_while_it_is_published(api_client):
+    product = ProductFactory(is_active=True, slug="hoco-eq33")
+    popup(destination_type="product", product=product, link_url="")
+
+    assert _popups(api_client)[0]["href"] == "/product/hoco-eq33"
+
+    product.is_active = False
+    product.save()
+    assert _popups(api_client) == []
+
+
+def test_category_destination_opens_its_shop_listing(api_client):
+    stock = CategoryFactory(slug="gadgets")
+    preorder = CategoryFactory(slug="eid", category_type=Category.CategoryType.PREORDER)
+    popup(destination_type="category", category=stock, link_url="", priority=2)
+    popup(destination_type="category", category=preorder, link_url="", priority=1)
+
+    assert [item["href"] for item in _popups(api_client)] == [
+        "/shop?category=gadgets",
+        "/shop?category=eid&type=preorder",
+    ]
+
+
+def test_campaign_destination_shows_only_while_its_sale_runs(api_client):
+    running = sale(name="Running")
+    ended = sale(name="Ended", starts_in_days=-5, ends_in_days=-1)
+    popup(destination_type="campaign", sale=running, link_url="", priority=2)
+    popup(destination_type="campaign", sale=ended, link_url="", priority=1)
+
+    [item] = _popups(api_client)
+
+    assert item["href"] == "/shop?collection=sale"
+    assert item["sale"]["name"] == "Running"
+    assert item["sale"]["percent_off"] == "20.00"

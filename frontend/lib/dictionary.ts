@@ -341,6 +341,8 @@ export const DICT = {
   },
   cancel: { en: "Cancel", bn: "বাতিল" },
   confirmPreOrderBtn: { en: "Confirm pre-order", bn: "প্রি-অর্ডার নিশ্চিত করুন" },
+  acceptAndPlaceOrder: { en: "Accept & place order", bn: "শর্ত মেনে অর্ডার করুন" },
+  termsTitle: { en: "Terms", bn: "শর্তাবলি" },
   checkoutPreOrderNotice: { en: "This order contains a pre-order product.", bn: "এই অর্ডারে প্রি-অর্ডার পণ্য রয়েছে।" },
   checkoutPreOrderShipping: {
     en: "The product will be shipped after stock arrives.",

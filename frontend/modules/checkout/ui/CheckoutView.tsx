@@ -39,7 +39,7 @@ import { CheckoutSummary } from "./CheckoutSummary";
 import { PreorderConfirmModal } from "./PreorderConfirmModal";
 
 export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: PaymentMethodsByKind }) {
-  const { ui } = useLang();
+  const { ui, t } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
 
@@ -57,7 +57,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
   const coupon = useCoupon(items);
-  const freeDeliveryEstimate = freeDeliveryStatus(useBrand().freeDeliveryMinAmount, items);
+  const brand = useBrand();
+  const freeDeliveryEstimate = freeDeliveryStatus(brand.freeDeliveryMinAmount, items);
   // The quote is the store's answer: once it charges a fee, the estimate must not claim free delivery beside it.
   const quoteCharges = shipping.status === "ok" && shipping.fee > 0;
   const freeDelivery = quoteCharges && freeDeliveryEstimate?.reached ? null : freeDeliveryEstimate;
@@ -228,7 +229,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
         </form>
         <PreorderConfirmModal
           open={confirmingPreorder}
-          items={preorderItems}
+          // The shopper's language, or the other one when staff wrote the terms in one language only.
+          terms={t(brand.preorderTerms) || brand.preorderTerms.bn}
           submitting={isSubmitting}
           onClose={() => setConfirmingPreorder(false)}
           onConfirm={() => void handleSubmit(undefined, { confirmed: true })}

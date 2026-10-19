@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rest_framework import serializers
+from rest_framework.fields import empty
 
 from apps.catalog.models import Category, Product
 from apps.catalog.selectors.images import variant_image_url
@@ -435,6 +436,12 @@ class CategorySerializer(serializers.Serializer):
         return _image_url(obj, self.context)
 
 
+class _DefaultOnBooleanField(serializers.BooleanField):
+    # DRF reads a boolean missing from a multipart form as an unticked checkbox
+    # (False); left out, this one takes its default instead.
+    default_empty_html = empty
+
+
 class CategoryCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     parent_id = serializers.UUIDField(required=False, allow_null=True)
@@ -442,6 +449,8 @@ class CategoryCreateSerializer(serializers.Serializer):
     # Omitted for a subcategory (inherits its parent's type); required in effect
     # only for a root category, where it defaults to Stock if left out.
     category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
+    # Off creates the category hidden from the storefront.
+    is_active = _DefaultOnBooleanField(required=False, default=True)
 
 
 class CategoryUpdateSerializer(serializers.Serializer):
@@ -461,6 +470,8 @@ class ProductSerializer(serializers.Serializer):
     category_type = serializers.CharField(source="category.category_type", read_only=True)
     brand_id = serializers.UUIDField(read_only=True, allow_null=True)
     featured = serializers.BooleanField(read_only=True)
+    show_questions = serializers.BooleanField(read_only=True)
+    show_price_report = serializers.BooleanField(read_only=True)
     name = serializers.CharField()
     slug = serializers.CharField(read_only=True)
     description = serializers.CharField(allow_blank=True)
@@ -563,6 +574,8 @@ class ProductCreateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField()
     brand_id = serializers.UUIDField(required=False, allow_null=True)
     featured = serializers.BooleanField(required=False, default=False)
+    show_questions = serializers.BooleanField(required=False, default=True)
+    show_price_report = serializers.BooleanField(required=False, default=True)
     # Off creates the product unpublished, so it can be finished before the storefront shows it.
     is_active = serializers.BooleanField(required=False, default=True)
     name = serializers.CharField()
@@ -598,6 +611,8 @@ class ProductUpdateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField(required=False)
     brand_id = serializers.UUIDField(required=False, allow_null=True)
     featured = serializers.BooleanField(required=False)
+    show_questions = serializers.BooleanField(required=False)
+    show_price_report = serializers.BooleanField(required=False)
     name = serializers.CharField(required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     highlights = serializers.ListField(child=serializers.CharField(), required=False)

@@ -36,7 +36,14 @@ def sale(percent="20.00", *, starts_in_days=-1, ends_in_days=7, **fields) -> Sal
     )
 
 
-def popup(sale_row: Sale | None, **fields) -> PromotionPopup:
-    """A popup written straight to the table, for read-side tests. Pass no sale
-    and `placement="preorder"` for a pre-order popup."""
-    return PromotionPopup.objects.create(image=fields.pop("image", png()), sale=sale_row, **fields)
+def popup(**fields) -> PromotionPopup:
+    """A live popup written straight to the table, for read-side tests: active,
+    in the stock shop, linking to `/shop` unless the fields say otherwise."""
+    defaults = {
+        "name": "Eid campaign",
+        "is_active": True,
+        "shop": PromotionPopup.Shop.STOCK,
+        "destination_type": PromotionPopup.Destination.URL,
+        "link_url": "/shop",
+    }
+    return PromotionPopup.objects.create(image=fields.pop("image", png()), **{**defaults, **fields})

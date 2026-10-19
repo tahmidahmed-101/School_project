@@ -25,6 +25,7 @@ export const preorderModule: FeatureModule = {
     { path: "preorder_reviews", lazy: page(() => import("../catalog/components/Reviews")) },
     { path: "preorder_questions", lazy: page(() => import("../catalog/components/Questions")) },
     { path: "preorder_price_reports", lazy: page(() => import("../catalog/components/PriceReports")) },
+    { path: "preorder_promotion_popups", lazy: page(() => import("../marketing/components/PromotionPopups")) },
     { path: "preorder_purchasing/suppliers", lazy: page(() => import("../procurement/components/Suppliers")) },
     { path: "preorder_purchasing/orders", lazy: page(() => import("../procurement/components/PurchaseOrders")) },
     {

@@ -160,7 +160,7 @@ function AccountFormDialog({
           </FieldContent>
         </Field>
       </div>
-      {account && <SwitchField control={control} name="is_active" label="Active" />}
+      {account && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
     </FormDialog>
   )
 }

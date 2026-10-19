@@ -189,6 +189,9 @@ export interface Product {
   brand_id: string | null
   /** Shown in the storefront's featured sections. */
   featured: boolean
+  /** Whether the storefront product page shows its Questions / Price report sections. */
+  show_questions: boolean
+  show_price_report: boolean
   name: string
   slug: string
   description: string
@@ -222,6 +225,8 @@ export interface ProductPayload {
   /** null clears the brand. */
   brand_id?: string | null
   featured?: boolean
+  show_questions?: boolean
+  show_price_report?: boolean
   name?: string
   description?: string
   highlights?: string[]

@@ -54,7 +54,7 @@ export function PreOrderSections({ content, hasOffers }: { content: StorefrontCo
         preorder
       />
       <PromoMarquee lines={promoLinesFor("preorder", content)} />
-      <PromotionPopup popup={content?.preorderPopup ?? null} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop="preorder" />
       <CategoryShowcase preorder />
 
       {preorderProducts.length === 0 ? (

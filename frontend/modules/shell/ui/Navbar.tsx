@@ -78,7 +78,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
         <div
           className={containerClass(
             "default",
-            "flex items-center justify-between gap-3 py-3 sm:gap-6 sm:py-3.5 lg:gap-8",
+            "flex items-center justify-between gap-3 py-3 max-[379px]:gap-2 max-[379px]:px-3 sm:gap-6 sm:py-3.5 lg:gap-8",
           )}
         >
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
@@ -86,7 +86,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               onClick={onOpenMenu}
               aria-label={ui("openMenu")}
-              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 lg:hidden"
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 max-[379px]:w-8 lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -101,7 +101,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 loading="eager"
                 className="h-6 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
-              <span className="text-sm font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
+              <span className="text-sm font-extrabold tracking-[0.12em] text-white max-[379px]:tracking-normal transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
                 {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
               </span>
             </Link>
@@ -110,17 +110,17 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
           <NavbarSearch />
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-            {/* Mobile only; on desktop Pre-order already lives in the Tier 2 nav links */}
+            {/* Mobile only; on desktop Pre-order already lives in the Tier 2 nav links. Below 380px the header
+                row tightens its spacing so the label still fits beside the icon. */}
             <Link
               href="/pre-order"
               aria-label={ui("navPreOrder")}
-              className={`relative flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 transition-colors lg:hidden ${
+              className={`relative flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 transition-colors max-[379px]:gap-1 max-[379px]:px-1.5 lg:hidden ${
                 pathname.startsWith("/pre-order") ? "text-gold-300" : "text-white hover:bg-white/10 hover:text-gold-300"
               }`}
             >
               <Clock className="h-5 w-5 shrink-0" />
-              {/* Icon only on narrow phones, where the label would push the header past the screen edge */}
-              <span className="text-xs font-semibold whitespace-nowrap max-[379px]:hidden">{ui("navPreOrder")}</span>
+              <span className="text-xs font-semibold whitespace-nowrap">{ui("navPreOrder")}</span>
             </Link>
 
             {/* Desktop only; on mobile the language toggle lives in the hamburger menu */}
@@ -177,7 +177,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                     type="button"
                     onClick={openDrawer}
                     aria-label={ui("openCart")}
-                    className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300"
+                    className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-gold-300 max-[379px]:w-8"
                   >
                     <ShoppingCart className="h-5 w-5 transition-transform hover:scale-105" />
                     {counts.cart > 0 && <CountBadge>{n(counts.cart)}</CountBadge>}

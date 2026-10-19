@@ -1,18 +1,20 @@
 """Dashboard API for promotion popups: settings permissions, CRUD and the
-rules a popup must meet before it is saved. A popup is an image, an optional
-link and, in the shop, the sale it promotes."""
+rules a popup campaign must meet before it is saved."""
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from django.utils import timezone
 
 from apps.accounts.constants import StaffPermissionCode
 from apps.accounts.services.staff_permissions import set_staff_permission
 from apps.accounts.tests.helpers import create_user
 from apps.business.models import PromotionPopup
-from apps.catalog.services.sales import delete_sale
+from apps.catalog.factories import CategoryFactory, ProductFactory
+from apps.catalog.models import Category
 
 from .promotions import POPUPS, png, popup, sale
 
@@ -30,158 +32,332 @@ def admin_client(api_client, admin_user):
     return api_client
 
 
-def _payload(sale_row, **overrides) -> dict:
-    return {"sale_id": str(sale_row.id), "image": png(), **overrides}
+def _payload(**overrides) -> dict:
+    return {
+        "name": "October Gadget Sale",
+        "shop": "stock",
+        "destination_type": "url",
+        "link_url": "/shop",
+        "image": png(),
+        **overrides,
+    }
 
 
 def _error(response) -> str:
     return response.data["error"]["code"]
 
 
-def test_admin_creates_reads_lists_updates_and_deletes_a_popup(admin_client):
-    offer = sale()
+def _field_errors(response) -> dict:
+    return response.data["error"]["fields"]
+
+
+def test_admin_creates_reads_lists_updates_and_deletes_a_campaign(
+    admin_client, django_capture_on_commit_callbacks
+):
+    starts = timezone.now() - timedelta(hours=1)
+    ends = timezone.now() + timedelta(days=3)
 
     created = admin_client.post(
-        POPUPS, _payload(offer, link_url="/shop?collection=sale"), format="multipart"
+        POPUPS,
+        _payload(
+            priority=5,
+            starts_at=starts.isoformat(),
+            ends_at=ends.isoformat(),
+        ),
+        format="multipart",
     )
+
     assert created.status_code == 201, created.data
     data = created.data["data"]
     row = PromotionPopup.objects.get()
-    assert set(data) == {"id", "image", "link_url", "is_active", "placement", "sale", "created_at"}
-    assert data["link_url"] == "/shop?collection=sale"
-    assert data["placement"] == "home"
+    assert data["name"] == "October Gadget Sale"
+    assert "description" not in data
     assert data["is_active"] is True
+    assert data["display_status"] == "active"
+    assert data["priority"] == 5
+    assert data["shop"] == "stock"
+    assert data["destination_type"] == "url"
+    assert data["link_url"] == "/shop"
+    assert data["product"] is None
+    assert data["category"] is None
+    assert data["sale"] is None
     assert data["image"] == f"http://testserver{row.image.url}"
-    assert row.image.name.startswith("promotions/")
-    assert data["sale"] == {
-        "id": str(offer.id),
-        "name": "Eid offer",
-        "percent_off": "20.00",
-        "status": "running",
-    }
 
-    detail = admin_client.get(f"{POPUPS}{row.id}/")
-    assert detail.status_code == 200
-    assert detail.data["data"]["id"] == str(row.id)
+    assert admin_client.get(f"{POPUPS}{row.id}/").data["data"]["id"] == str(row.id)
+    assert [item["id"] for item in admin_client.get(POPUPS).data["data"]] == [str(row.id)]
 
-    patched = admin_client.patch(
-        f"{POPUPS}{row.id}/", {"link_url": "", "is_active": False}, format="json"
-    )
-    assert patched.status_code == 200, patched.data
-    assert patched.data["data"]["link_url"] == ""
-    assert patched.data["data"]["is_active"] is False
+    updated = admin_client.patch(f"{POPUPS}{row.id}/", {"is_active": False}, format="json")
+    assert updated.status_code == 200, updated.data
+    assert updated.data["data"]["display_status"] == "inactive"
 
-    deleted = admin_client.delete(f"{POPUPS}{row.id}/")
-    assert deleted.status_code == 200
+    image_path = Path(row.image.path)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert admin_client.delete(f"{POPUPS}{row.id}/").status_code == 200
     assert not PromotionPopup.objects.exists()
-    assert admin_client.get(f"{POPUPS}{row.id}/").status_code == 404
+    assert not image_path.exists()
 
 
-def test_the_link_is_optional(admin_client):
-    response = admin_client.post(POPUPS, _payload(sale()), format="multipart")
+def test_new_campaign_is_active_without_a_link_by_default(admin_client):
+    payload = _payload()
+    for field in ("destination_type", "link_url"):
+        del payload[field]
+
+    response = admin_client.post(POPUPS, payload, format="multipart")
 
     assert response.status_code == 201, response.data
-    assert response.data["data"]["link_url"] == ""
-
-
-def test_admin_list_includes_switched_off_popups_newest_first(admin_client):
-    offer = sale()
-    older = popup(offer, is_active=False)
-    newer = popup(offer)
-
-    ids = [row["id"] for row in admin_client.get(POPUPS).data["data"]]
-
-    assert ids == [str(newer.id), str(older.id)]
-
-
-def test_an_image_is_required_on_create(admin_client):
-    response = admin_client.post(POPUPS, {"sale_id": str(sale().id)}, format="multipart")
-
-    assert response.status_code == 400
-    assert _error(response) == "promotion_image_required"
-    assert not PromotionPopup.objects.exists()
-
-
-def test_the_image_can_be_replaced_but_not_removed(admin_client):
-    row = popup(sale())
-    old_path = Path(row.image.path)
-
-    replaced = admin_client.patch(f"{POPUPS}{row.id}/", {"image": png("b.png")}, format="multipart")
-    assert replaced.status_code == 200, replaced.data
-    row.refresh_from_db()
-    assert Path(row.image.path).exists()
-    assert row.image.path != str(old_path)
-
-    removed = admin_client.patch(f"{POPUPS}{row.id}/", {"image": None}, format="json")
-    assert removed.status_code == 400
-    assert _error(removed) == "promotion_image_required"
-    row.refresh_from_db()
-    assert row.image
-
-
-def test_a_file_that_is_not_an_image_is_refused(admin_client):
-    from django.core.files.uploadedfile import SimpleUploadedFile
-
-    fake = SimpleUploadedFile("popup.png", b"not an image", content_type="image/png")
-    response = admin_client.post(POPUPS, _payload(sale(), image=fake), format="multipart")
-
-    assert response.status_code == 400
-    assert not PromotionPopup.objects.exists()
+    data = response.data["data"]
+    assert data["is_active"] is True
+    assert data["display_status"] == "active"
+    assert data["priority"] == 0
+    assert data["destination_type"] == "none"
+    assert data["link_url"] == ""
+    assert data["starts_at"] is None
+    assert data["ends_at"] is None
 
 
 @pytest.mark.parametrize(
-    "url",
-    ["javascript:alert(1)", "//evil.example/x", "/\\evil.example", "shop", "http://", "ftp://x.io"],
+    ("starts_in", "ends_in", "expected"),
+    [
+        (timedelta(days=1), None, "scheduled"),
+        (None, timedelta(days=-1), "expired"),
+        (timedelta(days=-1), timedelta(days=1), "active"),
+    ],
 )
-def test_unsafe_or_malformed_links_are_refused(admin_client, url):
-    response = admin_client.post(POPUPS, _payload(sale(), link_url=url), format="multipart")
+def test_display_status_follows_the_schedule(admin_client, starts_in, ends_in, expected):
+    now = timezone.now()
+    row = popup(
+        starts_at=now + starts_in if starts_in else None,
+        ends_at=now + ends_in if ends_in else None,
+    )
+
+    response = admin_client.get(f"{POPUPS}{row.id}/")
+
+    assert response.data["data"]["display_status"] == expected
+
+
+def test_each_destination_type_keeps_only_its_own_target(admin_client):
+    product = ProductFactory(is_active=True)
+    category = CategoryFactory()
+    offer = sale()
+
+    for destination, field, value in [
+        ("product", "product_id", product.id),
+        ("category", "category_id", category.id),
+        ("campaign", "sale_id", offer.id),
+    ]:
+        response = admin_client.post(
+            POPUPS,
+            _payload(destination_type=destination, **{field: str(value)}),
+            format="multipart",
+        )
+        assert response.status_code == 201, response.data
+        data = response.data["data"]
+        assert data["link_url"] == ""
+        assert data["product"] == (
+            {"id": str(product.id), "name": product.name, "slug": product.slug, "image": None}
+            if destination == "product"
+            else None
+        )
+        assert (data["category"] or {}).get("id") == (
+            str(category.id) if destination == "category" else None
+        )
+        assert (data["sale"] or {}).get("id") == (
+            str(offer.id) if destination == "campaign" else None
+        )
+
+
+def test_no_link_clears_every_target(admin_client):
+    product = ProductFactory(is_active=True)
+    row = popup(destination_type="product", product=product, link_url="")
+
+    response = admin_client.patch(f"{POPUPS}{row.id}/", {"destination_type": "none"}, format="json")
+
+    assert response.status_code == 200, response.data
+    row.refresh_from_db()
+    assert row.product is None
+    assert response.data["data"]["product"] is None
+
+
+def test_switching_destination_clears_the_old_target(admin_client):
+    product = ProductFactory(is_active=True)
+    row = popup(destination_type="product", product=product, link_url="")
+
+    response = admin_client.patch(
+        f"{POPUPS}{row.id}/",
+        {"destination_type": "url", "link_url": "https://example.com/offer"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    row.refresh_from_db()
+    assert row.product is None
+    assert row.link_url == "https://example.com/offer"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "field"),
+    [
+        ({"destination_type": "product"}, "product_id"),
+        ({"destination_type": "category"}, "category_id"),
+        ({"destination_type": "campaign"}, "sale_id"),
+        ({"destination_type": "url", "link_url": ""}, "link_url"),
+    ],
+)
+def test_destination_type_needs_its_target(admin_client, overrides, field):
+    response = admin_client.post(POPUPS, _payload(**overrides), format="multipart")
 
     assert response.status_code == 400
-    assert "link_url" in response.data["error"]["fields"]
-
-
-@pytest.mark.parametrize("url", ["/shop?collection=sale", "https://kullmart.com/offers"])
-def test_site_paths_and_full_urls_are_accepted(admin_client, url):
-    response = admin_client.post(POPUPS, _payload(sale(), link_url=url), format="multipart")
-
-    assert response.status_code == 201, response.data
-    assert response.data["data"]["link_url"] == url
-
-
-def test_a_shop_popup_needs_a_sale(admin_client):
-    response = admin_client.post(POPUPS, {"image": png()}, format="multipart")
-
-    assert response.status_code == 400
-    assert _error(response) == "promotion_sale_required"
+    assert _error(response) == "promotion_destination_required"
+    assert field in _field_errors(response)
     assert not PromotionPopup.objects.exists()
 
 
-def test_an_unknown_or_deleted_sale_is_refused(admin_client, admin_user):
-    from uuid import uuid4
+def test_end_must_be_after_start(admin_client):
+    now = timezone.now()
+    response = admin_client.post(
+        POPUPS,
+        _payload(starts_at=now.isoformat(), ends_at=(now - timedelta(hours=1)).isoformat()),
+        format="multipart",
+    )
 
-    unknown = admin_client.post(POPUPS, _payload(sale(), sale_id=str(uuid4())), format="multipart")
-    assert unknown.status_code == 404
-    assert _error(unknown) == "sale_not_found"
-
-    gone = sale()
-    delete_sale(sale=gone, actor=admin_user)
-    deleted = admin_client.post(POPUPS, _payload(gone), format="multipart")
-    assert deleted.status_code == 404
+    assert response.status_code == 400
+    assert "ends_at" in _field_errors(response)
 
 
-def test_the_sale_can_be_switched(admin_client):
-    row = popup(sale())
-    other = sale(name="Puja offer")
+def test_a_partial_update_is_held_to_the_schedule_rule(admin_client):
+    now = timezone.now()
+    row = popup(starts_at=now)
 
-    response = admin_client.patch(f"{POPUPS}{row.id}/", {"sale_id": str(other.id)}, format="json")
+    response = admin_client.patch(
+        f"{POPUPS}{row.id}/", {"ends_at": (now - timedelta(days=1)).isoformat()}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert "ends_at" in _field_errors(response)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "field"),
+    [
+        ({"name": ""}, "name"),
+        ({"shop": "outlet"}, "shop"),
+        ({"priority": -1}, "priority"),
+        ({"link_url": "javascript:alert(1)"}, "link_url"),
+    ],
+)
+def test_invalid_fields_are_refused(admin_client, overrides, field):
+    response = admin_client.post(POPUPS, _payload(**overrides), format="multipart")
+
+    assert response.status_code == 400
+    assert field in _field_errors(response)
+
+
+def test_a_popup_stays_in_its_shop(admin_client):
+    row = popup()
+
+    response = admin_client.patch(f"{POPUPS}{row.id}/", {"shop": "preorder"}, format="json")
+
+    assert response.status_code == 400
+    assert _error(response) == "promotion_shop_fixed"
+    row.refresh_from_db()
+    assert row.shop == "stock"
+
+
+def test_destination_must_belong_to_the_popups_shop(admin_client):
+    stock_product = ProductFactory(is_active=True)
+    preorder_category = CategoryFactory(category_type=Category.CategoryType.PREORDER)
+
+    product = admin_client.post(
+        POPUPS,
+        _payload(shop="preorder", destination_type="product", product_id=str(stock_product.id)),
+        format="multipart",
+    )
+    category = admin_client.post(
+        POPUPS,
+        _payload(destination_type="category", category_id=str(preorder_category.id)),
+        format="multipart",
+    )
+
+    assert product.status_code == 400
+    assert "product_id" in _field_errors(product)
+    assert category.status_code == 400
+    assert "category_id" in _field_errors(category)
+    assert not PromotionPopup.objects.exists()
+
+
+def test_a_preorder_popup_cannot_lead_to_a_sale(admin_client):
+    response = admin_client.post(
+        POPUPS,
+        _payload(shop="preorder", destination_type="campaign", sale_id=str(sale().id)),
+        format="multipart",
+    )
+
+    assert response.status_code == 400
+    assert _error(response) == "promotion_campaign_stock_only"
+    assert "destination_type" in _field_errors(response)
+
+
+def test_list_can_be_narrowed_to_one_shop(admin_client):
+    stock = popup()
+    preorder = popup(shop="preorder")
+
+    def ids(shop):
+        return [item["id"] for item in admin_client.get(POPUPS, {"shop": shop}).data["data"]]
+
+    assert ids("stock") == [str(stock.id)]
+    assert ids("preorder") == [str(preorder.id)]
+    assert admin_client.get(POPUPS, {"shop": "outlet"}).status_code == 400
+
+
+def test_create_needs_an_image(admin_client):
+    payload = _payload()
+    del payload["image"]
+
+    response = admin_client.post(POPUPS, payload, format="multipart")
+
+    assert response.status_code == 400
+    assert _error(response) == "promotion_image_required"
+
+
+def test_a_new_image_replaces_the_old_file(admin_client, django_capture_on_commit_callbacks):
+    row = popup()
+    old_path = Path(row.image.path)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = admin_client.patch(
+            f"{POPUPS}{row.id}/", {"image": png("new.png")}, format="multipart"
+        )
 
     assert response.status_code == 200, response.data
-    assert response.data["data"]["sale"]["name"] == "Puja offer"
+    row.refresh_from_db()
+    assert Path(row.image.path) != old_path
+    assert not old_path.exists()
+
+
+def test_unknown_product_is_refused(admin_client):
+    response = admin_client.post(
+        POPUPS,
+        _payload(destination_type="product", product_id="00000000-0000-0000-0000-000000000000"),
+        format="multipart",
+    )
+
+    assert response.status_code == 400
+    assert _error(response) == "product_not_found"
+    assert "product_id" in _field_errors(response)
+
+
+def test_list_puts_the_highest_priority_first(admin_client):
+    low = popup(name="Low", priority=1)
+    high = popup(name="High", priority=9)
+
+    response = admin_client.get(POPUPS)
+
+    assert [item["id"] for item in response.data["data"]] == [str(high.id), str(low.id)]
 
 
 def test_staff_without_settings_permission_is_forbidden(api_client):
     staff = create_user(email="popup-nobody@example.com", role="staff")
-    row = popup(sale())
+    row = popup()
     api_client.force_authenticate(user=staff)
 
     assert api_client.get(POPUPS).status_code == 403
@@ -195,13 +371,13 @@ def test_settings_view_permission_reads_but_cannot_write(api_client):
     set_staff_permission(
         staff_user=staff, permission_code=StaffPermissionCode.SETTINGS_VIEW, is_enabled=True
     )
-    row = popup(sale())
+    row = popup()
     api_client.force_authenticate(user=staff)
 
     assert api_client.get(POPUPS).status_code == 200
     assert api_client.get(f"{POPUPS}{row.id}/").status_code == 200
     assert (
-        api_client.patch(f"{POPUPS}{row.id}/", {"link_url": "/shop"}, format="json").status_code
+        api_client.patch(f"{POPUPS}{row.id}/", {"status": "paused"}, format="json").status_code
         == 403
     )
     assert api_client.delete(f"{POPUPS}{row.id}/").status_code == 403

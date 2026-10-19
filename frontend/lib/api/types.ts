@@ -124,6 +124,9 @@ export interface ApiProduct {
   description?: string;
   /** SEO keywords, comma separated. Present on the detail endpoint only. */
   meta_keywords?: string;
+  /** Per-product switches for the Questions and Price report sections. Present on the detail endpoint only. */
+  show_questions?: boolean;
+  show_price_report?: boolean;
 }
 
 export interface ApiReview {
@@ -248,6 +251,8 @@ export interface ApiBusinessProfile {
   about?: ApiBilingual;
   /** Stock-order subtotal that earns free delivery; null or "0" means the offer is off. */
   free_delivery_min_amount?: string | null;
+  /** Accepted before placing a pre-order; both "" for none. Absent on backends that predate it. */
+  preorder_terms?: ApiBilingual;
 }
 
 type ApiLocalizedText = { en: string; bn: string };
@@ -269,26 +274,26 @@ export interface ApiPromoLine {
   placement: "home" | "preorder" | "both";
 }
 
-/** The one shop popup the backend picked to show now: an image, where clicking it goes, and the running sale. */
+/** A popup campaign the backend says may show now, highest priority first. `href` is already resolved. */
 export interface ApiPromotionPopup {
   id: string;
   /** Absolute URL. */
   image: string;
-  /** Empty when staff gave no link; the storefront then opens the promotion's products. */
-  link_url: string;
-  sale: ApiProductSale;
+  /** Where clicking the image goes; null when the popup has no destination. */
+  href: string | null;
+  /** The shop whose pages show it: stock (home, stock listing and products) or pre-order. */
+  shop: "stock" | "preorder";
+  starts_at: string | null;
+  ends_at: string | null;
+  /** The sale a campaign-page popup promotes; null for other destinations. */
+  sale: ApiProductSale | null;
 }
-
-/** The pre-order page popup: the same, with no sale. */
-export type ApiPreorderPopup = Omit<ApiPromotionPopup, "sale">;
 
 export interface ApiStorefrontContent {
   hero_slides: ApiHeroSlide[];
   promo_lines: ApiPromoLine[];
-  /** The shop home page popup. Null when none should show; absent on an API from before popups existed. */
-  promotion_popup?: ApiPromotionPopup | null;
-  /** The pre-order page popup. Null when none should show; absent on an API from before it existed. */
-  preorder_popup?: ApiPreorderPopup | null;
+  /** Popups that may show now, highest priority first; absent on an API from before popup campaigns existed. */
+  promotion_popups?: ApiPromotionPopup[];
 }
 
 export interface ApiPaymentMethod {

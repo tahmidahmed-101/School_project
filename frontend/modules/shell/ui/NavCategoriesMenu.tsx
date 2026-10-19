@@ -9,11 +9,15 @@ import { useLang } from "@/lib/i18n";
 import { shopListing, type ProductKind } from "@/lib/product";
 import { useClickOutside } from "@/lib/useClickOutside";
 import { WithActiveCategory } from "@/modules/catalog";
+import { Collapse } from "@/design-system/patterns/Collapse";
 
-/** Scrolls a just-opened group into view inside its scrolling list, so its subcategories are not left below the edge. */
+/** How long the Collapse panel takes to open, in ms. */
+const OPEN_MS = 250;
+
+/** Once a group has slid open, glides it into view inside the scrolling list, so its subcategories are not left below the edge. */
 function revealGroup(toggle: HTMLElement) {
   const group = toggle.parentElement?.parentElement;
-  requestAnimationFrame(() => group?.scrollIntoView({ block: "nearest" }));
+  setTimeout(() => group?.scrollIntoView({ block: "nearest", behavior: "smooth" }), OPEN_MS);
 }
 
 /** "Shop by Categories" pill in the desktop nav bar: the categories of the shop the visitor is in. */
@@ -84,7 +88,8 @@ function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
                         } ${activeCategory === main.slug ? "text-gold-800" : "text-ink-900 hover:text-ink-950"}`}
                       >
                         <span className="truncate">{t(main.name)}</span>
-                        {arrow}
+                        {/* A group with subcategories shows only the down arrow of its toggle, as on the hero rail. */}
+                        {subs.length === 0 && arrow}
                       </Link>
                       {subs.length > 0 && (
                         <button
@@ -95,15 +100,16 @@ function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
                             setToggled((prev) => ({ ...prev, [main.id]: !isOpenGroup }));
                             if (!isOpenGroup) revealGroup(event.currentTarget);
                           }}
-                          className="flex w-10 shrink-0 cursor-pointer items-center justify-center text-ink-700 hover:text-gold-800"
+                          // Same right edge and size as the other rows' arrow, so the arrows line up in one column.
+                          className="flex shrink-0 cursor-pointer items-center justify-end pl-3 pr-5 text-ink-700 hover:text-gold-800"
                         >
                           <ChevronDown
-                            className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpenGroup ? "rotate-180" : ""}`}
+                            className={`h-3 w-3 transition-transform duration-200 ${isOpenGroup ? "rotate-180" : ""}`}
                           />
                         </button>
                       )}
                     </div>
-                    {isOpenGroup && (
+                    <Collapse open={isOpenGroup}>
                       <div className="mx-3 mb-1.5 mt-0.5 rounded-xl bg-surface-muted py-1">
                         {subs.map(({ category, depth }) => (
                           <Link
@@ -124,7 +130,7 @@ function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
                           </Link>
                         ))}
                       </div>
-                    )}
+                    </Collapse>
                   </div>
                 );
               })

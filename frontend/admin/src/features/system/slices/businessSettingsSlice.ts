@@ -251,7 +251,10 @@ export const savePromotionPopup = createAsyncThunk(
       if (image) {
         const form = new FormData()
         for (const [key, value] of Object.entries(values)) {
-          if (value !== null && value !== undefined) form.append(key, String(value))
+          if (value === undefined) continue
+          // A list goes as repeated keys; null as "", which DRF reads as null on a nullable field.
+          if (Array.isArray(value)) value.forEach((item) => form.append(key, String(item)))
+          else form.append(key, value === null ? "" : String(value))
         }
         form.append("image", image)
         body = form

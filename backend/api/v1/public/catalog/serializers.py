@@ -358,6 +358,8 @@ class PublicProductListSerializer(serializers.Serializer):
 class PublicProductDetailSerializer(PublicProductListSerializer):
     description = serializers.CharField(allow_blank=True)
     meta_keywords = serializers.CharField(read_only=True, allow_blank=True)
+    show_questions = serializers.BooleanField(read_only=True)
+    show_price_report = serializers.BooleanField(read_only=True)
 
 
 def public_customer_name(customer) -> str:

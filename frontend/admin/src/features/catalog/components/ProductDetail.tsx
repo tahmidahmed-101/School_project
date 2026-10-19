@@ -88,7 +88,6 @@ const ProductDetail = () => {
   const isStock = kind === "stock"
   const isBundle = product.product_type === "bundle"
   const options = savedOptionsOf(product)
-  const specs = Array.isArray(product.specs) ? product.specs : []
   const settings = product.variants.find((v) => v.is_preorder_enabled)
   const price = isStock ? (product.price === null ? null : (product.discount_price ?? product.price)) : product.price
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
@@ -205,25 +204,12 @@ const ProductDetail = () => {
               <p className="whitespace-pre-line break-words border-t border-border pt-3 text-sm">{product.description}</p>
             )}
 
-            {(product.highlights.length > 0 || specs.length > 0) && (
-              <div className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-border pt-3 text-sm sm:grid-cols-2">
-                {product.highlights.length > 0 && (
-                  <ul className="list-disc space-y-1 pl-5">
-                    {product.highlights.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                )}
-                {specs.length > 0 && (
-                  <ul className="space-y-1">
-                    {specs.map((spec, i) => (
-                      <li key={i}>
-                        <span className="text-muted-foreground">{spec.name}:</span> {spec.value}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+            {product.highlights.length > 0 && (
+              <ul className="list-disc space-y-1 border-t border-border pt-3 pl-5 text-sm">
+                {product.highlights.map((h, i) => (
+                  <li key={i}>{h}</li>
+                ))}
+              </ul>
             )}
           </div>
         </CardContent>

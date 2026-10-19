@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.constants import StaffPermissionCode
-from apps.business.models import PolicyKind
+from apps.business.models import PolicyKind, PromotionPopup
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.modules import get_module_state, modules_list
 from apps.business.selectors.policies import (
@@ -29,6 +29,7 @@ from apps.business.selectors.storefront_content import (
 from apps.business.services import update_business_profile, update_store_policy
 from apps.business.services.modules import set_module_config, set_module_enabled
 from apps.business.services.storefront_content import (
+    PromotionPopupFieldError,
     create_hero_slide,
     create_promo_line,
     create_promotion_popup,
@@ -44,7 +45,7 @@ from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
 from apps.common.params import KIND_STOCK, get_kind
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
-from apps.common.responses import error_from_exception, not_found
+from apps.common.responses import error_from_exception, error_response, not_found
 from apps.orders.selectors.payment_methods import (
     get_payment_method_state,
     payment_methods_list,
@@ -398,10 +399,18 @@ def _promotion_popup_response(request, popup_id, status_code: int = status.HTTP_
     return Response({"data": data, "message": "Success"}, status=status_code)
 
 
+def _promotion_popup_error(exc: DomainError) -> Response:
+    """A broken rule that belongs to one field is reported against it, so the
+    form can mark that field."""
+    if isinstance(exc, PromotionPopupFieldError):
+        return error_response(exc.code, exc.message, fields={exc.field: [exc.message]})
+    return error_from_exception(exc, status_for_code(exc.code))
+
+
 @extend_schema(tags=["Business Settings"])
 class AdminPromotionPopupListView(APIView):
-    """Promotion popups, switched-off ones included, in the order the
-    storefront prefers them. Create is multipart."""
+    """Promotion popups, drafts, paused and expired ones included, in the order
+    the storefront prefers them. Create is multipart (it carries the image)."""
 
     serializer_class = AdminPromotionPopupWriteSerializer
 
@@ -411,8 +420,13 @@ class AdminPromotionPopupListView(APIView):
         return [SettingsManagePermission()]
 
     def get(self, request) -> Response:
+        shop = request.query_params.get("shop")
+        if shop not in (None, *PromotionPopup.Shop.values):
+            return error_response(
+                "invalid_shop", "Unknown shop.", fields={"shop": ["Unknown shop."]}
+            )
         data = AdminPromotionPopupSerializer(
-            promotion_popups_list(), many=True, context={"request": request}
+            promotion_popups_list(shop=shop), many=True, context={"request": request}
         ).data
         return Response({"data": data, "message": "Success"})
 
@@ -422,7 +436,7 @@ class AdminPromotionPopupListView(APIView):
         try:
             popup = create_promotion_popup(data=serializer.validated_data)
         except DomainError as exc:
-            return error_from_exception(exc, status_for_code(exc.code))
+            return _promotion_popup_error(exc)
         return _promotion_popup_response(request, popup.id, status.HTTP_201_CREATED)
 
 
@@ -449,7 +463,7 @@ class AdminPromotionPopupDetailView(APIView):
         try:
             update_promotion_popup(popup=popup, data=serializer.validated_data)
         except DomainError as exc:
-            return error_from_exception(exc, status_for_code(exc.code))
+            return _promotion_popup_error(exc)
         return _promotion_popup_response(request, pk)
 
     def delete(self, request, pk) -> Response:

@@ -51,7 +51,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             fill
             loading={priority ? "eager" : undefined}
             fetchPriority={priority ? "high" : undefined}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 240px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 20vw, 240px"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </Link>
@@ -86,7 +86,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <div className="mb-1.5 space-y-0.5">
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 text-sm font-bold leading-tight text-fg transition-colors group-hover:text-gold-800 sm:text-base"
+            className="line-clamp-2 text-sm font-bold leading-tight text-fg transition-colors group-hover:text-gold-800 sm:text-base lg:text-sm"
             title={t(product.name)}
           >
             {t(product.name)}
@@ -120,7 +120,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         {/* Price & Actions (centered, stacked) */}
         <div className="mt-auto flex w-full flex-col items-center gap-1.5 border-t border-ink-100 pt-1.5">
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
-            <span className="text-sm font-bold text-gold-800 sm:text-base">{money(product.price)}</span>
+            <span className="text-sm font-bold text-gold-800 sm:text-base lg:text-sm">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (
               <span className="text-xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
             )}

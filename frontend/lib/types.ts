@@ -93,6 +93,9 @@ export interface Product {
   highlights?: T[];
   /** SEO keywords from the product detail endpoint. */
   metaKeywords?: string;
+  /** False when staff turned the Questions / Price report sections off for this product (detail endpoint only). */
+  showQuestions?: boolean;
+  showPriceReport?: boolean;
   /** Which shop the product belongs to, from its category. */
   kind: "stock" | "preorder";
   // Pre-order attributes

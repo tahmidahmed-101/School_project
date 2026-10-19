@@ -53,6 +53,11 @@ class BusinessProfile(TimeStampedModel):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
 
+    # Terms the shopper accepts before placing a pre-order, in English and Bangla.
+    # Both blank = none: the pre-order is confirmed without terms.
+    preorder_terms_en = models.TextField(blank=True, default="")
+    preorder_terms_bn = models.TextField(blank=True, default="")
+
     # Stock orders with a subtotal at or above this ship free. Blank or 0 = off.
     free_delivery_min_amount = models.DecimalField(
         max_digits=14,

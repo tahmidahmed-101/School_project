@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct } from "@/tests/fixtures";
-import type { ApiHeroSlide, ApiPreorderPopup, ApiPromotionPopup, ApiStorefrontContent } from "@/lib/api/types";
+import type { ApiHeroSlide, ApiPromotionPopup, ApiStorefrontContent } from "@/lib/api/types";
 import {
   hasDiscountedProduct,
   heroSlidesFor,
+  pickPromotionPopup,
   promoLinesFor,
-  toPreorderPopup,
   toPromotionPopup,
   toStorefrontContent,
 } from "../domain/storefront-content";
@@ -127,57 +127,76 @@ describe("hasDiscountedProduct", () => {
   });
 });
 
-describe("toPromotionPopup", () => {
-  const apiPopup = (overrides: Partial<ApiPromotionPopup> = {}): ApiPromotionPopup => ({
-    id: "p1",
-    image: "https://api.example.test/media/promotions/p1.png",
-    link_url: "/product/panjabi",
-    sale: { name: "Eid offer", percent_off: "25.00", ends_at: "2026-11-01T00:00:00+06:00" },
-    ...overrides,
-  });
+const apiPopup = (overrides: Partial<ApiPromotionPopup> = {}): ApiPromotionPopup => ({
+  id: "p1",
+  image: "https://api.example.test/media/promotions/p1.png",
+  href: "/product/panjabi",
+  shop: "stock",
+  starts_at: "2026-10-01T00:00:00Z",
+  ends_at: null,
+  sale: { name: "Eid offer", percent_off: "25.00", ends_at: "2026-11-01T00:00:00+06:00" },
+  ...overrides,
+});
 
-  it("reads the image, the link and the sale", () => {
+describe("toPromotionPopup", () => {
+  it("reads the image, link, schedule and sale", () => {
     expect(toPromotionPopup(apiPopup())).toEqual({
       id: "p1",
       image: "https://api.example.test/media/promotions/p1.png",
       href: "/product/panjabi",
+      shop: "stock",
+      startsAt: Date.parse("2026-10-01T00:00:00Z"),
+      endsAt: null,
       sale: { name: "Eid offer", percentOff: 25 },
     });
   });
 
-  it("opens the products on sale when there is no link, or the link is unsafe", () => {
-    expect(toPromotionPopup(apiPopup({ link_url: "" }))?.href).toBe("/shop?collection=sale");
-    expect(toPromotionPopup(apiPopup({ link_url: "javascript:alert(1)" }))?.href).toBe("/shop?collection=sale");
-    expect(toPromotionPopup(apiPopup({ link_url: "//evil.example" }))?.href).toBe("/shop?collection=sale");
-    expect(toPromotionPopup(apiPopup({ link_url: "https://kullmart.com/x" }))?.href).toBe("https://kullmart.com/x");
+  it("has no sale for a destination other than the campaign page", () => {
+    expect(toPromotionPopup(apiPopup({ sale: null }))).not.toHaveProperty("sale");
   });
 
-  it("is null when the API sends none, an older API omits it, or it has no image", () => {
-    expect(toPromotionPopup(null)).toBeNull();
-    expect(content({}).promotionPopup).toBeNull();
+  it("is null without an image, or with a link that is not a site path or http(s) address", () => {
     expect(toPromotionPopup(apiPopup({ image: "" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "javascript:alert(1)" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "//evil.example" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "https://kullmart.com/x" }))?.href).toBe("https://kullmart.com/x");
+  });
+
+  it("keeps a popup with no destination, without a link", () => {
+    expect(toPromotionPopup(apiPopup({ href: null }))?.href).toBeNull();
+  });
+
+  it("is read into the content in the API's order, leaving unusable ones out", () => {
+    const popups = content({
+      promotion_popups: [apiPopup({ id: "a" }), apiPopup({ id: "bad", image: "" }), apiPopup({ id: "b" })],
+    }).promotionPopups;
+    expect(popups.map((popup) => popup.id)).toEqual(["a", "b"]);
+    expect(content({}).promotionPopups).toEqual([]);
   });
 });
 
-describe("toPreorderPopup", () => {
-  const apiPopup = (overrides: Partial<ApiPreorderPopup> = {}): ApiPreorderPopup => ({
-    id: "pre1",
-    image: "https://api.example.test/media/promotions/pre1.png",
-    link_url: "",
-    ...overrides,
+describe("pickPromotionPopup", () => {
+  const popups = (...overrides: Partial<ApiPromotionPopup>[]) =>
+    content({ promotion_popups: overrides.map((o) => apiPopup(o)) }).promotionPopups;
+  const now = Date.parse("2026-10-19T12:00:00Z");
+
+  it("takes only a popup of the page's shop", () => {
+    const list = popups({ id: "stock", shop: "stock" }, { id: "pre", shop: "preorder" });
+    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("stock");
+    expect(pickPromotionPopup(list, "preorder", now)?.id).toBe("pre");
+    expect(pickPromotionPopup(popups({ id: "stock", shop: "stock" }), "preorder", now)).toBeNull();
   });
 
-  it("has no sale and opens the pre-order products without a link", () => {
-    expect(toPreorderPopup(apiPopup())).toEqual({
-      id: "pre1",
-      image: "https://api.example.test/media/promotions/pre1.png",
-      href: "/pre-order",
-    });
-    expect(toPreorderPopup(apiPopup({ link_url: "/product/puffer" }))?.href).toBe("/product/puffer");
+  it("skips one that has not started or has ended, since the API answer may be cached", () => {
+    const list = popups(
+      { id: "later", starts_at: "2026-10-20T00:00:00Z" },
+      { id: "over", starts_at: null, ends_at: "2026-10-19T11:59:00Z" },
+      { id: "open", starts_at: null, ends_at: "2026-10-19T12:01:00Z" },
+    );
+    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("open");
   });
 
-  it("is read into the content beside the shop popup, null when absent", () => {
-    expect(content({ preorder_popup: apiPopup() }).preorderPopup).toMatchObject({ id: "pre1" });
-    expect(content({}).preorderPopup).toBeNull();
+  it("prefers the first eligible one, which the API orders by priority", () => {
+    expect(pickPromotionPopup(popups({ id: "high" }, { id: "low" }), "stock", now)?.id).toBe("high");
   });
 });

@@ -35,6 +35,8 @@ export const BRAND_INFO = {
   about: { en: "", bn: "" },
   /** Stock-order subtotal that earns free delivery, as the API's decimal string; null while the offer is off. */
   freeDeliveryMinAmount: null as string | null,
+  /** Terms the shopper accepts before placing a pre-order, as staff wrote them; both empty for none. */
+  preorderTerms: { en: "", bn: "" },
   logo: "brand/logo.png",
   logoMark: "brand/logo-mark.png",
   /** Gold cart cut out of the logo on a transparent background, for the green header. */
@@ -103,5 +105,6 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     openingHours: profile.opening_hours?.trim() ?? "",
     about: { en: profile.about?.en?.trim() ?? "", bn: profile.about?.bn?.trim() ?? "" },
     freeDeliveryMinAmount: toPaisa(freeDeliveryMin) > BigInt(0) ? freeDeliveryMin : null,
+    preorderTerms: { en: profile.preorder_terms?.en?.trim() ?? "", bn: profile.preorder_terms?.bn?.trim() ?? "" },
   };
 }

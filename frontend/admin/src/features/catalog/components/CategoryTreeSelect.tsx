@@ -51,6 +51,9 @@ export function CategoryTreeSelect<T extends FieldValues>({
   )
 }
 
+/** What the searchable picker reads from an option; a full CategoryOption fits. */
+type TreeOption = Pick<CategoryOption, "label" | "value" | "depth">
+
 /** The same picker with a search box: type to narrow the list, which stays indented by depth. */
 export function CategoryTreeCombobox<T extends FieldValues>({
   control,
@@ -58,12 +61,14 @@ export function CategoryTreeCombobox<T extends FieldValues>({
   id,
   options,
   placeholder,
+  disabled,
 }: {
   control: Control<T>
   name: FieldPath<T>
   id?: string
-  options: CategoryOption[]
+  options: TreeOption[]
   placeholder?: string
+  disabled?: boolean
 }) {
   return (
     <Controller
@@ -72,15 +77,15 @@ export function CategoryTreeCombobox<T extends FieldValues>({
       render={({ field }) => (
         <ComboboxRoot
           items={options}
-          itemToStringValue={(item: CategoryOption) => item.label}
+          itemToStringValue={(item: TreeOption) => item.label}
           value={options.find((o) => o.value === field.value) ?? null}
-          onValueChange={(option: CategoryOption | null) => field.onChange(option?.value ?? "")}
+          onValueChange={(option: TreeOption | null) => field.onChange(option?.value ?? "")}
         >
-          <ComboboxInput id={id} placeholder={placeholder} showClear />
+          <ComboboxInput id={id} placeholder={placeholder} showClear={!disabled} disabled={disabled} />
           <ComboboxContent>
             <ComboboxEmpty>No categories found.</ComboboxEmpty>
             <ComboboxList>
-              {(item: CategoryOption) => (
+              {(item: TreeOption) => (
                 <ComboboxItem key={item.value} value={item}>
                   <span style={{ paddingLeft: `${item.depth * 0.75}rem` }}>{item.label}</span>
                 </ComboboxItem>

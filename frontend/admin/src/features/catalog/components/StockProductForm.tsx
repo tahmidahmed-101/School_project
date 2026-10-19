@@ -14,7 +14,6 @@ import {
   basePayload,
   baseShape,
   baseValuesOf,
-  checkSpecs,
   reportedRefusal,
 } from "../lib/productFormBase"
 import type { CategoryOption } from "../lib/useCategoryOptions"
@@ -27,7 +26,6 @@ import {
   ProductFormImages,
   ProductFormShell,
   SavedVariants,
-  SpecsCard,
 } from "./ProductFormParts"
 
 const schema = z
@@ -36,7 +34,6 @@ const schema = z
     path: ["discount_price"],
     message: "Discount price must be lower than the price",
   })
-  .superRefine(checkSpecs)
 
 type FormValues = z.infer<typeof schema>
 
@@ -137,7 +134,6 @@ export function StockProductForm({
         >
           <PricingFields register={register} errors={errors} />
         </PricingCard>
-        <SpecsCard />
         <ProductFormImages product={product} staged={staged} />
       </ProductFormShell>
     </FormProvider>

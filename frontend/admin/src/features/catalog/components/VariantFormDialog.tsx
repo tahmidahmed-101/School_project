@@ -212,7 +212,7 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
             {text("preorder_min_quantity", "Minimum per order", { placeholder: "1" })}
           </>
         )}
-        {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
+        {isEditing && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
       </div>
     </FormDialog>
   )

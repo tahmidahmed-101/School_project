@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { moneySchema } from "@/lib/forms"
 
 import type { Product, ProductPayload } from "../types"
-import { OPTION_REFUSALS, optionTextKey } from "./options"
+import { OPTION_REFUSALS } from "./options"
 
 /** The fields the stock and the pre-order product form both have. */
 export const baseShape = {
@@ -13,6 +13,8 @@ export const baseShape = {
   /** "" means no brand. */
   brand_id: z.string(),
   featured: z.boolean(),
+  show_questions: z.boolean(),
+  show_price_report: z.boolean(),
   description: z.string(),
   highlights: z.string(),
   meta_keywords: z.string(),
@@ -29,6 +31,8 @@ export const baseDefaults: BaseValues = {
   category_id: "",
   brand_id: "",
   featured: false,
+  show_questions: true,
+  show_price_report: true,
   description: "",
   highlights: "",
   meta_keywords: "",
@@ -44,6 +48,8 @@ export const baseValuesOf = (product: Product): BaseValues => ({
   category_id: product.category_id,
   brand_id: product.brand_id ?? "",
   featured: product.featured,
+  show_questions: product.show_questions,
+  show_price_report: product.show_price_report,
   description: product.description ?? "",
   highlights: (product.highlights ?? []).join("\n"),
   meta_keywords: product.meta_keywords ?? "",
@@ -60,6 +66,8 @@ export const basePayload = (values: BaseValues): ProductPayload => ({
   category_id: values.category_id,
   brand_id: values.brand_id || null,
   featured: values.featured,
+  show_questions: values.show_questions,
+  show_price_report: values.show_price_report,
   description: values.description,
   highlights: values.highlights
     .split("\n")
@@ -68,21 +76,6 @@ export const basePayload = (values: BaseValues): ProductPayload => ({
   specs: values.specs.filter((row) => row.name || row.value),
   meta_keywords: values.meta_keywords,
 })
-
-/** A half-filled or repeated specification row is refused; a fully blank row is dropped on save. */
-export function checkSpecs(v: Pick<BaseValues, "specs">, ctx: z.RefinementCtx) {
-  const seen = new Set<string>()
-  v.specs.forEach((row, i) => {
-    if (!row.name && !row.value) return
-    if (!row.name) ctx.addIssue({ code: "custom", path: ["specs", i, "name"], message: "Name this row" })
-    if (!row.value) ctx.addIssue({ code: "custom", path: ["specs", i, "value"], message: "Enter a value" })
-    const key = optionTextKey(row.name)
-    if (key && seen.has(key)) {
-      ctx.addIssue({ code: "custom", path: ["specs", i, "name"], message: "This name is already in the list" })
-    }
-    seen.add(key)
-  })
-}
 
 /** True (after saying it in plain words) when a failed save was one of the option / variant refusals. */
 export function reportedRefusal(err: unknown): boolean {

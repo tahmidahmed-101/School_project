@@ -97,7 +97,7 @@ export function CheckoutSummary({
 
       <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
         {items.map(({ product, quantity, variantTitle, variantId }) => (
-          <div key={variantId} className="flex items-start gap-3 text-xs">
+          <div key={variantId} className="flex items-start gap-3 border-b border-ink-100 pb-3 text-xs">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-surface-muted">
               <Image src={photo(product.image)} alt={t(product.name)} fill sizes="48px" className="object-cover" />
             </div>

@@ -31,6 +31,20 @@ const profile = (overrides: Partial<ApiBusinessProfile> = {}): ApiBusinessProfil
   ...overrides,
 });
 
+describe("mergeBrand pre-order terms", () => {
+  it("keeps each language as staff wrote it, line breaks included, trimmed at the ends", () => {
+    const terms = mergeBrand(
+      profile({ preorder_terms: { en: "  No refunds.\nDates may change.  ", bn: " ফেরত নেই। " } }),
+    ).preorderTerms;
+    expect(terms).toEqual({ en: "No refunds.\nDates may change.", bn: "ফেরত নেই।" });
+  });
+
+  it("has none for a missing field or without a profile", () => {
+    expect(mergeBrand(profile()).preorderTerms).toEqual({ en: "", bn: "" });
+    expect(mergeBrand(null).preorderTerms).toEqual({ en: "", bn: "" });
+  });
+});
+
 describe("mergeBrand", () => {
   it("uses the contact details the business profile has", () => {
     const brand = mergeBrand(profile({ phone: "01811-222333", email: "hello@kullmart.com" }));

@@ -3,8 +3,8 @@ import { X, Check } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Field, FieldDescription } from "@/components/ui/field"
+import { FormField } from "@/components/common/form-fields"
+import { SwitchBox } from "@/components/common/SwitchBox"
 import {
   Dialog,
   DialogContent,
@@ -132,35 +132,45 @@ export function DialogActions({
   )
 }
 
-/** A boolean form field rendered as a switch with a label (and optional help text). */
+/**
+ * A boolean form field: the label on top, then a `SwitchBox` stating the value (Yes / No unless
+ * `onLabel` / `offLabel` say otherwise), and optional help text under it.
+ */
 export function SwitchField<T extends FieldValues>({
   control,
   name,
   label,
   description,
   disabled,
+  onLabel,
+  offLabel,
+  className,
 }: {
   control: Control<T>
   name: FieldPath<T>
   label: ReactNode
   description?: ReactNode
   disabled?: boolean
+  onLabel?: string
+  offLabel?: string
+  className?: string
 }) {
   const id = useId()
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field }) => (
-        <Field>
-          <div className="flex items-center gap-3">
-            <Switch id={id} checked={!!field.value} onCheckedChange={field.onChange} disabled={disabled} />
-            <label htmlFor={id} className="text-sm">
-              {label}
-            </label>
-          </div>
-          {description && <FieldDescription>{description}</FieldDescription>}
-        </Field>
+      render={({ field, fieldState }) => (
+        <FormField label={label} htmlFor={id} description={description} error={fieldState.error} className={className}>
+          <SwitchBox
+            id={id}
+            checked={!!field.value}
+            onCheckedChange={field.onChange}
+            disabled={disabled}
+            onLabel={onLabel}
+            offLabel={offLabel}
+          />
+        </FormField>
       )}
     />
   )

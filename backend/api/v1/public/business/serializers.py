@@ -21,8 +21,13 @@ class PublicBusinessProfileSerializer(serializers.Serializer):
     free_delivery_min_amount = serializers.DecimalField(
         max_digits=14, decimal_places=2, allow_null=True
     )
+    # Accepted before placing a pre-order; both blank when there are none.
+    preorder_terms = serializers.SerializerMethodField()
     social = serializers.SerializerMethodField()
     about = serializers.SerializerMethodField()
+
+    def get_preorder_terms(self, obj) -> dict[str, str]:
+        return {"en": obj.preorder_terms_en, "bn": obj.preorder_terms_bn}
 
     def get_about(self, obj) -> dict[str, str]:
         return {"en": obj.about_en, "bn": obj.about_bn}
@@ -128,28 +133,30 @@ class PublicPromoLineSerializer(serializers.Serializer):
         return {"en": obj.text_en, "bn": obj.text_bn}
 
 
-class _PopupContentSerializer(serializers.Serializer):
-    """What every popup shares, read from a `StorefrontPromotion`: its image
-    and, when staff gave one, where clicking it goes."""
+class PublicPromotionPopupSerializer(serializers.Serializer):
+    """A popup the storefront may show now, read from a `StorefrontPromotion`:
+    its image, where clicking it goes, which shop and when it may appear, and for a
+    campaign destination the running sale."""
 
     id = serializers.UUIDField(source="popup.id", read_only=True)
     image = serializers.SerializerMethodField()
-    link_url = serializers.CharField(source="popup.link_url", read_only=True)
+    # Null when the popup has no destination: the image alone.
+    href = serializers.CharField(read_only=True, allow_null=True)
+    shop = serializers.CharField(source="popup.shop", read_only=True)
+    starts_at = serializers.DateTimeField(source="popup.starts_at", read_only=True, allow_null=True)
+    ends_at = serializers.DateTimeField(source="popup.ends_at", read_only=True, allow_null=True)
+    sale = serializers.SerializerMethodField()
 
     def get_image(self, obj) -> str:
         request = self.context.get("request")
         url = obj.popup.image.url
         return request.build_absolute_uri(url) if request else url
 
-
-class PublicPromotionPopupSerializer(_PopupContentSerializer):
-    """The shop popup and the running sale it promotes."""
-
-    sale = serializers.SerializerMethodField()
-
-    def get_sale(self, obj) -> dict:
+    def get_sale(self, obj) -> dict | None:
         # The same shape as a product's `sale` in the public catalog.
         sale = obj.sale
+        if sale is None:
+            return None
         return {
             "name": sale.name,
             "percent_off": str(sale.percent_off),
@@ -161,12 +168,7 @@ class PublicPromotionPopupSerializer(_PopupContentSerializer):
         }
 
 
-class PublicPreorderPopupSerializer(_PopupContentSerializer):
-    """The pre-order page popup: no sale."""
-
-
 class PublicStorefrontContentSerializer(serializers.Serializer):
     hero_slides = PublicHeroSlideSerializer(many=True, read_only=True)
     promo_lines = PublicPromoLineSerializer(many=True, read_only=True)
-    promotion_popup = PublicPromotionPopupSerializer(read_only=True, allow_null=True)
-    preorder_popup = PublicPreorderPopupSerializer(read_only=True, allow_null=True)
+    promotion_popups = PublicPromotionPopupSerializer(many=True, read_only=True)

@@ -111,6 +111,7 @@ export const navSections: NavSection[] = [
     items: [
       { title: "Promotions", url: "/sales", permission: ORDERS },
       { title: "Coupons", url: "/coupons", permission: ORDERS },
+      { title: "Promotion popups", url: "/promotion_popups", permission: "settings.view" },
     ],
   },
   {
@@ -194,6 +195,13 @@ export const navSections: NavSection[] = [
       { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: BILLS },
       { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: BILLS },
     ],
+  },
+  {
+    label: "Marketing",
+    icon: Megaphone,
+    group: "PREORDER",
+    // Sales and coupons never apply to pre-orders, so only the popups are here.
+    items: [{ title: "Promotion popups", url: "/preorder_promotion_popups", permission: "settings.view" }],
   },
   {
     label: "Settings",

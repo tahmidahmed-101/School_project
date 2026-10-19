@@ -123,7 +123,7 @@ function SupplierFormDialog({
         error={errors.payment_terms}
         {...register("payment_terms")}
       />
-      {supplier && <SwitchField control={control} name="is_active" label="Active" />}
+      {supplier && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
     </FormDialog>
   )
 }

@@ -179,6 +179,8 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     specs: toSpecs(api.specs),
     highlights: highlights.length ? highlights : undefined,
     metaKeywords: api.meta_keywords || undefined,
+    showQuestions: api.show_questions,
+    showPriceReport: api.show_price_report,
     sale: toSale(api.sale),
   };
   return applyVariant(base, preferred);

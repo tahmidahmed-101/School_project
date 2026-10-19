@@ -12,9 +12,8 @@ from apps.business.models import PolicyKind
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.policies import get_published_policy, returns_enabled
 from apps.business.selectors.storefront_content import (
-    eligible_preorder_popup,
-    eligible_promotion_popup,
     hero_slides_list,
+    live_promotion_popups,
     promo_lines_list,
 )
 from apps.common.params import KIND_STOCK, get_kind
@@ -111,8 +110,8 @@ class PublicStorePolicyView(APIView):
 @extend_schema(tags=["Public Business"])
 class PublicStorefrontContentView(APIView):
     """Active hero slides and promo strip lines, in display order, and the
-    popup to show now on the shop home page and on the pre-order page, each
-    null when there is none."""
+    popups that may show now, highest priority first. The storefront picks the
+    first that fits its page and the shopper's screen."""
 
     serializer_class = PublicStorefrontContentSerializer
     permission_classes: ClassVar[list] = [AllowAny]
@@ -122,8 +121,7 @@ class PublicStorefrontContentView(APIView):
         content = {
             "hero_slides": hero_slides_list(active_only=True),
             "promo_lines": promo_lines_list(active_only=True),
-            "promotion_popup": eligible_promotion_popup(),
-            "preorder_popup": eligible_preorder_popup(),
+            "promotion_popups": live_promotion_popups(),
         }
         data = PublicStorefrontContentSerializer(content, context={"request": request}).data
         return Response({"data": data, "message": "Success"})

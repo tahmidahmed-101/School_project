@@ -14,6 +14,7 @@ def create_category(
     parent: Category | None = None,
     description: str = "",
     category_type: str | None = None,
+    is_active: bool = True,
 ) -> Category:
     if parent is not None:
         if category_type is not None and category_type != parent.category_type:
@@ -29,6 +30,7 @@ def create_category(
         parent=parent,
         description=description,
         category_type=category_type,
+        is_active=is_active,
         slug=unique_slug_for(model=Category, text=name),
     )
     category.save()

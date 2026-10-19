@@ -164,3 +164,8 @@ html,
 body {
   background: var(--bg);
 }
+
+/* Keep the scrollbar's room when a modal or drawer locks scrolling (useOverlay), so the page never jumps sideways. */
+html {
+  scrollbar-gutter: stable;
+}

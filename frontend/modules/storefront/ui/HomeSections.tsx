@@ -51,7 +51,7 @@ export function HomeSections({
         hasOffers={hasOffers}
       />
       <PromoMarquee lines={promoLinesFor("home", content)} />
-      <PromotionPopup popup={content?.promotionPopup ?? null} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop="stock" />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 

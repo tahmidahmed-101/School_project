@@ -11,7 +11,6 @@ import {
   fetchModules,
   fetchPaymentMethods,
   fetchPromoLines,
-  fetchPromotionPopups,
 } from "@/features/system/slices/businessSettingsSlice"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -47,7 +46,6 @@ const Settings = () => {
       dispatch(fetchIntegrations()),
       dispatch(fetchHeroSlides()),
       dispatch(fetchPromoLines()),
-      dispatch(fetchPromotionPopups()),
     ]
     return () => requests.forEach((r) => r.abort())
   }, [dispatch])
@@ -65,7 +63,7 @@ const Settings = () => {
 
       <Tabs value={tab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>
         <div className="overflow-x-auto">
-          <TabsList className="w-full md:w-fit">
+          <TabsList className="w-max min-w-full md:w-fit md:min-w-0">
             {TABS.map(({ value, label, icon: Icon }) => (
               <TabsTrigger key={value} value={value} className="min-w-max gap-2">
                 <Icon className="h-4 w-4" /> {label}

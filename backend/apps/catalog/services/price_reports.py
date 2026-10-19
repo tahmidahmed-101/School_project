@@ -17,6 +17,10 @@ def report_price_issue(
     expected_price: Decimal | None = None,
     comment: str = "",
 ) -> PriceIssueReport:
+    if not product.show_price_report:
+        raise BusinessRuleViolationError(
+            "Price reports are turned off for this product.", code="price_report_off"
+        )
     if variant is not None and (
         variant.product_id != product.id or not variant.is_active or variant.deleted_at
     ):

@@ -178,3 +178,17 @@ describe("toProduct options", () => {
     expect(shown.highlights).toEqual([{ en: "Pure cotton", bn: "" }]);
   });
 });
+
+describe("toProduct section switches", () => {
+  const base = { id: "p1", category_id: "c1", kind: "stock", name: "Mug", slug: "mug", variants: [], images: [] };
+
+  it("carries the Questions / Price report switches from the detail endpoint", () => {
+    const shown = toProduct({ ...base, show_questions: false, show_price_report: true } as never, []);
+    expect([shown.showQuestions, shown.showPriceReport]).toEqual([false, true]);
+  });
+
+  it("leaves them unset when the API sends none, which the product page reads as on", () => {
+    const shown = toProduct(base as never, []);
+    expect([shown.showQuestions, shown.showPriceReport]).toEqual([undefined, undefined]);
+  });
+});

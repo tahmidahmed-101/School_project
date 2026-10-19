@@ -8,6 +8,10 @@ from apps.common.exceptions import BusinessRuleViolationError
 
 
 def ask_question(*, customer, product: Product, question: str) -> ProductQuestion:
+    if not product.show_questions:
+        raise BusinessRuleViolationError(
+            "Questions are turned off for this product.", code="questions_off"
+        )
     question = question.strip()
     # A double-submitted form would otherwise queue the same question twice
     # for staff to answer twice.

@@ -115,7 +115,7 @@ export function ProductDetailView({ product, relatedProducts, moreProducts = [] 
                 </ScrollReveal>
                 <ProductCardGrid
                   products={relatedProducts}
-                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4"
+                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4 xl:grid-cols-5"
                 />
               </div>
             )}

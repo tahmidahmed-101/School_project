@@ -5,6 +5,8 @@ import { JsonLd } from "@/modules/seo";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
 import { getCatalog, getProductBySlug, getRelatedProductsBySlug } from "@/modules/catalog/server";
 import { photo } from "@/lib/photo";
+import { PromotionPopup } from "@/modules/storefront";
+import { getStorefrontContent } from "@/modules/storefront/server";
 
 interface ProductPageProps {
   params: Promise<{
@@ -41,10 +43,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function KullMartProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const [product, related, { products }] = await Promise.all([
+  const [product, related, { products }, content] = await Promise.all([
     getProductBySlug(slug),
     getRelatedProductsBySlug(slug, RELATED_COUNT),
     getCatalog(),
+    getStorefrontContent(),
   ]);
 
   if (!product) {
@@ -74,6 +77,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
         relatedProducts={relatedProducts}
         moreProducts={moreProducts}
       />
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop={product.kind} />
     </>
   );
 }

@@ -128,13 +128,13 @@ const CategoryForm = () => {
       name: values.name,
       parent_id: values.parent_id === NO_PARENT ? null : values.parent_id,
       description: values.description,
+      is_active: values.is_active,
     }
     // A subcategory takes its parent's kind on the server; only a new root category is told it.
     if (!isEditing && payload.parent_id === null) payload.category_type = kind
     try {
       let saved: Category
       if (isEditing && id) {
-        payload.is_active = values.is_active
         saved = await updateCategory(id, payload)
       } else {
         saved = await createCategory(payload)
@@ -184,10 +184,6 @@ const CategoryForm = () => {
               </FieldContent>
             </Field>
 
-            {isEditing && (
-              <SwitchField control={control} name="is_active" label="Active" />
-            )}
-
             <TextareaField
               className="md:col-span-2"
               label="Description"
@@ -197,14 +193,19 @@ const CategoryForm = () => {
               {...register("description")}
             />
 
-            <FormField
-              className="md:col-span-2"
-              label="Image"
-              htmlFor="category-image"
-              description="Uploaded when you save."
-            >
+            {/* The image and the status share the last row. */}
+            <FormField label="Image" htmlFor="category-image" description="Uploaded when you save.">
               <ImagePicker id="category-image" src={existing?.image} onSelect={setImageFile} />
             </FormField>
+
+            <SwitchField
+              control={control}
+              name="is_active"
+              label="Status"
+              onLabel="Active"
+              offLabel="Inactive"
+              className="self-start"
+            />
           </CardContent>
         </Card>
         <FormActions
