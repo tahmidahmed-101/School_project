@@ -269,45 +269,18 @@ export interface ApiPromoLine {
   placement: "home" | "preorder" | "both";
 }
 
-/** A featured product: `price` is what the shopper pays under the sale, `original_price` the list price. */
-export interface ApiPromotionCard {
-  id: string;
-  name: string;
-  slug: string;
-  image: string | null;
-  price: string;
-  original_price: string;
-  percent_off: string;
-}
-
-/** The one popup the backend picked to show now; it checks the campaign, its sale and every card. */
+/** The one shop popup the backend picked to show now: an image, where clicking it goes, and the running sale. */
 export interface ApiPromotionPopup {
   id: string;
-  /** Absolute URL, or null. */
-  image: string | null;
-  title: ApiLocalizedText;
-  body: ApiLocalizedText;
-  /** Null when the popup has no button. */
-  cta: { label: ApiLocalizedText; url: string } | null;
+  /** Absolute URL. */
+  image: string;
+  /** Empty when staff gave no link; the storefront then opens the promotion's products. */
+  link_url: string;
   sale: ApiProductSale;
-  products: ApiPromotionCard[];
 }
 
-/** A featured pre-order product: `price` is what the shopper pays now, `original_price` the list price when higher. */
-export interface ApiPreorderCard {
-  id: string;
-  name: string;
-  slug: string;
-  image: string | null;
-  price: string;
-  original_price: string | null;
-  release_date: string | null;
-}
-
-/** The pre-order page popup: no sale, and only products open for pre-order with capacity left. */
-export interface ApiPreorderPopup extends Omit<ApiPromotionPopup, "sale" | "products"> {
-  products: ApiPreorderCard[];
-}
+/** The pre-order page popup: the same, with no sale. */
+export type ApiPreorderPopup = Omit<ApiPromotionPopup, "sale">;
 
 export interface ApiStorefrontContent {
   hero_slides: ApiHeroSlide[];

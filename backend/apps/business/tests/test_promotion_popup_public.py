@@ -1,20 +1,16 @@
-"""The storefront-content `promotion_popup`: shown only while the campaign,
-its sale and its products all still hold, and priced by the sale itself."""
+"""The storefront-content `promotion_popup`: the newest switched-on shop popup
+whose sale is running, as its image, link and sale."""
 
 from __future__ import annotations
 
 from datetime import timedelta
-from decimal import Decimal
 
 import pytest
-from django.db import connection
-from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
-from apps.catalog.factories import ProductImageFactory, ProductVariantFactory
 from apps.catalog.services.sales import delete_sale, update_sale
 
-from .promotions import CONTENT, png, popup, sale, stock_product, window
+from .promotions import CONTENT, png, popup, sale
 
 pytestmark = pytest.mark.django_db
 
@@ -41,201 +37,68 @@ def test_no_popup_keeps_the_existing_response_and_adds_null(api_client):
     }
 
 
-def test_an_eligible_popup_carries_content_sale_and_cards(api_client):
+def test_an_eligible_popup_carries_image_link_and_sale(api_client):
     offer = sale("25.00", name="Eid offer")
-    product = stock_product("1000.00", product__name="Panjabi", product__slug="panjabi")
-    ProductImageFactory(product=product, url="/catalog/panjabi.jpg", sort_order=0)
-    row = popup(
-        offer,
-        [product],
-        title_en="Eid sale",
-        title_bn="ঈদ সেল",
-        body_en="Up to 25% off",
-        body_bn="২৫% পর্যন্ত ছাড়",
-        cta_label_en="Shop now",
-        cta_label_bn="এখনই কিনুন",
-        cta_url="/shop?sale=eid",
-        image=png(),
-    )
+    row = popup(offer, link_url="/shop?collection=sale")
 
     data = _popup_data(api_client)
 
-    assert data["id"] == str(row.id)
-    assert data["image"] == f"http://testserver{row.image.url}"
-    assert data["title"] == {"en": "Eid sale", "bn": "ঈদ সেল"}
-    assert data["body"] == {"en": "Up to 25% off", "bn": "২৫% পর্যন্ত ছাড়"}
-    assert data["cta"] == {"label": {"en": "Shop now", "bn": "এখনই কিনুন"}, "url": "/shop?sale=eid"}
-    assert data["sale"]["name"] == "Eid offer"
-    assert data["sale"]["percent_off"] == "25.00"
-    assert data["sale"]["ends_at"] is not None
-    assert data["products"] == [
-        {
-            "id": str(product.id),
-            "name": "Panjabi",
-            "slug": "panjabi",
-            "image": "/catalog/panjabi.jpg",
-            "price": "750.00",
-            "original_price": "1000.00",
+    assert data == {
+        "id": str(row.id),
+        "image": f"http://testserver{row.image.url}",
+        "link_url": "/shop?collection=sale",
+        "sale": {
+            "name": "Eid offer",
             "percent_off": "25.00",
-        }
-    ]
-    assert "name" not in data  # the dashboard label stays internal
+            "ends_at": data["sale"]["ends_at"],
+        },
+    }
+    assert data["sale"]["ends_at"]
 
 
-def test_a_popup_without_a_link_has_no_cta_and_no_image(api_client):
-    popup(sale(), [stock_product()])
+def test_a_popup_without_a_link_sends_an_empty_link(api_client):
+    popup(sale())
 
-    data = _popup_data(api_client)
-
-    assert data["cta"] is None
-    assert data["image"] is None
+    assert _popup_data(api_client)["link_url"] == ""
 
 
-@pytest.mark.parametrize(
-    "fields",
-    [
-        {"is_active": False},
-        window(starts_in_days=1, ends_in_days=5),
-        window(starts_in_days=-5, ends_in_days=-1),
-    ],
-    ids=["switched-off", "scheduled", "ended"],
-)
-def test_popups_outside_their_own_window_or_switched_off_are_hidden(api_client, fields):
-    popup(sale(), [stock_product()], **fields)
+def test_a_switched_off_popup_is_hidden(api_client):
+    popup(sale(), is_active=False)
 
     assert _popup_data(api_client) is None
 
 
 def test_a_popup_is_hidden_when_its_sale_is_not_running(api_client, admin_user):
-    product = stock_product()
-    scheduled = sale(starts_in_days=2)
-    popup(scheduled, [product])
+    popup(sale(starts_in_days=2))
     assert _popup_data(api_client) is None
 
-    ended = sale(starts_in_days=-5, ends_in_days=-1)
-    popup(ended, [product])
+    popup(sale(starts_in_days=-5, ends_in_days=-1))
     assert _popup_data(api_client) is None
 
     switched_off = sale()
-    popup(switched_off, [product])
+    popup(switched_off)
     update_sale(sale=switched_off, is_active=False)
     assert _popup_data(api_client) is None
 
     deleted = sale()
-    popup(deleted, [product])
+    popup(deleted)
     delete_sale(sale=deleted, actor=admin_user)
     assert _popup_data(api_client) is None
 
 
-def test_a_popup_without_products_shows_with_no_cards(api_client):
-    row = popup(sale(), [])
-
-    data = _popup_data(api_client)
-
-    assert data["id"] == str(row.id)
-    assert data["products"] == []
-    assert data["sale"]["percent_off"] == "20.00"
-
-
-def test_a_popup_without_products_still_needs_its_sale_running(api_client):
-    popup(sale(starts_in_days=2), [])
-
-    assert _popup_data(api_client) is None
-
-
-def test_stale_products_are_dropped_and_none_left_hides_the_popup(api_client):
+def test_the_newest_popup_wins(api_client):
     offer = sale()
-    keep = stock_product()
-    hidden = stock_product()
-    popup(offer, [hidden, keep])
-    hidden.is_active = False
-    hidden.save(update_fields=["is_active"])
+    popup(offer)
+    newest = popup(offer)
 
-    assert [card["id"] for card in _popup_data(api_client)["products"]] == [str(keep.id)]
-
-    keep.is_active = False
-    keep.save(update_fields=["is_active"])
-    assert _popup_data(api_client) is None
-
-
-def test_a_product_another_sale_prices_is_not_shown_as_this_ones(api_client):
-    """A bigger sale covering the same product sets its price, so this
-    campaign's sale is not responsible for it and the card is left out."""
-    product = stock_product()
-    small = sale("10.00", name="Small")
-    sale("30.00", name="Big")
-    popup(small, [product])
-
-    assert _popup_data(api_client) is None
-
-
-def test_a_product_whose_discount_price_beats_the_sale_is_not_shown(api_client):
-    product = stock_product("1000.00", discount_price=Decimal("700.00"))
-    popup(sale("20.00"), [product])
-
-    assert _popup_data(api_client) is None
-
-
-def test_a_product_the_sale_stopped_covering_is_dropped(api_client):
-    keep, leave = stock_product(), stock_product()
-    offer = sale(applies_to="products", product_ids=[keep.id, leave.id])
-    popup(offer, [keep, leave])
-    update_sale(sale=offer, product_ids=[keep.id])
-
-    assert [card["id"] for card in _popup_data(api_client)["products"]] == [str(keep.id)]
-
-
-def test_the_card_shows_the_cheapest_variant_the_sale_prices(api_client):
-    product = stock_product("1000.00", sku="B-SKU")
-    ProductVariantFactory(product=product, price=Decimal("600.00"), sku="A-SKU")
-    popup(sale("50.00"), [product])
-
-    (card,) = _popup_data(api_client)["products"]
-
-    assert (card["price"], card["original_price"]) == ("300.00", "600.00")
-
-
-def test_highest_priority_wins_then_latest_start_then_newest(api_client):
-    offer = sale()
-    product = stock_product()
-    popup(offer, [product], name="Low", priority=1)
-    high_old = popup(offer, [product], name="High older start", priority=5, **window(-3, 5))
-    high_new = popup(offer, [product], name="High newer start", priority=5, **window(-1, 5))
-
-    assert _popup_data(api_client)["id"] == str(high_new.id)
-
-    high_new.starts_at = high_old.starts_at
-    high_new.save(update_fields=["starts_at"])
-    newest = high_new if high_new.created_at > high_old.created_at else high_old
     assert _popup_data(api_client)["id"] == str(newest.id)
 
 
-def test_an_ineligible_higher_priority_popup_gives_way(api_client):
-    product = stock_product()
-    popup(sale(starts_in_days=2), [product], name="Waiting sale", priority=9)
-    fallback = popup(sale(name="Live"), [product], name="Live", priority=1)
+def test_a_newer_popup_whose_sale_is_not_running_gives_way(api_client):
+    live = popup(sale())
+    popup(sale(starts_in_days=2))
 
-    assert _popup_data(api_client)["id"] == str(fallback.id)
-
-
-def test_query_count_does_not_grow_with_featured_products(api_client):
-    def _campaign(count: int):
-        products = [stock_product() for _ in range(count)]
-        for product in products:
-            ProductImageFactory(product=product)
-        return popup(sale(), products, priority=count)
-
-    _campaign(1)
-    api_client.get(CONTENT)  # warm per-process caches (live sales)
-    with CaptureQueriesContext(connection) as one:
-        assert len(_popup_data(api_client)["products"]) == 1
-
-    _campaign(8)
-    api_client.get(CONTENT)
-    with CaptureQueriesContext(connection) as eight:
-        assert len(_popup_data(api_client)["products"]) == 8
-
-    assert len(eight) == len(one)
+    assert _popup_data(api_client)["id"] == str(live.id)
 
 
 def test_hero_and_promo_shapes_are_unchanged_beside_a_popup(api_client):
@@ -243,7 +106,7 @@ def test_hero_and_promo_shapes_are_unchanged_beside_a_popup(api_client):
 
     HeroSlide.objects.create(image=png(), title_en="Banner")
     PromoLine.objects.create(text_en="Free delivery")
-    popup(sale(), [stock_product()])
+    popup(sale())
 
     data = api_client.get(CONTENT).data["data"]
 
@@ -260,9 +123,9 @@ def test_hero_and_promo_shapes_are_unchanged_beside_a_popup(api_client):
     assert set(data["promo_lines"][0]) == {"id", "text", "placement"}
 
 
-def test_a_running_sale_that_ends_mid_window_hides_the_popup(api_client):
+def test_a_running_sale_that_ends_hides_the_popup(api_client):
     offer = sale(ends_in_days=1)
-    popup(offer, [stock_product()])
+    popup(offer)
     assert _popup_data(api_client) is not None
 
     update_sale(

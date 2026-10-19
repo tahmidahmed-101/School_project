@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -65,13 +66,27 @@ class PublicPaymentMethodListView(APIView):
         )
 
 
-@extend_schema(tags=["Public Business"], responses=PublicStorePolicySerializer)
+@extend_schema(
+    tags=["Public Business"],
+    parameters=[
+        OpenApiParameter(
+            "kind",
+            OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            enum=PolicyKind.values,
+            description="Which store policy. `returns` adds `returns_enabled` and `eligibility`.",
+        )
+    ],
+    responses=PublicStorePolicySerializer,
+)
 class PublicStorePolicyView(APIView):
-    """`kind` is shipping, returns or refund. Answers 404 `policy_unavailable`
-    until staff publish a complete, dated version — there is no default text.
+    """`kind` is shipping, returns, refund or preorder_checkout. Answers 404
+    `policy_unavailable` until staff publish a complete, dated version — there
+    is no default text.
 
     Policy prose only: rates live on `/public/checkout/shipping-options/`,
-    raising a return on `/customer/orders/<id>/returns/`.
+    raising a return on `/customer/orders/<id>/returns/`. `preorder_checkout`
+    is the text shown before placing a pre-order; it sets no checkout rule.
     """
 
     serializer_class = PublicStorePolicySerializer

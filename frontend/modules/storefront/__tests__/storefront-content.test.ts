@@ -131,127 +131,53 @@ describe("toPromotionPopup", () => {
   const apiPopup = (overrides: Partial<ApiPromotionPopup> = {}): ApiPromotionPopup => ({
     id: "p1",
     image: "https://api.example.test/media/promotions/p1.png",
-    title: { en: "Eid sale", bn: "ঈদ সেল" },
-    body: { en: "Up to 25% off", bn: "" },
-    cta: { label: { en: "Shop now", bn: "এখনই কিনুন" }, url: "/shop?sale=eid" },
+    link_url: "/product/panjabi",
     sale: { name: "Eid offer", percent_off: "25.00", ends_at: "2026-11-01T00:00:00+06:00" },
-    products: [
-      {
-        id: "a",
-        name: "Panjabi",
-        slug: "panjabi",
-        image: "/catalog/panjabi.jpg",
-        price: "750.00",
-        original_price: "1000.00",
-        percent_off: "25.00",
-      },
-    ],
     ...overrides,
   });
 
-  it("reads content, sale and cards, falling back to English for blank Bangla", () => {
+  it("reads the image, the link and the sale", () => {
     expect(toPromotionPopup(apiPopup())).toEqual({
       id: "p1",
       image: "https://api.example.test/media/promotions/p1.png",
-      title: { en: "Eid sale", bn: "ঈদ সেল" },
-      body: { en: "Up to 25% off", bn: "Up to 25% off" },
-      cta: { label: { en: "Shop now", bn: "এখনই কিনুন" }, url: "/shop?sale=eid" },
-      sale: { name: "Eid offer", percentOff: 25, endsAt: "2026-11-01T00:00:00+06:00" },
-      products: [
-        {
-          id: "a",
-          name: "Panjabi",
-          slug: "panjabi",
-          image: "/catalog/panjabi.jpg",
-          price: 750,
-          originalPrice: 1000,
-          percentOff: 25,
-        },
-      ],
+      href: "/product/panjabi",
+      sale: { name: "Eid offer", percentOff: 25 },
     });
   });
 
-  it("is null when the API sends none, an older API omits it, or it has no title", () => {
+  it("opens the products on sale when there is no link, or the link is unsafe", () => {
+    expect(toPromotionPopup(apiPopup({ link_url: "" }))?.href).toBe("/shop?collection=sale");
+    expect(toPromotionPopup(apiPopup({ link_url: "javascript:alert(1)" }))?.href).toBe("/shop?collection=sale");
+    expect(toPromotionPopup(apiPopup({ link_url: "//evil.example" }))?.href).toBe("/shop?collection=sale");
+    expect(toPromotionPopup(apiPopup({ link_url: "https://kullmart.com/x" }))?.href).toBe("https://kullmart.com/x");
+  });
+
+  it("is null when the API sends none, an older API omits it, or it has no image", () => {
     expect(toPromotionPopup(null)).toBeNull();
     expect(content({}).promotionPopup).toBeNull();
-    expect(toPromotionPopup(apiPopup({ title: { en: " ", bn: "" } }))).toBeNull();
-  });
-
-  it("shows a popup that features no products", () => {
-    expect(toPromotionPopup(apiPopup({ products: [] }))).toMatchObject({ id: "p1", products: [] });
-  });
-
-  it("drops a card that is not actually cheaper than its list price", () => {
-    const card = apiPopup().products[0]!;
-    const popup = toPromotionPopup(apiPopup({ products: [card, { ...card, id: "b", slug: "b", price: "1000.00" }] }));
-    expect(popup?.products.map((p) => p.id)).toEqual(["a"]);
-  });
-
-  it("drops a button whose link is unsafe or that has no label", () => {
-    const label = { en: "Go", bn: "" };
-    expect(toPromotionPopup(apiPopup({ cta: { label, url: "javascript:alert(1)" } }))?.cta).toBeUndefined();
-    expect(toPromotionPopup(apiPopup({ cta: { label, url: "//evil.example" } }))?.cta).toBeUndefined();
-    expect(toPromotionPopup(apiPopup({ cta: { label: { en: "", bn: "" }, url: "/shop" } }))?.cta).toBeUndefined();
-    expect(toPromotionPopup(apiPopup({ cta: null }))?.cta).toBeUndefined();
+    expect(toPromotionPopup(apiPopup({ image: "" }))).toBeNull();
   });
 });
 
 describe("toPreorderPopup", () => {
   const apiPopup = (overrides: Partial<ApiPreorderPopup> = {}): ApiPreorderPopup => ({
     id: "pre1",
-    image: null,
-    title: { en: "Winter pre-order", bn: "" },
-    body: { en: "", bn: "" },
-    cta: null,
-    products: [
-      {
-        id: "a",
-        name: "Puffer jacket",
-        slug: "puffer-jacket",
-        image: "/catalog/puffer.jpg",
-        price: "850.00",
-        original_price: "1000.00",
-        release_date: "2026-12-01T00:00:00+06:00",
-      },
-    ],
+    image: "https://api.example.test/media/promotions/pre1.png",
+    link_url: "",
     ...overrides,
   });
 
-  it("reads cards with their pre-order price, list price and delivery date, and no sale", () => {
-    const popup = toPreorderPopup(apiPopup());
-    expect(popup?.sale).toBeUndefined();
-    expect(popup?.products).toEqual([
-      {
-        id: "a",
-        name: "Puffer jacket",
-        slug: "puffer-jacket",
-        image: "/catalog/puffer.jpg",
-        price: 850,
-        originalPrice: 1000,
-        releaseDate: "2026-12-01T00:00:00+06:00",
-      },
-    ]);
-  });
-
-  it("shows no list price when there is none or it is not higher", () => {
-    const card = apiPopup().products[0]!;
-    const popup = toPreorderPopup(
-      apiPopup({
-        products: [
-          { ...card, original_price: null, release_date: null },
-          { ...card, id: "b", slug: "b", original_price: "850.00" },
-        ],
-      }),
-    );
-    expect(popup?.products.map((p) => [p.originalPrice, p.releaseDate])).toEqual([
-      [undefined, undefined],
-      [undefined, "2026-12-01T00:00:00+06:00"],
-    ]);
+  it("has no sale and opens the pre-order products without a link", () => {
+    expect(toPreorderPopup(apiPopup())).toEqual({
+      id: "pre1",
+      image: "https://api.example.test/media/promotions/pre1.png",
+      href: "/pre-order",
+    });
+    expect(toPreorderPopup(apiPopup({ link_url: "/product/puffer" }))?.href).toBe("/product/puffer");
   });
 
   it("is read into the content beside the shop popup, null when absent", () => {
-    expect(content({ preorder_popup: apiPopup({ products: [] }) }).preorderPopup).toMatchObject({ id: "pre1" });
+    expect(content({ preorder_popup: apiPopup() }).preorderPopup).toMatchObject({ id: "pre1" });
     expect(content({}).preorderPopup).toBeNull();
-    expect(toPreorderPopup(apiPopup({ title: { en: "", bn: "" } }))).toBeNull();
   });
 });

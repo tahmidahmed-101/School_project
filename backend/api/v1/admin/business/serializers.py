@@ -13,8 +13,6 @@ from apps.business.policy_content import missing_policy_fields
 from apps.common.serializers import user_label
 
 _validate_url = URLValidator()
-# A popup is a handful of cards; more would not fit, and bounds the checks.
-MAX_PROMOTION_PRODUCTS = 12
 
 
 class AdminBusinessProfileSerializer(serializers.Serializer):
@@ -341,22 +339,12 @@ def validate_site_link(value: str) -> str:
 
 class AdminPromotionPopupSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
-    name = serializers.CharField(read_only=True)
-    title_en = serializers.CharField(read_only=True)
-    title_bn = serializers.CharField(read_only=True)
-    body_en = serializers.CharField(read_only=True)
-    body_bn = serializers.CharField(read_only=True)
-    cta_label_en = serializers.CharField(read_only=True)
-    cta_label_bn = serializers.CharField(read_only=True)
-    cta_url = serializers.CharField(read_only=True)
     image = serializers.SerializerMethodField()
-    starts_at = serializers.DateTimeField(read_only=True)
-    ends_at = serializers.DateTimeField(read_only=True)
-    priority = serializers.IntegerField(read_only=True)
+    link_url = serializers.CharField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
     placement = serializers.CharField(read_only=True)
     sale = serializers.SerializerMethodField()
-    products = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
 
     def get_image(self, obj) -> str | None:
         if not obj.image:
@@ -376,38 +364,18 @@ class AdminPromotionPopupSerializer(serializers.Serializer):
             "status": "deleted" if sale.deleted_at else sale.status,
         }
 
-    def get_products(self, obj) -> list[dict]:
-        return [
-            {"id": str(row.product.id), "name": row.product.name, "slug": row.product.slug}
-            for row in obj.featured.all()
-        ]
-
 
 class AdminPromotionPopupWriteSerializer(serializers.Serializer):
-    """Multipart, like hero slides. Used with `partial=True` on PATCH, so the
-    required fields are only required on create. `image: null` removes it.
-    `placement` is set on create only: a `home` popup needs `sale_id`, a
-    `preorder` one takes none (the service enforces both)."""
+    """Multipart, like hero slides. Used with `partial=True` on PATCH. The
+    image is required on create and can be replaced, not removed. `placement`
+    is set on create only: a `home` popup needs `sale_id`, a `preorder` one
+    takes none (the service enforces all three)."""
 
-    name = serializers.CharField(max_length=150)
-    title_en = serializers.CharField(max_length=160)
-    title_bn = serializers.CharField(required=False, allow_blank=True, max_length=160)
-    body_en = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    body_bn = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    cta_label_en = serializers.CharField(required=False, allow_blank=True, max_length=60)
-    cta_label_bn = serializers.CharField(required=False, allow_blank=True, max_length=60)
-    cta_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     image = serializers.ImageField(required=False, allow_null=True)
+    link_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS, required=False)
     sale_id = serializers.UUIDField(required=False)
-    # Optional: a popup can announce the sale without featuring products.
-    product_ids = serializers.ListField(
-        child=serializers.UUIDField(), required=False, max_length=MAX_PROMOTION_PRODUCTS
-    )
-    starts_at = serializers.DateTimeField()
-    ends_at = serializers.DateTimeField()
-    priority = serializers.IntegerField(required=False, min_value=0, max_value=32767)
     is_active = _OmittableBooleanField(required=False)
 
-    def validate_cta_url(self, value: str) -> str:
-        return validate_site_link(value)
+    def validate_link_url(self, value: str) -> str:
+        return validate_site_link(value.strip())

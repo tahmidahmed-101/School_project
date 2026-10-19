@@ -237,29 +237,21 @@ const PROMOTION_POPUPS = "/admin/settings/promotion-popups/"
 export const fetchPromotionPopups = getList<PromotionPopup>("businessSettings/fetchPromotionPopups", PROMOTION_POPUPS)
 
 /**
- * POST (no id) or PATCH /admin/settings/promotion-popups/{id}/. Multipart when a new image is sent, each
- * product id as its own `product_ids` part; JSON otherwise, where `image: null` removes the picture.
+ * POST (no id) or PATCH /admin/settings/promotion-popups/{id}/. Multipart when a new image is sent (always on create);
+ * JSON otherwise. The image can be replaced, never removed.
  */
 export const savePromotionPopup = createAsyncThunk(
   "businessSettings/savePromotionPopup",
   async (
-    {
-      id,
-      values,
-      image,
-      removeImage = false,
-    }: { id?: string; values: Partial<PromotionPopupInput>; image?: File | null; removeImage?: boolean },
+    { id, values, image }: { id?: string; values: Partial<PromotionPopupInput>; image?: File | null },
     { rejectWithValue }
   ) => {
     try {
-      let body: FormData | (Partial<PromotionPopupInput> & { image?: null }) = removeImage
-        ? { ...values, image: null }
-        : values
+      let body: FormData | Partial<PromotionPopupInput> = values
       if (image) {
         const form = new FormData()
         for (const [key, value] of Object.entries(values)) {
-          if (Array.isArray(value)) value.forEach((item) => form.append(key, String(item)))
-          else if (value !== null && value !== undefined) form.append(key, String(value))
+          if (value !== null && value !== undefined) form.append(key, String(value))
         }
         form.append("image", image)
         body = form
@@ -372,11 +364,11 @@ const businessSettingsSlice = createSlice({
         state.promoLines.data = state.promoLines.data.filter((line) => line.id !== action.payload)
       })
       .addCase(savePromotionPopup.fulfilled, (state, action) => {
-        // The server orders by priority, start and age; re-sorting here mirrors that for the row just saved.
+        // The server lists the newest first; re-sorting here mirrors that for the row just saved.
         state.promotionPopups.data = [
           ...state.promotionPopups.data.filter((popup) => popup.id !== action.payload.id),
           action.payload,
-        ].sort((a, b) => b.priority - a.priority || b.starts_at.localeCompare(a.starts_at))
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at))
       })
       .addCase(deletePromotionPopup.fulfilled, (state, action) => {
         state.promotionPopups.data = state.promotionPopups.data.filter((popup) => popup.id !== action.payload)

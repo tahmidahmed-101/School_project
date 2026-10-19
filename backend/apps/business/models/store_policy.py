@@ -12,6 +12,9 @@ class PolicyKind(models.TextChoices):
     SHIPPING = "shipping", "Shipping policy"
     RETURNS = "returns", "Return policy"
     REFUND = "refund", "Refund policy"
+    # Shown before a shopper places a pre-order. Prose only: it sets no
+    # checkout rule, and pre-order return eligibility stays on `returns`.
+    PREORDER_CHECKOUT = "preorder_checkout", "Pre-order checkout terms"
 
 
 class StorePolicy(TimeStampedModel):

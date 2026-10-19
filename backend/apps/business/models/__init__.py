@@ -6,7 +6,6 @@ from .storefront_content import (
     HeroSlide,
     PromoLine,
     PromotionPopup,
-    PromotionPopupProduct,
 )
 
 __all__ = [
@@ -18,7 +17,6 @@ __all__ = [
     "PolicyKind",
     "PromoLine",
     "PromotionPopup",
-    "PromotionPopupProduct",
     "StorePolicy",
     "StorePolicyRevision",
 ]

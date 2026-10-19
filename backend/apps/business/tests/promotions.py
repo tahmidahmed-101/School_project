@@ -10,9 +10,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from PIL import Image
 
-from apps.business.models import PromotionPopup, PromotionPopupProduct
-from apps.catalog.factories import ProductVariantFactory
-from apps.catalog.models import Product, Sale
+from apps.business.models import PromotionPopup
+from apps.catalog.models import Sale
 from apps.catalog.services.sales import create_sale
 
 POPUPS = "/api/v1/admin/settings/promotion-popups/"
@@ -37,53 +36,7 @@ def sale(percent="20.00", *, starts_in_days=-1, ends_in_days=7, **fields) -> Sal
     )
 
 
-def stock_product(price="1000.00", **fields) -> Product:
-    if "product__category" not in fields:
-        fields["product__category__category_type"] = "stock"
-    variant = ProductVariantFactory(price=Decimal(price), product__is_active=True, **fields)
-    return variant.product
-
-
-def preorder_product(price="1000.00", **fields) -> Product:
-    return ProductVariantFactory(
-        price=Decimal(price),
-        product__is_active=True,
-        product__category__category_type="preorder",
-        **fields,
-    ).product
-
-
-def open_preorder_product(price="1000.00", **fields) -> Product:
-    """A pre-order product inside its ordering window."""
-    now = timezone.now()
-    return preorder_product(
-        price,
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-        **fields,
-    )
-
-
-def window(starts_in_days=-1, ends_in_days=5) -> dict:
-    now = timezone.now()
-    return {
-        "starts_at": now + timedelta(days=starts_in_days),
-        "ends_at": now + timedelta(days=ends_in_days),
-    }
-
-
-def popup(sale_row: Sale | None, products: list[Product], **fields) -> PromotionPopup:
+def popup(sale_row: Sale | None, **fields) -> PromotionPopup:
     """A popup written straight to the table, for read-side tests. Pass no sale
     and `placement="preorder"` for a pre-order popup."""
-    row = PromotionPopup.objects.create(
-        name=fields.pop("name", "Eid popup"),
-        title_en=fields.pop("title_en", "Eid sale"),
-        sale=sale_row,
-        **{**window(), **fields},
-    )
-    PromotionPopupProduct.objects.bulk_create(
-        PromotionPopupProduct(popup=row, product=product, sort_order=index)
-        for index, product in enumerate(products)
-    )
-    return row
+    return PromotionPopup.objects.create(image=fields.pop("image", png()), sale=sale_row, **fields)

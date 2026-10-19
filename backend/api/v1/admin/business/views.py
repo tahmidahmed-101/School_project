@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import ClassVar
 
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.constants import StaffPermissionCode
+from apps.business.models import PolicyKind
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.modules import get_module_state, modules_list
 from apps.business.selectors.policies import (
@@ -75,6 +77,15 @@ SettingsViewPermission = require_any_staff_permission(
     StaffPermissionCode.SETTINGS_VIEW, StaffPermissionCode.SETTINGS_MANAGE
 )
 SettingsManagePermission = require_staff_permission(StaffPermissionCode.SETTINGS_MANAGE)
+
+
+POLICY_KIND_PARAMETER = OpenApiParameter(
+    "kind",
+    OpenApiTypes.STR,
+    location=OpenApiParameter.PATH,
+    enum=PolicyKind.values,
+    description="Which store policy.",
+)
 
 
 def _envelope(profile) -> Response:
@@ -205,7 +216,8 @@ class AdminPaymentMethodDetailView(APIView):
 
 @extend_schema(tags=["Business Settings"])
 class AdminStorePolicyListView(APIView):
-    """Shipping, return and refund policies, drafts included."""
+    """Every store policy (shipping, returns, refund, pre-order checkout
+    terms), drafts included."""
 
     serializer_class = AdminStorePolicySerializer
     permission_classes: ClassVar[list] = [SettingsViewPermission]
@@ -219,7 +231,7 @@ class AdminStorePolicyListView(APIView):
         )
 
 
-@extend_schema(tags=["Business Settings"])
+@extend_schema(tags=["Business Settings"], parameters=[POLICY_KIND_PARAMETER])
 class AdminStorePolicyDetailView(APIView):
     """Reading is open to `settings.view`; editing or publishing needs
     `settings.manage`. Every accepted change records a revision."""
@@ -254,7 +266,7 @@ class AdminStorePolicyDetailView(APIView):
     put = patch
 
 
-@extend_schema(tags=["Business Settings"])
+@extend_schema(tags=["Business Settings"], parameters=[POLICY_KIND_PARAMETER])
 class AdminStorePolicyRevisionListView(GenericListAPIView):
     """Immutable change history for one policy, newest first."""
 
@@ -379,7 +391,7 @@ class AdminPromoLineDetailView(APIView):
 
 
 def _promotion_popup_response(request, popup_id, status_code: int = status.HTTP_200_OK) -> Response:
-    # Re-read: the featured products were just replaced under any prefetch.
+    # Re-read, so the sale is the one now saved.
     data = AdminPromotionPopupSerializer(
         get_promotion_popup(popup_id), context={"request": request}
     ).data
@@ -388,8 +400,8 @@ def _promotion_popup_response(request, popup_id, status_code: int = status.HTTP_
 
 @extend_schema(tags=["Business Settings"])
 class AdminPromotionPopupListView(APIView):
-    """Promotion popups, switched-off, scheduled and ended ones included, in
-    the order the storefront prefers them. Create is multipart."""
+    """Promotion popups, switched-off ones included, in the order the
+    storefront prefers them. Create is multipart."""
 
     serializer_class = AdminPromotionPopupWriteSerializer
 
