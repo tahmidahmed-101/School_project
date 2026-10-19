@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, CornerDownRight, X, Store, Globe, Truck, Sparkles } from "lucide-react";
-import { categoryGroups, useCatalog } from "@/modules/catalog";
+import { categoryGroups, useCatalog, WithPageKind } from "@/modules/catalog";
+import { useCart } from "@/modules/cart";
+import { shopListing, type ProductKind } from "@/lib/product";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { WithActiveCategory } from "@/modules/catalog";
@@ -28,12 +30,18 @@ interface MobileNavMenuProps {
 }
 
 /** Left-hand slide-in menu with ready stock, pre-order, categories and the language toggle, mobile only. */
-export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMenuProps) {
+export function MobileNavMenu(props: MobileNavMenuProps) {
+  const { kind: basket } = useCart();
+  return <WithPageKind basket={basket}>{(kind) => <ShopNavMenu {...props} kind={kind} />}</WithPageKind>;
+}
+
+function ShopNavMenu({ open, onClose, hasShippingPolicy, kind }: MobileNavMenuProps & { kind: ProductKind }) {
   const pathname = usePathname();
   const { lang, setLang, t, ui } = useLang();
   const { categories: allCategories } = useCatalog();
-  // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
-  const groups = categoryGroups(allCategories.filter((category) => category.type === "stock"));
+  // Each shop lists only its own categories: stock pages the stock tree, pre-order pages the pre-order tree.
+  const groups = categoryGroups(allCategories.filter((category) => category.type === kind));
+  const categoryHref = (slug: string) => shopListing(kind, { category: slug });
   // Groups the visitor opened or closed by hand; the group of the category being viewed starts open.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
@@ -129,7 +137,7 @@ export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMen
                               }`}
                             >
                               <Link
-                                href={`${SHOP_PATH}?category=${main.slug}`}
+                                href={categoryHref(main.slug)}
                                 onClick={onClose}
                                 className={`flex min-w-0 flex-1 items-center py-2.5 pl-9 pr-3 text-sm font-semibold ${
                                   activeCategory === main.slug
@@ -158,7 +166,7 @@ export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMen
                                 {subs.map(({ category, depth }) => (
                                   <Link
                                     key={category.id}
-                                    href={`${SHOP_PATH}?category=${category.slug}`}
+                                    href={categoryHref(category.slug)}
                                     onClick={onClose}
                                     style={{ paddingLeft: `${0.75 + (depth - 1) * 0.75}rem` }}
                                     className={`flex items-center gap-2 py-2 pr-3 text-xs transition-colors ${

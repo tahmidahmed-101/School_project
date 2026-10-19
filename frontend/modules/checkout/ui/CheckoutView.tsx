@@ -9,7 +9,7 @@ import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from 
 import { useBrand } from "@/modules/catalog";
 import { ApiError } from "@/lib/api/client";
 import { freeDeliveryStatus } from "@/lib/free-delivery";
-import { shopHome } from "@/lib/product";
+import { isBelowMinimum, productKind, shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import { toOrderResult } from "../data/adapters";
@@ -36,6 +36,7 @@ import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
+import { PreorderConfirmModal } from "./PreorderConfirmModal";
 
 export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: PaymentMethodsByKind }) {
   const { ui } = useLang();
@@ -48,6 +49,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const [errorMsg, setErrorMsg] = useState("");
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
+  const [confirmingPreorder, setConfirmingPreorder] = useState(false);
+  const preorderItems = items.filter((item) => productKind(item.product) === "preorder");
 
   const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind);
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
@@ -84,9 +87,15 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       ]),
     );
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  /** A pre-order basket is placed only after the shopper confirms it in a modal; `confirmed` is that answer. */
+  const handleSubmit = async (e?: FormEvent, { confirmed = false }: { confirmed?: boolean } = {}) => {
+    e?.preventDefault();
     if (isSubmitting) return;
+    // The summary disables the button too; this also stops a submit by Enter in a field.
+    if (items.some(isBelowMinimum)) {
+      setErrorMsg(ui("cartBelowMinimum"));
+      return;
+    }
     if (!paymentMethod) {
       setErrorMsg(ui("checkoutNoPaymentMethod"));
       return;
@@ -96,6 +105,12 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
     if (Object.keys(problems).length > 0) {
       setFieldErrors(localise(problems));
       setErrorMsg(ui("checkoutValidationAlert"));
+      return;
+    }
+
+    if (preorderItems.length > 0 && !confirmed) {
+      setErrorMsg("");
+      setConfirmingPreorder(true);
       return;
     }
 
@@ -145,6 +160,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       }
     } finally {
       setIsSubmitting(false);
+      // Closed either way: on success the order page replaces the form, on failure its alert says why.
+      setConfirmingPreorder(false);
     }
   };
 
@@ -209,6 +226,13 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
             />
           </div>
         </form>
+        <PreorderConfirmModal
+          open={confirmingPreorder}
+          items={preorderItems}
+          submitting={isSubmitting}
+          onClose={() => setConfirmingPreorder(false)}
+          onConfirm={() => void handleSubmit(undefined, { confirmed: true })}
+        />
       </Container>
     </div>
   );

@@ -94,6 +94,14 @@ describe("toProduct pre-order state", () => {
     expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "closed" });
     expect(shown.stockCount).toBe(0);
   });
+
+  it("carries an open pre-order's minimum quantity, and none for a closed one or an older API", () => {
+    const open = product({ is_preorder_active: true, preorder_min_quantity: 3 }, "preorder");
+    expect(open).toMatchObject({ isPreOrder: true, minPreorderQuantity: 3 });
+    expect(open.skuVariants?.[0]?.minPreorderQuantity).toBe(3);
+    expect(product({ preorder_min_quantity: 3 }, "preorder").minPreorderQuantity).toBeUndefined();
+    expect(product({ is_preorder_active: true }, "preorder").minPreorderQuantity).toBeUndefined();
+  });
 });
 
 describe("toProduct options", () => {

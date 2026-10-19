@@ -17,7 +17,7 @@ interface ProductGridProps {
 export function ProductGrid({ products, title, viewAllLink, viewAllText }: ProductGridProps) {
   const { ui } = useLang();
 
-  const gridColsClass = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+  const gridColsClass = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4";
 
   return (
     // content-visibility: a home page has a dozen of these shelves, and laying them all out up front was the

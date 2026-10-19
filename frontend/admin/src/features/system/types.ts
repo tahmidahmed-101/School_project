@@ -124,6 +124,59 @@ export interface PromoLine {
 
 export type PromoLineInput = Omit<PromoLine, "id">
 
+// ---- promotion popups (/admin/settings/promotion-popups/) ----
+
+export interface PromotionPopup {
+  id: string
+  /** Dashboard label; never shown to shoppers. */
+  name: string
+  title_en: string
+  title_bn: string
+  body_en: string
+  body_bn: string
+  cta_label_en: string
+  cta_label_bn: string
+  cta_url: string
+  /** Absolute URL, or null when the popup has no picture. */
+  image: string | null
+  starts_at: string
+  ends_at: string
+  /** Higher wins when several popups could show at once. */
+  priority: number
+  is_active: boolean
+  /** Which shop page shows it; fixed once created. */
+  placement: ShopPlacement
+  /** The sale a shop popup promotes; null on a pre-order popup. */
+  sale: {
+    id: string
+    name: string
+    percent_off: string
+    status: "scheduled" | "running" | "ended" | "off" | "deleted"
+  } | null
+  /** In display order. */
+  products: { id: string; name: string; slug: string }[]
+}
+
+export interface PromotionPopupInput {
+  name: string
+  title_en: string
+  title_bn: string
+  body_en: string
+  body_bn: string
+  cta_label_en: string
+  cta_label_bn: string
+  cta_url: string
+  starts_at: string | null
+  ends_at: string | null
+  priority: number
+  is_active: boolean
+  /** Sent on create only. */
+  placement: ShopPlacement
+  /** Shop popups only. */
+  sale_id: string
+  product_ids: string[]
+}
+
 // ---- store policies (/admin/settings/policies/) ----
 
 export type PolicyKind = "shipping" | "returns" | "refund"

@@ -194,6 +194,11 @@ const ProductDetail = () => {
                   {settings.preorder_stock_limit}
                 </IconLine>
               )}
+              {!isStock && (settings?.preorder_min_quantity ?? 1) > 1 && (
+                <IconLine icon={Package} label="Minimum per order">
+                  {settings?.preorder_min_quantity}
+                </IconLine>
+              )}
             </div>
 
             {product.description && (

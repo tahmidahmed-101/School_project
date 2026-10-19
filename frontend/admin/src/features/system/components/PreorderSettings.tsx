@@ -7,6 +7,7 @@ import {
   fetchPaymentMethods,
   fetchPolicies,
   fetchPromoLines,
+  fetchPromotionPopups,
 } from "@/features/system/slices/businessSettingsSlice"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -15,6 +16,7 @@ import { PaymentMethodsPanel } from "./settings/PaymentMethodsPanel"
 import { PreorderDepositForm } from "./settings/PreorderDepositForm"
 import { PreorderReturnsCard } from "./settings/PreorderReturnsCard"
 import { PromoLinesCard } from "./settings/PromoLinesCard"
+import { PromotionPopupsCard } from "./settings/PromotionPopupsCard"
 
 const PreorderSettings = () => {
   useDocumentTitle("Pre-order settings")
@@ -26,6 +28,7 @@ const PreorderSettings = () => {
       dispatch(fetchBusinessProfile()),
       dispatch(fetchHeroSlides()),
       dispatch(fetchPromoLines()),
+      dispatch(fetchPromotionPopups()),
       dispatch(fetchPolicies()),
       dispatch(fetchPaymentMethods("preorder")),
     ]
@@ -46,6 +49,7 @@ const PreorderSettings = () => {
       <PaymentMethodsPanel canManage={canManage} kind="preorder" />
       <HeroSlidesCard canManage={canManage} placement="preorder" />
       <PromoLinesCard canManage={canManage} placement="preorder" />
+      <PromotionPopupsCard canManage={canManage} placement="preorder" />
       <PreorderReturnsCard canManage={canManage} />
     </div>
   )

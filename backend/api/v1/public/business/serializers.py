@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.catalog.selectors.images import variant_image_url
+
 
 class PublicBusinessProfileSerializer(serializers.Serializer):
     """Storefront-facing subset. Registration data (tax_id, trade licence) is
@@ -128,6 +130,112 @@ class PublicPromoLineSerializer(serializers.Serializer):
         return {"en": obj.text_en, "bn": obj.text_bn}
 
 
+class PublicPromotionCardSerializer(serializers.Serializer):
+    """A featured product as the popup card shows it. Prices are the variant's
+    own: `price` is what the shopper pays under the sale, `original_price` the
+    list price it is cut from."""
+
+    id = serializers.UUIDField(source="product.id", read_only=True)
+    name = serializers.CharField(source="product.name", read_only=True)
+    slug = serializers.CharField(source="product.slug", read_only=True)
+    image = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    original_price = serializers.DecimalField(
+        source="variant.price", max_digits=12, decimal_places=2, read_only=True
+    )
+    percent_off = serializers.SerializerMethodField()
+
+    def get_image(self, obj) -> str | None:
+        return variant_image_url(obj.variant)
+
+    def get_price(self, obj) -> str:
+        return str(obj.variant.effective_price)
+
+    def get_percent_off(self, obj) -> str:
+        return str(obj.variant.applied_sale.percent_off)
+
+
+class PublicPreorderCardSerializer(serializers.Serializer):
+    """A featured pre-order product: `price` is what the shopper pays now (the
+    pre-order price while it applies), `original_price` the list price when
+    that is higher, else null."""
+
+    id = serializers.UUIDField(source="product.id", read_only=True)
+    name = serializers.CharField(source="product.name", read_only=True)
+    slug = serializers.CharField(source="product.slug", read_only=True)
+    image = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    original_price = serializers.SerializerMethodField()
+    release_date = serializers.DateTimeField(source="variant.release_date", read_only=True)
+
+    def get_image(self, obj) -> str | None:
+        return variant_image_url(obj.variant)
+
+    def get_price(self, obj) -> str:
+        return str(obj.variant.effective_price)
+
+    def get_original_price(self, obj) -> str | None:
+        variant = obj.variant
+        return str(variant.price) if variant.effective_price < variant.price else None
+
+
+class _PopupContentSerializer(serializers.Serializer):
+    """The fields every popup shares, read from a `StorefrontPromotion`."""
+
+    id = serializers.UUIDField(source="popup.id", read_only=True)
+    image = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    body = serializers.SerializerMethodField()
+    cta = serializers.SerializerMethodField()
+
+    def get_image(self, obj) -> str | None:
+        if not obj.popup.image:
+            return None
+        request = self.context.get("request")
+        url = obj.popup.image.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_title(self, obj) -> dict[str, str]:
+        return {"en": obj.popup.title_en, "bn": obj.popup.title_bn}
+
+    def get_body(self, obj) -> dict[str, str]:
+        return {"en": obj.popup.body_en, "bn": obj.popup.body_bn}
+
+    def get_cta(self, obj) -> dict | None:
+        popup = obj.popup
+        if not popup.cta_url:
+            return None
+        return {"label": {"en": popup.cta_label_en, "bn": popup.cta_label_bn}, "url": popup.cta_url}
+
+
+class PublicPromotionPopupSerializer(_PopupContentSerializer):
+    """The shop popup: its running sale and the products that sale prices."""
+
+    sale = serializers.SerializerMethodField()
+    products = PublicPromotionCardSerializer(source="cards", many=True, read_only=True)
+
+    def get_sale(self, obj) -> dict:
+        # The same shape as a product's `sale` in the public catalog.
+        sale = obj.sale
+        return {
+            "name": sale.name,
+            "percent_off": str(sale.percent_off),
+            "ends_at": (
+                serializers.DateTimeField().to_representation(sale.ends_at)
+                if sale.ends_at
+                else None
+            ),
+        }
+
+
+class PublicPreorderPopupSerializer(_PopupContentSerializer):
+    """The pre-order page popup: no sale, and products open for pre-order."""
+
+    products = PublicPreorderCardSerializer(source="cards", many=True, read_only=True)
+
+
 class PublicStorefrontContentSerializer(serializers.Serializer):
     hero_slides = PublicHeroSlideSerializer(many=True, read_only=True)
     promo_lines = PublicPromoLineSerializer(many=True, read_only=True)
+    promotion_popup = PublicPromotionPopupSerializer(read_only=True, allow_null=True)
+    preorder_popup = PublicPreorderPopupSerializer(read_only=True, allow_null=True)

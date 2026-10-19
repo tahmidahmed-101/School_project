@@ -163,6 +163,22 @@ def _check_preorder_stock_limit(
         )
 
 
+def ensure_preorder_minimums(lines) -> None:
+    """Each pre-order line reaches its variant's minimum. Run when the order
+    is placed, not on cart edits, so a shopper can build the quantity up in
+    steps. `lines` carry their variant, product and category already loaded."""
+    for line in lines:
+        variant = line.variant
+        if not variant.is_preorder_kind or line.quantity >= variant.preorder_min_quantity:
+            continue
+        raise BusinessRuleViolationError(
+            f"{variant.product.name} ({variant.sku}) needs at least "
+            f"{variant.preorder_min_quantity} units per pre-order; "
+            f"{line.quantity} requested.",
+            code="preorder_min_quantity_not_met",
+        )
+
+
 def _ensure_pending(order: SalesOrder) -> None:
     if order.status != SalesOrder.Status.PENDING:
         raise BusinessRuleViolationError(

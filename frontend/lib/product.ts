@@ -1,4 +1,4 @@
-import type { Product, ProductSale } from "@/lib/types";
+import type { CartItem, Product, ProductSale } from "@/lib/types";
 
 /** True if any field contains the query, case-insensitively. */
 export function matchesQuery(fields: string[], query: string): boolean {
@@ -51,6 +51,17 @@ export function getMaxOrderQuantity(product: Product): number {
     return Math.max(1, product.maxPreorderQuantity - (product.currentPreorderQuantity ?? 0));
   }
   return 10;
+}
+
+/** Fewest units one order line may hold: a pre-order's configured minimum, else 1. */
+export function getMinOrderQuantity(product: Pick<Product, "isPreOrder" | "minPreorderQuantity">): number {
+  if (!product.isPreOrder) return 1;
+  return Math.max(1, product.minPreorderQuantity ?? 1);
+}
+
+/** A cart line short of its minimum. The cart may hold it while the shopper adds more; checkout refuses it. */
+export function isBelowMinimum(item: Pick<CartItem, "product" | "quantity">): boolean {
+  return item.quantity < getMinOrderQuantity(item.product);
 }
 
 export type ProductKind = Product["kind"];

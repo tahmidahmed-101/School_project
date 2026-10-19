@@ -19,18 +19,23 @@ from apps.business.selectors.policies import (
 from apps.business.selectors.storefront_content import (
     get_hero_slide,
     get_promo_line,
+    get_promotion_popup,
     hero_slides_list,
     promo_lines_list,
+    promotion_popups_list,
 )
 from apps.business.services import update_business_profile, update_store_policy
 from apps.business.services.modules import set_module_config, set_module_enabled
 from apps.business.services.storefront_content import (
     create_hero_slide,
     create_promo_line,
+    create_promotion_popup,
     delete_hero_slide,
     delete_promo_line,
+    delete_promotion_popup,
     update_hero_slide,
     update_promo_line,
+    update_promotion_popup,
 )
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
@@ -59,6 +64,8 @@ from .serializers import (
     AdminPaymentMethodUpdateSerializer,
     AdminPromoLineSerializer,
     AdminPromoLineWriteSerializer,
+    AdminPromotionPopupSerializer,
+    AdminPromotionPopupWriteSerializer,
     AdminStorePolicyRevisionSerializer,
     AdminStorePolicySerializer,
     AdminStorePolicyUpdateSerializer,
@@ -368,4 +375,74 @@ class AdminPromoLineDetailView(APIView):
         if line is None:
             return not_found("promo_line_not_found", "Promo line not found.")
         delete_promo_line(line=line)
+        return Response({"data": {}, "message": "Success"})
+
+
+def _promotion_popup_response(request, popup_id, status_code: int = status.HTTP_200_OK) -> Response:
+    # Re-read: the featured products were just replaced under any prefetch.
+    data = AdminPromotionPopupSerializer(
+        get_promotion_popup(popup_id), context={"request": request}
+    ).data
+    return Response({"data": data, "message": "Success"}, status=status_code)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromotionPopupListView(APIView):
+    """Promotion popups, switched-off, scheduled and ended ones included, in
+    the order the storefront prefers them. Create is multipart."""
+
+    serializer_class = AdminPromotionPopupWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request) -> Response:
+        data = AdminPromotionPopupSerializer(
+            promotion_popups_list(), many=True, context={"request": request}
+        ).data
+        return Response({"data": data, "message": "Success"})
+
+    def post(self, request) -> Response:
+        serializer = AdminPromotionPopupWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            popup = create_promotion_popup(data=serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
+        return _promotion_popup_response(request, popup.id, status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromotionPopupDetailView(APIView):
+    serializer_class = AdminPromotionPopupWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request, pk) -> Response:
+        if get_promotion_popup(pk) is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        return _promotion_popup_response(request, pk)
+
+    def patch(self, request, pk) -> Response:
+        popup = get_promotion_popup(pk)
+        if popup is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        serializer = AdminPromotionPopupWriteSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            update_promotion_popup(popup=popup, data=serializer.validated_data)
+        except DomainError as exc:
+            return error_from_exception(exc, status_for_code(exc.code))
+        return _promotion_popup_response(request, pk)
+
+    def delete(self, request, pk) -> Response:
+        popup = get_promotion_popup(pk)
+        if popup is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        delete_promotion_popup(popup=popup)
         return Response({"data": {}, "message": "Success"})

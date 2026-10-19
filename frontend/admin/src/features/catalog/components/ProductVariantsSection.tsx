@@ -67,6 +67,7 @@ const orderingWindowOf = (sibling: ProductVariant): ProductVariantPayload => ({
   preorder_end_date: sibling.preorder_end_date,
   release_date: sibling.release_date,
   preorder_stock_limit: sibling.preorder_stock_limit,
+  preorder_min_quantity: sibling.preorder_min_quantity ?? 1,
 })
 
 function buildRows(combinations: Combination[], variants: ProductVariant[], productName: string): Row[] {

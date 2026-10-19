@@ -11,6 +11,8 @@ from .views import (
     AdminPaymentMethodListView,
     AdminPromoLineDetailView,
     AdminPromoLineListView,
+    AdminPromotionPopupDetailView,
+    AdminPromotionPopupListView,
     AdminStorePolicyDetailView,
     AdminStorePolicyListView,
     AdminStorePolicyRevisionListView,
@@ -49,5 +51,11 @@ urlpatterns = [
         "promo-lines/<uuid:pk>/",
         AdminPromoLineDetailView.as_view(),
         name="promo-line-detail",
+    ),
+    path("promotion-popups/", AdminPromotionPopupListView.as_view(), name="promotion-popup-list"),
+    path(
+        "promotion-popups/<uuid:pk>/",
+        AdminPromotionPopupDetailView.as_view(),
+        name="promotion-popup-detail",
     ),
 ]

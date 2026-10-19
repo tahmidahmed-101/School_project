@@ -11,6 +11,7 @@ import {
   fetchModules,
   fetchPaymentMethods,
   fetchPromoLines,
+  fetchPromotionPopups,
 } from "@/features/system/slices/businessSettingsSlice"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -46,6 +47,7 @@ const Settings = () => {
       dispatch(fetchIntegrations()),
       dispatch(fetchHeroSlides()),
       dispatch(fetchPromoLines()),
+      dispatch(fetchPromotionPopups()),
     ]
     return () => requests.forEach((r) => r.abort())
   }, [dispatch])

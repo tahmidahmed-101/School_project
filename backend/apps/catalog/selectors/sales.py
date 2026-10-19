@@ -83,20 +83,23 @@ def _target_ids(sale: Sale) -> frozenset:
     return frozenset()
 
 
+def live_sale_of(sale: Sale) -> LiveSale:
+    """`sale` as pricing reads it, so another feature asks "does it cover this
+    product" with the same rule that sets the price. Prefetch its targets."""
+    return LiveSale(
+        id=sale.id,
+        name=sale.name,
+        percent_off=sale.percent_off,
+        starts_at=sale.starts_at,
+        ends_at=sale.ends_at,
+        applies_to=sale.applies_to,
+        target_ids=_target_ids(sale),
+    )
+
+
 def _load_live_sales() -> list[LiveSale]:
     sales = sales_list().filter(_not_ended(timezone.now()), is_active=True)
-    return [
-        LiveSale(
-            id=sale.id,
-            name=sale.name,
-            percent_off=sale.percent_off,
-            starts_at=sale.starts_at,
-            ends_at=sale.ends_at,
-            applies_to=sale.applies_to,
-            target_ids=_target_ids(sale),
-        )
-        for sale in sales
-    ]
+    return [live_sale_of(sale) for sale in sales]
 
 
 def live_sales() -> list[LiveSale]:
@@ -117,6 +120,11 @@ def clear_live_sales_cache() -> None:
 def running_sales() -> list[LiveSale]:
     now = timezone.now()
     return [sale for sale in live_sales() if sale.is_running(now)]
+
+
+def running_sale_by_id(sale_id) -> LiveSale | None:
+    """The running sale with this id, from the same cached list prices use."""
+    return next((sale for sale in running_sales() if sale.id == sale_id), None)
 
 
 def best_sale_for(product, sales: list[LiveSale] | None = None) -> LiveSale | None:

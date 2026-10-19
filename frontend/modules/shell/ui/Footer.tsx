@@ -4,12 +4,12 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { WhatsAppIcon } from "@/design-system/icons/BrandIcons";
 import { mapsHref, socialLinks } from "./contactLinks";
 import { getBrand } from "@/modules/business/server";
-import { categoryGroups } from "@/modules/catalog";
 import { getShellCatalog } from "@/modules/catalog/server";
 import { isPolicyPublished } from "@/modules/policies/server";
 import { getServerText } from "@/lib/i18n.server";
 import { photo } from "@/lib/photo";
 import { containerClass } from "@/design-system/ui/Container";
+import { FooterShopLinks } from "./FooterShopLinks";
 
 export async function Footer() {
   const [{ t, ui, lang }, BRAND_INFO, { categories: allCategories }, hasShippingPolicy] = await Promise.all([
@@ -19,9 +19,6 @@ export async function Footer() {
     isPolicyPublished("shipping"),
   ]);
   const about = BRAND_INFO.about[lang] || BRAND_INFO.about.en || BRAND_INFO.about.bn || ui("footerAboutText");
-  // Pre-order has its own nav link and category rail; the footer covers the regular stock catalogue.
-  // Main categories only: their subcategories are one click away in the shop.
-  const categories = categoryGroups(allCategories.filter((category) => category.type === "stock"));
 
   return (
     <footer className="border-t border-brand-950 bg-brand-900 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] text-xs text-white/75 lg:pb-0">
@@ -69,72 +66,7 @@ export async function Footer() {
             </div>
           </div>
 
-          {/* Col 2: Categories (3 cols) */}
-          <div className="space-y-3 lg:col-span-3">
-            <h4 className="text-xs font-bold uppercase tracking-wide text-white">{ui("footerCategories")}</h4>
-            <ul className="space-y-2">
-              {categories.map(({ main: cat }) => (
-                <li key={cat.id}>
-                  <Link
-                    href={`/shop?category=${cat.slug}`}
-                    prefetch={false}
-                    className="transition-colors hover:text-gold-300"
-                  >
-                    {t(cat.name)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Col 3: Quick links (2 cols) */}
-          <div className="space-y-3 lg:col-span-2">
-            <h4 className="text-xs font-bold uppercase tracking-wide text-white">{ui("footerQuickLinks")}</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/" className="transition-colors hover:text-gold-300">
-                  {ui("navHome")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop" className="transition-colors hover:text-gold-300">
-                  {ui("navShop")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/pre-order" className="transition-colors hover:text-gold-300">
-                  {ui("navPreOrder")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/checkout" className="transition-colors hover:text-gold-300">
-                  {ui("checkoutTitle")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/track-order" className="transition-colors hover:text-gold-300">
-                  {ui("navTrackOrder")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/return-policy" className="transition-colors hover:text-gold-300">
-                  {ui("footerReturnPolicy")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/refund-policy" className="transition-colors hover:text-gold-300">
-                  {ui("footerRefundPolicy")}
-                </Link>
-              </li>
-              {hasShippingPolicy && (
-                <li>
-                  <Link href="/shipping-policy" className="transition-colors hover:text-gold-300">
-                    {ui("footerShippingPolicy")}
-                  </Link>
-                </li>
-              )}
-            </ul>
-          </div>
+          <FooterShopLinks categories={allCategories} hasShippingPolicy={hasShippingPolicy} />
 
           {/* Col 4: Store Contact (3 cols) */}
           <div className="space-y-3 lg:col-span-3">

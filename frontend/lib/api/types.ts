@@ -85,6 +85,8 @@ export interface ApiVariant {
   is_preorder_price_applied: boolean;
   /** Pre-order cap; null when the pre-order has no limit. */
   preorder_stock_limit: number | null;
+  /** Fewest units one pre-order of this variant may place; null on a stock variant. Optional: absent on an older API. */
+  preorder_min_quantity?: number | null;
   /** Quantity already committed on non-cancelled orders. */
   preordered_quantity: number;
   /** `max(limit - preordered_quantity, 0)`; null when there is no limit. */
@@ -267,9 +269,53 @@ export interface ApiPromoLine {
   placement: "home" | "preorder" | "both";
 }
 
+/** A featured product: `price` is what the shopper pays under the sale, `original_price` the list price. */
+export interface ApiPromotionCard {
+  id: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  price: string;
+  original_price: string;
+  percent_off: string;
+}
+
+/** The one popup the backend picked to show now; it checks the campaign, its sale and every card. */
+export interface ApiPromotionPopup {
+  id: string;
+  /** Absolute URL, or null. */
+  image: string | null;
+  title: ApiLocalizedText;
+  body: ApiLocalizedText;
+  /** Null when the popup has no button. */
+  cta: { label: ApiLocalizedText; url: string } | null;
+  sale: ApiProductSale;
+  products: ApiPromotionCard[];
+}
+
+/** A featured pre-order product: `price` is what the shopper pays now, `original_price` the list price when higher. */
+export interface ApiPreorderCard {
+  id: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  price: string;
+  original_price: string | null;
+  release_date: string | null;
+}
+
+/** The pre-order page popup: no sale, and only products open for pre-order with capacity left. */
+export interface ApiPreorderPopup extends Omit<ApiPromotionPopup, "sale" | "products"> {
+  products: ApiPreorderCard[];
+}
+
 export interface ApiStorefrontContent {
   hero_slides: ApiHeroSlide[];
   promo_lines: ApiPromoLine[];
+  /** The shop home page popup. Null when none should show; absent on an API from before popups existed. */
+  promotion_popup?: ApiPromotionPopup | null;
+  /** The pre-order page popup. Null when none should show; absent on an API from before it existed. */
+  preorder_popup?: ApiPreorderPopup | null;
 }
 
 export interface ApiPaymentMethod {

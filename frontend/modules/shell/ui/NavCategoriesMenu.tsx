@@ -2,9 +2,11 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown, CornerDownRight, Layers } from "lucide-react";
-import { categoryGroups, useCatalog } from "@/modules/catalog";
+import { ArrowRight, ChevronDown, ChevronRight, CornerDownRight, Layers } from "lucide-react";
+import { categoryGroups, useCatalog, WithPageKind } from "@/modules/catalog";
+import { useCart } from "@/modules/cart";
 import { useLang } from "@/lib/i18n";
+import { shopListing, type ProductKind } from "@/lib/product";
 import { useClickOutside } from "@/lib/useClickOutside";
 import { WithActiveCategory } from "@/modules/catalog";
 
@@ -14,12 +16,18 @@ function revealGroup(toggle: HTMLElement) {
   requestAnimationFrame(() => group?.scrollIntoView({ block: "nearest" }));
 }
 
-/** "Shop by Categories" pill in the desktop nav bar with its animated menu. */
+/** "Shop by Categories" pill in the desktop nav bar: the categories of the shop the visitor is in. */
 export function NavCategoriesMenu() {
-  const { lang, t, ui, n } = useLang();
+  const { kind: basket } = useCart();
+  return <WithPageKind basket={basket}>{(kind) => <ShopCategoriesMenu kind={kind} />}</WithPageKind>;
+}
+
+function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
+  const { t, ui } = useLang();
   const { categories: allCategories } = useCatalog();
-  // Pre-order has its own nav link and category rail; this menu covers the regular stock catalogue.
-  const groups = categoryGroups(allCategories.filter((category) => category.type === "stock"));
+  // Each shop lists only its own categories: stock pages the stock tree, pre-order pages the pre-order tree.
+  const groups = categoryGroups(allCategories.filter((category) => category.type === kind));
+  const categoryHref = (slug: string) => shopListing(kind, { category: slug });
   // Groups the visitor opened or closed by hand; the group of the category being viewed starts open.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [isOpen, setIsOpen] = useState(false);
@@ -53,12 +61,11 @@ export function NavCategoriesMenu() {
         <div className="max-h-80 overflow-y-auto overscroll-contain">
           <WithActiveCategory>
             {(activeCategory) =>
-              groups.map(({ main, subs, itemCount }) => {
+              groups.map(({ main, subs }) => {
                 const isOpenGroup = toggled[main.id] ?? subs.some(({ category }) => category.slug === activeCategory);
-                const items = (count: number) => (
-                  <span className="ml-2 shrink-0 text-2xs font-normal text-fg-muted">
-                    {n(count)} {lang === "bn" ? "টি" : "items"}
-                  </span>
+                // An arrow, as on the hero's category rail, rather than an item count.
+                const arrow = (
+                  <ChevronRight className="ml-2 h-3 w-3 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-700" />
                 );
                 // Only main categories show at first; the arrow opens the subcategories in a tinted box below.
                 return (
@@ -69,15 +76,15 @@ export function NavCategoriesMenu() {
                       }`}
                     >
                       <Link
-                        href={`/shop?category=${main.slug}`}
+                        href={categoryHref(main.slug)}
                         prefetch={false}
                         onClick={close}
-                        className={`flex min-w-0 flex-1 cursor-pointer items-center justify-between py-2.5 pl-5 text-xs font-bold ${
+                        className={`group flex min-w-0 flex-1 cursor-pointer items-center justify-between py-2.5 pl-5 text-xs font-bold ${
                           subs.length ? "pr-1" : "pr-5"
                         } ${activeCategory === main.slug ? "text-gold-800" : "text-ink-900 hover:text-ink-950"}`}
                       >
                         <span className="truncate">{t(main.name)}</span>
-                        {items(itemCount)}
+                        {arrow}
                       </Link>
                       {subs.length > 0 && (
                         <button
@@ -101,11 +108,11 @@ export function NavCategoriesMenu() {
                         {subs.map(({ category, depth }) => (
                           <Link
                             key={category.id}
-                            href={`/shop?category=${category.slug}`}
+                            href={categoryHref(category.slug)}
                             prefetch={false}
                             onClick={close}
                             style={{ paddingLeft: `${0.625 + (depth - 1) * 0.75}rem` }}
-                            className={`flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pr-2.5 text-xs transition-colors ${
+                            className={`group flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pr-2.5 text-xs transition-colors ${
                               activeCategory === category.slug
                                 ? "font-bold text-gold-800"
                                 : "font-medium text-ink-700 hover:text-ink-950"
@@ -113,7 +120,7 @@ export function NavCategoriesMenu() {
                           >
                             <CornerDownRight className="h-3 w-3 shrink-0 text-ink-300" />
                             <span className="flex-1 truncate">{t(category.name)}</span>
-                            {items(category.itemCount)}
+                            {arrow}
                           </Link>
                         ))}
                       </div>
@@ -126,7 +133,7 @@ export function NavCategoriesMenu() {
         </div>
         <div className="mt-2 border-t border-ink-100 px-5 pt-2">
           <Link
-            href="/shop"
+            href={shopListing(kind)}
             onClick={close}
             className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-800 hover:text-gold-900"
           >

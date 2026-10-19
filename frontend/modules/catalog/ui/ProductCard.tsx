@@ -10,7 +10,7 @@ import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent, getMinOrderQuantity, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
 import { soleVariant } from "@/lib/variants";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
@@ -34,6 +34,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const isSoldOut = isPreOrderSoldOut(product);
   const isOutOfStock = !product.isPreOrder && !product.inStock;
   const needsChoice = !soleVariant(product);
+  const minQuantity = getMinOrderQuantity(product);
 
   const buyNow = () => {
     if (addItem(product, 1, undefined, { openDrawer: false })) router.push("/checkout");
@@ -85,7 +86,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <div className="mb-1.5 space-y-0.5">
           <Link
             href={`/product/${product.slug}`}
-            className="line-clamp-2 text-xs font-bold leading-tight text-fg transition-colors group-hover:text-gold-800 sm:text-sm"
+            className="line-clamp-2 text-sm font-bold leading-tight text-fg transition-colors group-hover:text-gold-800 sm:text-base"
             title={t(product.name)}
           >
             {t(product.name)}
@@ -101,21 +102,27 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {/* Pre-order Expected Delivery Info: short date only, wraps instead of overflowing */}
           {product.isPreOrder && product.expectedDelivery && (
             <div
-              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-2xs font-medium leading-snug text-gold-800"
+              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-xs font-medium leading-snug text-gold-800"
               title={`${ui("expectedDelivery")}: ${t(product.expectedDelivery)}`}
             >
               <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-700" />
               <span className="max-w-full break-words text-center">{t(product.expectedDelivery)}</span>
             </div>
           )}
+
+          {minQuantity > 1 && (
+            <p className="mx-auto mt-1 w-fit rounded-full bg-gold-50 px-2 py-0.5 text-2xs font-semibold leading-snug text-gold-900 ring-1 ring-gold-200">
+              {ui("preOrderMinQuantity").replace("{count}", n(minQuantity))}
+            </p>
+          )}
         </div>
 
         {/* Price & Actions (centered, stacked) */}
         <div className="mt-auto flex w-full flex-col items-center gap-1.5 border-t border-ink-100 pt-1.5">
           <div className="flex flex-wrap items-baseline justify-center gap-x-1.5">
-            <span className="text-xs font-bold text-gold-800 sm:text-sm">{money(product.price)}</span>
+            <span className="text-sm font-bold text-gold-800 sm:text-base">{money(product.price)}</span>
             {discountPercent && product.compareAtPrice && (
-              <span className="text-2xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
+              <span className="text-xs font-medium text-fg-muted line-through">{money(product.compareAtPrice)}</span>
             )}
           </div>
 
@@ -141,7 +148,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <Button
                 size="xs"
                 fullWidth
-                onClick={() => openPreOrderModal(product)}
+                onClick={() => openPreOrderModal(product, minQuantity)}
                 aria-label={`${ui("preOrderNow")} - ${t(product.name)}`}
                 leadingIcon={<Sparkles className="h-3.5 w-3.5 shrink-0" />}
               >

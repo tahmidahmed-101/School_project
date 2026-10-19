@@ -159,6 +159,12 @@ def _public_products() -> QuerySet[Product]:
     )
 
 
+def storefront_products_by_ids(product_ids) -> list[Product]:
+    """Products the storefront may show, out of `product_ids`, with variants,
+    images and options loaded in a fixed number of queries."""
+    return list(_public_products().filter(id__in=list(product_ids)).distinct())
+
+
 def get_product_by_slug(slug: str) -> Product | None:
     return _public_products().filter(slug=slug).first()
 

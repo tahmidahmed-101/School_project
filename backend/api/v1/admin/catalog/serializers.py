@@ -58,6 +58,7 @@ PREORDER_FIELD_BLANKS = {
     "preorder_end_date": None,
     "release_date": None,
     "preorder_stock_limit": None,
+    "preorder_min_quantity": None,
     "is_preorder_active": False,
     "can_preorder": False,
     "is_preorder_price_applied": False,
@@ -105,6 +106,7 @@ class ProductVariantSerializer(serializers.Serializer):
     preorder_stock_limit = serializers.IntegerField(
         allow_null=True, required=False, min_value=0
     )
+    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
     is_preorder_active = serializers.SerializerMethodField()
     can_preorder = serializers.SerializerMethodField()
     effective_price = serializers.SerializerMethodField()
@@ -220,6 +222,7 @@ class ProductVariantCreateSerializer(serializers.Serializer):
     preorder_stock_limit = serializers.IntegerField(
         required=False, allow_null=True, min_value=0
     )
+    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
         refuse_colour_size(self)
@@ -285,6 +288,7 @@ class ProductVariantUpdateSerializer(serializers.Serializer):
     preorder_stock_limit = serializers.IntegerField(
         required=False, allow_null=True, min_value=0
     )
+    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
         refuse_colour_size(self)

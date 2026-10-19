@@ -32,6 +32,7 @@ class ProductVariantInline(admin.TabularInline):
         "preorder_end_date",
         "release_date",
         "preorder_stock_limit",
+        "preorder_min_quantity",
         "is_active",
     )
     readonly_fields = ("title",)
