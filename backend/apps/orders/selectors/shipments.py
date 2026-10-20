@@ -141,3 +141,25 @@ def shipped_from_warehouses(*, shipment_ids, variant, quantity: int) -> list[tup
     if remaining:
         parts[None] = parts.get(None, 0) + remaining
     return list(parts.items())
+
+
+def shipped_unit_cost(*, shipment_ids, variant, warehouse=None):
+    """What one unit of `variant` cost when these consignments took it out of
+    `warehouse` (any warehouse when `None`), averaged over their stock-outs.
+    `None` when a stock-out kept no cost (shipped before costs were kept)."""
+    from apps.inventory.constants import MovementType
+    from apps.inventory.models import StockLedgerEntry
+
+    entries = StockLedgerEntry.objects.filter(
+        reference_type="shipment",
+        reference_id__in=list(shipment_ids),
+        variant=variant,
+        movement_type=MovementType.SALES_OUT,
+    )
+    if warehouse is not None:
+        entries = entries.filter(warehouse=warehouse)
+    rows = list(entries.values_list("quantity", "unit_cost"))
+    units = sum(quantity for quantity, _ in rows)
+    if not units or any(cost is None for _, cost in rows):
+        return None
+    return sum(quantity * cost for quantity, cost in rows) / units

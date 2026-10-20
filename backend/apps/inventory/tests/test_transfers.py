@@ -9,12 +9,12 @@ from apps.catalog.factories import ProductVariantFactory
 from apps.catalog.models import Category
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
-from apps.inventory.models import StockItem, StockLedgerEntry, StockTransfer
+from apps.inventory.models import StockItem, StockLedgerEntry, StockTransfer, Warehouse
 from apps.inventory.selectors.stock import get_stock_item
 from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement, reserve_stock
 from apps.inventory.services.transfers import transfer_stock
-from apps.inventory.services.warehouses import create_warehouse
+from apps.inventory.services.warehouses import create_warehouse, update_warehouse
 
 pytestmark = pytest.mark.django_db
 
@@ -171,3 +171,51 @@ def test_a_transfer_adds_no_records_in_other_warehouses(main, branch):
 
     assert not StockItem.objects.filter(variant=variant, warehouse=third).exists()
     assert get_stock_item(variant=variant, warehouse=branch).quantity_on_hand == 1
+
+
+# --- The default warehouse ----------------------------------------------------
+
+
+def test_the_default_warehouse_cannot_be_switched_off(main):
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        update_warehouse(warehouse=main, data={"is_active": False})
+    assert exc.value.code == "default_warehouse_inactive"
+
+
+def test_the_default_warehouse_cannot_simply_be_unticked(main):
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        update_warehouse(warehouse=main, data={"is_default": False})
+    assert exc.value.code == "default_warehouse_required"
+
+
+def test_a_switched_off_warehouse_cannot_become_the_default(main, branch):
+    update_warehouse(warehouse=branch, data={"is_active": False})
+    with pytest.raises(BusinessRuleViolationError):
+        update_warehouse(warehouse=branch, data={"is_default": True})
+    with pytest.raises(BusinessRuleViolationError):
+        create_warehouse(
+            data={"name": "Off", "code": "OFF", "kind": STOCK}
+            | {"is_default": True, "is_active": False}
+        )
+
+
+def test_making_another_warehouse_the_default_frees_the_old_one(main, branch):
+    update_warehouse(warehouse=branch, data={"is_default": True})
+    main.refresh_from_db()
+    assert not main.is_default
+    update_warehouse(warehouse=main, data={"is_active": False})  # no longer the default
+    assert get_or_create_default_warehouse(STOCK) == branch
+
+
+def test_a_default_switched_off_before_the_rule_gives_a_clear_error_not_a_crash(main):
+    Warehouse.objects.filter(pk=main.pk).update(is_active=False)
+    variant = ProductVariantFactory()
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        _receive(variant, None, 1, "1")
+    assert exc.value.code == "default_warehouse_inactive"
+
+
+def test_a_new_default_never_reuses_a_code_already_taken():
+    # The seeded MAIN is no longer the default, but still holds its code.
+    Warehouse.objects.filter(kind=STOCK).update(is_default=False)
+    assert get_or_create_default_warehouse(STOCK).code == "MAIN-2"

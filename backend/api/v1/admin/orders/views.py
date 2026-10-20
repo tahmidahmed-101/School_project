@@ -80,7 +80,7 @@ from apps.orders.services.payments import (
 )
 from apps.orders.services.preorder import set_preorder_stage
 from apps.orders.services.preorder_allocation import allocate_preorder_stock
-from apps.orders.services.reservations import release_stock_reservation
+from apps.orders.services.reservations import release_reservation_by_staff
 from apps.orders.services.returns import (
     approve_rma,
     create_rma,
@@ -658,7 +658,7 @@ class AdminReservationReleaseView(APIView):
         if reservation is None:
             return not_found("reservation_not_found", "Reservation not found.")
         try:
-            reservation = release_stock_reservation(reservation=reservation, actor=request.user)
+            reservation = release_reservation_by_staff(reservation=reservation, actor=request.user)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response(

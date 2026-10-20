@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
+from apps.inventory.selectors.stock import get_stock_item
 from apps.inventory.services.stock import (
     record_movement,
     release_reservation,
@@ -36,7 +37,7 @@ def hold_returned_stock(*, order_line, variant, quantity: int, warehouse=None) -
     """Hold sellable units that came back for an order line again, in the
     warehouse they came back to (`None`: the default one). The line's holds
     that shipped units from there take them back first, so they count as
-    unshipped again; only what those cannot take becomes a new hold."""
+    unshipped again; only what those cannot take becomes a new hold there."""
     target = warehouse_for_variant(variant, warehouse)
     reopened = 0
     rows = (
@@ -60,17 +61,24 @@ def hold_returned_stock(*, order_line, variant, quantity: int, warehouse=None) -
     if reopened:
         reserve_stock(variant=variant, warehouse=target, quantity=reopened)
     if quantity > reopened:
-        hold_line_stock(
-            order_line=order_line, variant=variant, quantity=quantity - reopened, prefer=target
+        # The units have just come back into `target`, so it holds them even
+        # when it has since been switched off; hold them right there.
+        rest = quantity - reopened
+        reserve_stock(variant=variant, warehouse=target, quantity=rest)
+        StockReservation.objects.create(
+            order_line=order_line, variant=variant, warehouse=target, quantity=rest
         )
 
 
 def ship_held_stock(*, order_line, variant, quantity: int, shipment) -> None:
     """Send `quantity` held units of `variant` out with a consignment: each
     comes off the hold of the warehouse it sits in (oldest hold first) and
-    leaves that warehouse with a SALES_OUT. Units no hold covers, which only
-    holds made before warehouses were recorded can leave, go from the
-    default warehouse as they always did."""
+    leaves that warehouse with a SALES_OUT.
+
+    Units no hold covers (staff released the order's hold by hand) are held
+    again first, from stock that is really free, and shipped from there. They
+    never come out of another order's hold; with too little free stock the
+    shipment is refused."""
     remaining = quantity
     rows = (
         StockReservation.objects.select_for_update()
@@ -89,18 +97,38 @@ def ship_held_stock(*, order_line, variant, quantity: int, shipment) -> None:
         if remaining == 0:
             return
     if remaining:
-        _ship_from(variant, None, remaining, shipment)
+        try:
+            fresh = hold_line_stock(order_line=order_line, variant=variant, quantity=remaining)
+        except BusinessRuleViolationError as exc:
+            if exc.code != "insufficient_stock":
+                raise
+            raise BusinessRuleViolationError(
+                f"The stock held for {variant.sku} on this order was released, and there isn't "
+                f"enough free stock to ship {remaining} unit(s) now. Restock it or ship fewer "
+                "units.",
+                code="insufficient_stock",
+            ) from exc
+        for row in fresh:
+            _ship_from(variant, row.warehouse, row.quantity, shipment)
+            row.shipped_quantity = row.quantity
+            row.save(update_fields=["shipped_quantity", "updated_at"])
 
 
 def _ship_from(variant, warehouse, quantity: int, shipment) -> None:
     # Release before the stock-out: the reverse order dips through a state
     # where reserved exceeds on-hand, which the CHECK rejects.
     release_reservation(variant=variant, warehouse=warehouse, quantity=quantity)
+    # The stock-out keeps the cost the units left at, so units received back
+    # later return at that cost, the same one the shipment charged to COGS.
+    stock_item = get_stock_item(
+        variant=variant, warehouse=warehouse_for_variant(variant, warehouse)
+    )
     record_movement(
         variant=variant,
         warehouse=warehouse,
         movement_type=MovementType.SALES_OUT,
         quantity=quantity,
+        unit_cost=stock_item.avg_cost if stock_item else None,
         reference_type="shipment",
         reference_id=shipment.id,
     )
@@ -133,6 +161,30 @@ def release_stock_reservation(
 
     reservation.status = locked.status
     return reservation
+
+
+@transaction.atomic
+def release_reservation_by_staff(*, reservation: StockReservation, actor=None) -> StockReservation:
+    """Release a hold by hand from the dashboard. Allowed while the order is
+    unpaid, and for a pre-order allocation (its units go back to the queue).
+    A confirmed order's ready-stock hold is promised to the customer: freeing
+    it would let the units sell twice, so it ends only by shipping or by
+    cancelling the order."""
+    from apps.orders.models import SalesOrder
+
+    line = reservation.order_line
+    order = line.order
+    if (
+        not line.is_preorder
+        and reservation.status == StockReservation.Status.ACTIVE
+        and order.status not in (SalesOrder.Status.PENDING, SalesOrder.Status.AWAITING_PAYMENT)
+    ):
+        raise BusinessRuleViolationError(
+            f"Order {order.order_number} is {order.get_status_display().lower()}, so this "
+            "stock is promised to the customer. Ship it, or cancel the order to free it.",
+            code="reservation_promised",
+        )
+    return release_stock_reservation(reservation=reservation, actor=actor)
 
 
 def _units_still_held(reservation: StockReservation) -> int:

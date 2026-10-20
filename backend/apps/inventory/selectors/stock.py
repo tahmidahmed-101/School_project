@@ -95,10 +95,17 @@ def available_quantities_for_variants(
 
 
 def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> dict[UUID, int]:
+    """Each variant's reorder point, over the same warehouses as
+    `available_quantities_for_variants` counts its stock: without a warehouse,
+    the points of every selling warehouse added up, so the low-stock badge
+    compares like with like."""
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    queryset = _in_default_warehouse(queryset, warehouse)
-    rows = queryset.values("variant_id", "reorder_point")
-    return {row["variant_id"]: row["reorder_point"] for row in rows}
+    if warehouse is not None:
+        queryset = queryset.filter(warehouse=warehouse)
+    else:
+        queryset = _in_sellable_warehouses(queryset)
+    rows = queryset.values("variant_id").annotate(point=Sum("reorder_point"))
+    return {row["variant_id"]: row["point"] for row in rows}
 
 
 def ledger_entries_list(

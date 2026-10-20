@@ -14,7 +14,11 @@ from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement, write_off_stock
 from apps.logistics.services.couriers.registry import get_gateway_for_carrier
 from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, ShipmentLine
-from apps.orders.selectors.shipments import order_shipments_complete, shipped_from_warehouses
+from apps.orders.selectors.shipments import (
+    order_shipments_complete,
+    shipped_from_warehouses,
+    shipped_unit_cost,
+)
 from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.orders import lock_order
 from apps.orders.services.reservations import (
@@ -279,9 +283,11 @@ def _restock_returned_line(
     order_line: SalesOrderLine, shipment: Shipment, sellable: int, damaged: int, *, actor=None
 ) -> None:
     """Every returned unit comes back in (RETURN_IN) to the warehouse it left
-    from; damaged ones then go out of it through the normal write-off, so the
-    shelf only gains sellable stock, and only sellable stock is held again for
-    the order (in that same warehouse first, so it can ship from there)."""
+    from, at the cost it left at: receiving back reverses the COGS the
+    shipment charged, so stock must gain exactly that value. Damaged ones then
+    go out of it through the normal write-off, so the shelf only gains sellable
+    stock, and only sellable stock is held again for the order (in that same
+    warehouse first, so it can ship from there)."""
     damaged_by_component = dict(expand_variant(order_line.variant, damaged)) if damaged else {}
     for component, component_qty in expand_variant(order_line.variant, sellable + damaged):
         to_write_off = damaged_by_component.get(component, 0)
@@ -293,6 +299,9 @@ def _restock_returned_line(
                 warehouse=warehouse,
                 movement_type=MovementType.RETURN_IN,
                 quantity=part,
+                unit_cost=shipped_unit_cost(
+                    shipment_ids=[shipment.id], variant=component, warehouse=warehouse
+                ),
                 reference_type="shipment",
                 reference_id=shipment.id,
                 actor=actor,

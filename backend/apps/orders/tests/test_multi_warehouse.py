@@ -12,21 +12,30 @@ import pytest
 
 from apps.accounting.constants import ACCOUNT_CODES
 from apps.accounting.models import JournalEntryLine
+from apps.accounting.selectors.reports import inventory_ledger_check
 from apps.accounts.factories import CustomerUserFactory
 from apps.catalog.factories import ProductVariantFactory
 from apps.catalog.models import Category
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
-from apps.inventory.models import StockLedgerEntry
-from apps.inventory.selectors.stock import available_quantity_for_variant, get_stock_item
+from apps.inventory.models import StockItem, StockLedgerEntry
+from apps.inventory.selectors.stock import (
+    available_quantity_for_variant,
+    get_stock_item,
+    reorder_points_for_variants,
+)
 from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement
-from apps.inventory.services.warehouses import create_warehouse
+from apps.inventory.services.warehouses import create_warehouse, update_warehouse
 from apps.orders.models import ReturnRMALine, Shipment, StockReservation
 from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.checkout import checkout
 from apps.orders.services.orders import cancel_order
 from apps.orders.services.payments import capture_payment
+from apps.orders.services.reservations import (
+    release_reservation_by_staff,
+    release_stock_reservation,
+)
 from apps.orders.services.returns import approve_rma, create_rma, grade_rma_line, receive_rma
 from apps.orders.services.shipments import (
     create_shipment,
@@ -308,3 +317,137 @@ def test_goods_cannot_be_received_into_an_inactive_warehouse(main, branch):
             ],
         )
     assert exc.value.code == "warehouse_kind_mismatch"
+
+
+def test_shipping_after_a_hold_was_released_never_takes_another_orders_hold(main):
+    """Staff released order A's hold by hand; shipping A must hold free stock
+    again, not consume the unit B is holding."""
+    variant = ProductVariantFactory()
+    _receive(variant, main, 3)
+    a = _order(variant, 1)
+    _order(variant, 1)  # B
+    release_stock_reservation(reservation=StockReservation.objects.get(order_line__order=a))
+
+    create_shipment(order=a, lines=[{"order_line": a.lines.get(), "quantity": 1}])
+
+    # 3 - 1 shipped; B still holds its unit.
+    assert _held(variant, main) == (2, 1)
+
+
+def test_shipping_after_a_hold_was_released_is_refused_without_free_stock(main):
+    variant = ProductVariantFactory()
+    _receive(variant, main, 2)
+    a = _order(variant, 1)
+    _order(variant, 1)  # B takes the other unit
+    release_stock_reservation(reservation=StockReservation.objects.get(order_line__order=a))
+    _order(variant, 1)  # C takes the unit A let go
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_shipment(order=a, lines=[{"order_line": a.lines.get(), "quantity": 1}])
+    assert exc.value.code == "insufficient_stock"
+    assert _held(variant, main) == (2, 2)
+
+
+def test_a_parcel_comes_back_into_a_warehouse_switched_off_after_it_shipped(main, branch):
+    variant = ProductVariantFactory()
+    _receive(variant, branch, 1)
+    order = _order(variant, 1)
+    shipment = create_shipment(
+        order=order, lines=[{"order_line": order.lines.get(), "quantity": 1}]
+    )
+    update_shipment_status(shipment=shipment, status=Shipment.Status.CANCELLED)
+    update_warehouse(warehouse=branch, data={"is_active": False})
+
+    receive_back_shipment(
+        shipment=shipment, dispositions={shipment.lines.get().id: {"sellable": 1, "damaged": 0}}
+    )
+
+    # Back on Branch's shelf and held there for the order again.
+    assert _held(variant, branch) == (1, 1)
+
+
+def test_a_return_is_booked_at_the_cost_of_the_warehouse_it_rejoins(main, branch):
+    """Branch's units cost more than Main's; a unit returned to Main adds Main's
+    cost to stock, so the books must add the same, not the shop-wide average."""
+    variant = ProductVariantFactory()
+    _receive(variant, main, 10, unit_cost="100")
+    _receive(variant, branch, 1, unit_cost="300")
+    order = _order(variant, 11)
+    line = order.lines.get()
+    shipment = create_shipment(order=order, lines=[{"order_line": line, "quantity": 11}])
+    update_shipment_status(shipment=shipment, status=Shipment.Status.DELIVERED)
+    _receive(variant, main, 10, unit_cost="100")
+    before = inventory_ledger_check(kind=Category.CategoryType.STOCK)["ledger_difference"]
+
+    rma = create_rma(order=order, lines=[{"order_line": line, "quantity": 1}])
+    approve_rma(rma=rma)
+    grade_rma_line(line=rma.lines.get(), condition=ReturnRMALine.Condition.SELLABLE)
+    receive_rma(rma=rma)
+
+    after = inventory_ledger_check(kind=Category.CategoryType.STOCK)["ledger_difference"]
+    assert after == before
+
+
+def test_a_parcel_received_back_after_the_cost_moved_keeps_books_equal_to_stock(main):
+    """Shipped at 100, then Main restocked at 200: the unit comes back at the
+    100 the shipment charged to COGS, so stock and books gain the same."""
+    variant = ProductVariantFactory()
+    _receive(variant, main, 1, unit_cost="100")
+    order = _order(variant, 1)
+    shipment = create_shipment(
+        order=order, lines=[{"order_line": order.lines.get(), "quantity": 1}]
+    )
+    update_shipment_status(shipment=shipment, status=Shipment.Status.CANCELLED)
+    _receive(variant, main, 1, unit_cost="200")
+    before = inventory_ledger_check(kind=Category.CategoryType.STOCK)["ledger_difference"]
+
+    receive_back_shipment(
+        shipment=shipment, dispositions={shipment.lines.get().id: {"sellable": 1, "damaged": 0}}
+    )
+
+    after = inventory_ledger_check(kind=Category.CategoryType.STOCK)["ledger_difference"]
+    assert after == before
+    assert get_stock_item(variant=variant, warehouse=main).avg_cost == Decimal("150")
+
+
+def test_staff_cannot_release_a_confirmed_orders_hold(main):
+    variant = ProductVariantFactory()
+    _receive(variant, main, 1)
+    order = _order(variant, 1)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        release_reservation_by_staff(
+            reservation=StockReservation.objects.get(order_line__order=order)
+        )
+    assert exc.value.code == "reservation_promised"
+    assert _held(variant, main) == (1, 1)
+
+
+def test_staff_can_release_an_unpaid_orders_hold(main):
+    variant = ProductVariantFactory()
+    _receive(variant, main, 1)
+    order = _order(variant, 1, confirm=False)
+
+    release_reservation_by_staff(reservation=StockReservation.objects.get(order_line__order=order))
+    assert _held(variant, main) == (1, 0)
+
+
+def test_the_reorder_point_covers_the_warehouses_the_stock_count_covers(main, branch):
+    variant = ProductVariantFactory()
+    _receive(variant, main, 1)
+    _receive(variant, branch, 1)
+    StockItem.objects.filter(variant=variant, warehouse=main).update(reorder_point=3)
+    StockItem.objects.filter(variant=variant, warehouse=branch).update(reorder_point=4)
+
+    assert reorder_points_for_variants([variant.id]) == {variant.id: 7}
+    assert reorder_points_for_variants([variant.id], main) == {variant.id: 3}
+
+
+def test_deleting_a_product_does_not_bring_back_deleted_stock_records(main, branch):
+    from apps.catalog.services.products import delete_product
+
+    variant = ProductVariantFactory()
+    StockItem.objects.filter(variant=variant, warehouse=branch).delete()
+
+    delete_product(product=variant.product)
+    assert not StockItem.objects.filter(variant=variant, warehouse=branch).exists()

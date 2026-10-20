@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.db.models import QuerySet
 
+from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.inventory.models import Warehouse
 
@@ -40,9 +41,24 @@ NEW_DEFAULT_WAREHOUSE = {
 
 
 def get_or_create_default_warehouse(kind: str = KIND_STOCK) -> Warehouse:
+    """The shop's active default warehouse, created on first use. A default that
+    was switched off (possible before that was refused) is reported, not
+    replaced: a second default would split the shop's stock between them."""
     default = default_warehouse(kind)
     if default:
         return default
+    switched_off = all_warehouses().filter(kind=kind, is_default=True).first()
+    if switched_off is not None:
+        raise BusinessRuleViolationError(
+            f"The default warehouse, {switched_off.name}, is switched off. Switch it on, or "
+            "make another warehouse the default.",
+            code="default_warehouse_inactive",
+        )
+    spec = NEW_DEFAULT_WAREHOUSE[kind]
+    # Codes are unique across both shops; never collide with one already taken.
+    code, n = spec["code"], 2
+    while Warehouse.objects.filter(code=code).exists():
+        code, n = f"{spec['code']}-{n}", n + 1
     return Warehouse.objects.create(
-        kind=kind, is_default=True, is_active=True, **NEW_DEFAULT_WAREHOUSE[kind]
+        kind=kind, is_default=True, is_active=True, name=spec["name"], code=code
     )

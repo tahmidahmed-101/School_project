@@ -272,7 +272,7 @@ def _ensure_no_stock(product: Product, *, variant: ProductVariant | None = None)
     blockers = [
         f"{item.variant.sku} in {item.warehouse.name}: {item.quantity_on_hand} on hand, "
         f"{item.quantity_reserved} reserved"
-        for item in lock_variant_stock(variant_ids)
+        for item in lock_variant_stock(variant_ids, create_missing=False)
         if item.quantity_on_hand or item.quantity_reserved
     ]
     active_reservations = StockReservation.objects.filter(

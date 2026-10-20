@@ -245,6 +245,36 @@ def reverse_sales_shipment(shipment) -> list[JournalEntry]:
     return [reverse_journal_entry(entry, reason="consignment received back") for entry in entries]
 
 
+def _returned_stock_value(rma) -> Decimal | None:
+    """What the RMA's sellable units added to stock: each RETURN_IN it booked,
+    valued at the average cost of the warehouse the units went back into. A
+    RETURN_IN without a cost leaves that average as it was, so this is exactly
+    the stock value they added; the shop-wide average would not be."""
+    entries = list(
+        StockLedgerEntry.objects.filter(
+            reference_type="rma",
+            reference_id=rma.id,
+            movement_type=MovementType.RETURN_IN,
+        ).values_list("variant_id", "warehouse_id", "quantity")
+    )
+    if not entries:
+        return None
+    cost_at = {
+        (item.variant_id, item.warehouse_id): item.avg_cost
+        for item in StockItem.objects.filter(
+            variant_id__in={variant_id for variant_id, _, _ in entries},
+            warehouse_id__in={warehouse_id for _, warehouse_id, _ in entries},
+        )
+    }
+    return sum(
+        (
+            cost_at.get((variant_id, warehouse_id), Decimal("0")) * quantity
+            for variant_id, warehouse_id, quantity in entries
+        ),
+        Decimal("0"),
+    )
+
+
 def post_sales_return(rma) -> list[JournalEntry]:
     """The mirror of `post_sales_shipment`, posted when an approved RMA is
     physically received. Without it, a return puts stock back on the shelf
@@ -297,6 +327,10 @@ def post_sales_return(rma) -> list[JournalEntry]:
             restocked_cost += amount
         else:
             scrapped_cost += amount
+    # Sellable units are worth what they added to the warehouses they rejoined.
+    returned = _returned_stock_value(rma)
+    if returned is not None:
+        restocked_cost = returned
     restocked_cost = quantize_money(restocked_cost)
     scrapped_cost = quantize_money(scrapped_cost)
 

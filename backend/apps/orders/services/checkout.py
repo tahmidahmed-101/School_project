@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.inventory.services.stock import lock_variant_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
 from apps.logistics.services.rates import quote_shipping
 from apps.orders.models import SalesOrder
@@ -144,6 +145,19 @@ def checkout(
     _reprice_lines(order, lines)
 
     _settle_coupon(order, lines)
+
+    # Lock every stock row the holds below can touch in one go, in a fixed
+    # order (by row), so two checkouts of the same items in a different cart
+    # order queue up behind each other instead of deadlocking.
+    lock_variant_stock(
+        {
+            component.id
+            for line in lines
+            if not _is_preorder_line(line)
+            for component, _ in expand_variant(line.variant, line.quantity)
+        },
+        create_missing=False,
+    )
 
     kinds: set[bool] = set()
     for line in lines:
