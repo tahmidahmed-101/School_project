@@ -88,7 +88,7 @@ const ForgotPasswordForm = () => {
 
         {email ? (
           <form onSubmit={resetForm.handleSubmit(resetPassword)}>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-4 pb-6">
               <TextField
                 label="Reset code"
                 id="code"
@@ -135,7 +135,7 @@ const ForgotPasswordForm = () => {
           </form>
         ) : (
           <form onSubmit={emailForm.handleSubmit(requestCode)}>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-4 pb-6">
               <TextField
                 label="Email"
                 id="email"
