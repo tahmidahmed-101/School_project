@@ -73,6 +73,9 @@ class AdminNewsletterSubscriberListView(GenericListAPIView):
             email=data["email"],
             is_active=is_active,
             unsubscribed_at=None if is_active else timezone.now(),
+            # Staff adding an address attest that its owner agreed. An address
+            # that unsubscribed stays suppressed until its owner signs up again.
+            consented_at=timezone.now() if is_active else None,
         )
         return Response(
             {"data": AdminNewsletterSubscriberSerializer(subscriber).data, "message": "Success"},
@@ -105,6 +108,9 @@ class AdminNewsletterSubscriberDetailView(APIView):
         update_fields = [*data.keys(), "updated_at"]
         if "is_active" in data:
             update_fields.append("unsubscribed_at")
+            if subscriber.is_active and subscriber.consented_at is None:
+                subscriber.consented_at = timezone.now()
+                update_fields.append("consented_at")
         subscriber.save(update_fields=update_fields)
         return Response(
             {"data": AdminNewsletterSubscriberSerializer(subscriber).data, "message": "Success"}

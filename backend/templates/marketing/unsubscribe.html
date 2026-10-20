@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% if done %}Unsubscribed{% elif invalid %}Link not valid{% else %}Unsubscribe{% endif %} - {{ shop }}</title>
+  <style>
+    body { margin: 0; background: #f6f6f4; color: #1d1d1b; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 28rem; margin: 15vh auto 0; padding: 2rem 1.5rem; background: #fff; border-radius: 12px; }
+    h1 { font-size: 1.25rem; margin: 0 0 .75rem; }
+    p { margin: 0 0 1.25rem; color: #4a4a46; }
+    button { font: inherit; padding: .65rem 1.25rem; border: 0; border-radius: 8px; background: #1d1d1b; color: #fff; cursor: pointer; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #161615; color: #ececea; }
+      main { background: #222220; }
+      p { color: #b7b7b2; }
+      button { background: #ececea; color: #161615; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    {% if invalid %}
+      <h1>This link is not valid</h1>
+      <p>It may have been copied incompletely. Use the unsubscribe link at the bottom of any of our emails.</p>
+    {% elif done %}
+      <h1>You are unsubscribed</h1>
+      <p>You will not receive newsletter emails from {{ shop }} any more. Emails about your account and orders are not affected.</p>
+    {% else %}
+      <h1>Unsubscribe from {{ shop }} news?</h1>
+      <p>You will stop receiving our newsletter. Emails about your account and orders are not affected.</p>
+      <form method="post">
+        <button type="submit">Unsubscribe</button>
+      </form>
+    {% endif %}
+  </main>
+</body>
+</html>

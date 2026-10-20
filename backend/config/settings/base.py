@@ -412,6 +412,19 @@ EMAIL_USE_SSL: bool = config("EMAIL_USE_SSL", default=False, cast=bool)
 # hold a worker indefinitely (Django's own default is no timeout at all).
 EMAIL_TIMEOUT: int = config("EMAIL_TIMEOUT", default=10, cast=int)
 
+# Newsletter campaigns (backend/docs/email-campaigns.md).
+# Where this API is reached from the internet, e.g. https://api.example.com. The
+# unsubscribe link in every campaign email points here, so a campaign cannot be
+# sent without it (or without NEWSLETTER_UNSUBSCRIBE_URL).
+PUBLIC_API_BASE_URL: str = config("PUBLIC_API_BASE_URL", default="").rstrip("/")
+# Optional: a storefront page to send unsubscribe links to instead, with
+# "{token}" where the token goes. That page must POST the token to
+# /api/v1/public/marketing/unsubscribe/<token>/.
+NEWSLETTER_UNSUBSCRIBE_URL: str = config("NEWSLETTER_UNSUBSCRIBE_URL", default="")
+# Messages per `send_campaigns` run, across all campaigns. Keeps one run short
+# and stays under the mail provider's hourly limits.
+CAMPAIGN_BATCH_SIZE: int = config("CAMPAIGN_BATCH_SIZE", default=200, cast=int)
+
 # Twilio configuration (SMS OTP)
 TWILIO_ACCOUNT_SID: str = config("TWILIO_ACCOUNT_SID", default="")
 TWILIO_AUTH_TOKEN: str = config("TWILIO_AUTH_TOKEN", default="")

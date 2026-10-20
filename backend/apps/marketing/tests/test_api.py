@@ -45,13 +45,14 @@ def test_resubscribing_after_unsubscribe_reactivates(api_client):
     assert subscriber.unsubscribed_at is None
 
 
-def test_unsubscribe_unknown_email_returns_error(api_client):
+def test_unsubscribe_unknown_email_answers_like_a_known_one(api_client):
+    # The same reply either way, so the endpoint cannot reveal who is subscribed.
     response = api_client.post(
         "/api/v1/public/marketing/unsubscribe/", {"email": "never-subscribed@example.com"}
     )
 
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "not_subscribed"
+    assert response.status_code == 200
+    assert response.data == {"data": {}, "message": "Success"}
 
 
 def test_unsubscribe_active_subscriber(api_client):

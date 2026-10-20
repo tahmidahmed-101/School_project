@@ -11,6 +11,10 @@ class NewsletterSubscriber(TimeStampedModel):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
+    # When this address last agreed to receive the newsletter: its storefront
+    # sign-up, a re-subscribe, or staff adding it. Campaigns go only to
+    # addresses that have one.
+    consented_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

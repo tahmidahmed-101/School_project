@@ -19,6 +19,7 @@ import ssl
 
 from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
+from django.core.mail.backends.base import BaseEmailBackend
 
 from apps.business.models import SmtpSetting
 from apps.business.selectors.email_settings import (
@@ -94,7 +95,7 @@ def ensure_public_host(host: str, port: int) -> None:
         raise EmailDeliveryError("host_not_allowed")
 
 
-def _dashboard_connection(server: SmtpServer):
+def _dashboard_connection(server: SmtpServer) -> BaseEmailBackend:
     ensure_public_host(server.host, server.port)
     return get_connection(
         SMTP_BACKEND,
@@ -109,7 +110,7 @@ def _dashboard_connection(server: SmtpServer):
     )
 
 
-def open_transport(server: SmtpServer | None = None) -> tuple[object, str, str]:
+def open_transport(server: SmtpServer | None = None) -> tuple[BaseEmailBackend, str, str]:
     """(connection, from address, source) for the server in force, or for
     `server` when given. One query for the saved settings."""
     if server is None:

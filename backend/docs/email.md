@@ -10,7 +10,9 @@ Only two flows, both in `apps/accounts/services/authentication.py`:
 | Password reset code | Logged, then swallowed: the response is the same generic "If the email exists…" whether or not the address has an account |
 
 Order updates are in-app notifications and Telegram staff alerts, not email.
-Nothing on the checkout or order path sends mail.
+Nothing on the checkout or order path sends mail. Newsletter campaigns use the
+same server but are marketing mail, with their own rules: see
+`email-campaigns.md`.
 
 They compose their own subject and text and hand it to
 `apps.business.services.email.send_email`, which picks the server and sends.
