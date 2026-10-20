@@ -22,6 +22,13 @@ CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # A developer's .env may hold a real bot token; tests must never message it.
 TELEGRAM_BOT_TOKEN = ""
+# Likewise real analytics credentials: tests switch providers on themselves.
+GA4_MEASUREMENT_ID = ""
+GA4_API_SECRET = ""
+META_PIXEL_ID = ""
+META_CAPI_ACCESS_TOKEN = ""
+META_TEST_EVENT_CODE = ""
+SECRETS_ENCRYPTION_KEYS: list[str] = []
 
 # WhiteNoise serves the `collectstatic` output, which only the Docker image
 # builds. No test serves static files, and initialising it against the missing

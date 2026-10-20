@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from django.conf import settings
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from apps.accounts.constants import StaffPermissionCode
 from apps.business.models import PolicyKind, PromotionPopup
 from apps.business.selectors import get_business_profile
+from apps.business.selectors.email_settings import email_state
 from apps.business.selectors.modules import get_module_state, modules_list
 from apps.business.selectors.policies import (
     get_store_policy,
@@ -27,6 +28,11 @@ from apps.business.selectors.storefront_content import (
     promotion_popups_list,
 )
 from apps.business.services import update_business_profile, update_store_policy
+from apps.business.services.email_settings import (
+    reset_smtp_settings,
+    save_smtp_settings,
+    send_test_email,
+)
 from apps.business.services.modules import set_module_config, set_module_enabled
 from apps.business.services.storefront_content import (
     PromotionPopupFieldError,
@@ -46,6 +52,13 @@ from apps.common.generics import GenericListAPIView
 from apps.common.params import KIND_STOCK, get_kind
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
 from apps.common.responses import error_from_exception, error_response, not_found
+from apps.common.throttling import EmailTestRateThrottle
+from apps.marketing.models import ConversionEvent
+from apps.marketing.selectors.conversion_settings import provider_states
+from apps.marketing.services.conversion_settings import (
+    reset_provider_settings,
+    save_provider_settings,
+)
 from apps.orders.selectors.payment_methods import (
     get_payment_method_state,
     payment_methods_list,
@@ -58,6 +71,12 @@ from apps.orders.services.payment_methods import (
 from .serializers import (
     AdminBusinessProfileSerializer,
     AdminBusinessProfileUpdateSerializer,
+    AdminConversionProviderSerializer,
+    AdminConversionProviderUpdateSerializer,
+    AdminEmailSettingsSerializer,
+    AdminEmailSettingsUpdateSerializer,
+    AdminEmailTestResultSerializer,
+    AdminEmailTestSerializer,
     AdminHeroSlideSerializer,
     AdminHeroSlideWriteSerializer,
     AdminIntegrationStatusSerializer,
@@ -472,3 +491,149 @@ class AdminPromotionPopupDetailView(APIView):
             return not_found("promotion_popup_not_found", "Promotion popup not found.")
         delete_promotion_popup(popup=popup)
         return Response({"data": {}, "message": "Success"})
+
+
+CONVERSION_PROVIDER_PARAMETER = OpenApiParameter(
+    "provider",
+    OpenApiTypes.STR,
+    location=OpenApiParameter.PATH,
+    enum=ConversionEvent.Provider.values,
+    description="ga4 or meta.",
+)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminConversionTrackingListView(APIView):
+    """Server-side Purchase tracking: where each provider's settings come from
+    and whether it is sending. Secrets are never returned."""
+
+    serializer_class = AdminConversionProviderSerializer
+    permission_classes: ClassVar[list] = [SettingsViewPermission]
+
+    def get(self, request) -> Response:
+        return Response(
+            {
+                "data": AdminConversionProviderSerializer(provider_states(), many=True).data,
+                "message": "Success",
+            }
+        )
+
+
+@extend_schema(tags=["Business Settings"], parameters=[CONVERSION_PROVIDER_PARAMETER])
+class AdminConversionTrackingDetailView(APIView):
+    """PATCH saves this shop's own credentials, which then take precedence over
+    the server environment. `{"is_enabled": false}` switches the provider off.
+    DELETE removes the saved settings and hands the provider back to the
+    environment variables."""
+
+    serializer_class = AdminConversionProviderSerializer
+    permission_classes: ClassVar[list] = [SettingsManagePermission]
+
+    @extend_schema(request=AdminConversionProviderUpdateSerializer)
+    def patch(self, request, provider: str) -> Response:
+        if provider not in ConversionEvent.Provider.values:
+            return not_found("provider_not_found", "Provider not found.")
+        serializer = AdminConversionProviderUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            state = save_provider_settings(
+                provider=provider, data=dict(serializer.validated_data), actor=request.user
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {"data": AdminConversionProviderSerializer(state).data, "message": "Success"}
+        )
+
+    def delete(self, request, provider: str) -> Response:
+        if provider not in ConversionEvent.Provider.values:
+            return not_found("provider_not_found", "Provider not found.")
+        state = reset_provider_settings(provider=provider, actor=request.user)
+        return Response(
+            {"data": AdminConversionProviderSerializer(state).data, "message": "Success"}
+        )
+
+
+TEST_EMAIL_MESSAGES = {
+    True: "The SMTP server accepted the test message. That does not confirm it reached the inbox.",
+    False: "The SMTP server did not accept the test message.",
+}
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminEmailSettingsView(APIView):
+    """Outgoing email. GET shows which server sends mail and its safe details,
+    never the password. PATCH saves this shop's own SMTP server, which then
+    takes precedence over the environment; `{"is_enabled": false}` hands mail
+    back to the environment settings. DELETE forgets the saved server."""
+
+    serializer_class = AdminEmailSettingsSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request) -> Response:
+        return Response(
+            {"data": AdminEmailSettingsSerializer(email_state()).data, "message": "Success"}
+        )
+
+    @extend_schema(
+        request=AdminEmailSettingsUpdateSerializer,
+        examples=[
+            OpenApiExample(
+                "Save an SMTP server",
+                value={
+                    "host": "smtp.example.com",
+                    "port": 587,
+                    "security": "starttls",
+                    "username": "mailer@example.com",
+                    "password": "app-password",
+                    "from_name": "Example Shop",
+                    "from_email": "orders@example.com",
+                },
+                request_only=True,
+            ),
+        ],
+    )
+    def patch(self, request) -> Response:
+        serializer = AdminEmailSettingsUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            state = save_smtp_settings(data=dict(serializer.validated_data), actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response({"data": AdminEmailSettingsSerializer(state).data, "message": "Success"})
+
+    def delete(self, request) -> Response:
+        state = reset_smtp_settings(actor=request.user)
+        return Response({"data": AdminEmailSettingsSerializer(state).data, "message": "Success"})
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminEmailTestView(APIView):
+    """Send a marked test message through the server in force. `accepted`
+    means the SMTP server took it, not that it reached the inbox; `reason` is
+    a fixed code (auth_failed, connection_failed, timeout, tls_failed,
+    recipient_refused, sender_refused, host_not_allowed, rejected)."""
+
+    serializer_class = AdminEmailTestResultSerializer
+    permission_classes: ClassVar[list] = [SettingsManagePermission]
+    throttle_classes: ClassVar[list] = [EmailTestRateThrottle]
+
+    @extend_schema(request=AdminEmailTestSerializer)
+    def post(self, request) -> Response:
+        serializer = AdminEmailTestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        recipient = serializer.validated_data.get("recipient") or request.user.email or ""
+        try:
+            result = send_test_email(recipient=recipient, actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {
+                "data": AdminEmailTestResultSerializer(result).data,
+                "message": TEST_EMAIL_MESSAGES[result["accepted"]],
+            }
+        )

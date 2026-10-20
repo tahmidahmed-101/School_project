@@ -260,6 +260,9 @@ REST_FRAMEWORK = {
         # Coupon endpoints answer valid/invalid per guess, so the default user
         # rate would allow code guessing at 6000/hour.
         "coupon": "20/min",
+        # The dashboard's "send a test email": each one opens an SMTP session
+        # to a server staff typed in, so it is kept to a handful.
+        "email_test": "5/hour",
         # OTP issuance costs real money per send (Twilio) and reaches a phone
         # the caller supplies, so it is capped far below the generic user rate.
         "otp": "5/hour",
@@ -395,6 +398,19 @@ CORS_ALLOWED_ORIGINS: list[str] = cast(
 # Email configuration
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+# Used when EMAIL_BACKEND is django.core.mail.backends.smtp.EmailBackend and no
+# SMTP server is saved from the dashboard (see backend/docs/email.md). The
+# defaults are Django's own, so an installation that never sets them behaves
+# exactly as before.
+EMAIL_HOST: str = config("EMAIL_HOST", default="localhost")
+EMAIL_PORT: int = config("EMAIL_PORT", default=25, cast=int)
+EMAIL_HOST_USER: str = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD: str = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS: bool = config("EMAIL_USE_TLS", default=False, cast=bool)
+EMAIL_USE_SSL: bool = config("EMAIL_USE_SSL", default=False, cast=bool)
+# Seconds. Email is sent inside the request, so a stalled SMTP server must not
+# hold a worker indefinitely (Django's own default is no timeout at all).
+EMAIL_TIMEOUT: int = config("EMAIL_TIMEOUT", default=10, cast=int)
 
 # Twilio configuration (SMS OTP)
 TWILIO_ACCOUNT_SID: str = config("TWILIO_ACCOUNT_SID", default="")
@@ -406,6 +422,30 @@ TELEGRAM_BOT_TOKEN: str = config("TELEGRAM_BOT_TOKEN", default="")
 # Telegram sends this back in a header on every webhook call; a request
 # without it is refused. Any long random string.
 TELEGRAM_WEBHOOK_SECRET: str = config("TELEGRAM_WEBHOOK_SECRET", default="")
+
+# Encrypts credentials staff save through the dashboard (today: the conversion
+# tracking secrets below). One or more Fernet keys, comma-separated: the first
+# encrypts, every one decrypts, so a key can be rotated by putting the new one
+# first. Generate one with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Without it nothing secret can be saved from the dashboard, and secrets saved
+# earlier cannot be read (their provider then stops sending).
+SECRETS_ENCRYPTION_KEYS: list[str] = config("SECRETS_ENCRYPTION_KEYS", default="", cast=Csv())
+
+# Server-side Purchase conversions (apps.marketing.services.conversions). Each
+# provider is off until both of its values are set. Server-only: never put
+# these in the storefront's NEXT_PUBLIC_* settings. Settings saved in the
+# dashboard take precedence over these; see backend/docs/conversion-tracking.md.
+# GA4 Measurement Protocol: Admin > Data streams > (web stream) > Measurement
+# Protocol API secrets.
+GA4_MEASUREMENT_ID: str = config("GA4_MEASUREMENT_ID", default="")
+GA4_API_SECRET: str = config("GA4_API_SECRET", default="")
+# Meta Conversions API: Events Manager > (pixel) > Settings > Generate access token.
+META_PIXEL_ID: str = config("META_PIXEL_ID", default="")
+META_CAPI_ACCESS_TOKEN: str = config("META_CAPI_ACCESS_TOKEN", default="")
+META_GRAPH_API_VERSION: str = config("META_GRAPH_API_VERSION", default="v21.0")
+# Events Manager > Test events code; routes events to the test view only.
+META_TEST_EVENT_CODE: str = config("META_TEST_EVENT_CODE", default="")
 
 # Modern Storages (Django 4.2+)
 STORAGES: dict[str, Any] = {

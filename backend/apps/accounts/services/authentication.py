@@ -7,7 +7,6 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.settings import api_settings
@@ -19,6 +18,7 @@ from apps.accounts.models import User, UserOTP
 from apps.accounts.selectors.users import get_active_otp, get_active_user_by_email
 from apps.accounts.services.sessions import revoke_all_sessions
 from apps.audit.services.audit import record_login_attempt
+from apps.business.services.email import EmailDeliveryError, send_email
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_numeric_code, hash_code
 
@@ -217,12 +217,13 @@ def request_email_verification(user: User) -> None:
     if not user.email:
         raise BusinessRuleViolationError("No email on file.", code="no_email")
     _, code = create_otp(user=user, purpose=UserOTP.Purpose.EMAIL_VERIFICATION)
-    send_mail(
-        "Verify your email",
-        f"Your verification code is {code}. It expires in {OTP_EXPIRY_MINUTES} minutes.",
-        None,
-        [user.email],
-        fail_silently=False,
+    # A refused send raises EmailDeliveryError: a 503 telling the customer to
+    # try again, never a 500. The code just issued stays valid meanwhile.
+    send_email(
+        subject="Verify your email",
+        body=f"Your verification code is {code}. It expires in {OTP_EXPIRY_MINUTES} minutes.",
+        to=[user.email],
+        purpose="email_verification",
     )
 
 
@@ -244,13 +245,18 @@ def request_password_reset(email: str) -> None:
     if user is None or not user.email:
         return
     _, code = create_otp(user=user, purpose=UserOTP.Purpose.PASSWORD_RESET)
-    send_mail(
-        "Reset your password",
-        f"Your password reset code is {code}. It expires in {OTP_EXPIRY_MINUTES} minutes.",
-        None,
-        [user.email],
-        fail_silently=False,
-    )
+    try:
+        send_email(
+            subject="Reset your password",
+            body=f"Your password reset code is {code}. It expires in {OTP_EXPIRY_MINUTES} minutes.",
+            to=[user.email],
+            purpose="password_reset",
+        )
+    except EmailDeliveryError:
+        # Already logged by send_email. Swallowed so the response is the same
+        # whether or not the address has an account: an error here would
+        # reveal that it does.
+        return
 
 
 def reset_password(*, email: str, code: str, new_password: str) -> None:

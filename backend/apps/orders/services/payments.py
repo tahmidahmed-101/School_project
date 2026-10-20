@@ -53,7 +53,7 @@ def _refuse_cod_for_advance_only_phone(order: SalesOrder) -> None:
     from apps.risk.services.scoring import recipient_phone
 
     phones = {recipient_phone(order)}
-    if order.shipping_address_id:
+    if order.shipping_address is not None:
         phones.add(order.shipping_address.phone)
     for phone in filter(None, phones):
         block = active_block(phone)
@@ -106,7 +106,7 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
     if method == PaymentMethodKey.COD and not needs_deposit:
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
-        _assess_order_risk(order)
+        _order_confirmed(order)
     alert_order_placed(order, method=method)
     return payment
 
@@ -220,7 +220,7 @@ def capture_payment(
         reinstate_lapsed_holds(order)
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
-        _assess_order_risk(order)
+        _order_confirmed(order)
     return payment
 
 
@@ -252,6 +252,26 @@ def record_cod_verification(*, order: SalesOrder, actor=None) -> SalesOrder:
         actor=actor, action="order.cod_verified", target_type="SalesOrder", target_id=order.id
     )
     return order
+
+
+def _order_confirmed(order: SalesOrder) -> None:
+    """What follows an order's first confirmation, wherever it happens: score
+    it for fraud, and owe the analytics providers its Purchase. Neither may
+    undo the confirmation that triggered it."""
+    _assess_order_risk(order)
+    _record_purchase_conversion(order)
+
+
+def _record_purchase_conversion(order: SalesOrder) -> None:
+    """Rows only, inside this transaction; the provider calls wait for the
+    commit. Its own savepoint, so a failure here leaves the order untouched."""
+    try:
+        from apps.marketing.services.conversions import record_purchase
+
+        with transaction.atomic():
+            record_purchase(order)
+    except Exception:
+        logger.exception("Recording the purchase conversion failed for order %s", order.id)
 
 
 def _assess_order_risk(order: SalesOrder) -> None:

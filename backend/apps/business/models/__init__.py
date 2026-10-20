@@ -1,5 +1,6 @@
 from .business_profile import SINGLETON_ID, BusinessProfile
 from .module_setting import ModuleSetting
+from .smtp_setting import SMTP_SINGLETON_ID, SmtpSetting
 from .store_policy import PolicyKind, StorePolicy, StorePolicyRevision
 from .storefront_content import (
     HeroPlacement,
@@ -10,6 +11,7 @@ from .storefront_content import (
 
 __all__ = [
     "SINGLETON_ID",
+    "SMTP_SINGLETON_ID",
     "BusinessProfile",
     "HeroPlacement",
     "HeroSlide",
@@ -17,6 +19,7 @@ __all__ = [
     "PolicyKind",
     "PromoLine",
     "PromotionPopup",
+    "SmtpSetting",
     "StorePolicy",
     "StorePolicyRevision",
 ]

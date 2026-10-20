@@ -429,3 +429,137 @@ class AdminPromotionPopupWriteSerializer(serializers.Serializer):
 
     def validate_link_url(self, value: str) -> str:
         return validate_site_link(value.strip())
+
+
+class AdminConversionProviderSerializer(serializers.Serializer):
+    """Status of one server-side conversion provider. Never carries the secret:
+    `secret_status` says only whether one is saved and readable."""
+
+    provider = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    source = serializers.ChoiceField(
+        choices=("dashboard", "environment", "none"),
+        read_only=True,
+        help_text=(
+            "dashboard: settings saved here decide this provider. environment: the "
+            "server's environment variables do. none: the provider is off."
+        ),
+    )
+    is_enabled = serializers.BooleanField(read_only=True)
+    is_active = serializers.BooleanField(
+        read_only=True, help_text="Whether confirmed orders are being sent to this provider now."
+    )
+    tracking_id = serializers.CharField(
+        read_only=True, help_text="GA4 Measurement ID or Meta Pixel ID. Not a secret."
+    )
+    secret_status = serializers.ChoiceField(
+        choices=("set", "missing", "unreadable"), read_only=True
+    )
+    secret_updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    test_event_code = serializers.CharField(read_only=True, allow_blank=True)
+    environment_configured = serializers.BooleanField(read_only=True)
+    encryption_available = serializers.BooleanField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    updated_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+
+class AdminConversionProviderUpdateSerializer(serializers.Serializer):
+    """Omit `secret` to keep the saved one. Shapes are checked by the service,
+    which owns the per-provider rules."""
+
+    tracking_id = serializers.CharField(required=False, max_length=64, trim_whitespace=True)
+    secret = serializers.CharField(
+        required=False, write_only=True, max_length=1024, trim_whitespace=True
+    )
+    test_event_code = serializers.CharField(
+        required=False, allow_blank=True, max_length=64, trim_whitespace=True
+    )
+    is_enabled = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("Send at least one setting to change.")
+        return attrs
+
+
+class AdminEmailEnvironmentSerializer(serializers.Serializer):
+    backend = serializers.CharField(read_only=True)
+    sends_real_email = serializers.BooleanField(read_only=True)
+    host = serializers.CharField(read_only=True, allow_blank=True)
+    port = serializers.IntegerField(read_only=True, allow_null=True)
+    security = serializers.CharField(read_only=True, allow_blank=True)
+    has_credentials = serializers.BooleanField(read_only=True)
+    from_email = serializers.CharField(read_only=True)
+
+
+class AdminEmailDashboardSerializer(serializers.Serializer):
+    is_enabled = serializers.BooleanField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    host = serializers.CharField(read_only=True)
+    port = serializers.IntegerField(read_only=True)
+    security = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True, allow_blank=True)
+    password_status = serializers.ChoiceField(
+        choices=("set", "missing", "unreadable", "not_needed"), read_only=True
+    )
+    password_updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    from_name = serializers.CharField(read_only=True, allow_blank=True)
+    from_email = serializers.CharField(read_only=True)
+    last_test_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    last_test_accepted = serializers.BooleanField(read_only=True, allow_null=True)
+    last_test_reason = serializers.CharField(read_only=True, allow_blank=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    updated_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+
+class AdminEmailSettingsSerializer(serializers.Serializer):
+    """Never carries a password: `dashboard.password_status` stands in for it."""
+
+    source = serializers.ChoiceField(
+        choices=("dashboard", "environment"),
+        read_only=True,
+        help_text="dashboard: the saved SMTP server sends mail. environment: EMAIL_* settings do.",
+    )
+    sends_real_email = serializers.BooleanField(
+        read_only=True, help_text="False while mail only goes to the console or a test backend."
+    )
+    encryption_available = serializers.BooleanField(read_only=True)
+    environment = AdminEmailEnvironmentSerializer(read_only=True)
+    dashboard = AdminEmailDashboardSerializer(read_only=True, allow_null=True)
+
+
+class AdminEmailSettingsUpdateSerializer(serializers.Serializer):
+    """Omit `password` to keep the saved one; it must be sent again with a new
+    `host` or `username`. Rules are checked by the service."""
+
+    host = serializers.CharField(required=False, max_length=253)
+    port = serializers.IntegerField(required=False)
+    security = serializers.ChoiceField(choices=("starttls", "ssl", "none"), required=False)
+    username = serializers.CharField(required=False, allow_blank=True, max_length=254)
+    password = serializers.CharField(
+        required=False, write_only=True, max_length=512, trim_whitespace=False
+    )
+    from_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    from_email = serializers.CharField(required=False, max_length=254)
+    is_enabled = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("Send at least one setting to change.")
+        return attrs
+
+
+class AdminEmailTestSerializer(serializers.Serializer):
+    recipient = serializers.CharField(
+        required=False, max_length=254, help_text="Defaults to your own email address."
+    )
+
+
+class AdminEmailTestResultSerializer(serializers.Serializer):
+    accepted = serializers.BooleanField(
+        read_only=True,
+        help_text="The SMTP server accepted the message. Not proof it reached the inbox.",
+    )
+    reason = serializers.CharField(read_only=True, allow_blank=True)
+    source = serializers.CharField(read_only=True)
+    recipient = serializers.CharField(read_only=True)
