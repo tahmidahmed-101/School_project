@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct } from "@/tests/fixtures";
-import type { ApiHeroSlide, ApiStorefrontContent } from "@/lib/api/types";
-import { hasDiscountedProduct, heroSlidesFor, promoLinesFor, toStorefrontContent } from "../domain/storefront-content";
+import type { ApiHeroSlide, ApiPromotionPopup, ApiStorefrontContent } from "@/lib/api/types";
+import {
+  hasDiscountedProduct,
+  heroSlidesFor,
+  pickPromotionPopup,
+  promoLinesFor,
+  toPromotionPopup,
+  toStorefrontContent,
+} from "../domain/storefront-content";
 
 const apiSlide = (overrides: Partial<ApiHeroSlide> = {}): ApiHeroSlide => ({
   id: "s1",
@@ -117,5 +124,79 @@ describe("hasDiscountedProduct", () => {
     const sale = { name: "Eid Sale", percentOff: 20 };
     const onSale = makeProduct({ price: 800, compareAtPrice: 1000, salePrice: 800, sale });
     expect(hasDiscountedProduct([makeProduct(), onSale])).toBe(true);
+  });
+});
+
+const apiPopup = (overrides: Partial<ApiPromotionPopup> = {}): ApiPromotionPopup => ({
+  id: "p1",
+  image: "https://api.example.test/media/promotions/p1.png",
+  href: "/product/panjabi",
+  shop: "stock",
+  starts_at: "2026-10-01T00:00:00Z",
+  ends_at: null,
+  sale: { name: "Eid offer", percent_off: "25.00", ends_at: "2026-11-01T00:00:00+06:00" },
+  ...overrides,
+});
+
+describe("toPromotionPopup", () => {
+  it("reads the image, link, schedule and sale", () => {
+    expect(toPromotionPopup(apiPopup())).toEqual({
+      id: "p1",
+      image: "https://api.example.test/media/promotions/p1.png",
+      href: "/product/panjabi",
+      shop: "stock",
+      startsAt: Date.parse("2026-10-01T00:00:00Z"),
+      endsAt: null,
+      sale: { name: "Eid offer", percentOff: 25 },
+    });
+  });
+
+  it("has no sale for a destination other than the campaign page", () => {
+    expect(toPromotionPopup(apiPopup({ sale: null }))).not.toHaveProperty("sale");
+  });
+
+  it("is null without an image, or with a link that is not a site path or http(s) address", () => {
+    expect(toPromotionPopup(apiPopup({ image: "" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "javascript:alert(1)" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "//evil.example" }))).toBeNull();
+    expect(toPromotionPopup(apiPopup({ href: "https://kullmart.com/x" }))?.href).toBe("https://kullmart.com/x");
+  });
+
+  it("keeps a popup with no destination, without a link", () => {
+    expect(toPromotionPopup(apiPopup({ href: null }))?.href).toBeNull();
+  });
+
+  it("is read into the content in the API's order, leaving unusable ones out", () => {
+    const popups = content({
+      promotion_popups: [apiPopup({ id: "a" }), apiPopup({ id: "bad", image: "" }), apiPopup({ id: "b" })],
+    }).promotionPopups;
+    expect(popups.map((popup) => popup.id)).toEqual(["a", "b"]);
+    expect(content({}).promotionPopups).toEqual([]);
+  });
+});
+
+describe("pickPromotionPopup", () => {
+  const popups = (...overrides: Partial<ApiPromotionPopup>[]) =>
+    content({ promotion_popups: overrides.map((o) => apiPopup(o)) }).promotionPopups;
+  const now = Date.parse("2026-10-19T12:00:00Z");
+
+  it("takes only a popup of the page's shop", () => {
+    const list = popups({ id: "stock", shop: "stock" }, { id: "pre", shop: "preorder" });
+    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("stock");
+    expect(pickPromotionPopup(list, "preorder", now)?.id).toBe("pre");
+    expect(pickPromotionPopup(popups({ id: "stock", shop: "stock" }), "preorder", now)).toBeNull();
+  });
+
+  it("skips one that has not started or has ended, since the API answer may be cached", () => {
+    const list = popups(
+      { id: "later", starts_at: "2026-10-20T00:00:00Z" },
+      { id: "over", starts_at: null, ends_at: "2026-10-19T11:59:00Z" },
+      { id: "open", starts_at: null, ends_at: "2026-10-19T12:01:00Z" },
+    );
+    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("open");
+  });
+
+  it("prefers the first eligible one, which the API orders by priority", () => {
+    expect(pickPromotionPopup(popups({ id: "high" }, { id: "low" }), "stock", now)?.id).toBe("high");
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
@@ -8,8 +8,7 @@ import { Save, RotateCcw, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
+import { SwitchField } from "@/components/common/FormDialog"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SubmitButton, StickyFormBar } from "@/components/common/FormActions"
@@ -210,19 +209,14 @@ const StaffForm = () => {
                 error={editForm.formState.errors.phone}
                 {...editForm.register("phone")}
               />
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
-                  <p className="text-xs text-muted-foreground">Inactive staff can't sign in.</p>
-                </FieldContent>
-                <Controller
-                  control={editForm.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-              </Field>
+              <SwitchField
+                control={editForm.control}
+                name="is_active"
+                label="Status"
+                onLabel="Active"
+                offLabel="Inactive"
+                description="Inactive staff can't sign in."
+              />
             </CardContent>
             <CardFooter className="justify-end gap-3 border-t p-4">
               <SubmitButton loading={editForm.formState.isSubmitting} icon={Save} disabled={!editForm.formState.isDirty}>

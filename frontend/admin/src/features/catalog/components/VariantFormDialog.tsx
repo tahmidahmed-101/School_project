@@ -34,6 +34,7 @@ const fields = z.object({
   preorder_end_date: z.string(),
   release_date: z.string(),
   preorder_stock_limit: z.string().refine((v) => v === "" || /^\d+$/.test(v), "Whole number"),
+  preorder_min_quantity: z.string().refine((v) => /^[1-9]\d*$/.test(v), "Whole number, at least 1"),
 })
 type FormValues = z.infer<typeof fields>
 
@@ -73,6 +74,7 @@ const toValues = (v: ProductVariant | null | undefined, settings: ProductVariant
   preorder_end_date: toDatetimeLocal(settings?.preorder_end_date),
   release_date: toDatetimeLocal(settings?.release_date),
   preorder_stock_limit: settings?.preorder_stock_limit != null ? String(settings.preorder_stock_limit) : "",
+  preorder_min_quantity: String(settings?.preorder_min_quantity ?? 1),
 })
 
 const stockPayload = (values: FormValues): ProductVariantPayload => ({
@@ -89,6 +91,7 @@ const preorderPayload = (values: FormValues): ProductVariantPayload => ({
   preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
   release_date: fromDatetimeLocal(values.release_date),
   preorder_stock_limit: values.preorder_stock_limit === "" ? null : Number(values.preorder_stock_limit),
+  preorder_min_quantity: Number(values.preorder_min_quantity),
 })
 
 interface Props {
@@ -99,7 +102,7 @@ interface Props {
   productId: string
   /** The variant being edited; null/undefined creates a new one. */
   variant?: ProductVariant | null
-  /** Pre-order only: a variant of the same product whose dates, price and limit a new variant starts with. */
+  /** Pre-order only: a variant of the same product whose dates, price, limit and minimum a new variant starts with. */
   sibling?: ProductVariant | null
   onSaved: () => void
 }
@@ -206,9 +209,10 @@ export function VariantFormDialog({ open, onOpenChange, kind, productId, variant
             {text("release_date", "Release date", { withTime: true })}
             {text("preorder_price", "Pre-order price", { placeholder: "Optional" })}
             {text("preorder_stock_limit", "Pre-order limit", { placeholder: "Unlimited" })}
+            {text("preorder_min_quantity", "Minimum per order", { placeholder: "1" })}
           </>
         )}
-        {isEditing && <SwitchField control={control} name="is_active" label="Active" />}
+        {isEditing && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
       </div>
     </FormDialog>
   )

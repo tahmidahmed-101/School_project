@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { isPreOrderSoldOut, productKind, shopHome, shopListing } from "@/lib/product";
+import { getMinOrderQuantity, isPreOrderSoldOut, productKind, shopHome, shopListing } from "@/lib/product";
 import { applyVariant, galleryFor, initialSelection, missingOption, resolveVariant, selectValue } from "@/lib/variants";
 import { useReportPageProductKind } from "../context";
 import { ProductCardGrid } from "./ProductCardGrid";
@@ -40,6 +40,8 @@ export function ProductDetailView({ product, relatedProducts, moreProducts = [] 
   const images = useMemo(() => galleryFor(product, selection), [product, selection]);
   const toPick = missingOption(product, selection);
   const isSoldOut = isPreOrderSoldOut(shown);
+  // A pre-order SKU with a minimum never offers less: switching to one raises the quantity to its floor.
+  const orderQuantity = Math.max(quantity, getMinOrderQuantity(shown));
   const isOutOfStock = !shown.isPreOrder && !shown.inStock;
   const kind = productKind(product);
   const summary = t(product.description) || t(product.tagline);
@@ -86,7 +88,7 @@ export function ProductDetailView({ product, relatedProducts, moreProducts = [] 
 
                 <ProductActions
                   product={shown}
-                  quantity={quantity}
+                  quantity={orderQuantity}
                   onQuantityChange={setQuantity}
                   variantId={selectedSku?.id}
                   hint={toPick && ui("optionChoose").replace("{option}", toPick.name)}
@@ -113,7 +115,7 @@ export function ProductDetailView({ product, relatedProducts, moreProducts = [] 
                 </ScrollReveal>
                 <ProductCardGrid
                   products={relatedProducts}
-                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4"
+                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 md:grid-cols-4 lg:gap-4 xl:grid-cols-5"
                 />
               </div>
             )}

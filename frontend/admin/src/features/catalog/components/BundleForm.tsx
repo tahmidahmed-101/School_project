@@ -239,7 +239,7 @@ const BundleForm = () => {
               rows={3}
               {...register("description")}
             />
-            <SwitchField control={control} name="is_active" label="Active" />
+            <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />
           </CardContent>
         </Card>
 

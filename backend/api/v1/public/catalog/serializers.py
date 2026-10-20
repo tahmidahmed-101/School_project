@@ -117,6 +117,7 @@ class PublicProductVariantSerializer(serializers.Serializer):
     is_preorder_closed = serializers.BooleanField(read_only=True)
     is_preorder_price_applied = serializers.SerializerMethodField()
     preorder_stock_limit = serializers.IntegerField(read_only=True, allow_null=True)
+    preorder_min_quantity = serializers.SerializerMethodField()
     preordered_quantity = serializers.SerializerMethodField()
     preorder_remaining = serializers.SerializerMethodField()
 
@@ -189,6 +190,10 @@ class PublicProductVariantSerializer(serializers.Serializer):
         if preordered_by_variant is not None:
             return preordered_by_variant.get(obj.id, 0)
         return obj._get_preordered_quantity()
+
+    def get_preorder_min_quantity(self, obj) -> int | None:
+        # Fewest units one pre-order of this variant may place; a stock item has none.
+        return obj.preorder_min_quantity if obj.is_preorder_kind else None
 
     def get_preorder_remaining(self, obj) -> int | None:
         # No configured limit means no capacity ceiling to report against.
@@ -353,6 +358,8 @@ class PublicProductListSerializer(serializers.Serializer):
 class PublicProductDetailSerializer(PublicProductListSerializer):
     description = serializers.CharField(allow_blank=True)
     meta_keywords = serializers.CharField(read_only=True, allow_blank=True)
+    show_questions = serializers.BooleanField(read_only=True)
+    show_price_report = serializers.BooleanField(read_only=True)
 
 
 def public_customer_name(customer) -> str:

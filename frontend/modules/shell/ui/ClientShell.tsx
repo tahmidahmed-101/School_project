@@ -16,7 +16,7 @@ import { PreOrderConfirmationModal } from "@/modules/preorder";
 const MobileNavMenu = dynamic(() => import("./MobileNavMenu").then((m) => m.MobileNavMenu), { ssr: false });
 
 interface ClientShellProps {
-  /** Rendered on the server and handed in, so the footer ships no JavaScript. */
+  /** Rendered on the server and handed in; only its shop-aware link columns run on the client. */
   footer: React.ReactNode;
   /** Whether the mobile menu links to /shipping-policy (only once that policy is published). */
   hasShippingPolicy?: boolean;

@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import ClassVar
 
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -59,6 +60,11 @@ class ProductVariant(FullAuditModel):
     preorder_stock_limit = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Maximum quantity available for pre-order. Leave blank for no limit."
+    )
+    preorder_min_quantity = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Fewest units of this variant one pre-order may place.",
     )
 
     class Meta:

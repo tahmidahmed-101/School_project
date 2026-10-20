@@ -4,6 +4,10 @@ const isDev = process.env.NODE_ENV !== "production";
 // NEXT_PUBLIC_API_URL so server code reads it, and the browser reaches it through the /api/public proxy.
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1/public").replace(/\/+$/, "");
 const API_ORIGIN = new URL(API_URL).origin;
+const API_HOST = new URL(API_ORIGIN);
+const LOOPBACK_HOSTS = ["127.0.0.1", "localhost"];
+// Loopback answers to both names, and local data holds media URLs built under either; both are the same API.
+const API_IMAGE_HOSTS = LOOPBACK_HOSTS.includes(API_HOST.hostname) ? LOOPBACK_HOSTS : [API_HOST.hostname];
 // Customer (account) API, a sibling of the public one. It is proxied under its backend path because the HttpOnly
 // refresh cookie is scoped to Path=/api/v1/customer/auth/ and the browser only sends it to that same path.
 const CUSTOMER_API_URL = `${API_ORIGIN}/api/v1/customer`;
@@ -44,15 +48,15 @@ const nextConfig = {
   poweredByHeader: false,
   env: { NEXT_PUBLIC_API_URL: API_URL },
   images: {
-    // Media URLs are absolute on the API origin (catalog/data/adapters.ts), which is loopback in local development.
-    dangerouslyAllowLocalIP: ["127.0.0.1", "localhost"].includes(new URL(API_ORIGIN).hostname),
+    // Media URLs are absolute on the API origin (normalizeImageUrl in lib/photo.ts), which is loopback in local development.
+    dangerouslyAllowLocalIP: LOOPBACK_HOSTS.includes(API_HOST.hostname),
     remotePatterns: [
       // Product photos uploaded through the LaunchCart admin are served from the backend's /media/.
-      {
+      ...API_IMAGE_HOSTS.map((hostname) => ({
         protocol: API_ORIGIN.startsWith("https") ? "https" : "http",
-        hostname: new URL(API_ORIGIN).hostname,
-        ...(new URL(API_ORIGIN).port && { port: new URL(API_ORIGIN).port }),
-      },
+        hostname,
+        ...(API_HOST.port && { port: API_HOST.port }),
+      })),
       // Placeholder photos the backend's demo seeder (apps/common/services/demo_seed) assigns to every seeded product.
       { protocol: "https", hostname: "picsum.photos", pathname: "/seed/**" },
     ],

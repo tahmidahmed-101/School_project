@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Calendar, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Sparkles, Calendar, Trash2 } from "lucide-react";
 import type { CartItem } from "@/lib/types";
 import { useCart } from "@/modules/cart";
 import { useCollectedVouchers, useVoucherText } from "@/modules/marketing";
@@ -15,7 +15,7 @@ import { FieldError, INPUT_CLASS } from "@/design-system/ui/FormField";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { errorKey } from "@/lib/api/errors";
 import { ApiError } from "@/lib/api/client";
-import { productKind, shopHome } from "@/lib/product";
+import { getMinOrderQuantity, isBelowMinimum, productKind, shopHome } from "@/lib/product";
 import type { FreeDeliveryStatus } from "@/lib/free-delivery";
 import { FreeDeliveryNote } from "@/design-system/patterns/FreeDeliveryNote";
 import { acceptsCoupon, couponErrorKey } from "../domain/checkout";
@@ -69,6 +69,7 @@ export function CheckoutSummary({
   const preOrderItem = items.find((i) => productKind(i.product) === "preorder");
   const hasPreOrder = Boolean(preOrderItem);
   const hasMixed = hasPreOrder && items.some((i) => productKind(i.product) === "stock");
+  const belowMinimum = items.some(isBelowMinimum);
   const showCoupon = acceptsCoupon(items);
   const discount = showCoupon ? (coupon.applied?.discountAmount ?? 0) : 0;
   const total = Math.max(0, subtotal - discount) + shippingFee;
@@ -96,7 +97,7 @@ export function CheckoutSummary({
 
       <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
         {items.map(({ product, quantity, variantTitle, variantId }) => (
-          <div key={variantId} className="flex items-start gap-3 text-xs">
+          <div key={variantId} className="flex items-start gap-3 border-b border-ink-100 pb-3 text-xs">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-surface-muted">
               <Image src={photo(product.image)} alt={t(product.name)} fill sizes="48px" className="object-cover" />
             </div>
@@ -120,6 +121,12 @@ export function CheckoutSummary({
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+              {isBelowMinimum({ product, quantity }) && (
+                <p role="status" className="flex items-start gap-1 text-2xs font-semibold text-danger">
+                  <AlertCircle className="mt-px h-3 w-3 shrink-0" />
+                  <span>{ui("preOrderMinNotMet").replace("{count}", n(getMinOrderQuantity(product)))}</span>
+                </p>
+              )}
               {product.isPreOrder && product.expectedDelivery && (
                 <div className="flex items-center gap-1 text-2xs font-medium text-gold-800">
                   <Calendar className="h-2.5 w-2.5 shrink-0" />
@@ -261,7 +268,12 @@ export function CheckoutSummary({
         </div>
       )}
 
-      <Button type="submit" size="lg" fullWidth loading={isSubmitting} disabled={hasMixed}>
+      {belowMinimum && (
+        <p role="status" className="text-2xs font-semibold leading-relaxed text-danger">
+          {ui("cartBelowMinimum")}
+        </p>
+      )}
+      <Button type="submit" size="lg" fullWidth loading={isSubmitting} disabled={hasMixed || belowMinimum}>
         {isSubmitting ? ui("checkoutPlacing") : ui("checkoutPlaceOrderBtn")}
       </Button>
       <div className="flex items-center justify-center pt-2 text-center">

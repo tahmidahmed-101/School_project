@@ -31,6 +31,8 @@ UPDATABLE_FIELDS = (
     "youtube_url",
     "linkedin_url",
     "preorder_deposit_percent",
+    "preorder_terms_en",
+    "preorder_terms_bn",
     "free_delivery_min_amount",
     "about_en",
     "about_bn",

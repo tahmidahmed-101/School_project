@@ -239,7 +239,7 @@ function PromoLineFormDialog({
         error={errors.sort_order}
         {...register("sort_order")}
       />
-      <SwitchField control={control} name="is_active" label="Active" description="Inactive lines stay off the storefront." />
+      <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" description="Inactive lines stay off the storefront." />
     </FormDialog>
   )
 }

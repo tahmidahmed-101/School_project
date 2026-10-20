@@ -282,7 +282,7 @@ function WarehouseFormDialog({
           error={errors.address}
           {...register("address")}
         />
-        <SwitchField control={control} name="is_active" label="Active" />
+        <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />
         <SwitchField
           control={control}
           name="is_default"

@@ -20,7 +20,6 @@ import {
   basePayload,
   baseShape,
   baseValuesOf,
-  checkSpecs,
   reportedRefusal,
 } from "../lib/productFormBase"
 import type { CategoryOption } from "../lib/useCategoryOptions"
@@ -32,7 +31,6 @@ import {
   ProductFormImages,
   ProductFormShell,
   SavedVariants,
-  SpecsCard,
 } from "./ProductFormParts"
 
 const SETTINGS_FIELDS = [
@@ -41,6 +39,7 @@ const SETTINGS_FIELDS = [
   "preorder_end_date",
   "release_date",
   "preorder_stock_limit",
+  "preorder_min_quantity",
 ] as const
 
 const fields = z.object({
@@ -50,12 +49,13 @@ const fields = z.object({
   preorder_end_date: z.string(),
   release_date: z.string(),
   preorder_stock_limit: z.string().refine((v) => v === "" || /^\d+$/.test(v), "Whole number"),
+  preorder_min_quantity: z.string().refine((v) => /^[1-9]\d*$/.test(v), "Whole number, at least 1"),
 })
 type FormValues = z.infer<typeof fields>
 
 /** `priceRequired` is off on a saved product with options, where each variant has its own price. */
 const windowSchema = (priceRequired: boolean) =>
-  fields.superRefine(checkSpecs).superRefine((v, ctx) => {
+  fields.superRefine((v, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message })
     if (priceRequired && !v.price) issue("price", "A pre-order product needs a price")
     // The storefront only takes pre-orders inside the open / close window, so both are required.
@@ -78,6 +78,7 @@ const settingsDefaults = {
   preorder_end_date: "",
   release_date: "",
   preorder_stock_limit: "",
+  preorder_min_quantity: "1",
 }
 
 /** The pre-order settings are stored on each variant; the form shows one variant's and saves them to all. */
@@ -89,6 +90,7 @@ const settingsOf = (product: Product) => {
     preorder_end_date: toDatetimeLocal(source?.preorder_end_date),
     release_date: toDatetimeLocal(source?.release_date),
     preorder_stock_limit: source?.preorder_stock_limit != null ? String(source.preorder_stock_limit) : "",
+    preorder_min_quantity: String(source?.preorder_min_quantity ?? 1),
   }
 }
 
@@ -99,6 +101,7 @@ const settingsPayload = (values: FormValues): ProductVariantPayload => ({
   preorder_end_date: fromDatetimeLocal(values.preorder_end_date),
   release_date: fromDatetimeLocal(values.release_date),
   preorder_stock_limit: values.preorder_stock_limit === "" ? null : Number(values.preorder_stock_limit),
+  preorder_min_quantity: Number(values.preorder_min_quantity),
 })
 
 /** Add / edit a product customers order before it arrives. */
@@ -120,7 +123,7 @@ export function PreorderProductForm({
   const noVariants = isEditing && product?.variants.length === 0
   const priceRequired = !hasOptions
   const resolver = useMemo(
-    () => zodResolver(noVariants ? fields.superRefine(checkSpecs) : windowSchema(priceRequired)),
+    () => zodResolver(noVariants ? fields : windowSchema(priceRequired)),
     [noVariants, priceRequired]
   )
   const form = useForm<FormValues>({ resolver, defaultValues: { ...baseDefaults, ...settingsDefaults } })
@@ -229,7 +232,7 @@ export function PreorderProductForm({
                 Customers can order between the opening and closing dates. These settings apply to every variant.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <DateField
                 withTime
                 label="Pre-orders open *"
@@ -256,11 +259,17 @@ export function PreorderProductForm({
                 error={errors.preorder_stock_limit}
                 {...register("preorder_stock_limit")}
               />
+              <TextField
+                label="Minimum per order"
+                inputMode="numeric"
+                placeholder="1"
+                error={errors.preorder_min_quantity}
+                {...register("preorder_min_quantity")}
+              />
             </CardContent>
           </Card>
         )}
 
-        <SpecsCard />
         <ProductFormImages product={product} staged={staged} />
       </ProductFormShell>
     </FormProvider>

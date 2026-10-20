@@ -128,7 +128,12 @@ function CategoryFormDialog({
       </Field>
       <TextareaField label="Description" id="cat-desc" rows={2} {...register("description")} />
       {category && (
-        <SwitchField control={control} name="is_active" label="Active (available when recording expenses)" />
+        <SwitchField
+          control={control}
+          name="is_active"
+          label="Status" onLabel="Active" offLabel="Inactive"
+          description="Available when recording expenses."
+        />
       )}
     </FormDialog>
   )

@@ -238,7 +238,7 @@ const Blocklists = () => {
     <div className="section-container space-y-6">
       <PageHeader title="Blocklists" />
       <Tabs value={tab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>
-        <TabsList className="w-full md:w-fit">
+        <TabsList className="w-max min-w-full md:w-fit md:min-w-0">
           <TabsTrigger value="phone" className="min-w-max gap-2">
             <Phone className="h-4 w-4" /> Phone numbers
           </TabsTrigger>

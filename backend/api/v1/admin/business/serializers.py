@@ -7,8 +7,10 @@ from django.core.validators import URLValidator
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from apps.business.models import PolicyKind
-from apps.business.models.storefront_content import WRITABLE_PLACEMENTS
+from apps.business.models import PolicyKind, PromotionPopup
+from apps.business.models.storefront_content import (
+    WRITABLE_PLACEMENTS,
+)
 from apps.business.policy_content import missing_policy_fields
 from apps.common.serializers import user_label
 
@@ -48,6 +50,8 @@ class AdminBusinessProfileSerializer(serializers.Serializer):
     linkedin_url = serializers.CharField(allow_blank=True)
 
     preorder_deposit_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    preorder_terms_en = serializers.CharField(allow_blank=True)
+    preorder_terms_bn = serializers.CharField(allow_blank=True)
     free_delivery_min_amount = serializers.DecimalField(
         max_digits=14, decimal_places=2, allow_null=True
     )
@@ -98,6 +102,8 @@ class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
         min_value=Decimal("0"),
         max_value=Decimal("100"),
     )
+    preorder_terms_en = serializers.CharField(required=False, allow_blank=True, max_length=10000)
+    preorder_terms_bn = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     free_delivery_min_amount = serializers.DecimalField(
         required=False, allow_null=True, max_digits=14, decimal_places=2, min_value=Decimal("0")
     )
@@ -316,3 +322,110 @@ class AdminPromoLineWriteSerializer(serializers.Serializer):
     placement = serializers.ChoiceField(choices=WRITABLE_PLACEMENTS)
     sort_order = serializers.IntegerField(required=False, min_value=0, max_value=32767)
     is_active = _OmittableBooleanField(required=False)
+
+
+def validate_site_link(value: str) -> str:
+    """A site path (`/shop?type=normal`) or a full http(s) URL, as for hero
+    slides, minus that rule's gaps: `//host` and a backslash after the slash
+    reach other sites, and a full URL must parse."""
+    if not value:
+        return value
+    if value.startswith("/"):
+        if value.startswith(("//", "/\\")):
+            raise serializers.ValidationError("Enter a site path starting with / or a full URL.")
+        return value
+    if not value.startswith(("http://", "https://")):
+        raise serializers.ValidationError("Enter a site path starting with / or a full URL.")
+    try:
+        URLValidator(schemes=["http", "https"])(value)
+    except DjangoValidationError:
+        raise serializers.ValidationError("Enter a valid URL.") from None
+    return value
+
+
+class AdminPromotionPopupSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    image = serializers.SerializerMethodField()
+    name = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    display_status = serializers.SerializerMethodField()
+    priority = serializers.IntegerField(read_only=True)
+    starts_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    ends_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    shop = serializers.CharField(read_only=True)
+    destination_type = serializers.CharField(read_only=True)
+    product = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+    sale = serializers.SerializerMethodField()
+    link_url = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_image(self, obj) -> str | None:
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        url = obj.image.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_display_status(self, obj) -> str:
+        return obj.display_status()
+
+    def get_product(self, obj) -> dict | None:
+        product = obj.product
+        if product is None:
+            return None
+        # The first gallery photo, so the form can show which product it is.
+        photo = next(iter(product.images.all()), None)
+        return {
+            "id": str(product.id),
+            "name": product.name,
+            "slug": product.slug,
+            "image": photo.url if photo else None,
+        }
+
+    def get_category(self, obj) -> dict | None:
+        category = obj.category
+        if category is None:
+            return None
+        return {
+            "id": str(category.id),
+            "name": category.name,
+            "slug": category.slug,
+            "category_type": category.category_type,
+        }
+
+    def get_sale(self, obj) -> dict | None:
+        sale = obj.sale
+        if sale is None:
+            return None
+        return {
+            "id": str(sale.id),
+            "name": sale.name,
+            "percent_off": str(sale.percent_off),
+            "status": "deleted" if sale.deleted_at else sale.status,
+        }
+
+
+class AdminPromotionPopupWriteSerializer(serializers.Serializer):
+    """JSON, or multipart when an image is sent (always on create). Used with
+    `partial=True` on PATCH. Rules that span fields (schedule order, the
+    destination that matches `destination_type` and the shop) are the service's."""
+
+    image = serializers.ImageField(required=False, allow_null=True)
+    name = serializers.CharField(required=False, max_length=120)
+    is_active = _OmittableBooleanField(required=False)
+    priority = serializers.IntegerField(required=False, min_value=0, max_value=1000)
+    starts_at = serializers.DateTimeField(required=False, allow_null=True)
+    ends_at = serializers.DateTimeField(required=False, allow_null=True)
+    # Set on create only; the service refuses a change.
+    shop = serializers.ChoiceField(choices=PromotionPopup.Shop.choices, required=False)
+    destination_type = serializers.ChoiceField(
+        choices=PromotionPopup.Destination.choices, required=False
+    )
+    product_id = serializers.UUIDField(required=False, allow_null=True)
+    category_id = serializers.UUIDField(required=False, allow_null=True)
+    sale_id = serializers.UUIDField(required=False, allow_null=True)
+    link_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    def validate_link_url(self, value: str) -> str:
+        return validate_site_link(value.strip())

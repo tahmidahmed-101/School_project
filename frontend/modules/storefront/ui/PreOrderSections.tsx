@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
+import { PromotionPopup } from "./PromotionPopup";
 import { CategoryShowcase, TrendingSection } from "@/modules/catalog";
 import { Newsletter } from "@/modules/marketing";
 import { PreOrderCategoryTabs } from "./PreOrderCategoryTabs";
@@ -53,6 +54,7 @@ export function PreOrderSections({ content, hasOffers }: { content: StorefrontCo
         preorder
       />
       <PromoMarquee lines={promoLinesFor("preorder", content)} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop="preorder" />
       <CategoryShowcase preorder />
 
       {preorderProducts.length === 0 ? (

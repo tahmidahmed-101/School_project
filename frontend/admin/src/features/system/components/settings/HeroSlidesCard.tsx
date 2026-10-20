@@ -320,7 +320,7 @@ function HeroSlideFormDialog({
         error={errors.sort_order}
         {...register("sort_order")}
       />
-      <SwitchField control={control} name="is_active" label="Active" description="Inactive slides stay off the storefront." />
+      <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" description="Inactive slides stay off the storefront." />
     </FormDialog>
   )
 }

@@ -10,7 +10,11 @@ PREORDER_ONLY_FIELDS = (
     "preorder_end_date",
     "release_date",
     "preorder_stock_limit",
+    "preorder_min_quantity",
 )
+# A pre-order field whose unset value is not None/False. It holds this on
+# every row, so on a stock row it counts as set only when it differs.
+PREORDER_FIELD_DEFAULTS = {"preorder_min_quantity": 1}
 STOCK_ONLY_FIELDS = ("discount_price", "wholesale_price")
 STOCK_ONLY_STOCK_ITEM_FIELDS = ("reorder_point", "target_stock_level")
 
@@ -19,14 +23,16 @@ def is_preorder_category(category: Category) -> bool:
     return category.category_type == Category.CategoryType.PREORDER
 
 
-def _is_set(value) -> bool:
+def _is_set(name: str, value) -> bool:
+    if name in PREORDER_FIELD_DEFAULTS:
+        return value is not None and value != PREORDER_FIELD_DEFAULTS[name]
     return value is not None and value is not False
 
 
 def fields_of_other_kind(category: Category, values: dict) -> list[str]:
     """The names in `values` that belong to the other kind and carry a value."""
     names = STOCK_ONLY_FIELDS if is_preorder_category(category) else PREORDER_ONLY_FIELDS
-    return [name for name in names if _is_set(values.get(name))]
+    return [name for name in names if _is_set(name, values.get(name))]
 
 
 def check_variant_kind(*, category: Category, values: dict) -> None:

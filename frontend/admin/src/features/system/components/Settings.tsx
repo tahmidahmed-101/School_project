@@ -63,7 +63,7 @@ const Settings = () => {
 
       <Tabs value={tab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>
         <div className="overflow-x-auto">
-          <TabsList className="w-full md:w-fit">
+          <TabsList className="w-max min-w-full md:w-fit md:min-w-0">
             {TABS.map(({ value, label, icon: Icon }) => (
               <TabsTrigger key={value} value={value} className="min-w-max gap-2">
                 <Icon className="h-4 w-4" /> {label}

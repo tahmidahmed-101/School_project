@@ -6,6 +6,8 @@ import { ProductsProvider, forListing, shopKindFor } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { breadcrumbJsonLd, pageMetadata } from "@/modules/seo";
 import { photo } from "@/lib/photo";
+import { PromotionPopup } from "@/modules/storefront";
+import { getStorefrontContent } from "@/modules/storefront/server";
 
 type ShopSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -51,10 +53,11 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
 }
 
 export default async function KullMartShopPage({ searchParams }: { searchParams: ShopSearchParams }) {
-  const [category, { products }, { type }] = await Promise.all([
+  const [category, { products }, { type }, content] = await Promise.all([
     categoryFrom(searchParams),
     getCatalog(),
     searchParams,
+    getStorefrontContent(),
   ]);
   const kind = shopKindFor(type, category);
   const trail = [
@@ -81,6 +84,7 @@ export default async function KullMartShopPage({ searchParams }: { searchParams:
           <ShopCatalog />
         </ProductsProvider>
       </Suspense>
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop={kind} />
     </>
   );
 }

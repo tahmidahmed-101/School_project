@@ -5,10 +5,11 @@ import { ShoppingCart, ArrowRight, Info } from "lucide-react";
 import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
 import { freeDeliveryStatus } from "@/lib/free-delivery";
+import { isBelowMinimum } from "@/lib/product";
 import { FreeDeliveryNote } from "@/design-system/patterns/FreeDeliveryNote";
 import { CartItemRow } from "./CartItemRow";
 import { Drawer, DrawerBody, DrawerEmpty, DrawerFooter } from "@/design-system/ui/Drawer";
-import { buttonClass } from "@/design-system/ui/Button";
+import { Button, buttonClass } from "@/design-system/ui/Button";
 
 const GROUP_TITLE = { stock: "kindStockItems", preorder: "kindPreorderItems" } as const;
 const REFUSED_NOTICE = { stock: "cartHoldsPreorder", preorder: "cartHoldsStock" } as const;
@@ -25,6 +26,7 @@ export function CartDrawer({ freeDeliveryMinAmount }: { freeDeliveryMinAmount?: 
       ? ui("cartMixedNotice")
       : null;
   const only = isMixed ? undefined : groups[0];
+  const belowMinimum = Boolean(only?.items.some(isBelowMinimum));
 
   return (
     <Drawer
@@ -84,10 +86,22 @@ export function CartDrawer({ freeDeliveryMinAmount }: { freeDeliveryMinAmount?: 
           </div>
           <FreeDeliveryNote status={freeDeliveryStatus(freeDeliveryMinAmount, only.items)} />
 
-          <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
-            <span>{ui("cartProceedToCheckout")}</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {belowMinimum ? (
+            <>
+              <p role="status" className="text-2xs font-semibold leading-relaxed text-danger">
+                {ui("cartBelowMinimum")}
+              </p>
+              <Button size="lg" fullWidth disabled>
+                <span>{ui("cartProceedToCheckout")}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <Link href="/checkout" onClick={closeDrawer} className={buttonClass({ size: "lg", fullWidth: true })}>
+              <span>{ui("cartProceedToCheckout")}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </DrawerFooter>
       )}
     </Drawer>

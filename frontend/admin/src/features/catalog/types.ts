@@ -78,6 +78,8 @@ export interface ProductVariant {
   preorder_end_date: string | null
   release_date: string | null
   preorder_stock_limit: number | null
+  /** Fewest units one pre-order may place; null on a stock variant. */
+  preorder_min_quantity: number | null
   is_preorder_active: boolean
   can_preorder: boolean
   effective_price: string
@@ -106,6 +108,7 @@ export interface ProductVariantPayload {
   preorder_end_date?: string | null
   release_date?: string | null
   preorder_stock_limit?: number | null
+  preorder_min_quantity?: number
 }
 
 /** Left out, `combinations` means every missing one. */
@@ -186,6 +189,9 @@ export interface Product {
   brand_id: string | null
   /** Shown in the storefront's featured sections. */
   featured: boolean
+  /** Whether the storefront product page shows its Questions / Price report sections. */
+  show_questions: boolean
+  show_price_report: boolean
   name: string
   slug: string
   description: string
@@ -219,6 +225,8 @@ export interface ProductPayload {
   /** null clears the brand. */
   brand_id?: string | null
   featured?: boolean
+  show_questions?: boolean
+  show_price_report?: boolean
   name?: string
   description?: string
   highlights?: string[]

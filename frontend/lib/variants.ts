@@ -110,6 +110,7 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     preorderCloses: variant.preorderCloses,
     maxPreorderQuantity: variant.maxPreorderQuantity,
     currentPreorderQuantity: variant.currentPreorderQuantity,
+    minPreorderQuantity: variant.minPreorderQuantity,
     preorderStatus: variant.preorderStatus,
   };
 }

@@ -178,6 +178,7 @@ export const DICT = {
   productCode: { en: "Code", bn: "কোড" },
   inStock: { en: "In stock", bn: "স্টকে আছে" },
   off: { en: "off", bn: "ছাড়" },
+  promotionPopupOpen: { en: "See the offer", bn: "অফারটি দেখুন" },
   category: { en: "Category", bn: "ক্যাটাগরি" },
   description: { en: "Description", bn: "বিবরণ" },
   specifications: { en: "Specifications", bn: "বৈশিষ্ট্য ও বিবরণ" },
@@ -305,6 +306,15 @@ export const DICT = {
   preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
   preOrderBadge: { en: "Pre-order", bn: "প্রি-অর্ডার" },
   preOrderOpen: { en: "Pre-order open", bn: "প্রি-অর্ডার চলছে" },
+  preOrderMinQuantity: { en: "Minimum order: {count} pcs", bn: "সর্বনিম্ন অর্ডার: {count} পিস" },
+  preOrderMinNotMet: {
+    en: "Order at least {count} pcs of this item to check out.",
+    bn: "চেকআউট করতে এই পণ্যটি কমপক্ষে {count} পিস অর্ডার করুন।",
+  },
+  cartBelowMinimum: {
+    en: "Some pre-order items are below their minimum quantity. Increase them to check out.",
+    bn: "কিছু প্রি-অর্ডার পণ্য সর্বনিম্ন পরিমাণের কম। চেকআউট করতে পরিমাণ বাড়ান।",
+  },
   preOrderCapacityReached: {
     en: "Pre-order capacity has been reached.",
     bn: "প্রি-অর্ডারের সর্বোচ্চ সীমা পূর্ণ হয়েছে।",
@@ -331,6 +341,8 @@ export const DICT = {
   },
   cancel: { en: "Cancel", bn: "বাতিল" },
   confirmPreOrderBtn: { en: "Confirm pre-order", bn: "প্রি-অর্ডার নিশ্চিত করুন" },
+  acceptAndPlaceOrder: { en: "Accept & place order", bn: "শর্ত মেনে অর্ডার করুন" },
+  termsTitle: { en: "Terms", bn: "শর্তাবলি" },
   checkoutPreOrderNotice: { en: "This order contains a pre-order product.", bn: "এই অর্ডারে প্রি-অর্ডার পণ্য রয়েছে।" },
   checkoutPreOrderShipping: {
     en: "The product will be shipped after stock arrives.",

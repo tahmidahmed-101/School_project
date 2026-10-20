@@ -300,7 +300,7 @@ function BrandFormDialog({
       <FormField label="Logo / image" htmlFor="brand-image" description="Uploaded when you save.">
         <ImagePicker id="brand-image" src={brand?.image} onSelect={setImageFile} />
       </FormField>
-      {brand && <SwitchField control={control} name="is_active" label="Active" />}
+      {brand && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
     </FormDialog>
   )
 }

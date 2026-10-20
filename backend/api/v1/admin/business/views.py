@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import ClassVar
 
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.constants import StaffPermissionCode
+from apps.business.models import PolicyKind, PromotionPopup
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.modules import get_module_state, modules_list
 from apps.business.selectors.policies import (
@@ -19,25 +21,31 @@ from apps.business.selectors.policies import (
 from apps.business.selectors.storefront_content import (
     get_hero_slide,
     get_promo_line,
+    get_promotion_popup,
     hero_slides_list,
     promo_lines_list,
+    promotion_popups_list,
 )
 from apps.business.services import update_business_profile, update_store_policy
 from apps.business.services.modules import set_module_config, set_module_enabled
 from apps.business.services.storefront_content import (
+    PromotionPopupFieldError,
     create_hero_slide,
     create_promo_line,
+    create_promotion_popup,
     delete_hero_slide,
     delete_promo_line,
+    delete_promotion_popup,
     update_hero_slide,
     update_promo_line,
+    update_promotion_popup,
 )
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
 from apps.common.params import KIND_STOCK, get_kind
 from apps.common.permissions import require_any_staff_permission, require_staff_permission
-from apps.common.responses import error_from_exception, not_found
+from apps.common.responses import error_from_exception, error_response, not_found
 from apps.orders.selectors.payment_methods import (
     get_payment_method_state,
     payment_methods_list,
@@ -59,6 +67,8 @@ from .serializers import (
     AdminPaymentMethodUpdateSerializer,
     AdminPromoLineSerializer,
     AdminPromoLineWriteSerializer,
+    AdminPromotionPopupSerializer,
+    AdminPromotionPopupWriteSerializer,
     AdminStorePolicyRevisionSerializer,
     AdminStorePolicySerializer,
     AdminStorePolicyUpdateSerializer,
@@ -68,6 +78,15 @@ SettingsViewPermission = require_any_staff_permission(
     StaffPermissionCode.SETTINGS_VIEW, StaffPermissionCode.SETTINGS_MANAGE
 )
 SettingsManagePermission = require_staff_permission(StaffPermissionCode.SETTINGS_MANAGE)
+
+
+POLICY_KIND_PARAMETER = OpenApiParameter(
+    "kind",
+    OpenApiTypes.STR,
+    location=OpenApiParameter.PATH,
+    enum=PolicyKind.values,
+    description="Which store policy.",
+)
 
 
 def _envelope(profile) -> Response:
@@ -198,7 +217,8 @@ class AdminPaymentMethodDetailView(APIView):
 
 @extend_schema(tags=["Business Settings"])
 class AdminStorePolicyListView(APIView):
-    """Shipping, return and refund policies, drafts included."""
+    """Every store policy (shipping, returns, refund, pre-order checkout
+    terms), drafts included."""
 
     serializer_class = AdminStorePolicySerializer
     permission_classes: ClassVar[list] = [SettingsViewPermission]
@@ -212,7 +232,7 @@ class AdminStorePolicyListView(APIView):
         )
 
 
-@extend_schema(tags=["Business Settings"])
+@extend_schema(tags=["Business Settings"], parameters=[POLICY_KIND_PARAMETER])
 class AdminStorePolicyDetailView(APIView):
     """Reading is open to `settings.view`; editing or publishing needs
     `settings.manage`. Every accepted change records a revision."""
@@ -247,7 +267,7 @@ class AdminStorePolicyDetailView(APIView):
     put = patch
 
 
-@extend_schema(tags=["Business Settings"])
+@extend_schema(tags=["Business Settings"], parameters=[POLICY_KIND_PARAMETER])
 class AdminStorePolicyRevisionListView(GenericListAPIView):
     """Immutable change history for one policy, newest first."""
 
@@ -368,4 +388,87 @@ class AdminPromoLineDetailView(APIView):
         if line is None:
             return not_found("promo_line_not_found", "Promo line not found.")
         delete_promo_line(line=line)
+        return Response({"data": {}, "message": "Success"})
+
+
+def _promotion_popup_response(request, popup_id, status_code: int = status.HTTP_200_OK) -> Response:
+    # Re-read, so the sale is the one now saved.
+    data = AdminPromotionPopupSerializer(
+        get_promotion_popup(popup_id), context={"request": request}
+    ).data
+    return Response({"data": data, "message": "Success"}, status=status_code)
+
+
+def _promotion_popup_error(exc: DomainError) -> Response:
+    """A broken rule that belongs to one field is reported against it, so the
+    form can mark that field."""
+    if isinstance(exc, PromotionPopupFieldError):
+        return error_response(exc.code, exc.message, fields={exc.field: [exc.message]})
+    return error_from_exception(exc, status_for_code(exc.code))
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromotionPopupListView(APIView):
+    """Promotion popups, drafts, paused and expired ones included, in the order
+    the storefront prefers them. Create is multipart (it carries the image)."""
+
+    serializer_class = AdminPromotionPopupWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request) -> Response:
+        shop = request.query_params.get("shop")
+        if shop not in (None, *PromotionPopup.Shop.values):
+            return error_response(
+                "invalid_shop", "Unknown shop.", fields={"shop": ["Unknown shop."]}
+            )
+        data = AdminPromotionPopupSerializer(
+            promotion_popups_list(shop=shop), many=True, context={"request": request}
+        ).data
+        return Response({"data": data, "message": "Success"})
+
+    def post(self, request) -> Response:
+        serializer = AdminPromotionPopupWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            popup = create_promotion_popup(data=serializer.validated_data)
+        except DomainError as exc:
+            return _promotion_popup_error(exc)
+        return _promotion_popup_response(request, popup.id, status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Business Settings"])
+class AdminPromotionPopupDetailView(APIView):
+    serializer_class = AdminPromotionPopupWriteSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [SettingsViewPermission()]
+        return [SettingsManagePermission()]
+
+    def get(self, request, pk) -> Response:
+        if get_promotion_popup(pk) is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        return _promotion_popup_response(request, pk)
+
+    def patch(self, request, pk) -> Response:
+        popup = get_promotion_popup(pk)
+        if popup is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        serializer = AdminPromotionPopupWriteSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            update_promotion_popup(popup=popup, data=serializer.validated_data)
+        except DomainError as exc:
+            return _promotion_popup_error(exc)
+        return _promotion_popup_response(request, pk)
+
+    def delete(self, request, pk) -> Response:
+        popup = get_promotion_popup(pk)
+        if popup is None:
+            return not_found("promotion_popup_not_found", "Promotion popup not found.")
+        delete_promotion_popup(popup=popup)
         return Response({"data": {}, "message": "Success"})

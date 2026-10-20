@@ -1,11 +1,8 @@
 import { useEffect, useState, type FormEventHandler, type ReactNode } from "react"
-import { Controller, useFieldArray, useFormContext } from "react-hook-form"
+import { Controller, useFormContext } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
-import { ChevronDown, ChevronUp, ListChecks, Plus, Trash2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SwitchField } from "@/components/common/FormDialog"
@@ -28,6 +25,14 @@ import { CategoryTreeCombobox } from "./CategoryTreeSelect"
 import { ProductImagesSection } from "./ProductImagesSection"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { StagedImagesCard } from "./StagedImagesCard"
+
+/** The on/off settings at the foot of the Basics card, in display order. */
+const PRODUCT_SWITCHES = [
+  { name: "is_active", label: "Publish", description: "Listed on the storefront." },
+  { name: "featured", label: "Featured", description: "Shown in the storefront's featured sections." },
+  { name: "show_questions", label: "Questions", description: "Customers can ask about it on the product page." },
+  { name: "show_price_report", label: "Price report", description: "Customers can report a wrong price." },
+] as const satisfies readonly { name: keyof BaseValues; label: string; description: string }[]
 
 /** Brands for the searchable picker. A failed load just leaves the list empty: brand is optional. */
 function useBrandOptions(kind: Kind) {
@@ -170,7 +175,7 @@ export function BasicsCard({
         />
 
         <TextField
-          className="md:col-span-2"
+          className="md:col-span-2 xl:col-span-4"
           label="Meta keywords"
           id="meta_keywords"
           placeholder="comma, separated, keywords"
@@ -178,14 +183,11 @@ export function BasicsCard({
           {...register("meta_keywords")}
         />
 
-        {/* The switches share one row, lined up with the keywords input. */}
-        <div className="grid grid-cols-1 gap-4 self-end sm:grid-cols-2 md:col-span-2">
-          <div className="py-2">
-            <SwitchField control={control} name="featured" label="Featured" />
-          </div>
-          <div className="py-2">
-            <SwitchField control={control} name="is_active" label="Publish" />
-          </div>
+        {/* The switches get a row of their own, each saying what it changes. */}
+        <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 md:col-span-2 xl:col-span-4 xl:grid-cols-4">
+          {PRODUCT_SWITCHES.map(({ name, label, description }) => (
+            <SwitchField key={name} control={control} name={name} label={label} description={description} />
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -280,75 +282,6 @@ export function ProductFormImages({
         onChanged={() => dispatch(fetchSingle(product.id))}
       />
     </div>
-  )
-}
-
-/** Name + value rows shown on the storefront product page, in this order. */
-export function SpecsCard() {
-  const {
-    control,
-    register,
-    formState: { errors },
-  } = useFormContext<BaseValues>()
-  const rows = useFieldArray({ control, name: "specs" })
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ListChecks className="size-4" /> Specifications
-        </CardTitle>
-        <CardDescription>
-          Facts about the product, like Material: Cotton. Customers see them in this order. Leave empty if there are
-          none.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {rows.fields.map((row, i) => (
-          <div key={row.id} className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_1fr_auto] sm:gap-3">
-            <Field>
-              <FieldContent>
-                <Input aria-label="Specification name" placeholder="Name, e.g. Material" {...register(`specs.${i}.name`)} />
-                <FieldError errors={[errors.specs?.[i]?.name]} />
-              </FieldContent>
-            </Field>
-            <Field>
-              <FieldContent>
-                <Input aria-label="Specification value" placeholder="Value, e.g. Cotton" {...register(`specs.${i}.value`)} />
-                <FieldError errors={[errors.specs?.[i]?.value]} />
-              </FieldContent>
-            </Field>
-            <div className="flex justify-end gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Move up"
-                disabled={i === 0}
-                onClick={() => rows.move(i, i - 1)}
-              >
-                <ChevronUp className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Move down"
-                disabled={i === rows.fields.length - 1}
-                onClick={() => rows.move(i, i + 1)}
-              >
-                <ChevronDown className="size-4" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon" aria-label="Remove row" onClick={() => rows.remove(i)}>
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => rows.append({ name: "", value: "" })}>
-          <Plus className="size-4" /> Add a row
-        </Button>
-      </CardContent>
-    </Card>
   )
 }
 

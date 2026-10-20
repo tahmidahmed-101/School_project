@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar } from "lucide-react";
+import { AlertCircle, Calendar } from "lucide-react";
 import type { CartItem } from "@/lib/types";
 import { useCart } from "../context";
 import { useLang } from "@/lib/i18n";
+import { getMinOrderQuantity, isBelowMinimum } from "@/lib/product";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 import { DrawerItem, DrawerItemImage, DrawerRemoveButton } from "@/design-system/ui/Drawer";
 
 export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: () => void }) {
-  const { t, ui, money } = useLang();
+  const { t, ui, money, n } = useLang();
   const { updateQuantity, removeItem } = useCart();
   const { product, quantity, variantTitle, variantId } = item;
 
@@ -54,6 +55,13 @@ export function CartItemRow({ item, onNavigate }: { item: CartItem; onNavigate: 
 
           <DrawerRemoveButton label={ui("cartRemove")} onClick={() => removeItem(variantId)} />
         </div>
+
+        {isBelowMinimum(item) && (
+          <p role="status" className="flex items-start gap-1 text-2xs font-semibold text-danger">
+            <AlertCircle className="mt-px h-3 w-3 shrink-0" />
+            <span>{ui("preOrderMinNotMet").replace("{count}", n(getMinOrderQuantity(product)))}</span>
+          </p>
+        )}
       </div>
     </DrawerItem>
   );

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,7 +11,11 @@ from rest_framework.views import APIView
 from apps.business.models import PolicyKind
 from apps.business.selectors import get_business_profile
 from apps.business.selectors.policies import get_published_policy, returns_enabled
-from apps.business.selectors.storefront_content import hero_slides_list, promo_lines_list
+from apps.business.selectors.storefront_content import (
+    hero_slides_list,
+    live_promotion_popups,
+    promo_lines_list,
+)
 from apps.common.params import KIND_STOCK, get_kind
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
@@ -60,13 +65,27 @@ class PublicPaymentMethodListView(APIView):
         )
 
 
-@extend_schema(tags=["Public Business"], responses=PublicStorePolicySerializer)
+@extend_schema(
+    tags=["Public Business"],
+    parameters=[
+        OpenApiParameter(
+            "kind",
+            OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            enum=PolicyKind.values,
+            description="Which store policy. `returns` adds `returns_enabled` and `eligibility`.",
+        )
+    ],
+    responses=PublicStorePolicySerializer,
+)
 class PublicStorePolicyView(APIView):
-    """`kind` is shipping, returns or refund. Answers 404 `policy_unavailable`
-    until staff publish a complete, dated version — there is no default text.
+    """`kind` is shipping, returns, refund or preorder_checkout. Answers 404
+    `policy_unavailable` until staff publish a complete, dated version — there
+    is no default text.
 
     Policy prose only: rates live on `/public/checkout/shipping-options/`,
-    raising a return on `/customer/orders/<id>/returns/`.
+    raising a return on `/customer/orders/<id>/returns/`. `preorder_checkout`
+    is the text shown before placing a pre-order; it sets no checkout rule.
     """
 
     serializer_class = PublicStorePolicySerializer
@@ -90,7 +109,9 @@ class PublicStorePolicyView(APIView):
 
 @extend_schema(tags=["Public Business"])
 class PublicStorefrontContentView(APIView):
-    """Active hero slides and promo strip lines, in display order."""
+    """Active hero slides and promo strip lines, in display order, and the
+    popups that may show now, highest priority first. The storefront picks the
+    first that fits its page and the shopper's screen."""
 
     serializer_class = PublicStorefrontContentSerializer
     permission_classes: ClassVar[list] = [AllowAny]
@@ -100,6 +121,7 @@ class PublicStorefrontContentView(APIView):
         content = {
             "hero_slides": hero_slides_list(active_only=True),
             "promo_lines": promo_lines_list(active_only=True),
+            "promotion_popups": live_promotion_popups(),
         }
         data = PublicStorefrontContentSerializer(content, context={"request": request}).data
         return Response({"data": data, "message": "Success"})

@@ -3,6 +3,8 @@ import { makeProduct } from "@/tests/fixtures";
 import {
   getDiscountPercent,
   getMaxOrderQuantity,
+  getMinOrderQuantity,
+  isBelowMinimum,
   getSaleOffer,
   isPreOrderSoldOut,
   matchesQuery,
@@ -87,6 +89,28 @@ describe("getMaxOrderQuantity", () => {
     expect(
       getMaxOrderQuantity(makeProduct({ isPreOrder: true, maxPreorderQuantity: 4, currentPreorderQuantity: 0 })),
     ).toBe(4);
+  });
+});
+
+describe("getMinOrderQuantity", () => {
+  it("is the pre-order's minimum, and 1 for stock items or a pre-order without one", () => {
+    expect(getMinOrderQuantity(makeProduct({ isPreOrder: true, minPreorderQuantity: 3 }))).toBe(3);
+    expect(getMinOrderQuantity(makeProduct({ isPreOrder: true }))).toBe(1);
+    expect(getMinOrderQuantity(makeProduct({ isPreOrder: false, minPreorderQuantity: 3 }))).toBe(1);
+  });
+});
+
+describe("isBelowMinimum", () => {
+  const preorder = makeProduct({ isPreOrder: true, minPreorderQuantity: 3 });
+
+  it("flags a pre-order line short of its minimum only", () => {
+    expect(isBelowMinimum({ product: preorder, quantity: 2 })).toBe(true);
+    expect(isBelowMinimum({ product: preorder, quantity: 3 })).toBe(false);
+    expect(isBelowMinimum({ product: preorder, quantity: 5 })).toBe(false);
+  });
+
+  it("never flags a stock line", () => {
+    expect(isBelowMinimum({ product: makeProduct({ minPreorderQuantity: 3 }), quantity: 1 })).toBe(false);
   });
 });
 

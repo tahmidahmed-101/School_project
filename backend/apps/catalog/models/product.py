@@ -51,6 +51,9 @@ class Product(FullAuditModel):
     featured = models.BooleanField(default=False)
     trending = models.BooleanField(default=False)
     new_arrival = models.BooleanField(default=False)
+    # Per-product switches for the storefront's Questions and Price report sections.
+    show_questions = models.BooleanField(default=True)
+    show_price_report = models.BooleanField(default=True)
     badge = models.CharField(
         max_length=20, choices=Badge.choices, default=Badge.NONE, blank=True
     )

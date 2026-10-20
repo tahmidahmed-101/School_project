@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { FileText, Flag, ListChecks, MessageCircleQuestion, Share2, Star, Truck } from "lucide-react";
+import { FileText, Flag, MessageCircleQuestion, Share2, Star, Truck } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { ACCORDION_BODY, AccordionItem } from "@/design-system/ui/AccordionItem";
@@ -40,15 +40,14 @@ interface ProductAccordionsProps {
 }
 
 /**
- * Description, specifications, reviews, questions, shipping, price report and share accordions.
+ * Description, reviews, questions, shipping, price report and share accordions.
  * The API-backed ones fetch when opened: a closed accordion does not mount its content.
  */
 export function ProductAccordions({ product, variantId, currentPrice }: ProductAccordionsProps) {
   const { t, ui, n } = useLang();
-  // The API sends no description on list-sourced products and no specs for many, so empty sections are left out.
+  // The API sends no description on list-sourced products, so an empty section is left out.
   const description = t(product.longDescription) || t(product.description);
   const hasHighlights = Boolean(product.highlights && product.highlights.length > 0);
-  const hasSpecs = Boolean(product.specs && product.specs.length > 0);
   const reviewsTitle =
     product.reviewCount > 0 ? `${ui("reviewsTitle")} (${n(product.reviewCount)})` : ui("reviewsTitle");
 
@@ -73,38 +72,31 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
           </AccordionItem>
         )}
 
-        {hasSpecs && (
-          <AccordionItem icon={<ListChecks className={ICON} />} title={ui("specifications")}>
-            <ul className="list-disc space-y-1.5 pb-3 pl-4 pt-3 text-sm leading-relaxed text-fg-muted">
-              {product.specs?.map((spec, i) => (
-                <li key={i}>
-                  <strong className="text-ink-800">{t(spec.label)}:</strong> {t(spec.value)}
-                </li>
-              ))}
-            </ul>
-          </AccordionItem>
-        )}
-
         <AccordionItem icon={<Star className={ICON} />} title={reviewsTitle}>
           <ProductReviews slug={product.slug} productId={product.id} />
         </AccordionItem>
 
-        <AccordionItem icon={<MessageCircleQuestion className={ICON} />} title={ui("questionsTitle")}>
-          <ProductQuestions slug={product.slug} productId={product.id} />
-        </AccordionItem>
+        {/* Staff can turn Questions and Price report off per product; missing means on. */}
+        {product.showQuestions !== false && (
+          <AccordionItem icon={<MessageCircleQuestion className={ICON} />} title={ui("questionsTitle")}>
+            <ProductQuestions slug={product.slug} productId={product.id} />
+          </AccordionItem>
+        )}
 
         <AccordionItem icon={<Truck className={ICON} />} title={ui("shippingReturnsTitle")}>
           <ShippingReturns />
         </AccordionItem>
 
-        <AccordionItem icon={<Flag className={ICON} />} title={ui("priceReportTitle")}>
-          <PriceReportForm
-            slug={product.slug}
-            productId={product.id}
-            variantId={variantId}
-            currentPrice={currentPrice}
-          />
-        </AccordionItem>
+        {product.showPriceReport !== false && (
+          <AccordionItem icon={<Flag className={ICON} />} title={ui("priceReportTitle")}>
+            <PriceReportForm
+              slug={product.slug}
+              productId={product.id}
+              variantId={variantId}
+              currentPrice={currentPrice}
+            />
+          </AccordionItem>
+        )}
 
         <AccordionItem icon={<Share2 className={ICON} />} title={ui("shareTitle")}>
           <ProductShare slug={product.slug} name={t(product.name)} />

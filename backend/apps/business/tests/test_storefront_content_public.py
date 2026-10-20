@@ -30,7 +30,11 @@ def test_empty_store_answers_empty_lists_without_auth(api_client):
 
     assert response.status_code == 200
     assert response.data["message"] == "Success"
-    assert response.data["data"] == {"hero_slides": [], "promo_lines": []}
+    assert response.data["data"] == {
+        "hero_slides": [],
+        "promo_lines": [],
+        "promotion_popups": [],
+    }
 
 
 def test_only_active_rows_are_listed_in_sort_order(api_client):

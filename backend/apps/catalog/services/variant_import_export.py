@@ -16,7 +16,11 @@ from apps.catalog.selectors.options import (
     option_values_prefetch,
     variant_option_values,
 )
-from apps.catalog.services.kind_rules import PREORDER_ONLY_FIELDS, is_preorder_category
+from apps.catalog.services.kind_rules import (
+    PREORDER_FIELD_DEFAULTS,
+    PREORDER_ONLY_FIELDS,
+    is_preorder_category,
+)
 from apps.catalog.services.options import MAX_OPTIONS, ensure_option_values
 from apps.catalog.services.products import create_variant, update_variant
 from apps.common.exceptions import DomainError
@@ -52,6 +56,7 @@ PREORDER_EXPORT_COLUMNS = [
     "preorder_end_date",
     "release_date",
     "preorder_stock_limit",
+    "preorder_min_quantity",
     "weight",
     *OPTION_COLUMNS,
     "is_active",
@@ -104,6 +109,7 @@ def _preorder_rows(variants: list[ProductVariant]) -> list[list]:
             _date(variant.preorder_end_date),
             _date(variant.release_date),
             _text(variant.preorder_stock_limit),
+            _text(variant.preorder_min_quantity),
             _text(variant.weight),
             *_option_cells(variant),
             "1" if variant.is_active else "0",
@@ -181,7 +187,8 @@ def _refuse_preorder_row(row: dict, product: Product, variant: ProductVariant | 
     given = [
         name
         for name in PREORDER_ONLY_FIELDS
-        if str(row.get(name) or "").strip().lower() not in BLANK_CELLS
+        if (cell := str(row.get(name) or "").strip().lower()) not in BLANK_CELLS
+        and cell != str(PREORDER_FIELD_DEFAULTS.get(name))
     ]
     if given:
         raise ValueError(f"Pre-order fields cannot be imported: {', '.join(given)}")

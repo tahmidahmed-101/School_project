@@ -102,6 +102,8 @@ def create_product(
     meta_keywords: str = "",
     brand=None,
     featured: bool = False,
+    show_questions: bool = True,
+    show_price_report: bool = True,
     is_active: bool = True,
     actor=None,
 ) -> Product:
@@ -117,6 +119,8 @@ def create_product(
         category=category,
         brand=brand,
         featured=featured,
+        show_questions=show_questions,
+        show_price_report=show_price_report,
         name=name,
         description=description,
         product_type=product_type if is_bundle else Product.ProductType.SIMPLE,
@@ -194,6 +198,8 @@ def update_product(*, product: Product, data: dict) -> Product:
         "category",
         "brand",
         "featured",
+        "show_questions",
+        "show_price_report",
         "name",
         "description",
         "highlights",
@@ -331,6 +337,26 @@ def representative_variant(product: Product) -> ProductVariant | None:
     return product.variants.filter(deleted_at__isnull=True).order_by("created_at").first()
 
 
+# Model validation errors on these fields, in this order, get their own code.
+VARIANT_CLEAN_ERROR_CODES = {
+    "preorder_price": "preorder_price_must_be_lower",
+    "preorder_end_date": "preorder_end_date_before_start",
+    "release_date": "release_date_before_preorder_end",
+    "preorder_min_quantity": "invalid_preorder_min_quantity",
+}
+
+
+def _full_clean_variant(variant: ProductVariant) -> None:
+    try:
+        variant.full_clean()
+    except ValidationError as e:
+        error_dict = getattr(e, "message_dict", {})
+        for field, code in VARIANT_CLEAN_ERROR_CODES.items():
+            if field in error_dict:
+                raise BusinessRuleViolationError(error_dict[field][0], code=code) from None
+        raise BusinessRuleViolationError(str(e), code="validation_error") from None
+
+
 @transaction.atomic
 def create_variant(
     *,
@@ -352,6 +378,7 @@ def create_variant(
     preorder_end_date=None,
     release_date=None,
     preorder_stock_limit: int | None = None,
+    preorder_min_quantity: int = 1,
     actor=None,
 ) -> ProductVariant:
     product = lock_product(product)
@@ -372,6 +399,7 @@ def create_variant(
             "preorder_end_date": preorder_end_date,
             "release_date": release_date,
             "preorder_stock_limit": preorder_stock_limit,
+            "preorder_min_quantity": preorder_min_quantity,
         },
     )
     # A new variation inherits the product's shared pricing instead of re-entering it.
@@ -421,26 +449,9 @@ def create_variant(
         preorder_end_date=preorder_end_date,
         release_date=release_date,
         preorder_stock_limit=preorder_stock_limit,
+        preorder_min_quantity=preorder_min_quantity,
     )
-    try:
-        variant.full_clean()
-    except ValidationError as e:
-        # Map validation errors to specific codes for pre-order fields
-        error_dict = getattr(e, "message_dict", {})
-        if "preorder_price" in error_dict:
-            raise BusinessRuleViolationError(
-                error_dict["preorder_price"][0], code="preorder_price_must_be_lower"
-            ) from None
-        if "preorder_end_date" in error_dict:
-            raise BusinessRuleViolationError(
-                error_dict["preorder_end_date"][0], code="preorder_end_date_before_start"
-            ) from None
-        if "release_date" in error_dict:
-            raise BusinessRuleViolationError(
-                error_dict["release_date"][0], code="release_date_before_preorder_end"
-            ) from None
-        # Fallback for any other validation errors
-        raise BusinessRuleViolationError(str(e), code="validation_error") from None
+    _full_clean_variant(variant)
     variant.save()
     variant.option_values.set(values)
     sync_product_type(product)
@@ -474,6 +485,7 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         "preorder_end_date",
         "release_date",
         "preorder_stock_limit",
+        "preorder_min_quantity",
     }
     price_fields = {"price", "cost_price", "discount_price", "wholesale_price"}
     changed_fields = [field for field in data if field in allowed_fields]
@@ -507,25 +519,7 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         values={field: data[field] for field in changed_fields if field in data},
     )
     if changed_fields:
-        try:
-            variant.full_clean()
-        except ValidationError as e:
-            # Map validation errors to specific codes for pre-order fields
-            error_dict = getattr(e, "message_dict", {})
-            if "preorder_price" in error_dict:
-                raise BusinessRuleViolationError(
-                    error_dict["preorder_price"][0], code="preorder_price_must_be_lower"
-                ) from None
-            if "preorder_end_date" in error_dict:
-                raise BusinessRuleViolationError(
-                    error_dict["preorder_end_date"][0], code="preorder_end_date_before_start"
-                ) from None
-            if "release_date" in error_dict:
-                raise BusinessRuleViolationError(
-                    error_dict["release_date"][0], code="release_date_before_preorder_end"
-                ) from None
-            # Fallback for any other validation errors
-            raise BusinessRuleViolationError(str(e), code="validation_error") from None
+        _full_clean_variant(variant)
         variant.save(update_fields=changed_fields)
     if new_values is not None:
         variant.option_values.set(new_values)

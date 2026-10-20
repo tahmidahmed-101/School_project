@@ -15,6 +15,8 @@ import type {
   PolicyKind,
   PromoLine,
   PromoLineInput,
+  PromotionPopup,
+  PromotionPopupInput,
   StorePolicy,
   StorePolicyUpdate,
 } from "../types"
@@ -38,6 +40,7 @@ interface BusinessSettingsState {
   policies: Section<StorePolicy[]>
   heroSlides: Section<HeroSlide[]>
   promoLines: Section<PromoLine[]>
+  promotionPopups: Section<PromotionPopup[]>
 }
 
 const section = <T,>(data: T): Section<T> => ({ data, status: "idle", error: null })
@@ -50,6 +53,7 @@ const initialState: BusinessSettingsState = {
   policies: section([]),
   heroSlides: section([]),
   promoLines: section([]),
+  promotionPopups: section([]),
 }
 
 const get = <T,>(type: string, url: string) =>
@@ -227,6 +231,44 @@ export const savePromoLine = createAsyncThunk(
 
 export const deletePromoLine = remove("businessSettings/deletePromoLine", PROMO_LINES)
 
+const PROMOTION_POPUPS = "/admin/settings/promotion-popups/"
+
+/** Every popup, switched-off, scheduled and ended ones included, in the order the storefront prefers them. */
+export const fetchPromotionPopups = getList<PromotionPopup>("businessSettings/fetchPromotionPopups", PROMOTION_POPUPS)
+
+/**
+ * POST (no id) or PATCH /admin/settings/promotion-popups/{id}/. Multipart when a new image is sent (always on create);
+ * JSON otherwise. The image can be replaced, never removed.
+ */
+export const savePromotionPopup = createAsyncThunk(
+  "businessSettings/savePromotionPopup",
+  async (
+    { id, values, image }: { id?: string; values: Partial<PromotionPopupInput>; image?: File | null },
+    { rejectWithValue }
+  ) => {
+    try {
+      let body: FormData | Partial<PromotionPopupInput> = values
+      if (image) {
+        const form = new FormData()
+        for (const [key, value] of Object.entries(values)) {
+          if (value === undefined) continue
+          // A list goes as repeated keys; null as "", which DRF reads as null on a nullable field.
+          if (Array.isArray(value)) value.forEach((item) => form.append(key, String(item)))
+          else form.append(key, value === null ? "" : String(value))
+        }
+        form.append("image", image)
+        body = form
+      }
+      const res = id ? await api.patch(`${PROMOTION_POPUPS}${id}/`, body) : await api.post(PROMOTION_POPUPS, body)
+      return unwrapEnvelope<PromotionPopup>(res.data)
+    } catch (err) {
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+export const deletePromotionPopup = remove("businessSettings/deletePromotionPopup", PROMOTION_POPUPS)
+
 const businessSettingsSlice = createSlice({
   name: "businessSettings",
   initialState,
@@ -288,6 +330,14 @@ const businessSettingsSlice = createSlice({
       })
       .addCase(fetchPromoLines.rejected, (state, action) => failed(state.promoLines, action.payload ?? action.error))
 
+      .addCase(fetchPromotionPopups.pending, (state) => pending(state.promotionPopups))
+      .addCase(fetchPromotionPopups.fulfilled, (state, action) => {
+        state.promotionPopups = { data: action.payload, status: "succeeded", error: null }
+      })
+      .addCase(fetchPromotionPopups.rejected, (state, action) =>
+        failed(state.promotionPopups, action.payload ?? action.error)
+      )
+
     builder
       .addCase(updateBusinessProfile.fulfilled, (state, action) => {
         state.profile.data = action.payload
@@ -315,6 +365,16 @@ const businessSettingsSlice = createSlice({
       })
       .addCase(deletePromoLine.fulfilled, (state, action) => {
         state.promoLines.data = state.promoLines.data.filter((line) => line.id !== action.payload)
+      })
+      .addCase(savePromotionPopup.fulfilled, (state, action) => {
+        // The server lists the newest first; re-sorting here mirrors that for the row just saved.
+        state.promotionPopups.data = [
+          ...state.promotionPopups.data.filter((popup) => popup.id !== action.payload.id),
+          action.payload,
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at))
+      })
+      .addCase(deletePromotionPopup.fulfilled, (state, action) => {
+        state.promotionPopups.data = state.promotionPopups.data.filter((popup) => popup.id !== action.payload)
       })
   },
 })

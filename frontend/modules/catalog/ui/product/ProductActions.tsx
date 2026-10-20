@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
 import { usePreOrderModal } from "@/modules/preorder";
-import { getMaxOrderQuantity, unavailableLabel } from "@/lib/product";
+import { getMaxOrderQuantity, getMinOrderQuantity, unavailableLabel } from "@/lib/product";
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
@@ -36,14 +36,16 @@ export function ProductActions({
   isSoldOut,
   isOutOfStock = false,
 }: ProductActionsProps) {
-  const { ui } = useLang();
+  const { ui, n } = useLang();
   const router = useRouter();
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
   const { openPreOrderModal } = usePreOrderModal();
 
   const isWishlisted = isInWishlist(product.id);
-  const maxQuantity = getMaxOrderQuantity(product);
+  const minQuantity = getMinOrderQuantity(product);
+  // Never below the minimum, even when less capacity is left: the backend then says how many remain.
+  const maxQuantity = Math.max(minQuantity, getMaxOrderQuantity(product));
 
   const canBuy = !isOutOfStock && !(product.isPreOrder && isSoldOut);
   const waiting = !variantId;
@@ -73,7 +75,13 @@ export function ProductActions({
           from tablet width up and stack on a phone. */}
       <div className="mt-7 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
+          <QuantityStepper
+            size="lg"
+            quantity={quantity}
+            onChange={onQuantityChange}
+            min={minQuantity}
+            max={maxQuantity}
+          />
           <button
             type="button"
             onClick={() => toggleItem(product)}
@@ -88,6 +96,12 @@ export function ProductActions({
             <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-red-500" : ""}`} />
           </button>
         </div>
+
+        {minQuantity > 1 && (
+          <p className="text-xs font-semibold text-gold-900">
+            {ui("preOrderMinQuantity").replace("{count}", n(minQuantity))}
+          </p>
+        )}
 
         <div className={`grid gap-3 ${showBuyNow ? "sm:grid-cols-2" : ""}`}>
           {isOutOfStock ? (

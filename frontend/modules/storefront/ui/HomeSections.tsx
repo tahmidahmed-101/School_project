@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Hero } from "./Hero";
 import { PromoMarquee } from "./PromoMarquee";
+import { PromotionPopup } from "./PromotionPopup";
 import { VoucherSection, type Voucher } from "@/modules/marketing";
 import { CategoryShowcase } from "@/modules/catalog";
 import { TrendingSection } from "@/modules/catalog";
@@ -50,6 +51,7 @@ export function HomeSections({
         hasOffers={hasOffers}
       />
       <PromoMarquee lines={promoLinesFor("home", content)} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} shop="stock" />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 

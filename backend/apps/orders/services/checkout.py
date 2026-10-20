@@ -16,6 +16,7 @@ from apps.orders.services.carts import (
     MIXED_BASKET_MESSAGE,
     _check_preorder_stock_limit,
     compute_line_tax,
+    ensure_preorder_minimums,
     ensure_purchasable,
 )
 from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
@@ -85,7 +86,8 @@ def checkout(
     stock twice.
 
     Pre-order lines skip real inventory stock reservation since the product
-    may not be in stock yet.
+    may not be in stock yet. Each must reach its variant's minimum quantity
+    here, the one gate every placement route passes through.
 
     Refuses a checkout out from a blocked IP, or to a phone number staff have
     fully refused — both are standing merchant decisions, checked before any
@@ -115,6 +117,7 @@ def checkout(
         ensure_purchasable(variant)
         if variant.is_preorder_kind and variant.preorder_stock_limit is not None:
             _check_preorder_stock_limit(variant, line.quantity)
+    ensure_preorder_minimums(lines)
 
     _reprice_lines(order, lines)
 

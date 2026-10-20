@@ -1,6 +1,6 @@
 import type { CategoryInfo, Product, ProductOption, ProductSale, ProductSpec, SkuVariant, T } from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
-import { publicEnv } from "@/lib/env";
+import { normalizeImageUrl } from "@/lib/photo";
 import { ORDER_QUANTITY_CAP, applyVariant } from "@/lib/variants";
 import type { ApiCategory, ApiProduct, ApiProductOption, ApiProductSale, ApiVariant } from "@/lib/api/types";
 
@@ -18,19 +18,8 @@ const PLACEHOLDER_IMAGE = "brand/logo-mark.png";
 /** Shown for a category with no picture of its own and no product picture to borrow. */
 const CATEGORY_PLACEHOLDER_IMAGE = "brand/category-placeholder.png";
 
-/**
- * Photos come back as `/media/...` or as absolute URLs. Media paths are made absolute on the API origin: the Cloudflare
- * image optimizer reads relative URLs from static assets only, so a proxied `/media/` path would 404 there.
- */
-export function normalizeImageUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed.startsWith("/media/")) return trimmed;
-  try {
-    return `${new URL(publicEnv.apiUrl ?? "").origin}${trimmed}`;
-  } catch {
-    return trimmed;
-  }
-}
+// Lives in lib so other modules' adapters (the storefront popup) share it; re-exported for this module's callers.
+export { normalizeImageUrl };
 
 /** "17 Oct 2026" / "১৭ অক্টো ২০২৬": locale date formatting of a real API date, not a translation. */
 function formatDate(iso: string | null): T | undefined {
@@ -81,6 +70,7 @@ function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
     preorderCloses: isPreOrder ? formatDate(v.preorder_end_date) : undefined,
     maxPreorderQuantity: isPreOrder ? (v.preorder_stock_limit ?? undefined) : undefined,
     currentPreorderQuantity: isPreOrder ? v.preordered_quantity : undefined,
+    minPreorderQuantity: isPreOrder ? (v.preorder_min_quantity ?? undefined) : undefined,
     preorderStatus,
   };
 }
@@ -189,6 +179,8 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     specs: toSpecs(api.specs),
     highlights: highlights.length ? highlights : undefined,
     metaKeywords: api.meta_keywords || undefined,
+    showQuestions: api.show_questions,
+    showPriceReport: api.show_price_report,
     sale: toSale(api.sale),
   };
   return applyVariant(base, preferred);

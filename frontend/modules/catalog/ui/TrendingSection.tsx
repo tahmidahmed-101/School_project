@@ -43,7 +43,7 @@ export function TrendingSection({ products, title, showViewAllLink = true, filte
         <ProductCardGrid
           products={sourceProducts}
           evenOnMobile
-          className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+          className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
         />
       </Container>
     </section>

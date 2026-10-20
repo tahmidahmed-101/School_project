@@ -85,6 +85,8 @@ export interface ApiVariant {
   is_preorder_price_applied: boolean;
   /** Pre-order cap; null when the pre-order has no limit. */
   preorder_stock_limit: number | null;
+  /** Fewest units one pre-order of this variant may place; null on a stock variant. Optional: absent on an older API. */
+  preorder_min_quantity?: number | null;
   /** Quantity already committed on non-cancelled orders. */
   preordered_quantity: number;
   /** `max(limit - preordered_quantity, 0)`; null when there is no limit. */
@@ -122,6 +124,9 @@ export interface ApiProduct {
   description?: string;
   /** SEO keywords, comma separated. Present on the detail endpoint only. */
   meta_keywords?: string;
+  /** Per-product switches for the Questions and Price report sections. Present on the detail endpoint only. */
+  show_questions?: boolean;
+  show_price_report?: boolean;
 }
 
 export interface ApiReview {
@@ -246,6 +251,8 @@ export interface ApiBusinessProfile {
   about?: ApiBilingual;
   /** Stock-order subtotal that earns free delivery; null or "0" means the offer is off. */
   free_delivery_min_amount?: string | null;
+  /** Accepted before placing a pre-order; both "" for none. Absent on backends that predate it. */
+  preorder_terms?: ApiBilingual;
 }
 
 type ApiLocalizedText = { en: string; bn: string };
@@ -267,9 +274,26 @@ export interface ApiPromoLine {
   placement: "home" | "preorder" | "both";
 }
 
+/** A popup campaign the backend says may show now, highest priority first. `href` is already resolved. */
+export interface ApiPromotionPopup {
+  id: string;
+  /** Absolute URL. */
+  image: string;
+  /** Where clicking the image goes; null when the popup has no destination. */
+  href: string | null;
+  /** The shop whose pages show it: stock (home, stock listing and products) or pre-order. */
+  shop: "stock" | "preorder";
+  starts_at: string | null;
+  ends_at: string | null;
+  /** The sale a campaign-page popup promotes; null for other destinations. */
+  sale: ApiProductSale | null;
+}
+
 export interface ApiStorefrontContent {
   hero_slides: ApiHeroSlide[];
   promo_lines: ApiPromoLine[];
+  /** Popups that may show now, highest priority first; absent on an API from before popup campaigns existed. */
+  promotion_popups?: ApiPromotionPopup[];
 }
 
 export interface ApiPaymentMethod {

@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from apps.catalog.models import ProductVariant
 from apps.catalog.services.kind_rules import (
+    PREORDER_FIELD_DEFAULTS,
     PREORDER_ONLY_FIELDS,
     STOCK_ONLY_FIELDS,
     STOCK_ONLY_STOCK_ITEM_FIELDS,
@@ -16,6 +17,8 @@ from apps.inventory.models import StockItem
 
 
 def _cleared(field: str):
+    if field in PREORDER_FIELD_DEFAULTS:
+        return PREORDER_FIELD_DEFAULTS[field]
     return False if field == "is_preorder_enabled" else None
 
 

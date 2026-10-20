@@ -37,6 +37,8 @@ export interface SkuVariant {
   /** Pre-order cap; undefined when the pre-order has no limit. */
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
+  /** Fewest units one pre-order may place; undefined on a stock SKU. */
+  minPreorderQuantity?: number;
   preorderStatus?: PreorderStatus;
 }
 
@@ -91,6 +93,9 @@ export interface Product {
   highlights?: T[];
   /** SEO keywords from the product detail endpoint. */
   metaKeywords?: string;
+  /** False when staff turned the Questions / Price report sections off for this product (detail endpoint only). */
+  showQuestions?: boolean;
+  showPriceReport?: boolean;
   /** Which shop the product belongs to, from its category. */
   kind: "stock" | "preorder";
   // Pre-order attributes
@@ -102,6 +107,7 @@ export interface Product {
   preorderCloses?: T;
   maxPreorderQuantity?: number;
   currentPreorderQuantity?: number;
+  minPreorderQuantity?: number;
   preorderStatus?: PreorderStatus;
 }
 

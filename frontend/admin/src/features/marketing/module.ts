@@ -8,5 +8,6 @@ export const marketingModule: FeatureModule = {
     { path: "coupons", lazy: page(() => import("./components/Coupons")) },
     { path: "coupon_form/:id", lazy: page(() => import("./components/CouponForm")) },
     { path: "subscribers", lazy: page(() => import("./components/Subscribers")) },
+    { path: "promotion_popups", lazy: page(() => import("./components/PromotionPopups")) },
   ],
 }

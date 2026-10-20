@@ -172,3 +172,29 @@ def test_free_delivery_amount_is_set_by_staff_and_read_by_the_storefront(api_cli
     api_client.force_authenticate(user=admin_user)
     cleared = api_client.patch(ENDPOINT, {"free_delivery_min_amount": None}, format="json")
     assert cleared.data["data"]["free_delivery_min_amount"] is None
+
+
+def test_preorder_terms_are_set_by_staff_and_read_by_the_storefront(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    assert api_client.get(ENDPOINT).data["data"]["preorder_terms_en"] == ""
+
+    english = "Advance payment is non-refundable.\nDates may change."
+    saved = api_client.patch(
+        ENDPOINT,
+        {"preorder_terms_en": f"  {english}  ", "preorder_terms_bn": "অগ্রিম অর্থ ফেরতযোগ্য নয়।"},
+        format="json",
+    )
+    api_client.force_authenticate(user=None)
+    public = api_client.get("/api/v1/public/business-profile/")
+
+    assert saved.status_code == 200, saved.data
+    # Line breaks kept; only the outer whitespace is trimmed.
+    assert saved.data["data"]["preorder_terms_en"] == english
+    assert public.data["data"]["preorder_terms"] == {
+        "en": english,
+        "bn": "অগ্রিম অর্থ ফেরতযোগ্য নয়।",
+    }
+
+    api_client.force_authenticate(user=admin_user)
+    cleared = api_client.patch(ENDPOINT, {"preorder_terms_en": ""}, format="json")
+    assert cleared.data["data"]["preorder_terms_en"] == ""

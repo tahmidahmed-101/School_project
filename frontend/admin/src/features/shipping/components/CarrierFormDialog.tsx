@@ -207,7 +207,9 @@ export function CarrierFormDialog({ open, onOpenChange, carrier, onSaved }: Carr
         <SwitchField
           control={control}
           name="is_active"
-          label="Active"
+          label="Status"
+          onLabel="Active"
+          offLabel="Inactive"
           description="Inactive carriers aren't offered for new shipments."
         />
       )}

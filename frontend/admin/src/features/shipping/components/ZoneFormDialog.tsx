@@ -115,7 +115,7 @@ export function ZoneFormDialog({ open, onOpenChange, zone, kind, onSaved }: Zone
         error={errors.areas}
         {...register("areas")}
       />
-      {zone && <SwitchField control={control} name="is_active" label="Active" />}
+      {zone && <SwitchField control={control} name="is_active" label="Status" onLabel="Active" offLabel="Inactive" />}
     </FormDialog>
   )
 }

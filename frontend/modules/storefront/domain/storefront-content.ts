@@ -1,4 +1,5 @@
-import type { ApiHeroSlide, ApiStorefrontContent } from "@/lib/api/types";
+import type { ApiHeroSlide, ApiPromotionPopup, ApiStorefrontContent } from "@/lib/api/types";
+import { toNumber } from "@/lib/api/parse";
 import type { Product, T } from "@/lib/types";
 import { getDiscountPercent } from "@/lib/product";
 import type { HeroSlide } from "./hero-content";
@@ -9,10 +10,27 @@ export interface ManagedHeroSlide extends HeroSlide {
   placement: ApiHeroSlide["placement"];
 }
 
-/** Hero slides and promo lines published in the dashboard. */
+/** The shop a popup belongs to; it shows on that shop's pages. */
+export type PopupShop = ApiPromotionPopup["shop"];
+
+/** A dashboard popup campaign: one image, where clicking it goes (null: nowhere), and when it may show. */
+export interface PromotionPopup {
+  id: string;
+  image: string;
+  href: string | null;
+  shop: PopupShop;
+  /** Epoch ms; null means open-ended. */
+  startsAt: number | null;
+  endsAt: number | null;
+  sale?: { name: string; percentOff: number };
+}
+
+/** Hero slides, promo lines and the popup campaigns, as published in the dashboard. */
 export interface StorefrontContent {
   heroSlides: ManagedHeroSlide[];
   promoLines: { text: T; placement: ApiHeroSlide["placement"] }[];
+  /** Highest priority first. */
+  promotionPopups: PromotionPopup[];
 }
 
 function localized(value: Partial<T> | null | undefined): T {
@@ -25,6 +43,43 @@ function safeLink(value: string | null | undefined): string | undefined {
   const link = value?.trim() ?? "";
   if (/^https?:\/\//i.test(link)) return link;
   return link.startsWith("/") && !link.startsWith("//") ? link : undefined;
+}
+
+function toTime(value: string | null | undefined): number | null {
+  const time = value ? Date.parse(value) : NaN;
+  return Number.isNaN(time) ? null : time;
+}
+
+/**
+ * The popup, or null without an image or with an unsafe link, so it can never become a script link.
+ * A popup with no destination (null href) is kept: it shows the image without a link.
+ */
+export function toPromotionPopup(api: ApiPromotionPopup): PromotionPopup | null {
+  const href = api.href ? safeLink(api.href) : null;
+  if (!api.image || href === undefined) return null;
+  return {
+    id: api.id,
+    image: api.image,
+    href,
+    shop: api.shop === "preorder" ? "preorder" : "stock",
+    startsAt: toTime(api.starts_at),
+    endsAt: toTime(api.ends_at),
+    ...(api.sale ? { sale: { name: api.sale.name, percentOff: toNumber(api.sale.percent_off) } } : {}),
+  };
+}
+
+/**
+ * The popup to show on a page of `shop`: the first (highest priority) one of that shop that is inside its schedule at `now`. The API already filters by schedule, but its answer is cached, so the times are checked again here.
+ */
+export function pickPromotionPopup(popups: PromotionPopup[], shop: PopupShop, now: number): PromotionPopup | null {
+  return (
+    popups.find(
+      (popup) =>
+        popup.shop === shop &&
+        (popup.startsAt === null || popup.startsAt <= now) &&
+        (popup.endsAt === null || now < popup.endsAt),
+    ) ?? null
+  );
 }
 
 export function toStorefrontContent(api: ApiStorefrontContent): StorefrontContent {
@@ -43,6 +98,9 @@ export function toStorefrontContent(api: ApiStorefrontContent): StorefrontConten
     promoLines: (api.promo_lines ?? [])
       .map((line) => ({ text: localized(line.text), placement: line.placement }))
       .filter((line) => line.text.en !== ""),
+    promotionPopups: (api.promotion_popups ?? [])
+      .map(toPromotionPopup)
+      .filter((popup): popup is PromotionPopup => popup !== null),
   };
 }
 

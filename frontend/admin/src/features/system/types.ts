@@ -30,6 +30,9 @@ export interface BusinessProfile {
   youtube_url: string
   linkedin_url: string
   preorder_deposit_percent: string
+  /** Accepted before placing a pre-order; both "" = none. */
+  preorder_terms_en: string
+  preorder_terms_bn: string
   free_delivery_min_amount: string | null
   about_en: string
   about_bn: string
@@ -123,6 +126,61 @@ export interface PromoLine {
 }
 
 export type PromoLineInput = Omit<PromoLine, "id">
+
+// ---- promotion popups (/admin/settings/promotion-popups/) ----
+
+/** As the storefront sees it: a switched-on popup is scheduled before its start and expired after its end. */
+export type PopupDisplayStatus = "inactive" | "scheduled" | "active" | "expired"
+/** The shop a popup belongs to: stock popups show on the stock storefront pages, pre-order ones on the pre-order pages. */
+export type PopupShop = "stock" | "preorder"
+/** `none`: the image alone, with no link. */
+export type PopupDestination = "none" | "product" | "category" | "campaign" | "url"
+
+export interface PromotionPopup {
+  id: string
+  /** Absolute URL. Every popup has one. */
+  image: string | null
+  created_at: string
+  name: string
+  /** Switched on; the schedule then decides when it shows. */
+  is_active: boolean
+  display_status: PopupDisplayStatus
+  /** Higher shows first when several popups could show on the same page. */
+  priority: number
+  /** Null: no limit on that side. */
+  starts_at: string | null
+  ends_at: string | null
+  /** Fixed once created. */
+  shop: PopupShop
+  destination_type: PopupDestination
+  /** Only the one matching `destination_type` is set. */
+  /** `image`: the product's main photo, or null. */
+  product: { id: string; name: string; slug: string; image: string | null } | null
+  category: { id: string; name: string; slug: string; category_type: "stock" | "preorder" } | null
+  sale: {
+    id: string
+    name: string
+    percent_off: string
+    status: "scheduled" | "running" | "ended" | "off" | "deleted"
+  } | null
+  /** The custom URL destination: a site path or an http(s) address. */
+  link_url: string
+}
+
+export interface PromotionPopupInput {
+  name: string
+  is_active: boolean
+  priority: number
+  starts_at: string | null
+  ends_at: string | null
+  /** Sent on create only. */
+  shop: PopupShop
+  destination_type: PopupDestination
+  product_id: string | null
+  category_id: string | null
+  sale_id: string | null
+  link_url: string
+}
 
 // ---- store policies (/admin/settings/policies/) ----
 
