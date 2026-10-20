@@ -9,7 +9,7 @@ from apps.catalog.factories import ProductVariantFactory
 from apps.catalog.models import Category
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
-from apps.inventory.models import StockLedgerEntry, StockTransfer
+from apps.inventory.models import StockItem, StockLedgerEntry, StockTransfer
 from apps.inventory.selectors.stock import get_stock_item
 from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement, reserve_stock
@@ -155,3 +155,19 @@ def test_transfer_api_creates_and_lists_transfers(api_client, main, branch):
 
     detail = api_client.get(f"/api/v1/admin/inventory/transfers/{data['id']}/")
     assert detail.data["data"]["transfer_number"] == data["transfer_number"]
+
+
+def test_a_transfer_adds_no_records_in_other_warehouses(main, branch):
+    """Only the two warehouses of a transfer are touched: an empty record
+    deleted from a third one is not put back."""
+    third = create_warehouse(data={"name": "Third", "code": "TH", "kind": STOCK})
+    variant = ProductVariantFactory()
+    _receive(variant, main, 4, "5.00")
+    StockItem.objects.filter(variant=variant, warehouse=third).delete()
+
+    transfer_stock(
+        from_warehouse=main, to_warehouse=branch, lines=[{"variant": variant, "quantity": 1}]
+    )
+
+    assert not StockItem.objects.filter(variant=variant, warehouse=third).exists()
+    assert get_stock_item(variant=variant, warehouse=branch).quantity_on_hand == 1

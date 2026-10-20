@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.utils import datetime_from_epoch
 
 from apps.accounts.models import User, UserOTP
-from apps.accounts.selectors.users import get_active_otp, get_active_user_by_email
+from apps.accounts.selectors.users import active_users, get_active_otp, get_active_user_by_email
 from apps.accounts.services.sessions import revoke_all_sessions
 from apps.audit.services.audit import record_login_attempt
 from apps.business.services.email import EmailDeliveryError, send_email
@@ -33,7 +33,9 @@ def _generate_code() -> str:
     return generate_numeric_code(6)
 
 
-def consume_otp(*, user: User, purpose: str, code: str, error_message: str) -> UserOTP:
+def consume_otp(
+    *, user: User, purpose: str, code: str, error_message: str, consume: bool = True
+) -> UserOTP:
     """Check a submitted OTP and consume it, counting failures against the code.
 
     Every wrong guess increments `attempts` on the outstanding code; after
@@ -44,6 +46,9 @@ def consume_otp(*, user: User, purpose: str, code: str, error_message: str) -> U
     The same message is raised whether the code is wrong, expired, missing or
     locked — distinguishing them would tell an attacker whether they are
     guessing against a live code.
+
+    `consume=False` checks the code (still counting a wrong guess) but leaves
+    it usable, for a caller with more to validate before the code is spent.
 
     Must be called *outside* an enclosing `transaction.atomic()` block: the
     failed-attempt counter is written and then an exception is raised, so an
@@ -60,7 +65,8 @@ def consume_otp(*, user: User, purpose: str, code: str, error_message: str) -> U
         otp.record_failed_attempt()
         raise BusinessRuleViolationError(error_message, code="invalid_otp")
 
-    otp.consume()
+    if consume:
+        otp.consume()
     return otp
 
 
@@ -131,12 +137,18 @@ def rotate_refresh_token(refresh_token: str) -> dict[str, str]:
             "Invalid refresh token.", code="auth_invalid_refresh"
         ) from exc
 
+    # A token outlives its account: one for a user since deleted or switched
+    # off must end the session (401), not crash while it is blacklisted
+    # against a user row that no longer exists.
+    user_id = token.get(api_settings.USER_ID_CLAIM)
+    if user_id is None or not active_users().filter(pk=user_id).exists():
+        raise BusinessRuleViolationError("Invalid refresh token.", code="auth_invalid_refresh")
+
     result = {"access": str(token.access_token)}
     if not api_settings.ROTATE_REFRESH_TOKENS:
         return result
 
     session_end = token["exp"]
-    user_id = token.get(api_settings.USER_ID_CLAIM)
 
     if api_settings.BLACKLIST_AFTER_ROTATION:
         # token_blacklist app not installed — rotation still applies.
@@ -264,16 +276,19 @@ def reset_password(*, email: str, code: str, new_password: str) -> None:
     if user is None:
         raise BusinessRuleViolationError("Invalid or expired reset code.", code="invalid_otp")
 
-    # Validate the new password first so a rejected one doesn't burn the code
-    # and force the user to request another.
-    validate_password(new_password, user=user)
-    # Outside any transaction — `consume_otp` records failed attempts.
-    consume_otp(
+    # The code first, so a wrong one is reported as such (and counted as a
+    # guess) whatever the password; but it is only spent once the new
+    # password is accepted, so a rejected password doesn't force the user to
+    # request another code. Outside any transaction: failed attempts are kept.
+    otp = consume_otp(
         user=user,
         purpose=UserOTP.Purpose.PASSWORD_RESET,
         code=code,
         error_message="Invalid or expired reset code.",
+        consume=False,
     )
+    validate_password(new_password, user=user)
+    otp.consume()
 
     with transaction.atomic():
         user.set_password(new_password)

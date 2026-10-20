@@ -38,7 +38,10 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
     for line in lines:
         per_unit = expand_variant(line.variant, 1)
         available: dict = {}
-        for item in lock_variant_stock([component.id for component, _ in per_unit]):
+        # Only rows that exist hold stock to allocate; none are created.
+        for item in lock_variant_stock(
+            [component.id for component, _ in per_unit], create_missing=False
+        ):
             warehouse = item.warehouse
             if (
                 warehouse.kind == KIND_PREORDER

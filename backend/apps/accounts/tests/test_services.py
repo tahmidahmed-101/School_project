@@ -174,6 +174,32 @@ def test_reset_password_requires_valid_password_reset_otp():
     assert user.check_password("NewStrongPass123!")
 
 
+def test_a_wrong_reset_code_is_reported_as_such_even_with_a_weak_password():
+    user = make_user(email="weak-and-wrong@example.com", password="OldStrongPass123!")
+    request_password_reset(user.email)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        reset_password(email=user.email, code="000000", new_password="weak")
+    assert exc.value.code == "invalid_otp"
+
+
+def test_a_rejected_new_password_leaves_the_reset_code_usable():
+    from django.core.exceptions import ValidationError
+
+    user = make_user(email="retry-password@example.com", password="OldStrongPass123!")
+    request_password_reset(user.email)
+    code = extract_otp_code(mail.outbox[-1].body)
+
+    with pytest.raises(ValidationError):
+        reset_password(email=user.email, code=code, new_password="weak")
+    reset_password(email=user.email, code=code, new_password="NewStrongPass123!")
+
+    user.refresh_from_db()
+    assert user.check_password("NewStrongPass123!")
+    with pytest.raises(BusinessRuleViolationError):
+        reset_password(email=user.email, code=code, new_password="OtherStrongPass456!")
+
+
 def test_profile_services_only_update_allowed_customer_fields():
     user = make_user(email="profile-service@example.com")
 

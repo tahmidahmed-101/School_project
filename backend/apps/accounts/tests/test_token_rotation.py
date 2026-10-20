@@ -113,3 +113,21 @@ def test_refresh_rejects_a_token_already_used_for_logout(api_client):
 
     response = _refresh(api_client, tokens["refresh"])
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize("gone", ["deleted", "deactivated"])
+def test_refreshing_for_a_user_who_is_gone_ends_the_session(api_client, gone):
+    """A browser can keep a refresh cookie for an account removed since: the
+    refresh must answer 401 (log in again), not fail with a server error."""
+    user = CustomerUserFactory()
+    tokens = authentication.issue_tokens(user)
+    if gone == "deleted":
+        user.delete()
+    else:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+    response = _refresh(api_client, tokens["refresh"])
+
+    assert response.status_code == 401
+    assert response.data["error"]["code"] == "auth_invalid_refresh"

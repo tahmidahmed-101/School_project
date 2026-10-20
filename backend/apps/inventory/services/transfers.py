@@ -76,10 +76,12 @@ def transfer_stock(
         raise BusinessRuleViolationError("A transfer needs at least one line.", code="no_lines")
     merged = _merged_lines(lines)
 
-    # Every warehouse row of these variants, locked in one consistent order,
-    # so two transfers running opposite ways cannot deadlock.
+    # The rows of these variants in the two warehouses, locked in one
+    # consistent order, so two transfers running opposite ways cannot
+    # deadlock. Other warehouses are left alone.
     locked = {
-        (item.variant_id, item.warehouse_id): item for item in lock_variant_stock(merged.keys())
+        (item.variant_id, item.warehouse_id): item
+        for item in lock_variant_stock(merged.keys(), warehouse_ids=[source.pk, destination.pk])
     }
 
     transfer = StockTransfer.objects.create(

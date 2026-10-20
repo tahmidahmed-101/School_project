@@ -139,14 +139,19 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
 
 
 @transaction.atomic
-def lock_variant_stock(variant_ids) -> list[StockItem]:
-    """Row-lock every stock row of these variants in every warehouse, for the
-    rest of the transaction.
+def lock_variant_stock(
+    variant_ids, *, warehouse_ids=None, create_missing: bool = True
+) -> list[StockItem]:
+    """Row-lock every stock row of these variants in every warehouse (or only
+    in `warehouse_ids`), for the rest of the transaction.
 
     Rows missing for a warehouse of the variant's kind are first created at
     zero (the same cache-fill as `materialize_stock_items`), so a concurrent first movement or
     reservation there blocks on the unique (variant, warehouse) row instead of
     slipping in unseen. Movements and reservations lock these same rows.
+    Limiting it to the warehouses a caller touches, or `create_missing=False`
+    for a caller that only reads what is there, keeps it from putting back
+    empty records staff deleted.
     """
     variant_ids = list(variant_ids)
     kind_by_variant = dict(
@@ -154,7 +159,11 @@ def lock_variant_stock(variant_ids) -> list[StockItem]:
             "id", "product__category__category_type"
         )
     )
-    warehouses = list(all_warehouses().values_list("id", "kind"))
+    warehouse_queryset = all_warehouses()
+    if warehouse_ids is not None:
+        warehouse_ids = list(warehouse_ids)
+        warehouse_queryset = warehouse_queryset.filter(id__in=warehouse_ids)
+    warehouses = list(warehouse_queryset.values_list("id", "kind"))
     existing = set(
         StockItem.objects.filter(variant_id__in=variant_ids).values_list(
             "variant_id", "warehouse_id"
@@ -166,7 +175,7 @@ def lock_variant_stock(variant_ids) -> list[StockItem]:
         for warehouse_id, warehouse_kind in warehouses
         if warehouse_kind == kind and (variant_id, warehouse_id) not in existing
     ]
-    if missing:
+    if missing and create_missing:
         StockItem.objects.bulk_create(
             [
                 StockItem(
@@ -178,12 +187,11 @@ def lock_variant_stock(variant_ids) -> list[StockItem]:
             ],
             ignore_conflicts=True,
         )
-    return list(
-        StockItem.objects.select_for_update()
-        .select_related("variant", "warehouse")
-        .filter(variant_id__in=variant_ids)
-        .order_by("pk")
-    )
+    rows = StockItem.objects.select_for_update().select_related("variant", "warehouse")
+    rows = rows.filter(variant_id__in=variant_ids)
+    if warehouse_ids is not None:
+        rows = rows.filter(warehouse_id__in=warehouse_ids)
+    return list(rows.order_by("pk"))
 
 
 @transaction.atomic
