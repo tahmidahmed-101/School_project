@@ -2,6 +2,10 @@ from django.urls import path
 
 from .views import (
     AdminBusinessProfileView,
+    AdminConversionTrackingDetailView,
+    AdminConversionTrackingListView,
+    AdminEmailSettingsView,
+    AdminEmailTestView,
     AdminHeroSlideDetailView,
     AdminHeroSlideListView,
     AdminIntegrationStatusView,
@@ -21,6 +25,18 @@ from .views import (
 urlpatterns = [
     path("business-profile/", AdminBusinessProfileView.as_view(), name="business-profile"),
     path("integrations/", AdminIntegrationStatusView.as_view(), name="integration-status"),
+    path("email/", AdminEmailSettingsView.as_view(), name="email-settings"),
+    path("email/test/", AdminEmailTestView.as_view(), name="email-test"),
+    path(
+        "conversion-tracking/",
+        AdminConversionTrackingListView.as_view(),
+        name="conversion-tracking-list",
+    ),
+    path(
+        "conversion-tracking/<str:provider>/",
+        AdminConversionTrackingDetailView.as_view(),
+        name="conversion-tracking-detail",
+    ),
     path("modules/", AdminModuleListView.as_view(), name="module-list"),
     path("payment-methods/", AdminPaymentMethodListView.as_view(), name="payment-method-list"),
     path(

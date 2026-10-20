@@ -303,9 +303,9 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
     if new_status == SalesOrder.Status.CONFIRMED and previous != SalesOrder.Status.SHIPPED:
-        from apps.orders.services.payments import _assess_order_risk
+        from apps.orders.services.payments import _order_confirmed
 
-        _assess_order_risk(order)
+        _order_confirmed(order)
     log_action(
         actor=actor,
         action="order.status_overridden",

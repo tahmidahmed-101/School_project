@@ -112,3 +112,10 @@ class PriceReportRateThrottle(SettingsRateMixin, UserRateThrottle):
     the whole catalog."""
 
     scope = "price_report"
+
+
+class EmailTestRateThrottle(SettingsRateMixin, UserRateThrottle):
+    """Per-user cap on dashboard test emails: each opens an SMTP session to a
+    server an administrator typed in."""
+
+    scope = "email_test"

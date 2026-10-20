@@ -11,6 +11,8 @@ ERROR_STATUS_CODES = {
     "admin_required": status.HTTP_403_FORBIDDEN,
     "auth_invalid_credentials": status.HTTP_401_UNAUTHORIZED,
     "auth_invalid_refresh": status.HTTP_401_UNAUTHORIZED,
+    # The mail server could not take a message right now (apps.business.services.email).
+    "email_unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 # Suffix/prefix fallbacks so new domain codes get a sane status without being
