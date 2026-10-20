@@ -252,3 +252,100 @@ export interface StorePolicyRevision {
   current: StorePolicySnapshot
   created_at: string
 }
+
+// ---- Outgoing email (api/v1/admin/business AdminEmailSettingsSerializer) ----
+
+export type SmtpSecurity = "starttls" | "ssl" | "none"
+
+/** The SMTP server saved from the dashboard. Never carries the password. */
+export interface EmailDashboardServer {
+  is_enabled: boolean
+  /** Enabled, complete and its password readable: it is the one sending mail. */
+  is_active: boolean
+  host: string
+  port: number
+  security: SmtpSecurity
+  username: string
+  password_status: "set" | "missing" | "unreadable" | "not_needed"
+  password_updated_at: string | null
+  from_name: string
+  from_email: string
+  last_test_at: string | null
+  last_test_accepted: boolean | null
+  last_test_reason: string
+  updated_at: string
+  updated_by_id: string | null
+}
+
+/** The server's own EMAIL_* environment settings, used when no dashboard server is in force. */
+export interface EmailEnvironmentServer {
+  backend: string
+  sends_real_email: boolean
+  host: string
+  port: number | null
+  security: string
+  has_credentials: boolean
+  from_email: string
+}
+
+export interface EmailSettings {
+  source: "dashboard" | "environment"
+  /** False while mail only goes to the console log or a test backend. */
+  sends_real_email: boolean
+  /** The server has SECRETS_ENCRYPTION_KEYS, so a password can be saved. */
+  encryption_available: boolean
+  environment: EmailEnvironmentServer
+  dashboard: EmailDashboardServer | null
+}
+
+/** AdminEmailSettingsUpdateSerializer: send only what changes; omit `password` to keep it. */
+export interface EmailSettingsPayload {
+  host?: string
+  port?: number
+  security?: SmtpSecurity
+  username?: string
+  password?: string
+  from_name?: string
+  from_email?: string
+  is_enabled?: boolean
+}
+
+/** AdminEmailTestResultSerializer */
+export interface EmailTestResult {
+  /** The SMTP server took the message; not proof it reached the inbox. */
+  accepted: boolean
+  reason: string
+  source: string
+  recipient: string
+}
+
+// ---- Server-side conversion tracking (AdminConversionProviderSerializer) ----
+
+export type ConversionProviderKey = "ga4" | "meta"
+
+export interface ConversionProvider {
+  provider: ConversionProviderKey
+  label: string
+  /** Who decides this provider's settings: saved here, the server environment, or nobody (off). */
+  source: "dashboard" | "environment" | "none"
+  is_enabled: boolean
+  /** Confirmed orders are being sent to it now. */
+  is_active: boolean
+  /** GA4 Measurement ID or Meta Pixel ID. Not a secret. */
+  tracking_id: string
+  secret_status: "set" | "missing" | "unreadable"
+  secret_updated_at: string | null
+  test_event_code: string
+  environment_configured: boolean
+  encryption_available: boolean
+  updated_at: string | null
+  updated_by_id: string | null
+}
+
+/** AdminConversionProviderUpdateSerializer: omit `secret` to keep the saved one. */
+export interface ConversionProviderPayload {
+  tracking_id?: string
+  secret?: string
+  test_event_code?: string
+  is_enabled?: boolean
+}

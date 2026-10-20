@@ -142,6 +142,8 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 - Payment methods per shop: Cash, COD, Card, bKash, Nagad, bank
 - Shipping, returns and refund policies with publish and revision history
 - Pre-order settings: deposit %, returns, terms
+- Email: the shop's own mail server (SMTP) for password reset and verification codes, with a test email
+- Tracking: confirmed orders sent to Google Analytics 4 and Meta as Purchase events (server-side)
 
 ## Tech stack
 
@@ -157,5 +159,5 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 > **Known gaps** — found in code, not working yet:
 >
 > - No online payment gateway (payments are recorded manually)
-> - Email sending is not configured for production (SMTP), so password reset codes are not delivered there yet
+> - Production needs SECRETS_ENCRYPTION_KEYS set before the mail server or tracking secrets can be saved
 > - Missing: email campaigns

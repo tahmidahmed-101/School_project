@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Boxes, CreditCard, FileText, Images, Plug, Store } from "lucide-react"
+import { BarChart3, Boxes, CreditCard, FileText, Images, Mail, Plug, Store } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useAppDispatch } from "@/app/hooks"
@@ -18,7 +18,9 @@ import { BusinessProfileForm } from "./settings/BusinessProfileForm"
 import { ModulesPanel } from "./settings/ModulesPanel"
 import { PoliciesPanel } from "./settings/PoliciesPanel"
 import { PaymentMethodsPanel } from "./settings/PaymentMethodsPanel"
+import { EmailPanel } from "./settings/EmailPanel"
 import { IntegrationsPanel } from "./settings/IntegrationsPanel"
+import { TrackingPanel } from "./settings/TrackingPanel"
 import { StorefrontContentPanel } from "./settings/StorefrontContentPanel"
 
 const TABS = [
@@ -27,6 +29,8 @@ const TABS = [
   { value: "modules", label: "Modules", icon: Boxes },
   { value: "payments", label: "Payment methods", icon: CreditCard },
   { value: "policies", label: "Store policies", icon: FileText },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "tracking", label: "Tracking", icon: BarChart3 },
   { value: "integrations", label: "Integrations", icon: Plug },
 ] as const
 
@@ -85,6 +89,12 @@ const Settings = () => {
         </TabsContent>
         <TabsContent value="policies" className="mt-4">
           <PoliciesPanel />
+        </TabsContent>
+        <TabsContent value="email" className="mt-4">
+          <EmailPanel canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="tracking" className="mt-4">
+          <TrackingPanel canManage={canManage} />
         </TabsContent>
         <TabsContent value="integrations" className="mt-4">
           <IntegrationsPanel />
