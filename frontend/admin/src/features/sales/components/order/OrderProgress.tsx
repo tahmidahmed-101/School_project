@@ -103,11 +103,17 @@ export function OrderProgress({ order }: { order: Order }) {
                 </span>
                 <span className={cn("h-0.5 flex-1", last ? "invisible" : i < done - 1 ? "bg-primary" : "bg-border")} />
               </div>
+              {/* Each label keeps to its own column. On phones only the step the order is at
+                  is named, so six labels never crowd into each other. */}
               <span
                 className={cn(
-                  "truncate text-xs",
+                  "w-full truncate px-0.5 text-xs",
+                  step.state !== "current" && step.state !== "exit"
+                    ? "max-sm:invisible"
+                    : "max-sm:w-max max-sm:overflow-visible",
                   step.state === "exit" ? "font-medium text-destructive" : reached || step.state === "current" ? "font-medium text-foreground" : "text-muted-foreground"
                 )}
+                title={step.label}
               >
                 {step.label}
               </span>

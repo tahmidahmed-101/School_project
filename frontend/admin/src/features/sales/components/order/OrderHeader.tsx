@@ -7,16 +7,14 @@ import { useAppDispatch } from "@/app/hooks"
 import { deleteData } from "@/features/sales/slices/orderSlice"
 import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
 import type { Order } from "@/features/sales/types"
-import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { SubmitButton } from "@/components/common/FormActions"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useCan } from "@/hooks/use-can"
 import { api, getApiErrorMessage } from "@/lib/api/client"
 import { downloadFile } from "@/lib/download"
 import { formatDateTime } from "@/lib/format"
-import { OrderActions } from "./OrderActions"
+import { OrderActions, type OrderMenuItem } from "./OrderActions"
 import { OrderEditDialog } from "./OrderEditDialog"
 
 const DELETE_WARNING = {
@@ -26,7 +24,7 @@ const DELETE_WARNING = {
     "This permanently removes the pre-order together with its payments, shipments and returns. It can't be undone. To keep the record, cancel the pre-order instead.",
 }
 
-/** Title, back link and the buttons every order has: invoice, risk check, edit, delete. */
+/** Title, back link and the order's buttons; invoice, risk check, edit and delete join its "More actions" menu. */
 export function OrderHeader({ order, refresh, badges }: { order: Order; refresh: () => void; badges?: ReactNode }) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -39,6 +37,7 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
   const [checking, setChecking] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
     try {
@@ -74,6 +73,20 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
     }
   }
 
+  const menuItems: OrderMenuItem[] = [
+    {
+      label: downloading ? "Preparing invoice…" : "Invoice PDF",
+      icon: FileText,
+      onSelect: handleInvoice,
+      disabled: downloading,
+    },
+    ...(canAssessRisk
+      ? [{ label: checking ? "Checking risk…" : "Check risk", icon: ShieldAlert, onSelect: handleRiskCheck, disabled: checking }]
+      : []),
+    ...(canManage ? [{ label: "Edit details", icon: PencilIcon, onSelect: () => setEditing(true) }] : []),
+    ...(canManage ? [{ label: `Delete ${noun}`, icon: Trash2, onSelect: () => setDeleting(true), destructive: true }] : []),
+  ]
+
   return (
     <>
       <PageHeader
@@ -89,43 +102,19 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
           </>
         }
         description={`Placed on ${formatDateTime(order.created_at)}`}
-        actions={
-          <>
-            <OrderActions order={order} refresh={refresh} />
-            <SubmitButton type="button" loading={downloading} icon={FileText} variant="outline" onClick={handleInvoice}>
-              Invoice PDF
-            </SubmitButton>
-            {canAssessRisk && (
-              <Button variant="outline" onClick={handleRiskCheck} disabled={checking}>
-                <ShieldAlert className="size-4" />
-                Check risk
-              </Button>
-            )}
-            {canManage && (
-              <Button variant="outline" onClick={() => setEditing(true)}>
-                <PencilIcon className="size-4" />
-                Edit details
-              </Button>
-            )}
-            {canManage && (
-              <ConfirmDialog
-                destructive
-                icon={<Trash2 />}
-                title={`Delete ${noun} ${order.order_number}?`}
-                description={DELETE_WARNING[kind]}
-                confirmLabel={`Delete ${noun}`}
-                cancelLabel={`Keep ${noun}`}
-                onConfirm={handleDelete}
-                trigger={
-                  <Button variant="destructive">
-                    <Trash2 className="size-4" />
-                    Delete
-                  </Button>
-                }
-              />
-            )}
-          </>
-        }
+        actions={<OrderActions order={order} refresh={refresh} menuItems={menuItems} />}
+      />
+
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={setDeleting}
+        destructive
+        icon={<Trash2 />}
+        title={`Delete ${noun} ${order.order_number}?`}
+        description={DELETE_WARNING[kind]}
+        confirmLabel={`Delete ${noun}`}
+        cancelLabel={`Keep ${noun}`}
+        onConfirm={handleDelete}
       />
 
       <OrderEditDialog order={order} open={editing} onOpenChange={setEditing} />

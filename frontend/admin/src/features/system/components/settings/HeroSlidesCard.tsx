@@ -1,24 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
-import type { ColumnDef } from "@tanstack/react-table"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { ImageIcon, Images, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { DataTable } from "@/components/common/data-table"
-import { TableActions } from "@/components/common/TableActions"
-import { ProductCell, TextCell, Thumbnail } from "@/components/common/cells"
+import { ImageIcon, Images } from "lucide-react"
+import { ProductCell, Thumbnail } from "@/components/common/cells"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { FormField, TextField } from "@/components/common/form-fields"
 import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteHeroSlide, fetchHeroSlides, saveHeroSlide } from "@/features/system/slices/businessSettingsSlice"
 import type { HeroSlide, ShopPlacement } from "@/features/system/types"
-import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
+import { getApiFieldErrors } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
+import { ContentListCard } from "./ContentListCard"
 import { onShop } from "./placement"
 
 const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
@@ -39,128 +34,48 @@ export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; p
   const dispatch = useAppDispatch()
   const { data: allSlides, status, error } = useAppSelector((state) => state.businessSettings.heroSlides)
   const data = useMemo(() => onShop(allSlides, placement), [allSlides, placement])
-  const [saving, setSaving] = useState<string | null>(null)
-  const [editing, setEditing] = useState<HeroSlide | null>(null)
-  const [formOpen, setFormOpen] = useState(false)
-
-  const toggle = async (slide: HeroSlide, is_active: boolean) => {
-    setSaving(slide.id)
-    try {
-      await dispatch(saveHeroSlide({ id: slide.id, values: { is_active } })).unwrap()
-      toast.success(`${slideName(slide)} ${is_active ? "shown" : "hidden"}`)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't update the slide"))
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  const handleDelete = async (slide: HeroSlide) => {
-    try {
-      await dispatch(deleteHeroSlide(slide.id)).unwrap()
-      toast.success(`${slideName(slide)} deleted`)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete slide"))
-    }
-  }
-
-  const columns: ColumnDef<HeroSlide>[] = [
-    {
-      id: "slide",
-      header: "SLIDE",
-      cell: ({ row }) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <Thumbnail src={row.original.image} icon={ImageIcon} className="w-16" />
-          <ProductCell name={slideName(row.original)} sub={row.original.link_url} />
-        </div>
-      ),
-    },
-    {
-      accessorKey: "sort_order",
-      header: "ORDER",
-      cell: ({ row }) => <TextCell value={row.original.sort_order} />,
-    },
-    {
-      id: "active",
-      header: "ACTIVE",
-      cell: ({ row }) => (
-        <Switch
-          aria-label={`Show ${slideName(row.original)} on the storefront`}
-          checked={row.original.is_active}
-          disabled={!canManage || saving === row.original.id}
-          onCheckedChange={(checked) => toggle(row.original, checked)}
-        />
-      ),
-    },
-    ...(canManage
-      ? [
-          {
-            id: "actions",
-            header: "ACTIONS",
-            cell: ({ row }) => (
-              <TableActions
-                itemName={slideName(row.original)}
-                onEdit={() => {
-                  setEditing(row.original)
-                  setFormOpen(true)
-                }}
-                onDelete={() => handleDelete(row.original)}
-              />
-            ),
-          } satisfies ColumnDef<HeroSlide>,
-        ]
-      : []),
-  ]
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{CARD_COPY[placement].title}</CardTitle>
-        <CardDescription>{CARD_COPY[placement].description}</CardDescription>
-        {canManage && (
-          <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Add slide
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent className="p-0">
-        <DataTable
-          embedded
-          showPagination={false}
-          columns={columns}
-          data={data}
-          isLoading={status === "loading" && !data.length}
-          error={status === "failed" && !data.length ? error : null}
-          onRetry={() => dispatch(fetchHeroSlides())}
-          emptyIcon={Images}
-          emptyTitle="No hero slides"
-          emptyDescription={placement === "home" ? "The storefront is showing its built-in slides." : undefined}
-          minWidth="520px"
-          columnWidths={["auto", "90px", "90px", ...(canManage ? ["80px"] : [])]}
-          unlabelledColumns={["actions"]}
-        />
-      </CardContent>
-
-      {canManage && (
+    <ContentListCard<HeroSlide>
+      title={CARD_COPY[placement].title}
+      description={CARD_COPY[placement].description}
+      addLabel="Add slide"
+      canManage={canManage}
+      items={data}
+      status={status}
+      error={error}
+      onRetry={() => dispatch(fetchHeroSlides())}
+      contentColumn={{
+        id: "slide",
+        header: "SLIDE",
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <Thumbnail src={row.original.image} icon={ImageIcon} className="w-16" />
+            <ProductCell name={slideName(row.original)} sub={row.original.link_url} />
+          </div>
+        ),
+      }}
+      itemName={slideName}
+      switchLabel={(slide) => `Show ${slideName(slide)} on the storefront`}
+      onToggle={(slide, is_active) => dispatch(saveHeroSlide({ id: slide.id, values: { is_active } })).unwrap()}
+      toggledMessage={(slide, isActive) => `${slideName(slide)} ${isActive ? "shown" : "hidden"}`}
+      toggleError="Couldn't update the slide"
+      onDelete={(slide) => dispatch(deleteHeroSlide(slide.id)).unwrap()}
+      deletedMessage={(slide) => `${slideName(slide)} deleted`}
+      deleteError="Failed to delete slide"
+      emptyIcon={Images}
+      emptyTitle="No hero slides"
+      emptyDescription={placement === "home" ? "The storefront is showing its built-in slides." : undefined}
+      renderForm={(form) => (
         <HeroSlideFormDialog
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          slide={editing}
+          open={form.open}
+          onOpenChange={form.onOpenChange}
+          slide={form.editing}
           placement={placement}
-          nextSortOrder={data.length ? Math.max(...data.map((s) => s.sort_order)) + 1 : 0}
+          nextSortOrder={form.nextSortOrder}
         />
       )}
-    </Card>
+    />
   )
 }
 

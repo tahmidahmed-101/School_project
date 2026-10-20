@@ -1,23 +1,17 @@
-import { useEffect, useMemo, useState } from "react"
-import type { ColumnDef } from "@tanstack/react-table"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Megaphone, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { DataTable } from "@/components/common/data-table"
-import { TableActions } from "@/components/common/TableActions"
-import { ProductCell, TextCell } from "@/components/common/cells"
+import { Megaphone } from "lucide-react"
+import { ProductCell } from "@/components/common/cells"
 import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deletePromoLine, fetchPromoLines, savePromoLine } from "@/features/system/slices/businessSettingsSlice"
 import type { PromoLine, ShopPlacement } from "@/features/system/types"
-import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
+import { ContentListCard } from "./ContentListCard"
 import { onShop } from "./placement"
 
 const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
@@ -37,125 +31,45 @@ export function PromoLinesCard({ canManage, placement }: { canManage: boolean; p
   const dispatch = useAppDispatch()
   const { data: allLines, status, error } = useAppSelector((state) => state.businessSettings.promoLines)
   const data = useMemo(() => onShop(allLines, placement), [allLines, placement])
-  const [saving, setSaving] = useState<string | null>(null)
-  const [editing, setEditing] = useState<PromoLine | null>(null)
-  const [formOpen, setFormOpen] = useState(false)
-
-  const toggle = async (line: PromoLine, is_active: boolean) => {
-    setSaving(line.id)
-    try {
-      await dispatch(savePromoLine({ id: line.id, values: { is_active } })).unwrap()
-      toast.success(`Promo line ${is_active ? "shown" : "hidden"}`)
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't update the promo line"))
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  const handleDelete = async (line: PromoLine) => {
-    try {
-      await dispatch(deletePromoLine(line.id)).unwrap()
-      toast.success("Promo line deleted")
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to delete promo line"))
-    }
-  }
-
-  const columns: ColumnDef<PromoLine>[] = [
-    {
-      id: "text",
-      header: "LINE",
-      cell: ({ row }) => (
-        <ProductCell name={row.original.text_en} sub={<span lang="bn">{row.original.text_bn}</span>} />
-      ),
-    },
-    {
-      accessorKey: "sort_order",
-      header: "ORDER",
-      cell: ({ row }) => <TextCell value={row.original.sort_order} />,
-    },
-    {
-      id: "active",
-      header: "ACTIVE",
-      cell: ({ row }) => (
-        <Switch
-          aria-label={`Show "${row.original.text_en}" on the storefront`}
-          checked={row.original.is_active}
-          disabled={!canManage || saving === row.original.id}
-          onCheckedChange={(checked) => toggle(row.original, checked)}
-        />
-      ),
-    },
-    ...(canManage
-      ? [
-          {
-            id: "actions",
-            header: "ACTIONS",
-            cell: ({ row }) => (
-              <TableActions
-                itemName={row.original.text_en}
-                onEdit={() => {
-                  setEditing(row.original)
-                  setFormOpen(true)
-                }}
-                onDelete={() => handleDelete(row.original)}
-              />
-            ),
-          } satisfies ColumnDef<PromoLine>,
-        ]
-      : []),
-  ]
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{CARD_COPY[placement].title}</CardTitle>
-        <CardDescription>{CARD_COPY[placement].description}</CardDescription>
-        {canManage && (
-          <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Add line
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent className="p-0">
-        <DataTable
-          embedded
-          showPagination={false}
-          columns={columns}
-          data={data}
-          isLoading={status === "loading" && !data.length}
-          error={status === "failed" && !data.length ? error : null}
-          onRetry={() => dispatch(fetchPromoLines())}
-          emptyIcon={Megaphone}
-          emptyTitle="No promo lines"
-          emptyDescription="The built-in lines are showing."
-          minWidth="520px"
-          columnWidths={["auto", "90px", "90px", ...(canManage ? ["80px"] : [])]}
-          unlabelledColumns={["actions"]}
-        />
-      </CardContent>
-
-      {canManage && (
+    <ContentListCard<PromoLine>
+      title={CARD_COPY[placement].title}
+      description={CARD_COPY[placement].description}
+      addLabel="Add line"
+      canManage={canManage}
+      items={data}
+      status={status}
+      error={error}
+      onRetry={() => dispatch(fetchPromoLines())}
+      contentColumn={{
+        id: "text",
+        header: "LINE",
+        cell: ({ row }) => (
+          <ProductCell name={row.original.text_en} sub={<span lang="bn">{row.original.text_bn}</span>} />
+        ),
+      }}
+      itemName={(line) => line.text_en}
+      switchLabel={(line) => `Show "${line.text_en}" on the storefront`}
+      onToggle={(line, is_active) => dispatch(savePromoLine({ id: line.id, values: { is_active } })).unwrap()}
+      toggledMessage={(_line, isActive) => `Promo line ${isActive ? "shown" : "hidden"}`}
+      toggleError="Couldn't update the promo line"
+      onDelete={(line) => dispatch(deletePromoLine(line.id)).unwrap()}
+      deletedMessage={() => "Promo line deleted"}
+      deleteError="Failed to delete promo line"
+      emptyIcon={Megaphone}
+      emptyTitle="No promo lines"
+      emptyDescription="The built-in lines are showing."
+      renderForm={(form) => (
         <PromoLineFormDialog
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          line={editing}
+          open={form.open}
+          onOpenChange={form.onOpenChange}
+          line={form.editing}
           placement={placement}
-          nextSortOrder={data.length ? Math.max(...data.map((l) => l.sort_order)) + 1 : 0}
+          nextSortOrder={form.nextSortOrder}
         />
       )}
-    </Card>
+    />
   )
 }
 

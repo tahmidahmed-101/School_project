@@ -7,9 +7,9 @@ import { formatCurrency } from "@/lib/format"
 import { OrderHeader } from "./OrderHeader"
 import { OrderLinesCard } from "./OrderLinesCard"
 import { OrderProgress } from "./OrderProgress"
-import { OrderSummaryCard } from "./OrderRecords"
+import { OrderOverview, OrderRecords } from "./OrderRecords"
 
-/** An order for items sold from the shelf: totals, the four-step journey, lines, records. */
+/** An order for items sold from the shelf: the journey, customer and totals, lines, then its records. */
 export function StockOrderDetail({ order, refresh }: { order: Order; refresh: () => void }) {
   const canManage = useCan("orders.manage")
   return (
@@ -18,9 +18,8 @@ export function StockOrderDetail({ order, refresh }: { order: Order; refresh: ()
 
       <OrderProgress order={order} />
 
-      <OrderSummaryCard
+      <OrderOverview
         order={order}
-        refresh={refresh}
         money={
           <section className="min-w-0 space-y-1">
             <h3 className="flex items-center gap-2 pb-1 text-base font-semibold">
@@ -50,6 +49,8 @@ export function StockOrderDetail({ order, refresh }: { order: Order; refresh: ()
       />
 
       <OrderLinesCard order={order} canManage={canManage} />
+
+      <OrderRecords order={order} refresh={refresh} />
     </div>
   )
 }

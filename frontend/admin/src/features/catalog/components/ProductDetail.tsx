@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Banknote, Boxes, CalendarClock, Coins, Edit, FolderTree, Hash, Link2, Package, PackageCheck, RotateCcw, Tag } from "lucide-react"
+import { Boxes, Edit, ListChecks, Package, RotateCcw, ScrollText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { IconLine } from "@/components/common/IconLine"
 import { DetailPageState } from "@/components/common/DetailPageState"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ActiveStatusBadge } from "@/components/common/cells"
@@ -17,6 +16,7 @@ import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency, formatDateTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
@@ -26,6 +26,41 @@ import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { savedOptionsOf } from "../lib/productKind"
 import { ProductVariantsSection } from "./ProductVariantsSection"
 import { ProductImagesSection } from "./ProductImagesSection"
+
+/** The product's main photo; the placeholder icon stands in when there is none or it fails to load. */
+function ProductPhoto({ src, name }: { src: string | null; name: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const showImage = src && failedSrc !== src
+  return (
+    <div className="flex aspect-square w-full max-w-44 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
+      {showImage ? (
+        <img src={src} alt={name} className="size-full object-cover" onError={() => setFailedSrc(src)} />
+      ) : (
+        <Package className="size-12 text-muted-foreground/40" aria-label="No photo" />
+      )}
+    </div>
+  )
+}
+
+/** One labelled figure (price, cost, stock, pre-order window...). */
+function Stat({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-1 truncate text-base font-semibold tabular-nums">{children}</dd>
+    </div>
+  )
+}
+
+/** One labelled fact in the details row (category, brand, slug). */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm font-medium">{children}</dd>
+    </div>
+  )
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -127,92 +162,89 @@ const ProductDetail = () => {
         }
       />
 
-      <Card>
-        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row">
-          <div className="flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-            {product.primary_image ? (
-              <img src={product.primary_image} alt={product.name} className="size-full object-cover" />
-            ) : (
-              <Package className="size-10 text-muted-foreground/40" />
-            )}
-          </div>
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardContent className="grid gap-6 py-5 sm:grid-cols-[11rem_1fr]">
+          <ProductPhoto src={product.primary_image} name={product.name} />
 
-          <div className="min-w-0 flex-1 space-y-3">
+          <div className="min-w-0 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <ActiveStatusBadge deleted={product.deleted_at} active={product.is_active} />
               {isBundle && <Badge variant="secondary">Bundle</Badge>}
-              {product.deleted_at && <span className="text-xs text-muted-foreground">{formatDateTime(product.deleted_at)}</span>}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <IconLine icon={FolderTree} label="Category">
-                {nameById.get(product.category_id) ?? "—"}
-              </IconLine>
-              {brandName && (
-                <IconLine icon={Tag} label="Brand">
-                  {brandName}
-                </IconLine>
+              {!isStock && <Badge variant="secondary">Pre-order</Badge>}
+              {product.deleted_at && (
+                <span className="text-xs text-muted-foreground">Deleted {formatDateTime(product.deleted_at)}</span>
               )}
-              <IconLine icon={Link2} label="Slug">
-                <span className="font-mono text-xs">{product.slug}</span>
-              </IconLine>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {price !== null && (
-                <IconLine icon={Banknote} label="Price">
-                  <span className="font-semibold">{formatCurrency(price)}</span>
+                <Stat label="Price">
+                  {formatCurrency(price)}
                   {isStock && product.discount_price && (
-                    <span className="ml-2 text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+                    <span className="ml-2 text-sm font-normal text-muted-foreground line-through">
+                      {formatCurrency(product.price)}
+                    </span>
                   )}
-                </IconLine>
+                </Stat>
               )}
-              {product.cost_price !== null && (
-                <IconLine icon={Coins} label="Cost">
-                  {formatCurrency(product.cost_price)}
-                </IconLine>
-              )}
-              {isStock && (
-                <IconLine icon={Boxes} label="Available stock">
-                  {product.total_stock}
-                </IconLine>
-              )}
+              {product.cost_price !== null && <Stat label="Cost">{formatCurrency(product.cost_price)}</Stat>}
+              {isStock && <Stat label="Available stock">{product.total_stock}</Stat>}
               {!isStock && settings?.preorder_start_date && (
-                <IconLine icon={CalendarClock} label="Pre-orders open">
-                  {formatDateTime(settings.preorder_start_date)}
-                  {settings.preorder_end_date && ` → ${formatDateTime(settings.preorder_end_date)}`}
-                </IconLine>
+                <Stat label="Pre-orders open">{formatDateTime(settings.preorder_start_date)}</Stat>
               )}
-              {!isStock && settings?.release_date && (
-                <IconLine icon={PackageCheck} label="Release date">
-                  {formatDateTime(settings.release_date)}
-                </IconLine>
+              {!isStock && settings?.preorder_end_date && (
+                <Stat label="Pre-orders close">{formatDateTime(settings.preorder_end_date)}</Stat>
               )}
+              {!isStock && settings?.release_date && <Stat label="Release date">{formatDateTime(settings.release_date)}</Stat>}
               {!isStock && settings?.preorder_stock_limit != null && (
-                <IconLine icon={Hash} label="Pre-order limit">
-                  {settings.preorder_stock_limit}
-                </IconLine>
+                <Stat label="Pre-order limit">{settings.preorder_stock_limit}</Stat>
               )}
               {!isStock && (settings?.preorder_min_quantity ?? 1) > 1 && (
-                <IconLine icon={Package} label="Minimum per order">
-                  {settings?.preorder_min_quantity}
-                </IconLine>
+                <Stat label="Minimum per order">{settings?.preorder_min_quantity}</Stat>
               )}
-            </div>
+            </dl>
 
-            {product.description && (
-              <p className="whitespace-pre-line break-words border-t border-border pt-3 text-sm">{product.description}</p>
-            )}
-
-            {product.highlights.length > 0 && (
-              <ul className="list-disc space-y-1 border-t border-border pt-3 pl-5 text-sm">
-                {product.highlights.map((h, i) => (
-                  <li key={i}>{h}</li>
-                ))}
-              </ul>
-            )}
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
+              <Fact label="Category">{nameById.get(product.category_id) ?? "—"}</Fact>
+              <Fact label="Brand">{brandName ?? "—"}</Fact>
+              <Fact label="Slug">
+                <span className="font-mono text-xs font-normal">{product.slug}</span>
+              </Fact>
+            </dl>
           </div>
         </CardContent>
+
+        {(product.description || product.highlights.length > 0) && (
+          <CardContent
+            className={cn(
+              "grid gap-6 border-t border-border bg-muted/20 py-5",
+              product.description && product.highlights.length > 0 && "md:grid-cols-[2fr_1fr]"
+            )}
+          >
+            {product.description && (
+              <section className="min-w-0">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <ScrollText className="size-4 text-primary" /> Description
+                </h3>
+                <p className="whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground">
+                  {product.description}
+                </p>
+              </section>
+            )}
+            {product.highlights.length > 0 && (
+              <section className="min-w-0">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <ListChecks className="size-4 text-primary" /> Highlights
+                </h3>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {product.highlights.map((h, i) => (
+                    <li key={i}>{h}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       {!product.deleted_at && (

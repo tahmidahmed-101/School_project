@@ -9,7 +9,7 @@ import { ReturnOutcome } from "@/features/shipping/components/ReturnOutcome"
 import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
 import { RECEIVABLE_BACK_STATUSES } from "@/features/shipping/types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { IconLine } from "@/components/common/IconLine"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useCan } from "@/hooks/use-can"
@@ -102,152 +102,189 @@ function OrderCustomerSection({ order }: { order: Order }) {
   )
 }
 
-function SectionTitle({ icon: Icon, label, count }: { icon: ComponentType<{ className?: string }>; label: string; count: number }) {
+/** A titled card for one kind of record (shipments, payments, returns), one row per record. */
+function RecordCard({
+  icon: Icon,
+  title,
+  count,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>
+  title: string
+  count: number
+  children: ReactNode
+}) {
   return (
-    <p className="flex items-center gap-2 pb-1 text-sm font-semibold">
-      <Icon className="size-4 text-primary" />
-      {label}
-      <span className="font-normal text-muted-foreground">{count}</span>
-    </p>
+    <Card className="min-w-0 overflow-hidden shadow-sm">
+      <CardHeader className="border-b bg-muted/30">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Icon className="size-4 text-primary" />
+          {title}
+          <span className="font-normal text-muted-foreground">({count})</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="divide-y divide-border">{children}</CardContent>
+    </Card>
   )
 }
 
-const ROW = "flex items-center justify-between gap-3 py-2 text-sm"
+const ROW = "flex items-center justify-between gap-3 py-3 text-sm"
 
-/** The order's payments, shipments and returns as plain rows; a section with nothing in it is left out. */
-function OrderRecordsSection({ order, refresh }: { order: Order; refresh: () => void }) {
-  const canReturn = useCan("returns.manage")
-  const canRefund = useCan("refunds.approve")
-
+function ShipmentsCard({ order, refresh }: { order: Order; refresh: () => void }) {
   return (
-    <div className="min-w-0 space-y-4">
-      {order.payments.length > 0 && (
-        <section>
-          <SectionTitle icon={CreditCard} label="Payments" count={order.payments.length} />
-          <div className="divide-y divide-border">
-            {order.payments.map((p) => (
-              <div key={p.id} className={ROW}>
-                <div className="min-w-0">
-                  <p className="font-medium">
-                    {formatCurrency(p.amount)} · {paymentMethodLabel(p.method)}
-                  </p>
-                  {(p.gateway_reference || Number(p.refunded_amount) > 0) && (
-                    <p className="truncate text-xs text-muted-foreground">
-                      {[p.gateway_reference && `Ref ${p.gateway_reference}`, Number(p.refunded_amount) > 0 && `Refunded ${formatCurrency(p.refunded_amount)}`]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <StatusBadge status={p.status} />
-                  <Button variant="ghost" size="icon" className="size-8" asChild>
-                    <Link
-                      to={`/payment_detail/${p.id}`}
-                      title={canRefund && p.status === "captured" ? "Refund" : "View"}
-                      aria-label={canRefund && p.status === "captured" ? "Refund" : "View payment"}
-                    >
-                      <Eye className="size-4" />
-                    </Link>
-                  </Button>
-                </div>
+    <RecordCard icon={Truck} title="Shipments" count={order.shipments.length}>
+      {order.shipments.map((s) => (
+        <div key={s.id} className="@container py-3 text-sm">
+          {/* Details on the left and the shipment's buttons beside them when the card is wide
+              enough; in a narrower card (or on a phone) the buttons sit under the details. */}
+          <div className="flex flex-col gap-3 @xl:flex-row @xl:items-center @xl:justify-between">
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link to={`/shipment_detail/${s.id}`} className="font-medium hover:underline">
+                  {s.carrier_name || "Shipment"}
+                </Link>
+                <StatusBadge status={s.status} />
+                <ReturnOutcome shipment={s} />
               </div>
-            ))}
+              <p className="break-words text-xs text-muted-foreground">
+                {[
+                  s.tracking_number ? `Tracking ${s.tracking_number}` : "No tracking number yet",
+                  s.courier_status && `Courier: ${s.courier_status}`,
+                  Number(s.shipping_charge) > 0 && `Charge ${formatCurrency(s.shipping_charge)}`,
+                  Number(s.cod_amount) > 0 && `COD ${formatCurrency(s.cod_amount)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <div className="shrink-0">
+              <ShipmentActions shipment={s} onChanged={refresh} />
+            </div>
           </div>
-        </section>
-      )}
+          {s.unresolved_damaged_quantity > 0 && (
+            <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+              {s.unresolved_damaged_quantity} damaged {s.unresolved_damaged_quantity === 1 ? "unit" : "units"} written off and still owed —{" "}
+              <Link to={`/shipment_detail/${s.id}`} className="underline">
+                replace them
+              </Link>
+            </p>
+          )}
+          {RECEIVABLE_BACK_STATUSES.includes(s.status) && !s.received_back_at && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Not yet received back.{" "}
+              <Link to={`/shipment_detail/${s.id}`} className="text-primary hover:underline">
+                Receive it back
+              </Link>
+            </p>
+          )}
+        </div>
+      ))}
+    </RecordCard>
+  )
+}
 
-      {order.shipments.length > 0 && (
-        <section>
-          <SectionTitle icon={Truck} label="Shipments" count={order.shipments.length} />
-          <div className="divide-y divide-border">
-            {order.shipments.map((s) => (
-              <div key={s.id} className="py-2 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link to={`/shipment_detail/${s.id}`} className="font-medium hover:underline">
-                      {s.carrier_name || "Shipment"}
-                    </Link>
-                    <p className="break-words text-xs text-muted-foreground">
-                      {s.tracking_number && <span className="font-mono">{s.tracking_number}</span>}
-                      {s.tracking_number && (Number(s.shipping_charge) > 0 || Number(s.cod_amount) > 0) && " · "}
-                      {[
-                        Number(s.shipping_charge) > 0 && `Charge ${formatCurrency(s.shipping_charge)}`,
-                        Number(s.cod_amount) > 0 && `COD ${formatCurrency(s.cod_amount)}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <ReturnOutcome shipment={s} />
-                    <StatusBadge status={s.status} />
-                    <ShipmentActions shipment={s} onChanged={refresh} />
-                  </div>
-                </div>
-                {s.unresolved_damaged_quantity > 0 && (
-                  <p role="alert" className="mt-1 text-xs font-medium text-destructive">
-                    {s.unresolved_damaged_quantity} damaged {s.unresolved_damaged_quantity === 1 ? "unit" : "units"} written off and still owed —{" "}
-                    <Link to={`/shipment_detail/${s.id}`} className="underline">
-                      replace them
-                    </Link>
-                  </p>
-                )}
-                {RECEIVABLE_BACK_STATUSES.includes(s.status) && !s.received_back_at && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Not yet received back.{" "}
-                    <Link to={`/shipment_detail/${s.id}`} className="text-primary hover:underline">
-                      Receive it back
-                    </Link>
-                  </p>
-                )}
-              </div>
-            ))}
+function PaymentsCard({ order }: { order: Order }) {
+  const canRefund = useCan("refunds.approve")
+  return (
+    <RecordCard icon={CreditCard} title="Payments" count={order.payments.length}>
+      {order.payments.map((p) => (
+        <div key={p.id} className={ROW}>
+          <div className="min-w-0">
+            <p className="font-medium">
+              {formatCurrency(p.amount)} · {paymentMethodLabel(p.method)}
+            </p>
+            {(p.gateway_reference || Number(p.refunded_amount) > 0) && (
+              <p className="truncate text-xs text-muted-foreground">
+                {[p.gateway_reference && `Ref ${p.gateway_reference}`, Number(p.refunded_amount) > 0 && `Refunded ${formatCurrency(p.refunded_amount)}`]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
           </div>
-        </section>
-      )}
+          <div className="flex shrink-0 items-center gap-1">
+            <StatusBadge status={p.status} />
+            <Button variant="ghost" size="icon" className="size-8" asChild>
+              <Link
+                to={`/payment_detail/${p.id}`}
+                title={canRefund && p.status === "captured" ? "Refund" : "View"}
+                aria-label={canRefund && p.status === "captured" ? "Refund" : "View payment"}
+              >
+                <Eye className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ))}
+    </RecordCard>
+  )
+}
 
-      {order.rmas.length > 0 && (
-        <section>
-          <SectionTitle icon={RotateCcw} label="Returns" count={order.rmas.length} />
-          <div className="divide-y divide-border">
-            {order.rmas.map((r) => (
-              <div key={r.id} className={ROW}>
-                <div className="min-w-0">
-                  <p className="font-medium">{r.rma_number}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {r.lines.reduce((n, l) => n + l.quantity, 0)} unit(s){r.reason ? ` · ${r.reason}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <StatusBadge status={r.status} />
-                  {canReturn && (
-                    <Button variant="ghost" size="icon" className="size-8" asChild>
-                      <Link to={`/return_detail/${r.id}`} title="View" aria-label="View return">
-                        <Eye className="size-4" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+function ReturnsCard({ order }: { order: Order }) {
+  const canReturn = useCan("returns.manage")
+  return (
+    <RecordCard icon={RotateCcw} title="Returns" count={order.rmas.length}>
+      {order.rmas.map((r) => (
+        <div key={r.id} className={ROW}>
+          <div className="min-w-0">
+            <p className="font-medium">{r.rma_number}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {r.lines.reduce((n, l) => n + l.quantity, 0)} unit(s){r.reason ? ` · ${r.reason}` : ""}
+            </p>
           </div>
-        </section>
-      )}
+          <div className="flex shrink-0 items-center gap-1">
+            <StatusBadge status={r.status} />
+            {canReturn && (
+              <Button variant="ghost" size="icon" className="size-8" asChild>
+                <Link to={`/return_detail/${r.id}`} title="View" aria-label="View return">
+                  <Eye className="size-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+    </RecordCard>
+  )
+}
+
+/** Who ordered and where it goes, beside what it costs: two cards side by side on wide screens. */
+export function OrderOverview({ order, money }: { order: Order; money: ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <Card className="min-w-0 shadow-sm">
+        <CardContent>
+          <OrderCustomerSection order={order} />
+        </CardContent>
+      </Card>
+      <Card className="min-w-0 shadow-sm">
+        <CardContent>{money}</CardContent>
+      </Card>
     </div>
   )
 }
 
-/** One card: customer, the money, and the payment, shipment and return rows side by side; the last column drops out when there are none. */
-export function OrderSummaryCard({ order, refresh, money }: { order: Order; refresh: () => void; money: ReactNode }) {
-  const hasRecords = order.payments.length > 0 || order.shipments.length > 0 || order.rmas.length > 0
+/**
+ * The order's shipments and payments side by side on desktop, returns after them. A kind with
+ * no records is left out, and one left on its own takes the full width.
+ */
+export function OrderRecords({ order, refresh }: { order: Order; refresh: () => void }) {
+  const cards = [
+    order.shipments.length > 0 && <ShipmentsCard key="shipments" order={order} refresh={refresh} />,
+    order.payments.length > 0 && <PaymentsCard key="payments" order={order} />,
+    order.rmas.length > 0 && <ReturnsCard key="returns" order={order} />,
+  ].filter(Boolean)
+  if (cards.length === 0) return null
   return (
-    <Card className="shadow-sm">
-      <CardContent className={cn("grid grid-cols-1 gap-x-8 gap-y-6 py-4", hasRecords ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
-        <OrderCustomerSection order={order} />
-        {money}
-        {hasRecords && <OrderRecordsSection order={order} refresh={refresh} />}
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        // Cards in one row stretch to the same height.
+        "grid grid-cols-1 gap-6",
+        cards.length > 1 && "lg:grid-cols-2",
+        // An odd card out spans the row instead of leaving a hole beside it.
+        cards.length === 3 && "lg:[&>*:last-child]:col-span-2"
+      )}
+    >
+      {cards}
+    </div>
   )
 }

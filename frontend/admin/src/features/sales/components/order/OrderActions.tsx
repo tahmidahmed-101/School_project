@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useState, type ComponentType } from "react"
 import { toast } from "sonner"
-import { Ban, CreditCard, ListChecks, RotateCcw, Truck } from "lucide-react"
+import { Ban, ChevronDown, CreditCard, ListChecks, MoreHorizontal, RotateCcw, Truck } from "lucide-react"
 
 import { useAppDispatch } from "@/app/hooks"
 import { cancelOrder, updateOrderStatus } from "@/features/sales/slices/orderSlice"
@@ -14,6 +14,13 @@ import {
 } from "@/features/sales/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
@@ -57,14 +64,35 @@ function statusEffect(order: Order, to: OrderStatus): string {
   }
 }
 
-/** Header buttons for what staff can do now (capture, ship, return, change status, cancel), with the dialogs behind them. */
-export function OrderActions({ order, refresh }: { order: Order; refresh: () => void }) {
+/** An entry the page adds to the order's "More actions" menu (invoice, risk check, edit, delete). */
+export interface OrderMenuItem {
+  label: string
+  icon: ComponentType<{ className?: string }>
+  onSelect: () => void
+  destructive?: boolean
+  disabled?: boolean
+}
+
+/**
+ * The order's buttons. Capturing the payment and changing the status stay buttons; everything
+ * else (shipping, returns, invoice, ...) sits in one "More actions" menu, so the header never
+ * runs out of room.
+ */
+export function OrderActions({
+  order,
+  refresh,
+  menuItems = [],
+}: {
+  order: Order
+  refresh: () => void
+  menuItems?: OrderMenuItem[]
+}) {
   const dispatch = useAppDispatch()
   const canManage = useCan("orders.manage")
   const canShip = useCan("shipments.update")
   const canReturn = useCan("returns.manage")
   const [busy, setBusy] = useState(false)
-  const [dialog, setDialog] = useState<"capture" | "ship" | "return" | "status" | null>(null)
+  const [dialog, setDialog] = useState<"capture" | "ship" | "return" | "status" | "cancel" | null>(null)
   const [nextStatus, setNextStatus] = useState<OrderStatus | "">("")
 
   const kind = order.order_type
@@ -81,7 +109,7 @@ export function OrderActions({ order, refresh }: { order: Order; refresh: () => 
   const canCreateReturn =
     canReturn && !NON_RETURNABLE_STATUSES.includes(order.status) && order.lines.some((l) => l.returnable_quantity > 0)
 
-  // Cancelling keeps its own button, which explains what it releases.
+  // Cancelling keeps its own menu entry, which explains what it releases.
   const statusTargets = order.allowed_statuses.filter((s) => s !== "cancelled")
   const canChangeStatus = canManage && statusTargets.length > 0
   const labelFor = (s: OrderStatus) => ORDER_STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s
@@ -119,6 +147,18 @@ export function OrderActions({ order, refresh }: { order: Order; refresh: () => 
     }
   }
 
+  const orderItems: OrderMenuItem[] = [
+    ...(canCreateShipment ? [{ label: "Create shipment", icon: Truck, onSelect: () => setDialog("ship") }] : []),
+    ...(canCreateReturn ? [{ label: "Create return", icon: RotateCcw, onSelect: () => setDialog("return") }] : []),
+  ]
+  const safeItems: OrderMenuItem[] = [...orderItems, ...menuItems.filter((item) => !item.destructive)]
+  const destructiveItems: OrderMenuItem[] = [
+    ...(canCancel
+      ? [{ label: `Cancel ${noun}`, icon: Ban, onSelect: () => setDialog("cancel"), destructive: true }]
+      : []),
+    ...menuItems.filter((item) => item.destructive),
+  ]
+
   return (
     <>
       {canCapture && (
@@ -127,40 +167,49 @@ export function OrderActions({ order, refresh }: { order: Order; refresh: () => 
           Capture payment
         </Button>
       )}
-      {canCreateShipment && (
-        <Button disabled={busy} onClick={() => setDialog("ship")}>
-          <Truck className="size-4" />
-          Create shipment
-        </Button>
-      )}
-      {canCreateReturn && (
-        <Button variant="outline" disabled={busy} onClick={() => setDialog("return")}>
-          <RotateCcw className="size-4" />
-          Create return
-        </Button>
-      )}
       {canChangeStatus && (
         <Button variant="outline" disabled={busy} onClick={openStatusDialog}>
           <ListChecks className="size-4" />
           Change status
         </Button>
       )}
-      {canCancel && (
-        <ConfirmDialog
-          destructive
-          title={`Cancel ${noun} ${order.order_number}?`}
-          description={CANCEL_DESCRIPTION[kind]}
-          confirmLabel={`Cancel ${noun}`}
-          cancelLabel={`Keep ${noun}`}
-          onConfirm={handleCancel}
-          trigger={
-            <Button variant="outline" className="text-destructive" disabled={busy}>
-              <Ban className="size-4" />
-              Cancel
+      {(safeItems.length > 0 || destructiveItems.length > 0) && (
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" disabled={busy}>
+              <MoreHorizontal className="size-4" />
+              More actions
+              <ChevronDown className="size-4 opacity-60" />
             </Button>
-          }
-        />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            {safeItems.map(({ label, icon: Icon, onSelect, disabled }) => (
+              <DropdownMenuItem key={label} disabled={disabled} onSelect={onSelect}>
+                <Icon className="size-4" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+            {safeItems.length > 0 && destructiveItems.length > 0 && <DropdownMenuSeparator />}
+            {destructiveItems.map(({ label, icon: Icon, onSelect, disabled }) => (
+              <DropdownMenuItem key={label} variant="destructive" disabled={disabled} onSelect={onSelect}>
+                <Icon className="size-4" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
+
+      <ConfirmDialog
+        open={dialog === "cancel"}
+        onOpenChange={(o) => setDialog(o ? "cancel" : null)}
+        destructive
+        title={`Cancel ${noun} ${order.order_number}?`}
+        description={CANCEL_DESCRIPTION[kind]}
+        confirmLabel={`Cancel ${noun}`}
+        cancelLabel={`Keep ${noun}`}
+        onConfirm={handleCancel}
+      />
 
       <Dialog open={dialog === "status"} onOpenChange={(o) => setDialog(o ? "status" : null)}>
         <DialogContent className="max-w-md">
