@@ -244,6 +244,13 @@ const ProductDetail = () => {
                   {product.total_stock}
                 </Stat>
               )}
+              {/* Pre-order: price, cost and limit make the first row (the limit tile always
+                  shows, so the dates below never move up into it), then the dates. */}
+              {!isStock && (
+                <Stat label="Pre-order limit" icon={Hash}>
+                  {settings?.preorder_stock_limit ?? <span className="font-normal text-muted-foreground">No limit</span>}
+                </Stat>
+              )}
               {!isStock && settings?.preorder_start_date && (
                 <Stat label="Pre-orders open" icon={CalendarClock}>
                   <TileDate value={settings.preorder_start_date} />
@@ -257,11 +264,6 @@ const ProductDetail = () => {
               {!isStock && settings?.release_date && (
                 <Stat label="Release date" icon={CalendarCheck}>
                   <TileDate value={settings.release_date} />
-                </Stat>
-              )}
-              {!isStock && settings?.preorder_stock_limit != null && (
-                <Stat label="Pre-order limit" icon={Hash}>
-                  {settings.preorder_stock_limit}
                 </Stat>
               )}
               {!isStock && (settings?.preorder_min_quantity ?? 1) > 1 && (
