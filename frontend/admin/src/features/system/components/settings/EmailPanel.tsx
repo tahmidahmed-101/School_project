@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppSelector } from "@/app/hooks"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { formatDate, formatDateTime } from "@/lib/format"
+import { SMTP_FAILURE_REASONS } from "@/lib/smtpReasons"
 import type { Option } from "@/lib/types"
 
 import { fetchEmailSettings, removeEmailSettings, saveEmailSettings, sendTestEmail } from "../../api"
@@ -31,18 +32,6 @@ const SECURITY_OPTIONS: Option[] = [
   { label: "SSL / TLS", value: "ssl" },
   { label: "None (no login allowed)", value: "none" },
 ]
-
-// send_test_email's fixed reason codes, in words staff can act on.
-const TEST_REASONS: Record<string, string> = {
-  auth_failed: "The mail server refused the username or password.",
-  connection_failed: "Couldn't connect to the mail server. Check the host and port.",
-  timeout: "The mail server didn't answer in time.",
-  tls_failed: "The secure connection failed. Check the security setting matches the port.",
-  recipient_refused: "The mail server refused the recipient address.",
-  sender_refused: "The mail server refused the sender address. Use an address your account may send from.",
-  host_not_allowed: "That host points to a private or internal address and can't be used.",
-  rejected: "The mail server rejected the message.",
-}
 
 interface FormValues {
   host: string
@@ -380,7 +369,7 @@ function TestEmailCard({ settings, onSent }: { settings: EmailSettings; onSent: 
       if (result.accepted) {
         toast.success(`Test email accepted for ${result.recipient}. Check the inbox (and spam folder).`)
       } else {
-        toast.error(TEST_REASONS[result.reason] ?? "The mail server did not accept the test email.")
+        toast.error(SMTP_FAILURE_REASONS[result.reason] ?? "The mail server did not accept the test email.")
       }
       onSent()
     } catch (err) {
@@ -419,7 +408,7 @@ function TestEmailCard({ settings, onSent }: { settings: EmailSettings; onSent: 
             Last test {formatDateTime(last.last_test_at)}:{" "}
             {last.last_test_accepted
               ? "accepted by the mail server."
-              : (TEST_REASONS[last.last_test_reason] ?? "not accepted.")}
+              : (SMTP_FAILURE_REASONS[last.last_test_reason] ?? "not accepted.")}
           </p>
         )}
       </CardContent>

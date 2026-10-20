@@ -244,6 +244,8 @@ export const navSections: NavSection[] = [
       { title: "Carriers", url: "/carriers", permission: SHIPMENTS },
       { title: "Blocklists", url: "/blocklists", permission: "risk.view" },
       { title: "Subscribers", url: "/subscribers", permission: ["marketing.view", "marketing.manage"] },
+      { title: "Email campaigns", url: "/campaigns", permission: ["marketing.view", "marketing.manage"] },
+      { title: "Blocked emails", url: "/email_blocklist", permission: ["marketing.view", "marketing.manage"] },
     ],
   },
 ]

@@ -8,6 +8,10 @@ export const marketingModule: FeatureModule = {
     { path: "coupons", lazy: page(() => import("./components/Coupons")) },
     { path: "coupon_form/:id", lazy: page(() => import("./components/CouponForm")) },
     { path: "subscribers", lazy: page(() => import("./components/Subscribers")) },
+    { path: "campaigns", lazy: page(() => import("./components/Campaigns")) },
+    { path: "campaign_form/:id", lazy: page(() => import("./components/CampaignForm")) },
+    { path: "campaign_detail/:id", lazy: page(() => import("./components/CampaignDetail")) },
+    { path: "email_blocklist", lazy: page(() => import("./components/EmailBlocklist")) },
     { path: "promotion_popups", lazy: page(() => import("./components/PromotionPopups")) },
   ],
 }

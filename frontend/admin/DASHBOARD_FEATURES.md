@@ -13,7 +13,7 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 - Purchasing: suppliers, purchase orders, receiving, bills
 - Orders, payments and returns
 - Shipping: shipments, couriers, zones, rates
-- Marketing: sales, coupons, popups, subscribers
+- Marketing: sales, coupons, popups, subscribers, email campaigns
 - Risk: fraud cases and blocklists
 - Accounting: expenses, ledger, tax, financial reports
 - Customers, staff and audit
@@ -103,12 +103,16 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 - Delivery zones and weight-based rates per zone and courier
 - Free-delivery threshold (stock orders)
 
-### Marketing — sales, coupons, popups, subscribers
+### Marketing — sales, coupons, popups, subscribers, email campaigns
 
 - Scheduled percentage sales on all / categories / brands / products
 - Coupons: % or fixed, caps, min order, usage and per-customer limits
 - Image promotion popups per shop with priority, schedule and link
 - Newsletter subscribers with CSV import/export
+- Email campaigns: plain-text newsletters to subscribers; save a draft, send a test email, send now or schedule, unschedule or cancel
+- Campaign results: accepted, failed and skipped emails per recipient, with the reason
+- Every campaign email has an unsubscribe link; unsubscribed and refused addresses are blocked automatically
+- Blocked emails: staff can block or unblock addresses; account emails (password reset) are never blocked
 
 ### Risk — fraud cases and blocklists
 
@@ -160,4 +164,5 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 >
 > - No online payment gateway (payments are recorded manually)
 > - Production needs SECRETS_ENCRYPTION_KEYS set before the mail server or tracking secrets can be saved
-> - Missing: email campaigns
+> - Email campaigns send only with an active mail server, PUBLIC_API_BASE_URL set and the background sender running
+> - Email campaigns are plain text only, sent to all subscribers (no segments), with no open or click tracking
