@@ -108,6 +108,9 @@ export function mapApiFieldErrors(error: ApiError): FormErrors {
   return mapped;
 }
 
+/** The phone is marked "advance payment only": the backend refuses cash on delivery, any other method is fine. */
+export const ADVANCE_PAYMENT_REQUIRED_CODE = "advance_payment_required";
+
 /** Domain codes where the store cannot deliver to the address at all (no zone / no rate configured). */
 export const NO_SHIPPING_CODES = new Set(["no_shipping_zone", "no_shipping_rate"]);
 

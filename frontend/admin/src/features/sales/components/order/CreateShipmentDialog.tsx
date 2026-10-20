@@ -2,12 +2,15 @@ import { useEffect, useState, type FormEvent } from "react"
 import { toast } from "sonner"
 
 import { FormDialog } from "@/components/common/FormDialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createShipment } from "@/features/sales/slices/orderSlice"
 import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
+import { dispatchShipment } from "@/features/shipping/slices/shipmentSlice"
 import type { Carrier } from "@/features/shipping/types"
 import type { Order, OrderLine } from "@/features/sales/types"
 import { lineQuantitiesValid, toLinePayload } from "@/features/sales/shared/lineQuantities"
@@ -34,6 +37,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
   const [carriers, setCarriers] = useState<Carrier[]>([])
   const [carrierId, setCarrierId] = useState(AUTO)
   const [trackingNumber, setTrackingNumber] = useState("")
+  const [bookNow, setBookNow] = useState(false)
   const [shippingCharge, setShippingCharge] = useState(order.shipping_total)
   const [codAmount, setCodAmount] = useState(() => initialCod(order))
   const [quantities, setQuantities] = useState<Record<string, string>>(() => initialQuantities(order))
@@ -46,6 +50,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
     if (open) {
       setCarrierId(AUTO)
       setTrackingNumber("")
+      setBookNow(false)
       setShippingCharge(order.shipping_total)
       setCodAmount(initialCod(order))
       setQuantities(initialQuantities(order))
@@ -63,13 +68,15 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
   }, [dispatch, open])
 
   const valid = lineQuantitiesValid(order.lines, quantities, shippable)
+  // A tracking number typed in means the parcel was booked by hand; booking again would double-book.
+  const canBookNow = !trackingNumber.trim()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!valid) return
     setSubmitting(true)
     try {
-      await dispatch(
+      const shipment = await dispatch(
         createShipment({
           orderId: order.id,
           payload: {
@@ -81,7 +88,24 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
           },
         })
       ).unwrap()
-      toast.success("Shipment created")
+      // Booked after the shipment exists, so a courier failure never undoes the shipment itself.
+      if (bookNow && canBookNow) {
+        try {
+          const booked = await dispatch(dispatchShipment(shipment.id)).unwrap()
+          toast.success(
+            booked.tracking_number
+              ? `Shipment created and booked — tracking ${booked.tracking_number}`
+              : "Shipment created and booked with the courier"
+          )
+        } catch (err) {
+          toast.warning(
+            `Shipment created, but the courier booking failed: ${getApiErrorMessage(err, "unknown error")}. ` +
+              'Use "Book courier" on the shipment to try again.'
+          )
+        }
+      } else {
+        toast.success("Shipment created")
+      }
       onOpenChange(false)
       onCreated()
     } catch (err) {
@@ -116,7 +140,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={AUTO}>Auto-select at dispatch</SelectItem>
+                <SelectItem value={AUTO}>Auto-select when booking</SelectItem>
                 {carriers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -129,7 +153,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
         <TextField
           label="Tracking number"
           id="shipment-tracking"
-          placeholder="Filled in by the courier on dispatch"
+          placeholder="Filled in by the courier when booked"
           value={trackingNumber}
           onChange={(e) => setTrackingNumber(e.target.value)}
         />
@@ -152,6 +176,23 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
           onChange={(e) => setCodAmount(e.target.value)}
           description="Cash the courier collects on delivery (0 if prepaid)."
         />
+      </div>
+
+      <div className="flex items-start gap-2">
+        <Checkbox
+          id="shipment-book-now"
+          checked={bookNow && canBookNow}
+          disabled={!canBookNow}
+          onCheckedChange={(v) => setBookNow(v === true)}
+        />
+        <div className="space-y-0.5">
+          <Label htmlFor="shipment-book-now">Book with the courier now</Label>
+          <p className="text-xs text-muted-foreground">
+            {canBookNow
+              ? `Sends the parcel to the courier's system right away and stores its consignment number. Otherwise use "Book courier" on the shipment later.`
+              : "Not available when you enter a tracking number yourself."}
+          </p>
+        </div>
       </div>
 
       <LineQuantityTable

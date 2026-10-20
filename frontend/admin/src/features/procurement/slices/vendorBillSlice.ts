@@ -5,6 +5,7 @@ import {
   replaceOnFulfilled,
   withExtraCases,
 } from "@/lib/sliceFactory"
+import { invalidateAllPages } from "@/hooks/use-all-pages"
 import { api } from "@/lib/api/client"
 import type {
   VendorBill,
@@ -25,13 +26,19 @@ const { reducer, fetchAll, fetchSingle } = createSliceFactory<VendorBill>({
 
 export { fetchAll, fetchSingle }
 
+// The cached bill list feeds "left to bill" on purchase orders, so every change clears it.
+const billsChanged = <R>(res: R) => {
+  invalidateAllPages(ENDPOINT)
+  return res
+}
+
 export const createVendorBill = createApiThunk<VendorBillCreatePayload, VendorBill>("vendorBills/create", (payload) =>
-  api.post(ENDPOINT, payload)
+  api.post(ENDPOINT, payload).then(billsChanged)
 )
 
 export const updateVendorBill = createApiThunk<{ id: string; payload: VendorBillUpdatePayload }, VendorBill>(
   "vendorBills/update",
-  ({ id, payload }) => api.patch(`${ENDPOINT}${id}/`, payload)
+  ({ id, payload }) => api.patch(`${ENDPOINT}${id}/`, payload).then(billsChanged)
 )
 
 export const voidVendorBill = createActionThunk<VendorBill>("vendorBills/void", ENDPOINT, "void")

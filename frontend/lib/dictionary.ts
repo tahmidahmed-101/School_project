@@ -528,6 +528,10 @@ export const DICT = {
   checkoutCouponApply: { en: "Apply", bn: "প্রয়োগ" },
   checkoutCouponRemove: { en: "Remove", bn: "বাদ দিন" },
   checkoutCouponApplied: { en: "Coupon applied", bn: "কুপন প্রয়োগ হয়েছে" },
+  checkoutAdvancePaymentRequired: {
+    en: "Cash on delivery isn't available for this phone number. Please choose bKash or Nagad and place the order again.",
+    bn: "এই ফোন নম্বরে ক্যাশ অন ডেলিভারি পাওয়া যাবে না। বিকাশ বা নগদ বেছে নিয়ে আবার অর্ডার করুন।",
+  },
   checkoutCouponStockOnly: {
     en: "Coupons work on stock orders only, not on a pre-order.",
     bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",

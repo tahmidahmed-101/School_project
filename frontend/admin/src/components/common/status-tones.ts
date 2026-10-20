@@ -24,6 +24,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   published: "success",
   draft: "secondary",
   archived: "secondary",
+  hidden: "secondary",
   deleted: "destructive",
 
   // order fulfillment (kull-mart: pending, awaiting_payment, confirmed, shipped,

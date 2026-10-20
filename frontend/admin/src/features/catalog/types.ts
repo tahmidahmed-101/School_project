@@ -324,7 +324,22 @@ export interface ProductReview {
   /** URLs of the pictures the customer attached, in upload order. */
   images: string[]
   is_verified_purchase: boolean
+  /** "pending" waits for approval (when the shop approves reviews first), "hidden" was taken down by staff. */
+  status: ProductReviewStatus
+  /** Why staff hid it. Internal: never shown on the storefront. */
+  moderation_note: string
+  moderated_at: string | null
+  moderated_by_id: string | null
   created_at: string
+}
+
+/** ProductReview.Status on the backend. Staff can only move a review to published or hidden. */
+export type ProductReviewStatus = "pending" | "published" | "hidden"
+
+/** AdminProductReviewModerationSerializer */
+export interface ProductReviewModerationPayload {
+  status: Exclude<ProductReviewStatus, "pending">
+  note?: string
 }
 
 /** AdminProductQuestionSerializer — a customer's question about a product, asked on the storefront. */

@@ -20,6 +20,14 @@ export const router = createBrowserRouter([
         hydrateFallbackElement: <Loader />,
         errorElement: <RouteError />,
       },
+  DEV_AUTH_BYPASS
+    ? { path: "/forgot-password", element: <Navigate to="/" replace /> }
+    : {
+        path: "/forgot-password",
+        lazy: page(() => import("@/features/authentication/components/ForgotPasswordForm")),
+        hydrateFallbackElement: <Loader />,
+        errorElement: <RouteError />,
+      },
   {
     path: "/",
     element: <RequireAuth />,

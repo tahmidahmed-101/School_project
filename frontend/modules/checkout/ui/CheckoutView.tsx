@@ -14,6 +14,7 @@ import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
 import { toOrderResult } from "../data/adapters";
 import {
+  ADVANCE_PAYMENT_REQUIRED_CODE,
   COUPON_STOCK_ONLY_CODE,
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
@@ -50,9 +51,13 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
   const [confirmingPreorder, setConfirmingPreorder] = useState(false);
+  // Set once the backend refuses cash on delivery for this phone ("advance payment only").
+  const [codRefusedFor, setCodRefusedFor] = useState<string | null>(null);
   const preorderItems = items.filter((item) => productKind(item.product) === "preorder");
 
-  const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind);
+  // COD stays hidden only while the refused number is still the one entered.
+  const codRefused = codRefusedFor !== null && codRefusedFor === form.phone.trim();
+  const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind).filter((m) => !(codRefused && m.key === "cod"));
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
@@ -146,6 +151,9 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
           setErrorMsg(ui(errorKey(error)));
         } else if (error.code === "mixed_basket") {
           setErrorMsg(ui("cartMixedNotice"));
+        } else if (error.code === ADVANCE_PAYMENT_REQUIRED_CODE) {
+          setCodRefusedFor(form.phone.trim());
+          setErrorMsg(ui("checkoutAdvancePaymentRequired"));
         } else if (error.code === COUPON_STOCK_ONLY_CODE) {
           setErrorMsg(ui("checkoutCouponStockOnly"));
         } else if (NO_SHIPPING_CODES.has(error.code)) {

@@ -11,6 +11,7 @@ import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
 import { DateField, TextField } from "@/components/common/form-fields"
 import { formatCurrency, getDefaultCurrency } from "@/lib/format"
+import { toPaisa } from "@/lib/money"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
@@ -19,6 +20,7 @@ import { useKind } from "@/hooks/use-kind"
 import { createVendorBill, updateVendorBill } from "../slices/vendorBillSlice"
 import type { PurchaseOrder, VendorBill } from "../types"
 import { usePurchaseOrderPick } from "../hooks/usePurchaseOrderPick"
+import { useUnbilledValue } from "../hooks/useUnbilledValue"
 import { poReceivedTotal } from "../utils"
 
 const schema = z.object({
@@ -28,8 +30,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 /**
- * Create a vendor bill against a PO (amount must equal the value received — the backend's
- * 3-way match), or edit an open bill's amount / due date.
+ * Create a vendor bill against a PO (amount must equal the value received and not billed yet —
+ * the backend's 3-way match, so a PO received in parts is billed in parts), or edit an open
+ * bill's amount / due date.
  */
 export function VendorBillFormDialog({
   open,
@@ -54,13 +57,17 @@ export function VendorBillFormDialog({
     { kind },
     { enabled: open && pickMode }
   )
+  const { billedFor, unbilledFor, isLoading: billsLoading } = useUnbilledValue(kind, { enabled: open && !bill })
   const billablePos = useMemo(
-    () => allPos.filter((p) => p.status !== "draft" && p.lines.some((l) => l.quantity_received > 0)),
-    [allPos]
+    () =>
+      allPos.filter((p) => p.status !== "draft" && p.status !== "cancelled" && toPaisa(unbilledFor(p)) > 0),
+    [allPos, unbilledFor]
   )
   const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)
   const po = purchaseOrder ?? picked
-  const expected = po ? poReceivedTotal(po) : null
+  // Only seeded once the bills are in, so the amount is never the full received value by mistake.
+  const expected = po && !billsLoading ? unbilledFor(po) : null
+  const billedSoFar = po ? billedFor(po) : "0.00"
 
   const {
     register,
@@ -149,7 +156,15 @@ export function VendorBillFormDialog({
             Supplier: <span className="font-medium">{po.supplier_name}</span>
           </p>
           <p>
-            Received value: <span className="font-semibold">{formatCurrency(expected)}</span>
+            Received value: <span className="font-semibold">{formatCurrency(poReceivedTotal(po))}</span>
+          </p>
+          {toPaisa(billedSoFar) > 0 && (
+            <p>
+              Already billed: <span className="font-semibold">{formatCurrency(billedSoFar)}</span>
+            </p>
+          )}
+          <p>
+            Left to bill: <span className="font-semibold">{expected === null ? "…" : formatCurrency(expected)}</span>
           </p>
         </div>
       )}
@@ -160,7 +175,7 @@ export function VendorBillFormDialog({
           type="number"
           step="0.01"
           min="0.01"
-          description="Must match the received value (3-way match)."
+          description={bill ? "Must match the received value not billed by other bills (3-way match)." : "Must match the value left to bill (3-way match)."}
           error={errors.amount}
           {...register("amount")}
         />

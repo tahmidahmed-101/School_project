@@ -199,7 +199,7 @@ export function CarrierFormDialog({ open, onOpenChange, carrier, onSaved }: Carr
           control={control}
           name="is_integration_enabled"
           label="Live integration"
-          description="Book consignments through the courier's API on dispatch."
+          description={`Book parcels through the courier's API with "Book courier" on a shipment.`}
         />
       </div>
 

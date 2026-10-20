@@ -27,3 +27,10 @@ export function kindFromImportCell(raw: string): JournalEntryKind {
   if (value === "company" || value === "wholebusiness") return ""
   throw new Error(`Belongs to "${raw.trim()}" must be stock, pre-order, or left blank for the whole business`)
 }
+
+/**
+ * What deleting an expense does (services/expenses.py delete_expense): its journal entry is
+ * reversed, so the books net to zero, and restoring it posts it again.
+ */
+export const EXPENSE_DELETE_DESCRIPTION =
+  "A reversing journal entry is posted so the expense no longer counts in the books. You can restore it later, which posts it again."

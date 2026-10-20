@@ -52,6 +52,7 @@ import {
 } from "../slices/purchaseOrderSlice"
 import type { GoodsReceipt, PurchaseOrder, PurchaseOrderLine, Supplier } from "../types"
 import { useCanManagePurchasing, useCanWriteBills, useProcurementSelector } from "../hooks/useProcurement"
+import { useUnbilledValue } from "../hooks/useUnbilledValue"
 import {
   GRN_STATUS_LABEL,
   GRN_STATUS_TONE,
@@ -267,6 +268,7 @@ const PurchaseOrderDetail = () => {
   const po = loaded && loaded.id === id ? loaded : null
   const canManage = useCanManagePurchasing()
   const canBill = useCanWriteBills()
+  const { billedFor, unbilledFor, isLoading: billsLoading } = useUnbilledValue(kind)
 
   const [headerOpen, setHeaderOpen] = useState(false)
   const [lineDialog, setLineDialog] = useState<{ open: boolean; line: PurchaseOrderLine | null }>({
@@ -332,6 +334,8 @@ const PurchaseOrderDetail = () => {
   const isDraft = po.status === "draft"
   const hasOutstanding = po.lines.some((l) => l.quantity_received < l.quantity_ordered)
   const receivedValue = poReceivedTotal(po)
+  const billedValue = billedFor(po)
+  const unbilledValue = unbilledFor(po)
 
   const runAction = async (action: () => Promise<unknown>, success: string) => {
     setBusy(true)
@@ -465,7 +469,10 @@ const PurchaseOrderDetail = () => {
                 <PackageCheck className="size-4" /> Receive Goods
               </Button>
             )}
-            {canBill && (po.status === "submitted" || po.status === "received") && toPaisa(receivedValue) > 0 && (
+            {canBill &&
+              (po.status === "submitted" || po.status === "received") &&
+              !billsLoading &&
+              toPaisa(unbilledValue) > 0 && (
               <Button variant="primary" size="action" onClick={() => setBillOpen(true)}>
                 <FileText className="size-4" /> Create Bill
               </Button>
@@ -506,7 +513,15 @@ const PurchaseOrderDetail = () => {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryStat label="Order value" value={formatCurrency(poOrderedTotal(po))} sub={`${po.lines.length} lines`} />
-        <SummaryStat label="Received value" value={formatCurrency(receivedValue)} sub="What a vendor bill must match" />
+        <SummaryStat
+          label="Received value"
+          value={formatCurrency(receivedValue)}
+          sub={
+            toPaisa(billedValue) > 0
+              ? `${formatCurrency(billedValue)} billed · ${formatCurrency(unbilledValue)} left to bill`
+              : "What vendor bills must add up to"
+          }
+        />
         <SummaryStat label="Units received" value={`${poUnitsReceived(po)} / ${poUnitsOrdered(po)}`} />
       </div>
 

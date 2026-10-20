@@ -77,6 +77,7 @@ export const navSections: NavSection[] = [
     items: [
       { title: "Stock", url: "/inventory", permission: INVENTORY },
       { title: "Stock movements", url: "/inventory/ledger", permission: INVENTORY },
+      { title: "Transfers", url: "/inventory/transfers", permission: INVENTORY },
       // Served by the orders app: GET needs orders.view (release needs orders.manage).
       { title: "Reservations", url: "/inventory/reservations", permission: ORDERS },
       { title: "Warehouses", url: "/warehouses", permission: INVENTORY },
@@ -171,6 +172,7 @@ export const navSections: NavSection[] = [
     items: [
       { title: "Arrivals", url: "/preorder_arrivals", permission: INVENTORY },
       { title: "Goods movements", url: "/preorder_movements", permission: INVENTORY },
+      { title: "Transfers", url: "/preorder_transfers", permission: INVENTORY },
       { title: "Warehouses", url: "/preorder_warehouses", permission: INVENTORY },
     ],
   },

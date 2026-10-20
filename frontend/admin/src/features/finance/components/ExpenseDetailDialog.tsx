@@ -13,7 +13,7 @@ import { DeleteModal } from "@/components/common/DeleteModal"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { Account, Expense, ExpenseCategory } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-import { belongsToLabel } from "../utils"
+import { belongsToLabel, EXPENSE_DELETE_DESCRIPTION } from "../utils"
 import { DetailRow } from "@/components/common/DetailRow"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 
@@ -92,7 +92,7 @@ export function ExpenseDetailDialog({
             {canPost ? (
               <DeleteModal
                 title="Delete this expense?"
-                description="Posted expenses can't be deleted — the backend will ask you to reverse the journal entry instead."
+                description={EXPENSE_DELETE_DESCRIPTION}
                 onConfirm={() => onDelete(expense)}
                 trigger={
                   <Button variant="outline" className="text-destructive hover:bg-destructive/10">

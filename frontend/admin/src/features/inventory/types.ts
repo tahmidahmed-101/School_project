@@ -166,3 +166,38 @@ export interface PreorderReport {
 export interface PreorderAllocationResult {
   allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
 }
+
+/** StockTransferLineSerializer */
+export interface StockTransferLine {
+  id: string
+  variant_id: string
+  variant_sku: string
+  /** "Red / M"; "" on a product without options. */
+  variant_title: string
+  product_name: string
+  quantity: number
+  /** The source warehouse's average cost at the moment of the move. */
+  unit_cost: string
+}
+
+/** StockTransferSerializer — units moved between two warehouses of the same kind. */
+export interface StockTransfer {
+  id: string
+  transfer_number: string
+  from_warehouse_id: string
+  from_warehouse_name: string
+  to_warehouse_id: string
+  to_warehouse_name: string
+  notes: string
+  lines: StockTransferLine[]
+  created_by_id: string | null
+  created_at: string
+}
+
+/** StockTransferCreateSerializer */
+export interface StockTransferPayload {
+  from_warehouse_id: string
+  to_warehouse_id: string
+  lines: { variant_id: string; quantity: number }[]
+  notes?: string
+}

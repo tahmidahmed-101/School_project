@@ -76,7 +76,7 @@ const ShipmentDetail = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DetailRow label="Carrier">{shipment.carrier_name || "Not set (auto-selected on dispatch)"}</DetailRow>
+          <DetailRow label="Carrier">{shipment.carrier_name || "Not set (auto-selected when booked)"}</DetailRow>
           <DetailRow label="Tracking number">
             <span className="font-mono">{shipment.tracking_number || "—"}</span>
           </DetailRow>

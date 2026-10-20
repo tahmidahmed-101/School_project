@@ -33,7 +33,7 @@ import { findAccount, findExpenseCategory, useFinanceImportLookups } from "../ho
 import { ExpenseFormDialog } from "./ExpenseFormDialog"
 import { ExpenseDetailDialog } from "./ExpenseDetailDialog"
 import { BelongsToSwitch } from "./BelongsToSwitch"
-import { belongsToLabel, kindFromImportCell, type BelongsTo } from "../utils"
+import { belongsToLabel, EXPENSE_DELETE_DESCRIPTION, kindFromImportCell, type BelongsTo } from "../utils"
 
 const VIEW_HINTS: Record<BelongsTo, string> = {
   stock: "Costs recorded for stock only.",
@@ -130,7 +130,7 @@ const Expenses = () => {
   const handleDelete = async (expense: Expense) => {
     try {
       await dispatch(deleteData(expense.id)).unwrap()
-      toast.success("Expense deleted")
+      toast.success("Expense deleted — a reversing journal entry was posted")
       setViewing(null)
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete expense"))
@@ -217,6 +217,7 @@ const Expenses = () => {
                 : undefined
             }
             onDelete={canPost ? () => handleDelete(exp) : undefined}
+            deleteDescription={EXPENSE_DELETE_DESCRIPTION}
           />
         )
       },

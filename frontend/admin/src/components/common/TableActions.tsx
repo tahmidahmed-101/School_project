@@ -30,6 +30,8 @@ type Props = {
   editUrl?: string
   onEdit?: () => void
   onDelete?: () => void | Promise<unknown>
+  /** What deleting does, when it is more than "cannot be undone" (e.g. it can be restored). */
+  deleteDescription?: string
   /** Row-specific actions beyond view / edit / delete. */
   actions?: TableAction[]
   itemName: string
@@ -42,6 +44,7 @@ export function TableActions({
   editUrl,
   onEdit,
   onDelete,
+  deleteDescription,
   actions = [],
   itemName,
 }: Props) {
@@ -107,7 +110,9 @@ export function TableActions({
           open={confirmingDelete}
           onOpenChange={setConfirmingDelete}
           title={`Delete ${itemName}?`}
-          description={`Are you sure you want to delete "${itemName}"? This action cannot be undone.`}
+          description={
+            deleteDescription ?? `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
+          }
           confirmLabel="Delete"
           destructive
           icon={<Trash2Icon />}

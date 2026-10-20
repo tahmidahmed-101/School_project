@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useNavigate, useLocation } from "react-router-dom"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import { toast } from "sonner"
 import { LogInIcon } from "lucide-react"
 
@@ -88,11 +88,14 @@ const SignInForm = () => {
               {...register("password")}
             />
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button type="submit" variant="apply" className="w-full" disabled={isSubmitting || isLoading}>
               <LogInIcon className="h-4 w-4" />
               Sign in
             </Button>
+            <Link to="/forgot-password" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+              Forgot password?
+            </Link>
           </CardFooter>
         </Card>
       </form>

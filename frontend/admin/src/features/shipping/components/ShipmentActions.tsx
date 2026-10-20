@@ -41,7 +41,7 @@ interface ShipmentActionsProps {
 }
 
 /**
- * Dispatch-to-courier and status update for a shipment in flight (shipments.update), then receive-back
+ * Book-with-courier and status update for a shipment in flight (shipments.update), then receive-back
  * and replace-damaged once it is returned or cancelled (returns.manage). Renders nothing when none apply.
  */
 export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentActionsProps) {
@@ -63,6 +63,10 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
 
   if (!canChangeStatus && !canReceiveBack && !canReplace) return null
 
+  // Only a courier booking or a courier webhook sets courier_status, so blank means not booked
+  // yet. The backend refuses a second booking (already_dispatched).
+  const canBook = canChangeStatus && !shipment.courier_status
+
   const options = nextShipmentStatuses(shipment.status)
   const labelFor = (s: ShipmentStatus) => SHIPMENT_STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s
 
@@ -71,11 +75,11 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
     try {
       const updated = await dispatch(dispatchShipment(shipment.id)).unwrap()
       toast.success(
-        updated.tracking_number ? `Booked with courier — tracking ${updated.tracking_number}` : "Dispatched to courier"
+        updated.tracking_number ? `Booked with courier — tracking ${updated.tracking_number}` : "Booked with courier"
       )
       onChanged?.()
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to dispatch shipment"))
+      toast.error(getApiErrorMessage(err, "Failed to book the courier"))
     } finally {
       setBusy(false)
     }
@@ -149,21 +153,21 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
           onConfirm={handleReplace}
         />
       )}
-      {canChangeStatus && shipment.status === "pending" && (
+      {canBook && (
         <ConfirmDialog
           trigger={
             <Button variant="outline" size={size} disabled={busy}>
               {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-              Dispatch
+              Book courier
             </Button>
           }
-          title="Dispatch to courier?"
+          title="Book with the courier?"
           description={
             shipment.carrier_name
-              ? `Books this consignment with ${shipment.carrier_name}'s courier integration and stores the returned tracking number.`
-              : "No carrier is set, so the cheapest carrier quoting a rate for the delivery zone is picked automatically."
+              ? `Books this parcel with ${shipment.carrier_name} through its courier integration and stores the consignment number it returns. A parcel can only be booked once.`
+              : "No carrier is set, so the cheapest carrier quoting a rate for the delivery zone is picked automatically. A parcel can only be booked once."
           }
-          confirmLabel="Dispatch"
+          confirmLabel="Book courier"
           cancelLabel="Go back"
           onConfirm={handleDispatch}
         />

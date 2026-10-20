@@ -11,6 +11,8 @@ import type {
   StockLedgerEntry,
   StockReservation,
   StockStatusSummary,
+  StockTransfer,
+  StockTransferPayload,
   StockWriteOffPayload,
   Warehouse,
   WarehousePayload,
@@ -41,6 +43,9 @@ export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[], kind:
   )
 export const postWriteOff = (payload: StockWriteOffPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/write-offs/`, payload))
+/** All-or-nothing: every line moves, or none does (e.g. one line short of available stock). */
+export const postStockTransfer = (payload: StockTransferPayload) =>
+  apiCall<StockTransfer>(() => api.post(`${I}/transfers/`, payload))
 
 // ---- warehouses ----
 export const WAREHOUSES_ENDPOINT = `${I}/warehouses/`
