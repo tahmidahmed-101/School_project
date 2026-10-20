@@ -17,14 +17,37 @@ from apps.procurement.selectors.kind import purchase_order_kind
 BILL_MATCH_TOLERANCE = Decimal("0.01")
 
 
-def _ensure_three_way_match(purchase_order: PurchaseOrder, amount: Decimal) -> None:
-    expected = sum(
+def _billed_elsewhere(purchase_order: PurchaseOrder, *, exclude=None) -> Decimal:
+    """What the PO's other live bills already charge for its received goods."""
+    bills = VendorBill.objects.filter(
+        purchase_order=purchase_order, deleted_at__isnull=True
+    ).exclude(status=VendorBill.Status.VOID)
+    if exclude is not None:
+        bills = bills.exclude(pk=exclude.pk)
+    return bills.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+
+def _ensure_three_way_match(
+    purchase_order: PurchaseOrder, amount: Decimal, *, exclude=None
+) -> None:
+    """A bill charges for goods received and not yet billed, so the same
+    delivery can never be paid for twice. A PO received in parts is billed in
+    parts: each bill covers what arrived since the last one."""
+    received = sum(
         (line.unit_cost * line.quantity_received for line in purchase_order.lines.all()),
         Decimal("0"),
     )
+    billed = _billed_elsewhere(purchase_order, exclude=exclude)
+    expected = received - billed
+    if billed > 0 and expected <= BILL_MATCH_TOLERANCE:
+        raise BusinessRuleViolationError(
+            f"Everything received on {purchase_order.po_number} is already billed.",
+            code="already_billed",
+        )
     if abs(amount - expected) > BILL_MATCH_TOLERANCE:
         raise BusinessRuleViolationError(
-            "Bill amount does not match received quantities (3-way match failed).",
+            f"Bill amount does not match received quantities not yet billed ({expected}) "
+            "(3-way match failed).",
             code="bill_mismatch",
         )
 
@@ -53,6 +76,8 @@ def _reverse_bill_postings(vendor_bill: VendorBill, *, reason: str) -> None:
 def create_vendor_bill(
     *, purchase_order: PurchaseOrder, supplier, amount: Decimal, due_date
 ) -> VendorBill:
+    # Locked so two bills raised at once cannot both see the goods unbilled.
+    purchase_order = PurchaseOrder.objects.select_for_update().get(pk=purchase_order.pk)
     if supplier.kind != purchase_order_kind(purchase_order):
         raise BusinessRuleViolationError(
             "Pick a supplier from the same side as the purchase order: stock or pre-order.",
@@ -77,13 +102,14 @@ def create_vendor_bill(
 
 @transaction.atomic
 def update_vendor_bill(*, vendor_bill: VendorBill, data: dict) -> VendorBill:
+    PurchaseOrder.objects.select_for_update().filter(pk=vendor_bill.purchase_order_id).exists()
     vendor_bill = VendorBill.objects.select_for_update().get(pk=vendor_bill.pk)
     _ensure_bill_open(vendor_bill)
 
     allowed_fields = {"amount", "due_date"}
     update_fields = [field for field in data if field in allowed_fields]
     if "amount" in update_fields:
-        _ensure_three_way_match(vendor_bill.purchase_order, data["amount"])
+        _ensure_three_way_match(vendor_bill.purchase_order, data["amount"], exclude=vendor_bill)
     reposts = any(
         field in update_fields and data[field] != getattr(vendor_bill, field)
         for field in ("amount", "due_date")

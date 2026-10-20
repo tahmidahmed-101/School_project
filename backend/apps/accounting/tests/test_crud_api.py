@@ -8,11 +8,11 @@ import pytest
 from apps.accounting.factories import (
     AccountFactory,
     ExpenseFactory,
-    JournalEntryFactory,
     JournalEntryLineFactory,
     TaxRateFactory,
 )
-from apps.accounting.models import Account, JournalEntry
+from apps.accounting.models import Account, JournalEntry, JournalEntryLine
+from apps.accounting.services.expenses import _post_expense
 from apps.accounts.constants import StaffPermissionCode, UserRole
 from apps.accounts.services.staff_permissions import set_staff_permission
 from apps.accounts.tests.helpers import create_user
@@ -22,6 +22,23 @@ pytestmark = pytest.mark.django_db
 ACCOUNTS_URL = "/api/v1/admin/accounting/accounts/"
 EXPENSES_URL = "/api/v1/admin/accounting/expenses/"
 TAX_RATES_URL = "/api/v1/admin/accounting/tax-rates/"
+
+
+def _posted_expense():
+    expense = ExpenseFactory()
+    expense.journal_entry = _post_expense(expense)
+    expense.save(update_fields=["journal_entry"])
+    return expense
+
+
+def _expense_balance(expense) -> Decimal:
+    """Net debit the expense account carries for this expense."""
+    lines = JournalEntryLine.objects.filter(
+        account=expense.expense_account,
+        journal_entry__reference_type="expense",
+        journal_entry__reference_id=expense.id,
+    )
+    return sum((line.debit - line.credit for line in lines), Decimal("0"))
 
 
 @pytest.fixture
@@ -155,14 +172,34 @@ def test_delete_unposted_expense(admin_client):
     assert expense.deleted_at is not None
 
 
-def test_delete_posted_expense_is_refused(admin_client):
-    entry = JournalEntryFactory(status=JournalEntry.Status.POSTED)
-    expense = ExpenseFactory(journal_entry=entry)
+def test_delete_posted_expense_reverses_it_out_of_the_ledger(admin_client):
+    expense = _posted_expense()
+    entry = expense.journal_entry
 
     response = admin_client.delete(f"{EXPENSES_URL}{expense.id}/")
 
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "expense_posted"
+    assert response.status_code == 204
+    expense.refresh_from_db()
+    assert expense.deleted_at is not None
+    entry.refresh_from_db()
+    assert entry.status == JournalEntry.Status.POSTED
+    reversal = JournalEntry.objects.get(reverses=entry)
+    assert _expense_balance(expense) == Decimal("0")
+    assert reversal.reference_id == expense.id
+
+
+def test_restoring_a_deleted_expense_books_it_again(admin_client):
+    expense = _posted_expense()
+    original = expense.journal_entry
+    admin_client.delete(f"{EXPENSES_URL}{expense.id}/")
+
+    response = admin_client.post(f"{EXPENSES_URL}{expense.id}/restore/")
+
+    assert response.status_code == 200
+    expense.refresh_from_db()
+    assert expense.deleted_at is None
+    assert expense.journal_entry_id != original.id
+    assert _expense_balance(expense) == expense.amount
 
 
 def test_delete_missing_expense_returns_404(admin_client):

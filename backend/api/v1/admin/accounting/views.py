@@ -40,7 +40,12 @@ from apps.accounting.services.expense_categories import (
     delete_expense_category,
     update_expense_category,
 )
-from apps.accounting.services.expenses import create_expense, delete_expense, update_expense
+from apps.accounting.services.expenses import (
+    create_expense,
+    delete_expense,
+    restore_expense,
+    update_expense,
+)
 from apps.accounting.services.exports import (
     REPORT_COLUMNS,
     balance_sheet_rows,
@@ -409,6 +414,7 @@ class AdminExpenseDetailView(AccountingPermissionMixin, APIView):
 class AdminExpenseRestoreView(RestoreAPIView):
     permission_classes: ClassVar[list] = [AccountingPostPermission]
     get_object_fn = staticmethod(get_expense_by_id)
+    restore_fn = staticmethod(restore_expense)
     serializer_class = ExpenseSerializer
     not_found_code = "expense_not_found"
     not_found_message = "Expense not found."

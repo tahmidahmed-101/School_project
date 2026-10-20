@@ -153,3 +153,38 @@ class QuickProductCreateSerializer(serializers.Serializer):
     )
     barcode = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
+
+
+class StockTransferLineInputSerializer(serializers.Serializer):
+    variant_id = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class StockTransferCreateSerializer(serializers.Serializer):
+    from_warehouse_id = serializers.UUIDField()
+    to_warehouse_id = serializers.UUIDField()
+    lines = serializers.ListField(child=StockTransferLineInputSerializer(), min_length=1)
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=255, default="")
+
+
+class StockTransferLineSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    variant_id = serializers.UUIDField(read_only=True)
+    variant_sku = serializers.CharField(source="variant.sku", read_only=True)
+    variant_title = VariantTitleField()
+    product_name = serializers.CharField(source="variant.product.name", read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    unit_cost = serializers.DecimalField(max_digits=12, decimal_places=4, read_only=True)
+
+
+class StockTransferSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    transfer_number = serializers.CharField(read_only=True)
+    from_warehouse_id = serializers.UUIDField(read_only=True)
+    from_warehouse_name = serializers.CharField(source="from_warehouse.name", read_only=True)
+    to_warehouse_id = serializers.UUIDField(read_only=True)
+    to_warehouse_name = serializers.CharField(source="to_warehouse.name", read_only=True)
+    notes = serializers.CharField(read_only=True)
+    lines = StockTransferLineSerializer(many=True, read_only=True)
+    created_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)

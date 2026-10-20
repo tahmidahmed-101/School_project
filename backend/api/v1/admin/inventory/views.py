@@ -32,6 +32,7 @@ from apps.inventory.selectors.stock import (
     stock_items_list,
 )
 from apps.inventory.selectors.stock_status import stock_status_summary
+from apps.inventory.selectors.transfers import get_transfer_by_id, transfers_list
 from apps.inventory.selectors.warehouse import (
     all_warehouses,
     get_warehouse_by_id,
@@ -45,7 +46,12 @@ from apps.inventory.services.stock import (
     stock_intake,
     write_off_stock,
 )
-from apps.inventory.services.warehouses import create_warehouse, update_warehouse
+from apps.inventory.services.transfers import transfer_stock
+from apps.inventory.services.warehouses import (
+    create_warehouse,
+    delete_warehouse,
+    update_warehouse,
+)
 
 from .serializers import (
     BulkStockAdjustmentSerializer,
@@ -55,6 +61,8 @@ from .serializers import (
     StockItemSerializer,
     StockLedgerEntrySerializer,
     StockLookupVariantSerializer,
+    StockTransferCreateSerializer,
+    StockTransferSerializer,
     StockWriteOffSerializer,
     WarehouseCreateSerializer,
     WarehouseSerializer,
@@ -432,20 +440,84 @@ class AdminWarehouseDetailView(InventoryPermissionMixin, APIView):
             return not_found("warehouse_not_found", "Warehouse not found.")
         if warehouse is None:
             return not_found("warehouse_not_found", "Warehouse not found.")
-        if warehouse.is_default:
-            return error_from_exception(
-                DomainError(
-                    "Cannot delete the default warehouse.",
-                    code="cannot_delete_default_warehouse",
-                )
-            )
-        if warehouse.stock_items.exists():
-            return error_from_exception(
-                DomainError(
-                    "Warehouse has stock items — move or zero them first.",
-                    code="warehouse_has_stock",
-                )
-            )
-        warehouse.soft_delete(deleted_by=request.user)
+        try:
+            delete_warehouse(warehouse=warehouse, actor=request.user)
+        except DomainError as exc:
+            return error_from_exception(exc)
         return Response({"data": {}, "message": "Success"})
 
+
+
+@extend_schema(tags=["Inventory"])
+class AdminStockTransferListCreateView(InventoryPermissionMixin, GenericListAPIView):
+    """Move available stock between two warehouses of the same kind, and the
+    history of those moves."""
+
+    serializer_class = StockTransferSerializer
+    search_fields = ("transfer_number", "notes", "lines__variant__sku")
+    ordering_fields = ("created_at",)
+    default_ordering = "-created_at"
+
+    def get_queryset(self):
+        params = self.request.query_params
+        return transfers_list(
+            warehouse=get_related(
+                params, "warehouse_id", get_warehouse_by_id, "Warehouse not found."
+            ),
+            variant=get_related(params, "variant_id", get_variant_by_id, "Variant not found."),
+            kind=get_kind(params),
+        )
+
+    def get(self, request) -> Response:
+        return self.list_response(request)
+
+    def post(self, request) -> Response:
+        serializer = StockTransferCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        warehouses = {}
+        for field in ("from_warehouse_id", "to_warehouse_id"):
+            warehouse = get_warehouse_by_id(data[field])
+            if warehouse is None:
+                return not_found("warehouse_not_found", "Warehouse not found.")
+            warehouses[field] = warehouse
+
+        lines = []
+        for line in data["lines"]:
+            variant = get_variant_by_id(line["variant_id"])
+            if variant is None:
+                return error_from_exception(
+                    DomainError("Variant not found.", code="variant_not_found")
+                )
+            lines.append({"variant": variant, "quantity": line["quantity"]})
+
+        try:
+            transfer = transfer_stock(
+                from_warehouse=warehouses["from_warehouse_id"],
+                to_warehouse=warehouses["to_warehouse_id"],
+                lines=lines,
+                notes=data["notes"],
+                actor=request.user,
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {
+                "data": StockTransferSerializer(get_transfer_by_id(transfer.id)).data,
+                "message": "Success",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema(tags=["Inventory"])
+class AdminStockTransferDetailView(APIView):
+    serializer_class = StockTransferSerializer
+    permission_classes: ClassVar[list] = [InventoryViewPermission]
+
+    def get(self, request, transfer_id) -> Response:
+        transfer = get_transfer_by_id(transfer_id)
+        if transfer is None:
+            return not_found("transfer_not_found", "Transfer not found.")
+        return Response({"data": StockTransferSerializer(transfer).data, "message": "Success"})

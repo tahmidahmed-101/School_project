@@ -44,6 +44,27 @@ def _require_enabled_method(method: str, *, kind: str):
     return spec
 
 
+def _refuse_cod_for_advance_only_phone(order: SalesOrder) -> None:
+    """A number staff marked "advance payment only" has cost the courier fee
+    on refused parcels before, so it pays up front: bKash, Nagad or the like,
+    never cash on delivery. Lifting the block is how staff make an exception."""
+    from apps.risk.models import PhoneBlock
+    from apps.risk.services.blocklist import active_block
+    from apps.risk.services.scoring import recipient_phone
+
+    phones = {recipient_phone(order)}
+    if order.shipping_address_id:
+        phones.add(order.shipping_address.phone)
+    for phone in filter(None, phones):
+        block = active_block(phone)
+        if block is not None and block.strength == PhoneBlock.Strength.ADVANCE_ONLY:
+            raise BusinessRuleViolationError(
+                "Cash on delivery is not available for this phone number. "
+                "Please pay in advance with bKash or Nagad.",
+                code="advance_payment_required",
+            )
+
+
 def _balance_due(order: SalesOrder) -> Decimal:
     """Read from the table, not `order.payments`, which a caller may have prefetched."""
     received = Payment.objects.filter(
@@ -68,6 +89,8 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
     if not order.lines.exists():
         raise BusinessRuleViolationError("Cannot place an empty order.", code="empty_order")
     _require_enabled_method(method, kind=order.order_type)
+    if method == PaymentMethodKey.COD:
+        _refuse_cod_for_advance_only_phone(order)
 
     payment = Payment.objects.create(
         order=order,
@@ -192,6 +215,9 @@ def capture_payment(
     # A pending row dates from the order; the money arrived today.
     post_customer_payment(payment, entry_date=timezone.localdate() if owed else None)
     if awaiting and order.grand_total - balance + amount >= order_deposit_due(order):
+        from apps.orders.services.reservations import reinstate_lapsed_holds
+
+        reinstate_lapsed_holds(order)
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
         _assess_order_risk(order)

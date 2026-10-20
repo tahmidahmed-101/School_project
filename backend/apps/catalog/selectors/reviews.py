@@ -7,9 +7,15 @@ from django.db.models import Avg, Count, QuerySet
 from apps.catalog.models import Product, ProductReview
 
 
+def published_reviews() -> QuerySet[ProductReview]:
+    """What the storefront shows, and the only reviews ratings are built from."""
+    return ProductReview.objects.filter(status=ProductReview.Status.PUBLISHED)
+
+
 def reviews_for_product(product: Product) -> QuerySet[ProductReview]:
     return (
-        ProductReview.objects.filter(product=product)
+        published_reviews()
+        .filter(product=product)
         .select_related("customer")
         .prefetch_related("images")
         .order_by("-created_at")
@@ -17,7 +23,11 @@ def reviews_for_product(product: Product) -> QuerySet[ProductReview]:
 
 
 def reviews_list(
-    *, product=None, rating: int | None = None, kind: str | None = None
+    *,
+    product=None,
+    rating: int | None = None,
+    kind: str | None = None,
+    status: str | None = None,
 ) -> QuerySet[ProductReview]:
     """Every review, for the admin moderation list."""
     queryset = ProductReview.objects.select_related("customer", "product").prefetch_related(
@@ -29,6 +39,8 @@ def reviews_list(
         queryset = queryset.filter(rating=rating)
     if kind:
         queryset = queryset.filter(product__category__category_type=kind)
+    if status:
+        queryset = queryset.filter(status=status)
     return queryset
 
 
@@ -41,7 +53,7 @@ def get_review_by_id(review_id: str | UUID) -> ProductReview | None:
 
 
 def product_review_summary(product: Product) -> dict:
-    reviews = ProductReview.objects.filter(product=product)
+    reviews = published_reviews().filter(product=product)
     result = reviews.aggregate(average_rating=Avg("rating"), review_count=Count("id"))
     # Reviews per star, every star present: {"5": 3, "4": 0, ...}.
     counts = dict(reviews.values_list("rating").annotate(total=Count("id")))
@@ -57,7 +69,8 @@ def product_review_summary(product: Product) -> dict:
 def rating_summaries_for_products(product_ids: list) -> dict[UUID, dict]:
     """Average rating and review count of each product that has a review."""
     rows = (
-        ProductReview.objects.filter(product_id__in=product_ids)
+        published_reviews()
+        .filter(product_id__in=product_ids)
         .values("product_id")
         .annotate(average_rating=Avg("rating"), review_count=Count("id"))
     )

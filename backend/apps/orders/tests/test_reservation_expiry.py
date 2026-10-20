@@ -211,3 +211,66 @@ def test_backfill_skips_partially_shipped_lines():
     )
     assert _total_reserved() == before
     assert "Skipped (partially shipped): 1 row(s)" in out.getvalue()
+
+
+def _expire(order):
+    StockReservation.objects.filter(order_line__order=order).update(
+        expires_at=timezone.now() - timedelta(minutes=1)
+    )
+
+
+def test_a_confirmed_orders_hold_never_expires():
+    cart, variant = _reserved_order(quantity=4, stock=10)
+    capture_payment(order=cart, amount=cart.grand_total)
+    _expire(cart)
+
+    assert release_expired_reservations() == 0
+
+    assert get_stock_item(variant=variant).quantity_reserved == 4
+
+
+def test_checkout_frees_expired_holds_on_the_stock_it_needs_without_a_sweeper():
+    stale, variant = _reserved_order(quantity=4, stock=5)
+    _expire(stale)
+    cart = get_or_create_cart(CustomerUserFactory())
+    add_line(order=cart, variant=variant, quantity=3)
+
+    checkout(order=cart)
+
+    assert StockReservation.objects.get(order_line__order=stale).status == (
+        StockReservation.Status.RELEASED
+    )
+    assert get_stock_item(variant=variant).quantity_reserved == 3
+
+
+def test_paying_after_the_hold_expired_holds_the_stock_again():
+    cart, variant = _reserved_order(quantity=4, stock=10)
+    _expire(cart)
+    release_expired_reservations()
+    assert get_stock_item(variant=variant).quantity_reserved == 0
+
+    capture_payment(order=cart, amount=cart.grand_total)
+
+    assert get_stock_item(variant=variant).quantity_reserved == 4
+    line = cart.lines.get()
+    create_shipment(order=cart, lines=[{"order_line": line, "quantity": 4}])
+    stock_item = get_stock_item(variant=variant)
+    assert (stock_item.quantity_on_hand, stock_item.quantity_reserved) == (6, 0)
+
+
+def test_paying_after_the_hold_expired_is_refused_once_the_stock_has_sold():
+    from apps.common.exceptions import BusinessRuleViolationError
+    from apps.orders.models import SalesOrder
+
+    stale, variant = _reserved_order(quantity=4, stock=5)
+    _expire(stale)
+    other = get_or_create_cart(CustomerUserFactory())
+    add_line(order=other, variant=variant, quantity=5)
+    checkout(order=other)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        capture_payment(order=stale, amount=stale.grand_total)
+
+    assert exc.value.code == "hold_expired_stock_gone"
+    stale.refresh_from_db()
+    assert stale.status == SalesOrder.Status.AWAITING_PAYMENT

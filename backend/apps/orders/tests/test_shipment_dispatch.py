@@ -283,3 +283,58 @@ def test_terminal_status_rebuilds_the_phone_risk_profile():
     assert profile.total_orders == 1
     assert profile.delivered_count == 1
     assert profile.success_rate == Decimal("100.00")
+
+
+def _dispatch_with(shipment, consignment_id="CID-ONCE"):
+    with patch("apps.orders.services.shipments.get_gateway_for_carrier") as get_gateway:
+        get_gateway.return_value.create_consignment.return_value = {
+            "consignment_id": consignment_id,
+            "status": Shipment.Status.SHIPPED,
+            "provider_status": "",
+        }
+        dispatch_to_courier(shipment=shipment)
+    return get_gateway
+
+
+def test_a_booked_shipment_is_not_booked_with_the_courier_twice():
+    _, shipment = _ready_shipment(dispatch_carrier=CarrierFactory())
+    _dispatch_with(shipment)
+
+    with (
+        patch("apps.orders.services.shipments.get_gateway_for_carrier") as get_gateway,
+        pytest.raises(BusinessRuleViolationError) as exc,
+    ):
+        dispatch_to_courier(shipment=shipment)
+
+    assert exc.value.code == "already_dispatched"
+    get_gateway.assert_not_called()
+    shipment.refresh_from_db()
+    assert shipment.tracking_number == "CID-ONCE"
+
+
+def test_a_courier_reply_without_a_status_still_marks_the_shipment_booked():
+    _, shipment = _ready_shipment(dispatch_carrier=CarrierFactory())
+    with patch("apps.orders.services.shipments.get_gateway_for_carrier") as get_gateway:
+        get_gateway.return_value.create_consignment.return_value = {
+            "consignment_id": "CID-BLANK",
+            "status": "",
+            "provider_status": "",
+        }
+        dispatch_to_courier(shipment=shipment)
+
+    shipment.refresh_from_db()
+    assert shipment.courier_status == "booked"
+
+
+def test_a_delivered_shipment_cannot_be_booked_with_a_courier():
+    _, shipment = _ready_shipment(dispatch_carrier=CarrierFactory())
+    update_shipment_status(shipment=shipment, status=Shipment.Status.DELIVERED)
+
+    with (
+        patch("apps.orders.services.shipments.get_gateway_for_carrier") as get_gateway,
+        pytest.raises(BusinessRuleViolationError) as exc,
+    ):
+        dispatch_to_courier(shipment=shipment)
+
+    assert exc.value.code == "terminal_status"
+    get_gateway.assert_not_called()

@@ -22,7 +22,11 @@ from apps.inventory.services.stock import (
     record_movement,
     reserve_stock,
 )
-from apps.inventory.services.warehouses import create_warehouse, update_warehouse
+from apps.inventory.services.warehouses import (
+    create_warehouse,
+    delete_warehouse,
+    update_warehouse,
+)
 from apps.orders.services.preorder_allocation import allocate_preorder_stock
 from apps.procurement.factories import SupplierFactory
 from apps.procurement.models import GoodsReceiptNote, GRNLine
@@ -255,3 +259,50 @@ def test_warehouse_api_lists_and_creates_by_kind(admin_client):
     )
     assert mismatch.status_code == 400
     assert mismatch.data["error"]["code"] == "warehouse_kind_mismatch"
+
+
+def _second_stock_warehouse():
+    get_or_create_default_warehouse(Category.CategoryType.STOCK)
+    return create_warehouse(
+        data={"name": "Overflow", "code": "OVERFLOW", "kind": Category.CategoryType.STOCK}
+    )
+
+
+def test_an_empty_warehouse_can_be_deleted_although_it_has_stock_rows():
+    variant = ProductVariantFactory()
+    warehouse = _second_stock_warehouse()
+    assert StockItem.objects.filter(warehouse=warehouse, variant=variant).exists()
+
+    delete_warehouse(warehouse=warehouse)
+
+    warehouse.refresh_from_db()
+    assert warehouse.deleted_at is not None
+    assert not StockItem.objects.filter(warehouse=warehouse).exists()
+
+
+def test_a_warehouse_holding_units_cannot_be_deleted():
+    variant = ProductVariantFactory()
+    warehouse = _second_stock_warehouse()
+    record_movement(
+        variant=variant,
+        warehouse=warehouse,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=3,
+        unit_cost=Decimal("5.00"),
+    )
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        delete_warehouse(warehouse=warehouse)
+
+    assert exc.value.code == "warehouse_has_stock"
+    warehouse.refresh_from_db()
+    assert warehouse.deleted_at is None
+
+
+def test_the_default_warehouse_cannot_be_deleted():
+    warehouse = get_or_create_default_warehouse(Category.CategoryType.STOCK)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        delete_warehouse(warehouse=warehouse)
+
+    assert exc.value.code == "cannot_delete_default_warehouse"

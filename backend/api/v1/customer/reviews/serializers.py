@@ -21,6 +21,8 @@ class CustomerReviewSerializer(serializers.Serializer):
     comment = serializers.CharField(required=False, allow_blank=True, default="")
     images = ReviewImagesField(required=False)
     is_verified_purchase = serializers.BooleanField(read_only=True)
+    # "pending" while it waits for the shop's approval; "hidden" if staff took it down.
+    status = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
 

@@ -24,7 +24,7 @@ from apps.orders.services.carts import (
     ensure_single_kind,
 )
 from apps.orders.services.notifications import notify_order, order_label
-from apps.orders.services.reservations import release_stock_reservation
+from apps.orders.services.reservations import reinstate_lapsed_holds, release_stock_reservation
 
 UPDATABLE_ORDER_FIELDS = ("shipping_address", "notes", "contact_email", "contact_phone")
 
@@ -295,6 +295,8 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
 
     if previous == SalesOrder.Status.PENDING:
         _check_out_by_hand(order)
+    elif previous == SalesOrder.Status.AWAITING_PAYMENT:
+        reinstate_lapsed_holds(order)
     if new_status == SalesOrder.Status.SHIPPED:
         _ship_remaining(order)
     order.status = new_status

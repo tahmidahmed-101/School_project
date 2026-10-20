@@ -53,7 +53,7 @@ services:
       - "127.0.0.1:4361:4361"
     networks: [internal, edge]
 
-  # Off by default: see scripts/reservation_sweeper.sh before enabling (`--profile sweeper`).
+  # Optional (`--profile sweeper`): checkout frees expired holds itself; see scripts/reservation_sweeper.sh.
   sweeper:
     init: true
     <<: *api

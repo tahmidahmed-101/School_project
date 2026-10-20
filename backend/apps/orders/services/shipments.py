@@ -541,7 +541,25 @@ def _ensure_not_held_for_fraud_review(order: SalesOrder) -> None:
 
 
 @transaction.atomic
-def dispatch_to_courier(*, shipment: Shipment) -> Shipment:
+def dispatch_to_courier(*, shipment: Shipment, actor=None) -> Shipment:
+    # Locked so a double-clicked "Book courier" waits for the first booking
+    # and then sees it, instead of both reaching the courier and booking (and
+    # later charging for) the same parcel twice.
+    Shipment.objects.select_for_update().filter(pk=shipment.pk).exists()
+    shipment.refresh_from_db()
+    if shipment.status in Shipment.TERMINAL_STATUSES:
+        raise BusinessRuleViolationError(
+            f"Shipment is already {shipment.get_status_display().lower()} and cannot be "
+            "booked with a courier.",
+            code="terminal_status",
+        )
+    # Only a courier booking or a courier webhook ever sets courier_status.
+    if shipment.courier_status:
+        raise BusinessRuleViolationError(
+            f"This shipment is already booked with the courier "
+            f"(consignment {shipment.tracking_number}).",
+            code="already_dispatched",
+        )
     # A shipment created before a case was opened must not reach a courier
     # while the case is under review.
     _ensure_not_held_for_fraud_review(shipment.order)
@@ -555,8 +573,23 @@ def dispatch_to_courier(*, shipment: Shipment) -> Shipment:
     result = gateway.create_consignment(shipment)
 
     shipment.tracking_number = result.get("consignment_id") or shipment.tracking_number
-    shipment.courier_status = result.get("status", "")
+    # The courier's own wording, as the webhooks store it. Never left blank:
+    # a blank courier_status is what marks the shipment as not yet booked.
+    shipment.courier_status = (
+        result.get("provider_status") or result.get("status") or "booked"
+    )
     shipment.save(update_fields=["tracking_number", "courier_status", "updated_at"])
+    log_action(
+        actor=actor,
+        action="shipment.dispatched",
+        target_type="Shipment",
+        target_id=shipment.id,
+        metadata={
+            "order_number": shipment.order.order_number,
+            "carrier": str(carrier),
+            "consignment_id": shipment.tracking_number,
+        },
+    )
     return shipment
 
 

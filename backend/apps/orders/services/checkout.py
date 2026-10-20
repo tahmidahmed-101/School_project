@@ -70,6 +70,24 @@ def _settle_coupon(order: SalesOrder, lines) -> None:
     revalidate_applied_coupon(order)
 
 
+def _free_expired_holds(order: SalesOrder) -> None:
+    """Hand back what unpaid orders past their hold still keep of the stock this
+    checkout needs, so stock frees up when it is wanted, not only when a
+    scheduled sweep happens to run."""
+    from apps.catalog.models import BundleItem
+    from apps.orders.services.reservations import release_expired_reservations
+
+    # A fixed two queries however long the cart: a bundle holds its
+    # components' stock, so their ids count as well as its own.
+    line_variant_ids = set(order.lines.values_list("variant_id", flat=True))
+    if not line_variant_ids:
+        return
+    component_ids = BundleItem.objects.filter(
+        bundle_variant_id__in=line_variant_ids
+    ).values_list("component_variant_id", flat=True)
+    release_expired_reservations(variant_ids=line_variant_ids | set(component_ids))
+
+
 @transaction.atomic
 def checkout(
     *, order: SalesOrder, shipping_address=None, carrier=None, ip_address: str = ""
@@ -98,10 +116,14 @@ def checkout(
         raise BusinessRuleViolationError(
             "This checkout could not be completed.", code="ip_blocked"
         )
-    if shipping_address is not None and blocklist.is_blocked(shipping_address.phone):
+    # Both numbers: a guest's contact phone is the one the courier calls.
+    phones = [order.contact_phone, shipping_address.phone if shipping_address else ""]
+    if any(phone and blocklist.is_blocked(phone) for phone in phones):
         raise BusinessRuleViolationError(
             "This checkout could not be completed.", code="phone_blocked"
         )
+
+    _free_expired_holds(order)
 
     lock_order(order)
     if order.status != SalesOrder.Status.PENDING:

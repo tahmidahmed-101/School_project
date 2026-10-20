@@ -11,7 +11,7 @@ from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.business.services.modules import require_feature
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.services.soft_delete import soft_delete_instance
+from apps.common.services.soft_delete import restore_instance, soft_delete_instance
 
 CHART_OF_ACCOUNTS_PICKER = "chart_of_accounts_picker"
 
@@ -131,12 +131,31 @@ def update_expense(*, expense: Expense, data: dict) -> Expense:
 
 @transaction.atomic
 def delete_expense(*, expense: Expense, actor=None) -> Expense:
-    # Same reason `update_expense` freezes amount/date/accounts: the posted
-    # entry is the ledger, so removal has to go through a reversing entry.
+    """The posted entry is the ledger and is never edited or deleted, so the
+    expense leaves the books through a reversing entry. The expense itself is
+    only soft-deleted, keeping the trail of what was recorded and undone."""
+    expense = Expense.objects.select_for_update().get(pk=expense.pk)
     entry = expense.journal_entry if expense.journal_entry_id is not None else None
-    if entry is not None and entry.status == JournalEntry.Status.POSTED:
-        raise BusinessRuleViolationError(
-            "This expense is posted to the ledger; reverse the journal entry instead.",
-            code="expense_posted",
-        )
+    if (
+        entry is not None
+        and entry.deleted_at is None
+        and entry.status == JournalEntry.Status.POSTED
+        and not is_reversed(entry)
+    ):
+        reverse_journal_entry(entry, reason=f"expense to {expense.payee} deleted")
     return soft_delete_instance(expense, actor=actor, code="expense_in_use")
+
+
+@transaction.atomic
+def restore_expense(expense: Expense) -> Expense:
+    """Deleting reversed the expense's entry, so bringing it back books it
+    again with a fresh entry rather than reviving the reversed one."""
+    # Refreshed in place: the restore view serializes the instance it passed in.
+    Expense.objects.select_for_update().filter(pk=expense.pk).exists()
+    expense.refresh_from_db()
+    restore_instance(expense)
+    entry = expense.journal_entry if expense.journal_entry_id is not None else None
+    if entry is None or is_reversed(entry):
+        expense.journal_entry = _post_expense(expense)
+        expense.save(update_fields=["journal_entry"])
+    return expense

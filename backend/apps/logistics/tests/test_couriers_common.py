@@ -82,4 +82,5 @@ def test_successful_dispatch_stores_the_consignment_id():
 
     shipment.refresh_from_db()
     assert shipment.tracking_number == "42"
-    assert shipment.courier_status == "shipped"
+    # The courier's own wording, as the webhooks store it.
+    assert shipment.courier_status == "in_review"

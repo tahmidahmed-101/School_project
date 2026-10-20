@@ -1,10 +1,10 @@
 #!/bin/sh
-# Periodically release stock reservations past their expiry.
+# Periodically release checkout holds of unpaid orders past their expiry.
 #
-# UNSAFE TO ENABLE until `manage.py backfill_shipped_reservations --apply` has
-# been run: the sweeper calls the inventory-level release, so any reservation
-# row still left ACTIVE on an already-shipped line would decrement
-# StockItem.quantity_reserved a second time and oversell live stock.
+# Optional: checkout already frees expired holds on the stock it is about to
+# reserve, so this only keeps the shown availability tidy between checkouts.
+# Only orders still awaiting payment are swept -- never a confirmed or shipped
+# one -- so no line that has shipped is touched.
 #
 # Started only via the `sweeper` compose profile (see docker-compose.prod.yml):
 #   docker compose -f docker-compose.prod.yml --profile sweeper up -d

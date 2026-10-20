@@ -318,3 +318,86 @@ def test_vendor_payment_amount_must_be_positive():
             vendor_bill=bill, amount=Decimal("0"), paid_at=timezone.now(), method="bank"
         )
     assert exc.value.code == "invalid_amount"
+
+
+def _receive(po, quantity):
+    create_goods_receipt(
+        purchase_order=po,
+        received_date=date.today(),
+        received_by=None,
+        lines=[
+            {
+                "purchase_order_line": po.lines.get(),
+                "quantity_received": quantity,
+                "condition": GRNLine.Condition.ACCEPTED,
+            }
+        ],
+    )
+
+
+def test_a_purchase_order_cannot_be_billed_twice_for_the_same_goods():
+    bill = _received_po_with_bill()
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_vendor_bill(
+            purchase_order=bill.purchase_order,
+            supplier=bill.supplier,
+            amount=Decimal("40.00"),
+            due_date=date.today(),
+        )
+
+    assert exc.value.code == "already_billed"
+
+
+def test_a_voided_bill_frees_its_goods_to_be_billed_again():
+    bill = _received_po_with_bill()
+    void_vendor_bill(vendor_bill=bill)
+
+    again = create_vendor_bill(
+        purchase_order=bill.purchase_order,
+        supplier=bill.supplier,
+        amount=Decimal("40.00"),
+        due_date=date.today(),
+    )
+
+    assert again.amount == Decimal("40.00")
+
+
+def test_a_partly_received_purchase_order_is_billed_in_parts():
+    supplier = SupplierFactory()
+    po = create_purchase_order(
+        supplier=supplier,
+        order_date=date.today(),
+        lines=[
+            {
+                "variant": ProductVariantFactory(),
+                "quantity_ordered": 10,
+                "unit_cost": Decimal("4.00"),
+            }
+        ],
+    )
+    po = submit_purchase_order(purchase_order=po)
+    _receive(po, 4)
+    first = create_vendor_bill(
+        purchase_order=po, supplier=supplier, amount=Decimal("16.00"), due_date=date.today()
+    )
+    _receive(po, 6)
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        create_vendor_bill(
+            purchase_order=po, supplier=supplier, amount=Decimal("40.00"), due_date=date.today()
+        )
+    assert exc.value.code == "bill_mismatch"
+
+    second = create_vendor_bill(
+        purchase_order=po, supplier=supplier, amount=Decimal("24.00"), due_date=date.today()
+    )
+    assert first.amount + second.amount == Decimal("40.00")
+
+
+def test_amending_a_bill_does_not_count_the_bill_against_itself():
+    bill = _received_po_with_bill()
+
+    updated = update_vendor_bill(vendor_bill=bill, data={"amount": Decimal("40.00")})
+
+    assert updated.amount == Decimal("40.00")

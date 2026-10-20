@@ -85,26 +85,89 @@ def _return_preorder_units_to_queue(reservation: StockReservation) -> None:
     )
 
 
-def release_expired_reservations(*, now=None, actor=None) -> int:
-    """Release every active reservation past its `expires_at`. Each one commits
-    on its own so a single bad row can't strand the rest of the sweep."""
+def release_expired_reservations(*, now=None, actor=None, variant_ids=None) -> int:
+    """Release every checkout hold past its `expires_at`. Each one commits on
+    its own so a single bad row can't strand the rest of the sweep.
+
+    Only holds of orders still awaiting payment expire: once an order is
+    confirmed its stock is promised to a customer until it ships or is
+    cancelled, however long that takes. `variant_ids` narrows the sweep to the
+    stock a checkout is about to reserve, so expired holds are freed when the
+    stock is wanted even with no scheduled sweeper running."""
+    from apps.orders.models import SalesOrder
+
     now = now or timezone.now()
     # Stock allocated to a pre-order is held for a paying customer until it
     # ships or staff release it; it does not time out like a checkout hold.
     expired = (
-        StockReservation.objects.filter(status=StockReservation.Status.ACTIVE, expires_at__lte=now)
+        StockReservation.objects.filter(
+            status=StockReservation.Status.ACTIVE,
+            expires_at__lte=now,
+            order_line__order__status=SalesOrder.Status.AWAITING_PAYMENT,
+        )
         .exclude(order_line__is_preorder=True)
         .order_by("created_at")
     )
+    if variant_ids is not None:
+        expired = expired.filter(variant_id__in=list(variant_ids))
+
+    from apps.orders.services.orders import lock_order
 
     released = 0
-    for reservation in expired:
+    for reservation in expired.select_related("order_line__order"):
         try:
-            release_stock_reservation(reservation=reservation, actor=actor)
+            with transaction.atomic():
+                # The order lock serialises this with a payment confirming the
+                # order, which would otherwise count the hold as still there.
+                order = lock_order(reservation.order_line.order)
+                if order.status != SalesOrder.Status.AWAITING_PAYMENT:
+                    continue
+                release_stock_reservation(reservation=reservation, actor=actor)
         except BusinessRuleViolationError:
             continue
         released += 1
     return released
+
+
+@transaction.atomic
+def reinstate_lapsed_holds(order) -> int:
+    """Hold stock again for an unpaid order whose checkout hold expired, as it
+    is confirmed. Shipping releases what the order holds, so confirming it with
+    nothing held would oversell. Refused when the stock has since been sold.
+    Returns how many units were held again."""
+    from apps.inventory.services.stock import reserve_stock
+
+    held_again = 0
+    lines = SalesOrderLine.objects.filter(order=order, is_preorder=False).select_related("variant")
+    for line in lines:
+        unshipped = line.quantity - line.shipped_quantity
+        if unshipped <= 0:
+            continue
+        for component, component_qty in expand_variant(line.variant, unshipped):
+            active = (
+                StockReservation.objects.filter(
+                    order_line=line,
+                    variant=component,
+                    status=StockReservation.Status.ACTIVE,
+                ).aggregate(total=Sum("quantity"))["total"]
+                or 0
+            )
+            missing = component_qty - active
+            if missing <= 0:
+                continue
+            try:
+                reserve_stock(variant=component, quantity=missing)
+            except BusinessRuleViolationError as exc:
+                if exc.code != "insufficient_stock":
+                    raise
+                raise BusinessRuleViolationError(
+                    f"The stock held for {component.sku} was released when this order's "
+                    "hold expired, and it has since sold out. Restock it or cancel the order.",
+                    code="hold_expired_stock_gone",
+                ) from exc
+            StockReservation.objects.create(order_line=line, variant=component, quantity=missing)
+            held_again += missing
+    return held_again
 
 
 @transaction.atomic

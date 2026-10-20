@@ -7,12 +7,14 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import ProductReview
 from apps.catalog.selectors.products import get_product_by_id
 from apps.catalog.selectors.reviews import get_review_by_id, reviews_list
-from apps.catalog.services.reviews import delete_review
+from apps.catalog.services.reviews import MODERATION_STATUSES, delete_review, moderate_review
+from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
 from apps.common.params import get_choice, get_kind, get_related
-from apps.common.responses import not_found
+from apps.common.responses import error_from_exception, not_found
 from apps.common.serializers import user_label
 
 from .permissions import CatalogManagePermission, CatalogPermissionMixin
@@ -28,6 +30,10 @@ class AdminProductReviewSerializer(serializers.Serializer):
     comment = serializers.CharField(read_only=True, allow_blank=True)
     images = serializers.SerializerMethodField()
     is_verified_purchase = serializers.BooleanField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    moderation_note = serializers.CharField(read_only=True, allow_blank=True)
+    moderated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    moderated_by_id = serializers.UUIDField(read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_customer_name(self, obj) -> str:
@@ -42,7 +48,8 @@ class AdminProductReviewSerializer(serializers.Serializer):
 
 @extend_schema(tags=["Catalog"])
 class AdminProductReviewListView(CatalogPermissionMixin, GenericListAPIView):
-    """Reviews across the catalog, for moderation. Filters: product_id, rating (1-5), search."""
+    """Reviews across the catalog, for moderation. Filters: product_id, rating (1-5),
+    status (pending / published / hidden), search."""
 
     serializer_class = AdminProductReviewSerializer
     search_fields = ("comment", "product__name")
@@ -54,16 +61,49 @@ class AdminProductReviewListView(CatalogPermissionMixin, GenericListAPIView):
         product = get_related(params, "product_id", get_product_by_id, "Product not found.")
         rating = get_choice(params, "rating", ("1", "2", "3", "4", "5"))
         return reviews_list(
-            product=product, rating=int(rating) if rating else None, kind=get_kind(params)
+            product=product,
+            rating=int(rating) if rating else None,
+            kind=get_kind(params),
+            status=get_choice(params, "status", ProductReview.Status.values),
         )
 
     def get(self, request) -> Response:
         return self.list_response(request)
 
 
+class AdminProductReviewModerationSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=MODERATION_STATUSES)
+    note = serializers.CharField(required=False, allow_blank=True, max_length=255, default="")
+
+
 @extend_schema(tags=["Catalog"])
 class AdminProductReviewDetailView(APIView):
+    serializer_class = AdminProductReviewSerializer
     permission_classes: ClassVar[list] = [CatalogManagePermission]
+
+    @extend_schema(request=AdminProductReviewModerationSerializer)
+    def patch(self, request, review_id) -> Response:
+        """Publish a review, or hide it from the storefront (`status`, optional `note`)."""
+        review = get_review_by_id(review_id)
+        if review is None:
+            return not_found("review_not_found", "Review not found.")
+        serializer = AdminProductReviewModerationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            review = moderate_review(
+                review=review,
+                status=serializer.validated_data["status"],
+                note=serializer.validated_data["note"],
+                actor=request.user,
+            )
+        except DomainError as exc:
+            return error_from_exception(exc)
+        return Response(
+            {
+                "data": AdminProductReviewSerializer(review, context={"request": request}).data,
+                "message": "Success",
+            }
+        )
 
     def delete(self, request, review_id) -> Response:
         review = get_review_by_id(review_id)

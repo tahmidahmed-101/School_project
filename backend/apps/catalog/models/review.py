@@ -17,6 +17,13 @@ def _review_image_path(instance: ProductReviewImage, filename: str) -> str:
 
 
 class ProductReview(TimeStampedModel):
+    class Status(models.TextChoices):
+        # Waiting for staff, when the shop approves reviews before they show.
+        PENDING = "pending", "Pending approval"
+        PUBLISHED = "published", "Published"
+        # Taken off the storefront by staff; kept, so the call can be undone.
+        HIDDEN = "hidden", "Hidden"
+
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="product_reviews"
     )
@@ -26,9 +33,23 @@ class ProductReview(TimeStampedModel):
     )
     comment = models.TextField(blank=True)
     is_verified_purchase = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PUBLISHED)
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    # Why staff hid it. Internal: never shown on the storefront.
+    moderation_note = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]
+        indexes: ClassVar[list] = [
+            models.Index(fields=["product", "status"], name="review_product_status_idx"),
+        ]
         constraints: ClassVar[list] = [
             models.UniqueConstraint(fields=["customer", "product"], name="uniq_product_review"),
         ]

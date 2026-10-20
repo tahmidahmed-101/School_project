@@ -788,7 +788,7 @@ class AdminShipmentDispatchView(APIView):
         if shipment is None:
             return not_found("shipment_not_found", "Shipment not found.")
         try:
-            shipment = dispatch_to_courier(shipment=shipment)
+            shipment = dispatch_to_courier(shipment=shipment, actor=request.user)
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": _shipment_detail(shipment), "message": "Success"})

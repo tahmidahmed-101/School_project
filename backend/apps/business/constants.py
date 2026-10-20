@@ -70,6 +70,16 @@ MODULE_REGISTRY: tuple[ModuleSpec, ...] = (
                 default=True,
                 disable_guard="apps.catalog.services.products.product_variations_in_use",
             ),
+            ConfigField(
+                key="review_approval",
+                label="Approve reviews before they show",
+                description=(
+                    "On means a new or edited customer review waits for staff approval "
+                    "before it appears on the storefront. Off means reviews show at once "
+                    "and staff can still hide any of them."
+                ),
+                default=False,
+            ),
         ),
     ),
     ModuleSpec(
