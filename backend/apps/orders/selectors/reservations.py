@@ -21,7 +21,7 @@ def reservations_list(
     kind: str | None = None,
 ) -> QuerySet[StockReservation]:
     queryset = StockReservation.objects.select_related(
-        "order_line", "order_line__order", "variant__product"
+        "order_line", "order_line__order", "variant__product", "warehouse"
     )
     if variant is not None:
         queryset = queryset.filter(variant=variant)

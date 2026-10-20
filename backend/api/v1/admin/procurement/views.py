@@ -21,6 +21,7 @@ from apps.common.permissions import require_any_staff_permission, require_staff_
 from apps.common.responses import error_from_exception, not_found
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.common.utils.export import CsvRenderer, csv_response
+from apps.inventory.selectors.warehouse import get_warehouse_by_id
 from apps.procurement.models import PurchaseOrder, VendorBill
 from apps.procurement.selectors.goods_receipts import get_goods_receipt_by_id, goods_receipts_list
 from apps.procurement.selectors.purchase_orders import (
@@ -431,6 +432,10 @@ class AdminGoodsReceiptListCreateView(PurchasingPermissionMixin, GenericListAPIV
             return error_from_exception(
                 DomainError("Purchase order not found.", code="po_not_found")
             )
+        warehouse_id = data.pop("warehouse_id", None)
+        warehouse = get_warehouse_by_id(warehouse_id) if warehouse_id else None
+        if warehouse_id and warehouse is None:
+            return not_found("warehouse_not_found", "Warehouse not found.")
         po_lines_by_id = {str(line.id): line for line in purchase_order.lines.all()}
         lines = []
         for line in data.pop("lines"):
@@ -452,6 +457,7 @@ class AdminGoodsReceiptListCreateView(PurchasingPermissionMixin, GenericListAPIV
                 purchase_order=purchase_order,
                 received_by=request.user,
                 lines=lines,
+                warehouse=warehouse,
                 **data,
             )
         except DomainError as exc:

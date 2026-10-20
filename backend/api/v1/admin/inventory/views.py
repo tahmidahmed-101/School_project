@@ -40,7 +40,6 @@ from apps.inventory.selectors.warehouse import (
 from apps.inventory.services.exports import LEDGER_EXPORT_COLUMNS, export_ledger_entries
 from apps.inventory.services.stock import (
     delete_stock_item,
-    materialize_stock_items,
     post_adjustment,
     post_bulk_adjustments,
     stock_intake,
@@ -107,8 +106,8 @@ class AdminStockItemListView(GenericListAPIView):
         variant = get_related(params, "variant_id", get_variant_by_id, "Variant not found.")
         warehouse = get_related(params, "warehouse_id", get_warehouse_by_id, "Warehouse not found.")
         low_stock_only = get_bool(params, "low_stock_only", default=False)
-        if warehouse is None:
-            materialize_stock_items(variant=variant)
+        # Read-only: new items get their empty record when they are created,
+        # so a record staff delete is not put back by the next page load.
         return stock_items_list(
             variant=variant,
             product=get_uuid(params, "product_id"),

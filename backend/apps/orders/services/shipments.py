@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from django.db import transaction
-from django.db.models import Sum
 from django.utils import timezone
 
 from apps.accounting.services.postings import post_sales_shipment, reverse_sales_shipment
@@ -12,24 +11,18 @@ from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.phone import local_bd_mobile
 from apps.inventory.constants import MovementType
-from apps.inventory.services.stock import (
-    record_movement,
-    release_reservation,
-    reserve_stock,
-    write_off_stock,
-)
+from apps.inventory.services.stock import record_movement, write_off_stock
 from apps.logistics.services.couriers.registry import get_gateway_for_carrier
-from apps.orders.models import (
-    SalesOrder,
-    SalesOrderLine,
-    Shipment,
-    ShipmentLine,
-    StockReservation,
-)
-from apps.orders.selectors.shipments import order_shipments_complete
+from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, ShipmentLine
+from apps.orders.selectors.shipments import order_shipments_complete, shipped_from_warehouses
 from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.orders import lock_order
-from apps.orders.services.reservations import release_line_reservations
+from apps.orders.services.reservations import (
+    hold_line_stock,
+    hold_returned_stock,
+    release_line_reservations,
+    ship_held_stock,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,15 +108,9 @@ def create_shipment(
         order_line = locked_lines[line_id]
         ShipmentLine.objects.create(shipment=shipment, order_line=order_line, quantity=quantity)
         for component, component_qty in expand_variant(order_line.variant, quantity):
-            # Release before the stock-out: the reverse order dips through a
-            # state where reserved exceeds on-hand, which the CHECK rejects.
-            release_reservation(variant=component, quantity=component_qty)
-            record_movement(
-                variant=component,
-                movement_type=MovementType.SALES_OUT,
-                quantity=component_qty,
-                reference_type="shipment",
-                reference_id=shipment.id,
+            # Each unit leaves the warehouse that holds it for the order.
+            ship_held_stock(
+                order_line=order_line, variant=component, quantity=component_qty, shipment=shipment
             )
         order_line.shipped_quantity += quantity
         order_line.save(update_fields=["shipped_quantity", "updated_at"])
@@ -291,55 +278,42 @@ def _ensure_receivable(shipment: Shipment, order: SalesOrder) -> None:
 def _restock_returned_line(
     order_line: SalesOrderLine, shipment: Shipment, sellable: int, damaged: int, *, actor=None
 ) -> None:
-    """Every returned unit comes back in (RETURN_IN); damaged ones then go out
-    through the normal write-off, so the shelf only gains sellable stock, and
-    only sellable stock is held again for the order."""
+    """Every returned unit comes back in (RETURN_IN) to the warehouse it left
+    from; damaged ones then go out of it through the normal write-off, so the
+    shelf only gains sellable stock, and only sellable stock is held again for
+    the order (in that same warehouse first, so it can ship from there)."""
+    damaged_by_component = dict(expand_variant(order_line.variant, damaged)) if damaged else {}
     for component, component_qty in expand_variant(order_line.variant, sellable + damaged):
-        record_movement(
-            variant=component,
-            movement_type=MovementType.RETURN_IN,
-            quantity=component_qty,
-            reference_type="shipment",
-            reference_id=shipment.id,
-            actor=actor,
-        )
-    if damaged:
-        for component, component_qty in expand_variant(order_line.variant, damaged):
-            write_off_stock(
+        to_write_off = damaged_by_component.get(component, 0)
+        for warehouse, part in shipped_from_warehouses(
+            shipment_ids=[shipment.id], variant=component, quantity=component_qty
+        ):
+            record_movement(
                 variant=component,
-                quantity=component_qty,
-                reason=f"Damaged in returned consignment {shipment.id}",
+                warehouse=warehouse,
+                movement_type=MovementType.RETURN_IN,
+                quantity=part,
+                reference_type="shipment",
+                reference_id=shipment.id,
                 actor=actor,
             )
-    if sellable:
-        for component, component_qty in expand_variant(order_line.variant, sellable):
-            reserve_stock(variant=component, quantity=component_qty)
-
-
-def _active_reservation_totals(order_line_ids) -> dict[tuple, int]:
-    """Active reservation quantity per (order line, variant), in one query."""
-    return {
-        (row["order_line_id"], row["variant_id"]): row["total"]
-        for row in StockReservation.objects.filter(
-            order_line_id__in=order_line_ids, status=StockReservation.Status.ACTIVE
-        )
-        .values("order_line_id", "variant_id")
-        .annotate(total=Sum("quantity"))
-    }
-
-
-def _top_up_reservation_rows(order_line: SalesOrderLine, held_rows: dict) -> None:
-    """Top the line's active reservation rows up to its unshipped quantity, so
-    cancelling the order later releases every unit held for it. Rows a partly
-    shipped line still carries from checkout already cover it."""
-    for component, needed in expand_variant(order_line.variant, order_line.shippable_quantity):
-        key = (order_line.id, component.id)
-        shortfall = needed - held_rows.get(key, 0)
-        if shortfall > 0:
-            StockReservation.objects.create(
-                order_line=order_line, variant=component, quantity=shortfall
-            )
-            held_rows[key] = needed
+            scrapped = min(to_write_off, part)
+            if scrapped:
+                write_off_stock(
+                    variant=component,
+                    warehouse=warehouse,
+                    quantity=scrapped,
+                    reason=f"Damaged in returned consignment {shipment.id}",
+                    actor=actor,
+                )
+                to_write_off -= scrapped
+            if part > scrapped:
+                hold_returned_stock(
+                    order_line=order_line,
+                    variant=component,
+                    quantity=part - scrapped,
+                    warehouse=warehouse,
+                )
 
 
 @transaction.atomic
@@ -381,7 +355,6 @@ def receive_back_shipment(*, shipment: Shipment, dispositions: dict, actor=None)
             )
 
     reverse_sales_shipment(shipment)
-    held_rows = _active_reservation_totals(locked_lines)
 
     for shipment_line in shipment_lines:
         order_line = locked_lines[shipment_line.order_line_id]
@@ -395,7 +368,6 @@ def receive_back_shipment(*, shipment: Shipment, dispositions: dict, actor=None)
         shipment_line.save(update_fields=["damaged_quantity", "updated_at"])
         if shipment_line.stock_posted:
             _restock_returned_line(order_line, shipment, sellable, damaged, actor=actor)
-            _top_up_reservation_rows(order_line, held_rows)
 
     shipment.received_back_at = timezone.now()
     update_fields = ["received_back_at", "updated_at"]
@@ -464,8 +436,6 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
         .prefetch_related("variant__bundle_components__component_variant")
         .filter(id__in=[shipment_line.order_line_id for shipment_line in owed])
     }
-    held_rows = _active_reservation_totals(locked_lines)
-
     replaced = 0
     for shipment_line in owed:
         order_line = locked_lines[shipment_line.order_line_id]
@@ -478,7 +448,9 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
         if shipment_line.stock_posted:
             for component, component_qty in expand_variant(order_line.variant, quantity):
                 try:
-                    reserve_stock(variant=component, quantity=component_qty)
+                    hold_line_stock(
+                        order_line=order_line, variant=component, quantity=component_qty
+                    )
                 except BusinessRuleViolationError as exc:
                     if exc.code != "insufficient_stock":
                         raise
@@ -491,8 +463,6 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
         if not shipment_line.stock_posted:
             order_line.allocated_quantity -= quantity
         order_line.save(update_fields=["shipped_quantity", "allocated_quantity", "updated_at"])
-        if shipment_line.stock_posted:
-            _top_up_reservation_rows(order_line, held_rows)
         shipment_line.replaced_quantity += quantity
         shipment_line.save(update_fields=["replaced_quantity", "updated_at"])
         replaced += quantity

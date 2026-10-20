@@ -451,7 +451,12 @@ class StockReservationSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField(read_only=True)
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
+    # Null only on holds made before warehouses were recorded (the default warehouse).
+    warehouse_id = serializers.UUIDField(read_only=True, allow_null=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True, default=None)
     quantity = serializers.IntegerField(read_only=True)
+    # Units of the hold already shipped; quantity - shipped_quantity is still held.
+    shipped_quantity = serializers.IntegerField(read_only=True)
     status = serializers.ChoiceField(choices=StockReservation.Status.choices, read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     expires_at = serializers.DateTimeField(read_only=True)

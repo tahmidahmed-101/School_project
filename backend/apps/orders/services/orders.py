@@ -6,7 +6,6 @@ from apps.audit.services.audit import log_action
 from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.options import variant_title
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.inventory.services.stock import reserve_stock
 from apps.orders.models import (
     Payment,
     SalesOrder,
@@ -24,7 +23,11 @@ from apps.orders.services.carts import (
     ensure_single_kind,
 )
 from apps.orders.services.notifications import notify_order, order_label
-from apps.orders.services.reservations import reinstate_lapsed_holds, release_stock_reservation
+from apps.orders.services.reservations import (
+    hold_line_stock,
+    reinstate_lapsed_holds,
+    release_stock_reservation,
+)
 
 UPDATABLE_ORDER_FIELDS = ("shipping_address", "notes", "contact_email", "contact_phone")
 
@@ -354,12 +357,7 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         return
 
     for component, component_qty in expand_variant(line.variant, line.quantity):
-        reserve_stock(variant=component, quantity=component_qty)
-        StockReservation.objects.create(
-            order_line=line,
-            variant=component,
-            quantity=component_qty,
-        )
+        hold_line_stock(order_line=line, variant=component, quantity=component_qty)
 
 
 def ensure_variant_of_kind(variant, kind: str) -> None:
@@ -427,12 +425,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
     )
     if order.status != SalesOrder.Status.PENDING and not is_preorder:
         for component, component_qty in expand_variant(variant, quantity):
-            reserve_stock(variant=component, quantity=component_qty)
-            StockReservation.objects.create(
-                order_line=line,
-                variant=component,
-                quantity=component_qty,
-            )
+            hold_line_stock(order_line=line, variant=component, quantity=component_qty)
     order.recalculate_totals()
     log_action(
         actor=actor,

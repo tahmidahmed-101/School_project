@@ -455,6 +455,13 @@ def create_variant(
     variant.save()
     variant.option_values.set(values)
     sync_product_type(product)
+    # An empty stock record in the default warehouse, so the new item shows on
+    # the Stock page to be stocked. Made once, here: a record staff delete
+    # later stays deleted. A bundle never holds stock of its own.
+    if product.product_type != Product.ProductType.BUNDLE:
+        from apps.inventory.services.stock import materialize_stock_items
+
+        materialize_stock_items(variant=variant)
     log_action(
         actor=actor,
         action="product_variant.created",

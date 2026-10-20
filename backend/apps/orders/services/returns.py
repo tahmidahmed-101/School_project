@@ -28,6 +28,7 @@ from apps.orders.models import (
     Shipment,
     ShipmentLine,
 )
+from apps.orders.selectors.shipments import shipped_from_warehouses
 from apps.orders.services.notifications import notify_return
 
 # Only units that have physically left the building can come back. A partially
@@ -251,15 +252,21 @@ def receive_rma(*, rma: ReturnRMA, actor=None) -> ReturnRMA:
         if line.condition != ReturnRMALine.Condition.SELLABLE:
             continue
         order_line = line.order_line
+        # Back to the warehouse(s) the units shipped from.
+        shipment_ids = order_line.shipment_lines.values_list("shipment_id", flat=True)
         for component, component_qty in expand_variant(order_line.variant, line.quantity):
-            record_movement(
-                variant=component,
-                movement_type=MovementType.RETURN_IN,
-                quantity=component_qty,
-                reference_type="rma",
-                reference_id=rma.id,
-                actor=actor,
-            )
+            for warehouse, part in shipped_from_warehouses(
+                shipment_ids=shipment_ids, variant=component, quantity=component_qty
+            ):
+                record_movement(
+                    variant=component,
+                    warehouse=warehouse,
+                    movement_type=MovementType.RETURN_IN,
+                    quantity=part,
+                    reference_type="rma",
+                    reference_id=rma.id,
+                    actor=actor,
+                )
 
     # Posted after restocking, but RETURN_IN carries no unit_cost so it leaves
     # avg_cost untouched — the reversal is still valued at the cost the

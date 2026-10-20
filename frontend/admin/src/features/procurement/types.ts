@@ -100,6 +100,9 @@ export interface GoodsReceipt {
   purchase_order_number: string
   received_date: string
   received_by_id: string | null
+  /** Where the accepted goods were put; null on receipts made before a warehouse could be chosen. */
+  warehouse_id: string | null
+  warehouse_name: string | null
   status: GoodsReceiptStatus
   lines: GRNLine[]
 }
@@ -108,6 +111,8 @@ export interface GoodsReceipt {
 export interface GoodsReceiptCreatePayload {
   purchase_order_id: string
   received_date: string
+  /** Omitted: the default warehouse of the order's kind. */
+  warehouse_id?: string
   lines: { purchase_order_line_id: string; quantity_received: number; condition: GRNLineCondition }[]
 }
 

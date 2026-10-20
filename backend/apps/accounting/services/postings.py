@@ -13,7 +13,7 @@ from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
-from apps.inventory.models import StockItem
+from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.inventory.selectors.stock import get_stock_item
 from apps.orders.models import SalesOrder
 
@@ -83,10 +83,68 @@ def post_vendor_payment(payment) -> JournalEntry:
     )
 
 
+def _variant_costs(variant_ids) -> dict:
+    """One weighted-average cost per variant across every warehouse holding
+    it, weighted by what each holds. A variant with nothing on hand anywhere
+    keeps the last cost it had. Empty rows, which every warehouse carries for
+    every item of its kind, never drag the cost to zero."""
+    totals: dict = {}
+    fallback: dict = {}
+    for item in StockItem.objects.filter(variant_id__in=variant_ids).order_by("updated_at"):
+        if item.quantity_on_hand > 0:
+            value, units = totals.get(item.variant_id, (Decimal("0"), 0))
+            totals[item.variant_id] = (
+                value + item.avg_cost * item.quantity_on_hand,
+                units + item.quantity_on_hand,
+            )
+        if item.avg_cost:
+            fallback[item.variant_id] = item.avg_cost
+    costs = dict(fallback)
+    for variant_id, (value, units) in totals.items():
+        costs[variant_id] = value / units
+    return costs
+
+
+def _shipment_cogs(shipment, expansions) -> Decimal:
+    """What the consignment's units cost: each SALES_OUT it posted, valued at
+    the average cost of the warehouse the units left. A stock-out never moves
+    that average, so today's figure is the one at shipping time."""
+    entries = list(
+        StockLedgerEntry.objects.filter(
+            reference_type="shipment",
+            reference_id=shipment.id,
+            movement_type=MovementType.SALES_OUT,
+        ).values_list("variant_id", "warehouse_id", "quantity")
+    )
+    if not entries:
+        cost_by_variant = _variant_costs({component.id for _, component, _ in expansions})
+        return sum(
+            (
+                cost_by_variant.get(component.id, Decimal("0")) * component_qty
+                for _, component, component_qty in expansions
+            ),
+            Decimal("0"),
+        )
+    cost_at = {
+        (item.variant_id, item.warehouse_id): item.avg_cost
+        for item in StockItem.objects.filter(
+            variant_id__in={variant_id for variant_id, _, _ in entries},
+            warehouse_id__in={warehouse_id for _, warehouse_id, _ in entries},
+        )
+    }
+    return sum(
+        (
+            cost_at.get((variant_id, warehouse_id), Decimal("0")) * quantity
+            for variant_id, warehouse_id, quantity in entries
+        ),
+        Decimal("0"),
+    )
+
+
 def post_sales_shipment(shipment) -> list[JournalEntry]:
     """Two entries, matching blueprint §8's revenue side and cost side:
     Dr AR / Cr Revenue+Tax, and Dr COGS / Cr Inventory Asset (COGS valued
-    at each variant's current weighted-average cost)."""
+    at the weighted-average cost of the warehouse each unit left)."""
     lines = list(
         shipment.lines.select_related("order_line", "order_line__variant").prefetch_related(
             "order_line__variant__bundle_components__component_variant"
@@ -100,12 +158,6 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
         for line in lines
         for component, component_qty in expand_variant(line.order_line.variant, line.quantity)
     ]
-    variant_ids = {component.id for _, component, _ in expansions}
-    cost_by_variant = {
-        item.variant_id: item.avg_cost
-        for item in StockItem.objects.filter(variant_id__in=variant_ids)
-    }
-
     # An order-level coupon discounts the whole order, not any one line, so
     # shipment revenue recognizes the same proportion of it as post_sales_return
     # reverses — otherwise a discounted order would recognize more revenue
@@ -115,7 +167,6 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
 
     revenue_total = Decimal("0")
     tax_total = Decimal("0")
-    cogs_total = Decimal("0")
 
     for line in lines:
         order_line = line.order_line
@@ -127,10 +178,7 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
             # debit below is revenue + tax, and it has to equal the two credits
             # exactly once every figure is stored at 2dp.
             tax_total += quantize_money(order_line.tax_amount * line.quantity / order_line.quantity)
-    for _order_line, component, component_qty in expansions:
-        avg_cost = cost_by_variant.get(component.id, Decimal("0"))
-        cogs_total += avg_cost * component_qty
-    cogs_total = quantize_money(cogs_total)
+    cogs_total = quantize_money(_shipment_cogs(shipment, expansions))
 
     entry_date = shipment.shipped_at.date() if shipment.shipped_at else timezone.now().date()
 
@@ -238,11 +286,7 @@ def post_sales_return(rma) -> list[JournalEntry]:
         for line in rma_lines
         for component, component_qty in expand_variant(line.order_line.variant, line.quantity)
     ]
-    variant_ids = {component.id for _, component, _ in expansions}
-    cost_by_variant = {
-        item.variant_id: item.avg_cost
-        for item in StockItem.objects.filter(variant_id__in=variant_ids)
-    }
+    cost_by_variant = _variant_costs({component.id for _, component, _ in expansions})
 
     restocked_cost = Decimal("0")
     scrapped_cost = Decimal("0")
@@ -376,7 +420,7 @@ def post_stock_adjustment(ledger_entry, *, unit_cost: Decimal | None = None) -> 
     variant's current weighted-average cost values the adjustment.
     """
     is_increase = ledger_entry.movement_type == MovementType.ADJUSTMENT_IN
-    stock_item = get_stock_item(variant=ledger_entry.variant)
+    stock_item = get_stock_item(variant=ledger_entry.variant, warehouse=ledger_entry.warehouse)
     # An outward movement never touches avg_cost, so it is valued at the
     # current weighted average rather than any caller-supplied cost.
     if unit_cost is None or not is_increase:
@@ -406,7 +450,7 @@ def post_stock_writeoff(ledger_entry) -> JournalEntry:
     variant's avg_cost at the time of write-off (record_movement doesn't
     change avg_cost on an OUT movement, so the current StockItem value is
     the value at write-off time)."""
-    stock_item = get_stock_item(variant=ledger_entry.variant)
+    stock_item = get_stock_item(variant=ledger_entry.variant, warehouse=ledger_entry.warehouse)
     unit_cost = stock_item.avg_cost if stock_item else Decimal("0")
     amount = quantize_money(unit_cost * ledger_entry.quantity)
     return post_journal_entry(

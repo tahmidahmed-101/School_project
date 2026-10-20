@@ -74,7 +74,9 @@ def test_stock_list_for_one_kind_still_shows_a_variant_with_no_stock_yet(admin_c
     unstocked = ProductVariantFactory(
         product__category__category_type=Category.CategoryType.PREORDER
     )
-    ProductVariantFactory()
+    # What creating the item does: an empty record in its kind's default warehouse.
+    materialize_stock_items(variant=unstocked)
+    materialize_stock_items(variant=ProductVariantFactory())
 
     rows = _rows(admin_client, "stock-items/", kind="preorder")
 

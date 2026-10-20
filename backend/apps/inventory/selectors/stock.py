@@ -3,12 +3,18 @@ from __future__ import annotations
 from collections.abc import Iterable
 from uuid import UUID
 
-from django.db.models import F, QuerySet
+from django.db.models import F, QuerySet, Sum
 
 from apps.catalog.models import Category
 from apps.inventory.models import StockItem, StockLedgerEntry
 
 from .warehouse import default_warehouse_ids
+
+
+def _in_sellable_warehouses(queryset: QuerySet) -> QuerySet:
+    """Rows in warehouses that can sell: active and not deleted. A variant only
+    has rows in warehouses of its own kind, so this never mixes the halves."""
+    return queryset.filter(warehouse__is_active=True, warehouse__deleted_at__isnull=True)
 
 
 def _in_default_warehouse(queryset: QuerySet, warehouse) -> QuerySet:
@@ -67,9 +73,9 @@ def get_stock_item_by_id(stock_item_id: str | UUID) -> StockItem | None:
 
 def available_quantity_for_variant(variant, warehouse=None) -> int:
     """Available (on_hand - reserved) — the number shown as "in stock" on the
-    public product browse API."""
-    item = get_stock_item(variant=variant, warehouse=warehouse)
-    return item.available if item else 0
+    public product browse API. Without a warehouse, every warehouse that can
+    sell counts: checkout holds stock wherever it is."""
+    return available_quantities_for_variants([variant.id], warehouse).get(variant.id, 0)
 
 
 def available_quantities_for_variants(
@@ -78,9 +84,14 @@ def available_quantities_for_variants(
     """Batch version of `available_quantity_for_variant` — one query for many
     variants, so callers building a variant table/list don't issue an N+1."""
     queryset = StockItem.objects.filter(variant_id__in=list(variant_ids))
-    queryset = _in_default_warehouse(queryset, warehouse)
-    rows = queryset.values("variant_id", "quantity_on_hand", "quantity_reserved")
-    return {row["variant_id"]: row["quantity_on_hand"] - row["quantity_reserved"] for row in rows}
+    if warehouse is not None:
+        queryset = queryset.filter(warehouse=warehouse)
+    else:
+        queryset = _in_sellable_warehouses(queryset)
+    rows = queryset.values("variant_id").annotate(
+        on_hand=Sum("quantity_on_hand"), reserved=Sum("quantity_reserved")
+    )
+    return {row["variant_id"]: row["on_hand"] - row["reserved"] for row in rows}
 
 
 def reorder_points_for_variants(variant_ids: Iterable[UUID], warehouse=None) -> dict[UUID, int]:

@@ -179,6 +179,28 @@ def test_arrived_stock_goes_to_the_oldest_waiting_order_first():
     assert allocate_preorder_stock() == []
 
 
+def test_arrived_stock_in_another_preorder_warehouse_is_allocated_too():
+    from apps.inventory.services.warehouses import create_warehouse
+
+    second = create_warehouse(data={"name": "Pre-order Two", "code": "PO2", "kind": KIND_PREORDER})
+    variant = _preorder_variant(limit=None)
+    order = _confirmed_preorder("alloc-second-wh@example.com", variant, quantity=2)
+    record_movement(
+        variant=variant,
+        warehouse=second,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=2,
+        unit_cost=Decimal("5.00"),
+    )
+
+    allocate_preorder_stock()
+
+    assert order.lines.get().allocated_quantity == 2
+    held = StockReservation.objects.get(order_line__order=order)
+    assert (held.warehouse, held.quantity) == (second, 2)
+    assert StockItem.objects.get(variant=variant, warehouse=second).quantity_reserved == 2
+
+
 def test_an_allocated_preorder_ships_from_stock():
     variant = _preorder_variant()
     order = _confirmed_preorder("ships@example.com", variant, quantity=2)

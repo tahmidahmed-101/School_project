@@ -6,14 +6,23 @@ from django.db.models import F
 from apps.accounting.services.postings import post_goods_received
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
-from apps.inventory.services.stock import record_movement
+from apps.inventory.services.stock import default_warehouse_for, record_movement
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, PurchaseOrderLine
+from apps.procurement.selectors.kind import purchase_order_kind
 
 
 @transaction.atomic
 def create_goods_receipt(
-    *, purchase_order: PurchaseOrder, received_date, received_by, lines: list[dict]
+    *,
+    purchase_order: PurchaseOrder,
+    received_date,
+    received_by,
+    lines: list[dict],
+    warehouse=None,
 ) -> GoodsReceiptNote:
+    """Book goods in against a purchase order. Accepted lines go into
+    `warehouse`, or the default warehouse of the order's kind when none is
+    given; it must be an active warehouse of that kind."""
     if purchase_order.status not in {
         PurchaseOrder.Status.SUBMITTED,
         PurchaseOrder.Status.RECEIVED,
@@ -26,8 +35,19 @@ def create_goods_receipt(
             "A goods receipt needs at least one line.", code="no_lines"
         )
 
+    kind = purchase_order_kind(purchase_order)
+    if warehouse is None:
+        warehouse = default_warehouse_for(kind)
+    elif warehouse.kind != kind or not warehouse.is_active or warehouse.deleted_at is not None:
+        raise BusinessRuleViolationError(
+            f"{warehouse.name} cannot receive this order's goods: choose an active "
+            f"{'pre-order' if kind == 'preorder' else 'stock'} warehouse.",
+            code="warehouse_kind_mismatch",
+        )
+
     grn = GoodsReceiptNote.objects.create(
         purchase_order=purchase_order,
+        warehouse=warehouse,
         received_date=received_date,
         received_by=received_by,
         status=GoodsReceiptNote.Status.PENDING,
@@ -60,6 +80,7 @@ def create_goods_receipt(
         if condition == GRNLine.Condition.ACCEPTED:
             record_movement(
                 variant=po_line.variant,
+                warehouse=warehouse,
                 movement_type=MovementType.PURCHASE_IN,
                 quantity=quantity,
                 unit_cost=po_line.unit_cost,

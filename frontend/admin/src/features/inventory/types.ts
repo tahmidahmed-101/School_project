@@ -139,7 +139,12 @@ export interface StockReservation {
   variant_id: string
   variant_sku: string
   product_name: string
+  /** Where the units are held; null on holds made before warehouses were recorded (the default one). */
+  warehouse_id: string | null
+  warehouse_name: string | null
   quantity: number
+  /** Units of the hold already shipped; quantity - shipped_quantity is still held. */
+  shipped_quantity: number
   status: ReservationStatus
   created_at: string
   expires_at: string

@@ -93,7 +93,26 @@ const Reservations = () => {
         <LinkCell to={`/order_detail/${row.original.order_id}`}>{row.original.order_number}</LinkCell>
       ),
     },
-    { accessorKey: "quantity", header: "QTY" },
+    {
+      id: "warehouse",
+      header: "WAREHOUSE",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.warehouse_name ?? "Default"}</span>
+      ),
+    },
+    {
+      accessorKey: "quantity",
+      header: "QTY",
+      cell: ({ row }) =>
+        row.original.shipped_quantity > 0 && row.original.status === "active" ? (
+          <span title={`${row.original.shipped_quantity} already shipped`}>
+            {row.original.quantity - row.original.shipped_quantity}
+            <span className="text-xs text-muted-foreground"> / {row.original.quantity}</span>
+          </span>
+        ) : (
+          row.original.quantity
+        ),
+    },
     {
       id: "status",
       header: "STATUS",
@@ -203,8 +222,8 @@ const Reservations = () => {
         emptyIcon={Lock}
         emptyTitle="No reservations"
         emptyDescription="No stock holds match these filters."
-        minWidth="1020px"
-        columnWidths={["280px", "140px", "70px", "150px", "210px", "210px", ...(canRelease ? ["80px"] : [])]}
+        minWidth="1180px"
+        columnWidths={["280px", "140px", "150px", "80px", "150px", "210px", "210px", ...(canRelease ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
       />
 

@@ -6,12 +6,9 @@ from django.db.models import F
 from apps.audit.services.audit import log_action
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.params import KIND_PREORDER
-from apps.inventory.services.stock import (
-    default_warehouse_for,
-    lock_variant_stock,
-    reserve_stock,
-)
-from apps.orders.models import SalesOrder, SalesOrderLine, StockReservation
+from apps.inventory.services.stock import default_warehouse_for, lock_variant_stock
+from apps.orders.models import SalesOrder, SalesOrderLine
+from apps.orders.services.reservations import hold_line_stock
 
 
 @transaction.atomic
@@ -20,9 +17,11 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
 
     Only confirmed orders take part, so stock is never held for an order whose
     deposit has not come in. Each allocated unit is a normal reservation, which
-    is what lets the line ship and what cancelling the order releases.
+    is what lets the line ship and what cancelling the order releases. Arrived
+    stock counts in every active pre-order warehouse, the default one first.
     """
-    warehouse = default_warehouse_for(KIND_PREORDER)
+    # Refuses up front when the shop has no pre-order warehouse at all.
+    default_warehouse_for(KIND_PREORDER)
     lines = list(
         SalesOrderLine.objects.select_for_update()
         .select_related("order", "variant")
@@ -38,11 +37,15 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
     allocated: list[dict] = []
     for line in lines:
         per_unit = expand_variant(line.variant, 1)
-        available = {
-            item.variant_id: item.available
-            for item in lock_variant_stock([component.id for component, _ in per_unit])
-            if item.warehouse_id == warehouse.id
-        }
+        available: dict = {}
+        for item in lock_variant_stock([component.id for component, _ in per_unit]):
+            warehouse = item.warehouse
+            if (
+                warehouse.kind == KIND_PREORDER
+                and warehouse.is_active
+                and warehouse.deleted_at is None
+            ):
+                available[item.variant_id] = available.get(item.variant_id, 0) + item.available
         units = min(
             line.awaiting_stock_quantity,
             *(available.get(component.id, 0) // quantity for component, quantity in per_unit),
@@ -50,10 +53,7 @@ def allocate_preorder_stock(*, actor=None) -> list[dict]:
         if units <= 0:
             continue
         for component, quantity in per_unit:
-            reserve_stock(variant=component, warehouse=warehouse, quantity=quantity * units)
-            StockReservation.objects.create(
-                order_line=line, variant=component, quantity=quantity * units
-            )
+            hold_line_stock(order_line=line, variant=component, quantity=quantity * units)
         line.allocated_quantity += units
         line.save(update_fields=["allocated_quantity", "updated_at"])
         allocated.append(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from django.db.models import F, Q, QuerySet, Sum
+from django.db.models import F, Max, Q, QuerySet, Sum
 from django.db.models.functions import Coalesce
 
 from apps.orders.models import SalesOrder, SalesOrderLine, Shipment, StockReservation
@@ -106,3 +106,38 @@ def get_shipment_by_carrier_and_tracking_number(carrier, tracking_number: str) -
     return Shipment.objects.select_related("order").filter(
         carrier=carrier, tracking_number=tracking_number, deleted_at__isnull=True
     ).first()
+
+
+def shipped_from_warehouses(*, shipment_ids, variant, quantity: int) -> list[tuple]:
+    """Split `quantity` units of `variant` coming back from these consignments
+    over the warehouses they left from (the latest one first), so returned
+    stock goes back where it was taken. Units the ledger cannot place, or
+    whose warehouse is gone, go to the default warehouse: `(None, n)`."""
+    from apps.inventory.constants import MovementType
+    from apps.inventory.models import StockLedgerEntry
+    from apps.inventory.selectors.warehouse import all_warehouses
+
+    origins = (
+        StockLedgerEntry.objects.filter(
+            reference_type="shipment",
+            reference_id__in=list(shipment_ids),
+            variant=variant,
+            movement_type=MovementType.SALES_OUT,
+        )
+        .values("warehouse_id")
+        .annotate(total=Sum("quantity"), last=Max("created_at"))
+        .order_by("-last")
+    )
+    live = {warehouse.id: warehouse for warehouse in all_warehouses()}
+    parts: dict = {}
+    remaining = quantity
+    for origin in origins:
+        take = min(remaining, origin["total"])
+        if take <= 0:
+            break
+        warehouse = live.get(origin["warehouse_id"])
+        parts[warehouse] = parts.get(warehouse, 0) + take
+        remaining -= take
+    if remaining:
+        parts[None] = parts.get(None, 0) + remaining
+    return list(parts.items())

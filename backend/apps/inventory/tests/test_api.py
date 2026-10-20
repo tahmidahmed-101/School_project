@@ -620,14 +620,17 @@ def test_ledger_entry_list_exposes_product_image_without_n_plus_one(api_client):
 
 
 def test_stock_item_list_shows_fresh_variant_without_stock_item(api_client):
-    """A newly-created variant with no movement history (and therefore no
-    StockItem row) must still appear in Stock Levels so it can be found and
-    stocked — the cache row is materialized on read."""
+    """A newly-created variant with no movement history must still appear in
+    Stock Levels so it can be found and stocked: creating it makes its empty
+    record in the default warehouse."""
+    from apps.catalog.factories import ProductFactory
+    from apps.catalog.services.products import create_variant
+
     admin = create_user(email="inv-fresh@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
 
-    variant = ProductVariantFactory(sku="SKU-FRESH-1")
-    assert not StockItem.objects.filter(variant=variant).exists()
+    variant = create_variant(product=ProductFactory(), sku="SKU-FRESH-1", price=Decimal("10.00"))
+    assert StockItem.objects.filter(variant=variant).count() == 1
 
     response = api_client.get(
         "/api/v1/admin/inventory/stock-items/",
@@ -644,9 +647,27 @@ def test_stock_item_list_shows_fresh_variant_without_stock_item(api_client):
     assert row["available"] == 0
     assert StockItem.objects.filter(variant=variant).exists()
 
-    # Idempotent: a second read does not duplicate the row.
+    # Reading never adds or duplicates rows.
     api_client.get("/api/v1/admin/inventory/stock-items/")
     assert StockItem.objects.filter(variant=variant).count() == 1
+
+
+def test_a_deleted_empty_stock_record_stays_deleted(api_client):
+    """Loading the Stock page must not put back a record staff just deleted."""
+    from apps.catalog.factories import ProductFactory
+    from apps.catalog.services.products import create_variant
+
+    admin = create_user(email="inv-delete@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    variant = create_variant(product=ProductFactory(), sku="SKU-GONE-1", price=Decimal("10.00"))
+    record = StockItem.objects.get(variant=variant)
+
+    deleted = api_client.delete(f"/api/v1/admin/inventory/stock-items/{record.id}/")
+    listed = api_client.get("/api/v1/admin/inventory/stock-items/", {"search": "SKU-GONE-1"})
+
+    assert deleted.status_code == 200
+    assert listed.data["data"]["results"] == []
+    assert not StockItem.objects.filter(variant=variant).exists()
 
 
 def test_admin_can_list_and_create_and_manage_warehouses(api_client):

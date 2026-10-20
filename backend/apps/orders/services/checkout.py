@@ -7,10 +7,9 @@ from django.db import transaction
 from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.inventory.services.stock import reserve_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
 from apps.logistics.services.rates import quote_shipping
-from apps.orders.models import SalesOrder, StockReservation
+from apps.orders.models import SalesOrder
 from apps.orders.services.address_snapshot import build_address_snapshot
 from apps.orders.services.carts import (
     MIXED_BASKET_MESSAGE,
@@ -21,6 +20,7 @@ from apps.orders.services.carts import (
 )
 from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
+from apps.orders.services.reservations import hold_line_stock
 from apps.risk.services import blocklist, ip_blocklist
 
 
@@ -160,12 +160,7 @@ def checkout(
         if is_preorder:
             continue
         for component, component_qty in expand_variant(line.variant, line.quantity):
-            reserve_stock(variant=component, quantity=component_qty)
-            StockReservation.objects.create(
-                order_line=line,
-                variant=component,
-                quantity=component_qty,
-            )
+            hold_line_stock(order_line=line, variant=component, quantity=component_qty)
 
     if len(kinds) > 1:
         raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")

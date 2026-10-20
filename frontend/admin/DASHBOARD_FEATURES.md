@@ -57,11 +57,12 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 - Triage "wrong price" reports: resolve, dismiss, reopen
 - Q&A and price reports switchable per product
 
-### Inventory — stock, ledger, reservations, warehouses
+### Inventory — stock, ledger, transfers, reservations, warehouses
 
 - Stock per variant per warehouse: on hand, reserved, available
 - Adjustments, bulk adjustments, write-offs (all post to accounting)
 - Append-only stock ledger with filters and CSV export
+- Stock in every active warehouse sells: orders hold it where it is (default warehouse first), and shipping, returns and cancellations use that same warehouse
 - Stock transfers between warehouses of the same shop
 - Reservations list with expiry and manual release; expired holds are freed at checkout
 - Warehouses with one default per shop; empty warehouses can be deleted
@@ -79,7 +80,7 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 
 - Suppliers per shop with CSV import
 - Purchase orders: draft → submitted → received, with PDF
-- Goods receiving with accepted / rejected lines
+- Goods receiving into a chosen warehouse, with accepted / rejected lines
 - Vendor bills with 3-way match against received goods; each delivery is billed once, part deliveries are billed in parts
 - Partial vendor payments with CSV export
 
@@ -155,7 +156,6 @@ Source: frontend/admin/src + backend/api/v1/admin (verified against code, 2026-1
 
 > **Known gaps** — found in code, not working yet:
 >
-> - Only the default warehouse is used for orders, receiving and returns (other warehouses hold stock only via transfers)
 > - No online payment gateway (payments are recorded manually)
 > - Email sending is not configured for production (SMTP), so password reset codes are not delivered there yet
 > - Missing: email campaigns

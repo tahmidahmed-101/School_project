@@ -15,6 +15,7 @@ from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.inventory.constants import IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
 from apps.inventory.selectors.warehouse import (
+    active_warehouses,
     all_warehouses,
     default_warehouse,
     get_or_create_default_warehouse,
@@ -287,6 +288,65 @@ def reserve_stock(*, variant, warehouse=None, quantity: int) -> StockItem:
     stock_item.quantity_reserved += quantity
     stock_item.save(update_fields=["quantity_reserved", "updated_at"])
     return stock_item
+
+
+def _sellable_rows(variant) -> list[StockItem]:
+    """The variant's stock rows in warehouses that can sell, locked: active,
+    not deleted and of the variant's own kind."""
+    # A warehouse with no record holds none of it, so there is nothing to
+    # create: holds only come out of stock that is already there.
+    kind = variant.product.category.category_type
+    return list(
+        StockItem.objects.select_for_update()
+        .select_related("warehouse")
+        .filter(variant=variant, warehouse__in=active_warehouses().filter(kind=kind))
+        .order_by("pk")
+    )
+
+
+@transaction.atomic
+def reserve_stock_anywhere(
+    *, variant, quantity: int, prefer=None
+) -> list[tuple[Warehouse, int]]:
+    """Hold `quantity` units wherever they are available, as few warehouses
+    as possible: the preferred warehouse first (where the units came from or
+    were held before), then the default, then the fullest. A hold that no
+    single warehouse can cover is split across several. Returns the
+    (warehouse, quantity) parts, so each can be held and later shipped from
+    where it really is. Refused whole if every warehouse together falls short."""
+    if quantity <= 0:
+        raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
+    prefer_id = getattr(prefer, "id", prefer)
+    rows = sorted(
+        _sellable_rows(variant),
+        key=lambda item: (
+            item.warehouse_id != prefer_id,
+            not item.warehouse.is_default,
+            -item.available,
+            item.warehouse.name,
+        ),
+    )
+    if sum(max(item.available, 0) for item in rows) < quantity:
+        raise BusinessRuleViolationError(
+            "Not enough available stock to reserve.", code="insufficient_stock"
+        )
+    # Whole in one warehouse when one can take it, so the parcel ships from one place.
+    whole = next((item for item in rows if item.available >= quantity), None)
+    if whole is not None:
+        rows = [whole]
+
+    parts: list[tuple[Warehouse, int]] = []
+    remaining = quantity
+    for item in rows:
+        take = min(remaining, item.available)
+        if take <= 0:
+            continue
+        reserve_stock(variant=variant, warehouse=item.warehouse, quantity=take)
+        parts.append((item.warehouse, take))
+        remaining -= take
+        if remaining == 0:
+            break
+    return parts
 
 
 @transaction.atomic

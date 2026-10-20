@@ -22,6 +22,7 @@ import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
 import { useKind } from "@/hooks/use-kind"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
+import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
 import { createGoodsReceipt } from "../slices/goodsReceiptSlice"
 import type { GoodsReceipt, GRNLineCondition, PurchaseOrder } from "../types"
@@ -126,6 +127,12 @@ function ReceiptForm({
   const pageKind = useKind()
   const isPreorder = (po?.kind ?? pageKind) === "preorder"
   const [receivedDate, setReceivedDate] = useState(todayLocalISODate)
+  // Accepted goods go into this warehouse; empty means the default one of the order's kind.
+  const { warehouses } = useWarehouses(isPreorder ? "preorder" : "stock")
+  const receivingWarehouses = warehouses.filter((w) => w.is_active && !w.deleted_at)
+  const [warehouseId, setWarehouseId] = useState("")
+  const chosenWarehouse =
+    warehouseId || receivingWarehouses.find((w) => w.is_default)?.id || receivingWarehouses[0]?.id || ""
   const [lineState, setLineState] = useState<Record<string, LineState>>(() => {
     const initial: Record<string, LineState> = {}
     for (const line of po?.lines ?? []) {
@@ -159,7 +166,12 @@ function ReceiptForm({
     setSubmitting(true)
     try {
       const grn = await dispatch(
-        createGoodsReceipt({ purchase_order_id: po.id, received_date: receivedDate, lines: payloadLines })
+        createGoodsReceipt({
+          purchase_order_id: po.id,
+          received_date: receivedDate,
+          ...(chosenWarehouse ? { warehouse_id: chosenWarehouse } : {}),
+          lines: payloadLines,
+        })
       ).unwrap()
       toast.success(
         grn.status === "qc_reject"
@@ -238,13 +250,32 @@ function ReceiptForm({
   return (
     <>
       <div className="space-y-4 py-2">
-        <DateField
-          className="max-w-xs"
-          label="Received date *"
-          id="grn-date"
-          value={receivedDate}
-          onChange={(e) => setReceivedDate(e.target.value)}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DateField
+            label="Received date *"
+            id="grn-date"
+            value={receivedDate}
+            onChange={(e) => setReceivedDate(e.target.value)}
+          />
+          <Field>
+            <FieldLabel htmlFor="grn-warehouse">Receive into</FieldLabel>
+            <FieldContent>
+              <Select value={chosenWarehouse} onValueChange={setWarehouseId}>
+                <SelectTrigger id="grn-warehouse">
+                  <SelectValue placeholder="Default warehouse" />
+                </SelectTrigger>
+                <SelectContent>
+                  {receivingWarehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name}
+                      {w.is_default ? " (default)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldContent>
+          </Field>
+        </div>
 
         {po && openLines.length === 0 && (
           <p className="text-sm text-muted-foreground">Every line on this purchase order has been fully received.</p>

@@ -27,7 +27,19 @@ class StockReservation(TimeStampedModel):
     variant = models.ForeignKey(
         "catalog.ProductVariant", on_delete=models.PROTECT, related_name="stock_reservations"
     )
+    # Where the units are held. Empty only on holds made before stock could sit
+    # in more than one warehouse; those are in the default warehouse of their kind.
+    warehouse = models.ForeignKey(
+        "inventory.Warehouse",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="stock_reservations",
+    )
     quantity = models.PositiveIntegerField()
+    # Units of this hold that have left with a consignment. Shipping takes them
+    # from the holds of their warehouse, so the rest is what is still held here.
+    shipped_quantity = models.PositiveIntegerField(default=0)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.ACTIVE
     )
@@ -42,6 +54,10 @@ class StockReservation(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.order_line_id}: {self.quantity} ({self.status})"
+
+    @property
+    def held_quantity(self) -> int:
+        return max(self.quantity - self.shipped_quantity, 0)
 
     @property
     def is_expired(self) -> bool:

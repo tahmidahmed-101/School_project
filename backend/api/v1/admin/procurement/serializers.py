@@ -137,6 +137,8 @@ class GoodsReceiptNoteSerializer(serializers.Serializer):
     purchase_order_number = serializers.CharField(source="purchase_order.po_number", read_only=True)
     received_date = serializers.DateField()
     received_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+    warehouse_id = serializers.UUIDField(read_only=True, allow_null=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True, default=None)
     status = serializers.ChoiceField(choices=GoodsReceiptNote.Status.choices)
     lines = serializers.SerializerMethodField()
 
@@ -152,6 +154,8 @@ class GoodsReceiptNoteSerializer(serializers.Serializer):
 class GoodsReceiptCreateSerializer(serializers.Serializer):
     purchase_order_id = serializers.UUIDField()
     received_date = serializers.DateField()
+    # Where the accepted goods go; omitted means the default warehouse of the order's kind.
+    warehouse_id = serializers.UUIDField(required=False, allow_null=True)
     lines = GRNLineInputSerializer(many=True)
 
 

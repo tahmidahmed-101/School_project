@@ -12,7 +12,7 @@ def goods_receipts_list(
     *, purchase_order=None, kind: str | None = None
 ) -> QuerySet[GoodsReceiptNote]:
     queryset = (
-        GoodsReceiptNote.objects.select_related("purchase_order")
+        GoodsReceiptNote.objects.select_related("purchase_order", "warehouse")
         .prefetch_related("lines")
         .filter(deleted_at__isnull=True)
     )
@@ -24,7 +24,7 @@ def goods_receipts_list(
 
 def get_goods_receipt_by_id(grn_id: str | UUID) -> GoodsReceiptNote | None:
     return (
-        GoodsReceiptNote.objects.select_related("purchase_order")
+        GoodsReceiptNote.objects.select_related("purchase_order", "warehouse")
         .prefetch_related("lines")
         .filter(id=grn_id, deleted_at__isnull=True)
         .first()

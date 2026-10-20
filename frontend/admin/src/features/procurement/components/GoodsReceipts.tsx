@@ -80,6 +80,7 @@ function ReceiptDetailDialog({ grn: selected, onClose }: { grn: GoodsReceipt | n
               <Link to={`${purchasingBase(grn.kind)}/orders/${grn.purchase_order_id}`} className="text-primary hover:underline">
                 {grn.purchase_order_number}
               </Link>
+              {grn.warehouse_name ? ` into ${grn.warehouse_name}` : ""}
             </DialogDescription>
           </DialogHeader>
           {!lineInfo ? (
@@ -168,6 +169,13 @@ const GoodsReceiptsList = () => {
       ),
     },
     {
+      id: "warehouse",
+      header: "WAREHOUSE",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.warehouse_name ?? "Default"}</span>
+      ),
+    },
+    {
       id: "lines",
       header: "LINES",
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.lines.length}</span>,
@@ -222,8 +230,8 @@ const GoodsReceiptsList = () => {
         onRowClick={setViewing}
         emptyIcon={PackageCheck}
         emptyTitle="No goods received yet"
-        minWidth="760px"
-        columnWidths={["130px", "170px", "90px", "90px", "130px", "80px"]}
+        minWidth="920px"
+        columnWidths={["130px", "170px", "160px", "90px", "90px", "130px", "80px"]}
       />
 
       <ReceiptDetailDialog grn={viewing} onClose={() => setViewing(null)} />
