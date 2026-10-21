@@ -21,7 +21,7 @@ import { useCan } from "@/hooks/use-can"
 import { moneySchema, reportFormError } from "@/lib/forms"
 import { resolveDetailState } from "@/lib/detailState"
 import { fromDatetimeLocal, getDefaultCurrency, toDatetimeLocal } from "@/lib/format"
-import { toPaisa } from "@/lib/money"
+import { parseAmount } from "@/lib/moneyInput"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useStockBrandRows, useStockCategoryRows } from "../lib/stockTargets"
 import { TickList } from "./TickList"
@@ -53,7 +53,7 @@ const couponSchema = z
     if (
       values.discount_type === "percentage" &&
       values.max_discount_amount &&
-      toPaisa(values.max_discount_amount) <= BigInt(0)
+      parseAmount(values.max_discount_amount) === BigInt(0)
     ) {
       ctx.addIssue({ code: "custom", path: ["max_discount_amount"], message: "Must be greater than 0" })
     }

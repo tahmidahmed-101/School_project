@@ -25,7 +25,7 @@ import { createPurchaseOrder } from "../slices/purchaseOrderSlice"
 import type { Supplier } from "../types"
 import { useCanManagePurchasing } from "../hooks/useProcurement"
 import { VariantPicker } from "@/components/common/VariantPicker"
-import { sumCostLines } from "@/lib/money"
+import { sumCostLines } from "@/lib/costLines"
 
 const lineSchema = z.object({
   variant: z

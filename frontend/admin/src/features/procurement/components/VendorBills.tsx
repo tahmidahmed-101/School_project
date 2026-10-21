@@ -27,6 +27,7 @@ import { DateField, TextField } from "@/components/common/form-fields"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime, fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
+import { parseAmount } from "@/lib/moneyInput"
 import { useAppDispatch } from "@/app/hooks"
 import type { Option } from "@/lib/types"
 import { useKind } from "@/hooks/use-kind"
@@ -69,7 +70,8 @@ function PaymentDialog({
   const [reference, setReference] = useState("")
   const [saving, setSaving] = useState(false)
 
-  const amountValid = toPaisa(amount) > 0 && toPaisa(amount) <= toPaisa(outstanding)
+  const typedPaisa = parseAmount(amount)
+  const amountValid = typedPaisa !== null && typedPaisa > 0 && typedPaisa <= toPaisa(outstanding)
 
   const save = async () => {
     const paidAtIso = fromDatetimeLocal(paidAt)

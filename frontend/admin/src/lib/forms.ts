@@ -2,7 +2,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import type { FieldPath, FieldValues, UseFormSetError } from "react-hook-form"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
-import { AMOUNT_PATTERN } from "@/lib/money"
+import { AMOUNT_PATTERN } from "@/lib/moneyInput"
 
 /**
  * Reports a failed save: maps the backend's field errors onto the form (only for fields the

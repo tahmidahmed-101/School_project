@@ -33,7 +33,7 @@ import { MoneyField, TextField } from "@/components/common/form-fields"
 import type { Kind } from "@/hooks/use-kind"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { AMOUNT_PATTERN, toPaisa } from "@/lib/money"
+import { AMOUNT_PATTERN, parseAmount } from "@/lib/moneyInput"
 import type { Option } from "@/lib/types"
 import { postBulkAdjustments } from "@/features/inventory/api"
 
@@ -307,10 +307,10 @@ export function GenerateVariantsDialog({
   const badDiscount = (key: string) => {
     const row = overrideOf(key)
     const rowPrice = row.price.trim() || price.trim()
-    if (badAmount(row.discount_price)) return true
-    return Boolean(
-      row.discount_price.trim() && AMOUNT_PATTERN.test(rowPrice) && toPaisa(row.discount_price) >= toPaisa(rowPrice),
-    )
+    const discountPaisa = parseAmount(row.discount_price)
+    const pricePaisa = parseAmount(rowPrice)
+    if (discountPaisa === null) return true
+    return Boolean(row.discount_price.trim() && rowPrice && pricePaisa !== null && discountPaisa >= pricePaisa)
   }
 
   const attributeProblem = rows.some((r) => !r.name)

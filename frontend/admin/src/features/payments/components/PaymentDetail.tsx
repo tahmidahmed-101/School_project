@@ -25,6 +25,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatCurrency } from "@/lib/format"
 import { fromPaisa, toPaisa } from "@/lib/money"
+import { parseAmount } from "@/lib/moneyInput"
 
 const PaymentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -76,9 +77,10 @@ const PaymentDetail = () => {
   const refundable = canRefund && payment.status === "captured" && outstandingPaisa > 0
 
   // Blank = refund everything outstanding; otherwise 0 < amount ≤ outstanding.
-  const amountPaisa = amount.trim() === "" ? outstandingPaisa : toPaisa(amount)
+  const typedPaisa = parseAmount(amount)
+  const amountPaisa = amount.trim() === "" ? outstandingPaisa : (typedPaisa ?? BigInt(0))
   const amountError =
-    amount.trim() !== "" && (!(amountPaisa > 0) || amountPaisa > outstandingPaisa)
+    amount.trim() !== "" && (typedPaisa === null || !(amountPaisa > 0) || amountPaisa > outstandingPaisa)
       ? `Enter an amount between ${formatCurrency("0.01")} and ${formatCurrency(outstanding)}`
       : undefined
 

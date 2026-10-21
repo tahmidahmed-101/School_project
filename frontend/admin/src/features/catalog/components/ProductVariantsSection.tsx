@@ -19,7 +19,7 @@ import { useCan } from "@/hooks/use-can"
 import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
 import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { AMOUNT_PATTERN, toPaisa } from "@/lib/money"
+import { AMOUNT_PATTERN, parseAmount } from "@/lib/moneyInput"
 import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
 import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
@@ -485,8 +485,10 @@ function SetPriceDialog({
 
   const typed = { price: price.trim(), discount_price: isStock ? discount.trim() : "", cost_price: cost.trim() }
   const bad = (value: string) => (value !== "" && !AMOUNT_PATTERN.test(value) ? { message: "Enter a valid amount (max 2 decimals)" } : undefined)
+  const typedPrice = parseAmount(typed.price)
+  const typedDiscount = parseAmount(typed.discount_price)
   const discountTooHigh =
-    typed.price !== "" && typed.discount_price !== "" && toPaisa(typed.discount_price) >= toPaisa(typed.price)
+    typed.price !== "" && typed.discount_price !== "" && typedPrice !== null && typedDiscount !== null && typedDiscount >= typedPrice
   const anyTyped = Object.values(typed).some(Boolean)
   const canSubmit = anyTyped && !Object.values(typed).some(bad) && !discountTooHigh && !busy
 

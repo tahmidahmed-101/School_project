@@ -15,7 +15,8 @@ import { DateField, SelectField, TextField } from "@/components/common/form-fiel
 import { useAppDispatch } from "@/app/hooks"
 import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
-import { fromPaisa, sumMoney, toPaisa } from "@/lib/money"
+import { fromPaisa, toPaisa } from "@/lib/money"
+import { parseAmount, sumTyped } from "@/lib/moneyInput"
 import { cn } from "@/lib/utils"
 import { createJournalEntry } from "../slices/journalEntrySlice"
 import type { Account } from "../types"
@@ -39,13 +40,14 @@ const schema = z
   })
   .superRefine((values, ctx) => {
     values.lines.forEach((line, i) => {
-      const d = toPaisa(line.debit)
-      const c = toPaisa(line.credit)
+      const d = parseAmount(line.debit)
+      const c = parseAmount(line.credit)
+      if (d === null || c === null) return
       if ((d > 0) === (c > 0)) {
         ctx.addIssue({ code: "custom", path: ["lines", i, "debit"], message: "Enter a debit or a credit" })
       }
     })
-    if (sumMoney(values.lines.map((l) => l.debit)) !== sumMoney(values.lines.map((l) => l.credit))) {
+    if (sumTyped(values.lines.map((l) => l.debit)) !== sumTyped(values.lines.map((l) => l.credit))) {
       ctx.addIssue({ code: "custom", path: ["lines"], message: "Debits must equal credits" })
     }
   })
@@ -98,8 +100,8 @@ export function JournalEntryFormDialog({
   }, [open, reset, defaultBelongsTo])
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.is_active), [accounts])
-  const totalDebit = sumMoney((lines ?? []).map((l) => l.debit))
-  const totalCredit = sumMoney((lines ?? []).map((l) => l.credit))
+  const totalDebit = sumTyped((lines ?? []).map((l) => l.debit))
+  const totalCredit = sumTyped((lines ?? []).map((l) => l.credit))
   const gap = toPaisa(totalDebit) - toPaisa(totalCredit)
   const balanced = gap === BigInt(0) && toPaisa(totalDebit) > 0
 
