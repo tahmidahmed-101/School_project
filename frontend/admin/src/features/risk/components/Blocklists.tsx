@@ -25,10 +25,10 @@ const PHONE_BLOCK_IMPORT_FIELDS: ImportField[] = [
   { key: "reason", label: "Reason", required: true, example: "Refused 3 COD deliveries" },
   {
     key: "strength",
-    label: "Rule",
+    label: "Block Type",
     type: "enum",
     options: ["advance_only", "blocked"],
-    aliases: ["strength"],
+    aliases: ["strength", "rule"],
     example: "advance_only",
   },
 ]
@@ -145,7 +145,7 @@ function PhoneBlocklistTab({ canManage }: { canManage: boolean }) {
       },
       {
         accessorKey: "strength",
-        header: "RULE",
+        header: "BLOCK TYPE",
         cell: ({ row }) => (
           <StatusBadge
             status={row.original.strength}
@@ -160,7 +160,7 @@ function PhoneBlocklistTab({ canManage }: { canManage: boolean }) {
         header: "SOURCE",
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
-            {row.original.origin === "manual" ? "Staff" : "Automatic rule"}
+            {row.original.origin === "manual" ? "Staff" : "Automatic"}
           </span>
         ),
       },
@@ -190,7 +190,7 @@ function PhoneBlocklistTab({ canManage }: { canManage: boolean }) {
         { key: "phone_number", label: "Phone number", type: "tel", placeholder: "01XXXXXXXXX", mono: true, required: true },
         {
           key: "strength",
-          label: "Rule",
+          label: "Block type",
           type: "select",
           options: (Object.keys(PHONE_STRENGTH_LABELS) as PhoneBlockStrength[]).map((key) => ({
             value: key,
