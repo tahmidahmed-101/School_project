@@ -41,7 +41,7 @@ export function ProductPickerDialog({ open, onOpenChange, kind, title, descripti
           <Input
             autoFocus
             aria-label="Search products"
-            placeholder="Search products by name…"
+            placeholder="Search products by name or code…"
             className="pl-8"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -68,7 +68,7 @@ export function ProductPickerDialog({ open, onOpenChange, kind, title, descripti
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{product.name}</span>
                   <span className="block text-xs capitalize text-muted-foreground">
-                    {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
+                    #{product.product_code} · {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
                   </span>
                 </span>
               </button>

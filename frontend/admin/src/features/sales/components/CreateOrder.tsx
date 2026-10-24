@@ -58,6 +58,7 @@ interface VariantHit {
   id: string
   sku: string
   product_name: string
+  product_code: string
   title?: string
   effective_price: string
   stock: number
@@ -445,7 +446,7 @@ const CreateOrder = () => {
               <SearchDropdown<VariantHit>
                 url="/admin/catalog/variants/"
                 params={{ category_type: kind }}
-                placeholder={isPreorder ? "Search pre-order items by name or SKU..." : "Search products by name or SKU..."}
+                placeholder={isPreorder ? "Search pre-order items by name, SKU or code..." : "Search products by name, SKU or code..."}
                 label="Search products"
                 emptyText={isPreorder ? "No pre-order items match." : "No products match."}
                 onPick={addVariant}
@@ -458,7 +459,9 @@ const CreateOrder = () => {
                         {v.product_name}
                         {v.title && <span className="font-normal text-muted-foreground"> · {v.title}</span>}
                       </span>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">{v.sku}</span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        #{v.product_code} · {v.sku}
+                      </span>
                     </span>
                     <span className="shrink-0 text-right text-xs">
                       <span className="block text-sm font-semibold">{formatCurrency(v.effective_price)}</span>

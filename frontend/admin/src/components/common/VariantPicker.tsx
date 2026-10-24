@@ -27,6 +27,7 @@ interface VariantHit {
   id: string
   sku: string
   product_name: string
+  product_code: string
   /** "Red / M"; "" on a product without options. */
   title?: string
   price: string
@@ -83,7 +84,7 @@ async function fetchVariants(params: Record<string, unknown>, signal: AbortSigna
   return unwrapList<VariantHit>(res.data, 1, 20).items
 }
 
-/** Server-backed SKU / barcode / product-name search over /admin/catalog/variants/. */
+/** Server-backed SKU / barcode / product-name / product-code search over /admin/catalog/variants/. */
 export function VariantPicker(props: InlineProps | ComboboxProps) {
   return props.variant === "combobox" ? <ComboboxVariantPicker {...props} /> : <InlineVariantPicker {...props} />
 }
@@ -91,7 +92,7 @@ export function VariantPicker(props: InlineProps | ComboboxProps) {
 function InlineVariantPicker({
   value,
   onChange,
-  placeholder = "Search SKU, barcode or product…",
+  placeholder = "Search SKU, barcode, product or code…",
   id,
   filters,
   excludeIds,
@@ -194,7 +195,9 @@ function InlineVariantPicker({
                         {v.product_name}
                         {v.title && <span className="text-muted-foreground font-normal"> · {v.title}</span>}
                       </div>
-                      <div className="truncate font-mono text-xs text-muted-foreground">{v.sku}</div>
+                      <div className="truncate font-mono text-xs text-muted-foreground">
+                        #{v.product_code} · {v.sku}
+                      </div>
                     </div>
                     <div className="shrink-0 text-right text-xs text-muted-foreground">
                       <div>{formatCurrency(v.price)}</div>
@@ -248,7 +251,7 @@ function ComboboxVariantPicker({ value, onChange, filters, invalid, id }: Combob
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search SKU or product..."
+            placeholder="Search SKU, product or code..."
             className="pl-8"
             aria-label="Search variants"
           />
@@ -280,7 +283,7 @@ function ComboboxVariantPicker({ value, onChange, filters, invalid, id }: Combob
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{variantLabel(v)}</p>
                   <p className="text-xs text-muted-foreground font-mono">
-                    {v.sku} · {onHandLabel(kind, v.stock)}
+                    #{v.product_code} · {v.sku} · {onHandLabel(kind, v.stock)}
                   </p>
                 </div>
               </button>

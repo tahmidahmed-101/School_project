@@ -48,7 +48,7 @@ export interface DashboardOrderLine {
 }
 
 export interface DashboardOrder {
-  /** Order number, e.g. "SO-8EE72314". */
+  /** Order number, e.g. "SO-123456789" (pre-orders: "PRE-123456789"). */
   id: string
   /** Order UUID (for /order_detail/:id). */
   order_id: string

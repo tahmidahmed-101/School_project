@@ -193,6 +193,7 @@ const ProductDetail = () => {
     <div className="section-container space-y-6">
       <PageHeader
         title={product.name}
+        description={`Code #${product.product_code}`}
         badges={!isStock && <Badge variant="secondary">Pre-order</Badge>}
         back={{ to: productListPath(kind), label: isStock ? "Back to products" : "Back to pre-order products" }}
         actions={

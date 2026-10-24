@@ -208,7 +208,8 @@ const Products = ({ kind }: { kind: Kind }) => {
       header: "PRODUCT",
       cell: ({ row }) => {
         const count = variantCount(row.original)
-        return <ProductCell name={row.original.name} sub={count === 0 ? "No variants" : `${count} variant${count === 1 ? "" : "s"}`} />
+        const variants = count === 0 ? "No variants" : `${count} variant${count === 1 ? "" : "s"}`
+        return <ProductCell name={row.original.name} sub={`#${row.original.product_code} · ${variants}`} />
       },
     },
     addedByColumn,
@@ -329,7 +330,7 @@ const Products = ({ kind }: { kind: Kind }) => {
       />
 
       <FilterToolbar
-        searchPlaceholder="Search products by name…"
+        searchPlaceholder="Search products by name or code…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[

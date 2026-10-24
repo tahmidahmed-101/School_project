@@ -59,6 +59,8 @@ export interface Combination {
 export interface ProductVariant {
   id: string
   product_id: string
+  /** The product's 4-digit code, e.g. "0042"; text, so leading zeros stay. */
+  product_code: string
   product_name: string
   sku: string
   barcode: string
@@ -185,6 +187,8 @@ export interface CategoryPayload {
 /** ProductSerializer */
 export interface Product {
   id: string
+  /** 4-digit code set by the server on create, e.g. "0042"; text, so leading zeros stay. */
+  product_code: string
   category_id: string
   brand_id: string | null
   /** Shown in the storefront's featured sections. */
