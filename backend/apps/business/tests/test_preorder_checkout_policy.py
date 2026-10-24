@@ -98,7 +98,7 @@ def test_admin_lists_and_reads_the_draft(admin_client):
     assert data["label"] == "Pre-order checkout terms"
     assert data["is_published"] is False
     assert data["return_rules"] is None
-    assert "content.title.en" in data["missing_fields"]
+    assert "content.title" in data["missing_fields"]
 
 
 def test_admin_publishes_complete_bilingual_content_with_revision_and_audit(
@@ -140,20 +140,19 @@ def test_a_draft_can_be_saved_incomplete_and_stays_unpublished(admin_client):
     assert response.status_code == 200, response.data
     data = response.data["data"]
     assert data["is_published"] is False
-    assert "content.title.bn" in data["missing_fields"]
-    assert "content.sections" in data["missing_fields"]
+    # English alone is enough for the title; only the sections are still missing.
+    assert data["missing_fields"] == ["content.sections"]
     assert StorePolicyRevision.objects.filter(policy__kind=KIND).count() == 1
 
 
 @pytest.mark.parametrize(
     "broken",
     [
-        {"title": bilingual("Title", "")},
+        {"title": bilingual("", " ")},
         {"sections": []},
-        {"intro": bilingual("English intro only", "")},
         {"sections": [{"heading": bilingual("Heading", "Heading bn"), "body": bilingual("", "")}]},
     ],
-    ids=["title-missing-bn", "no-sections", "intro-one-language", "blank-section-body"],
+    ids=["blank-title", "no-sections", "blank-section-body"],
 )
 def test_incomplete_content_cannot_be_published(admin_client, broken):
     response = publish(admin_client, content={**content(), **broken})

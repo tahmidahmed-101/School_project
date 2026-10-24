@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from apps.common.exceptions import BusinessRuleViolationError
 
-# The storefront renders every policy in both languages, so a policy is only
-# complete when each piece of text exists in each locale.
+# Text is stored per locale. A piece written in only one of them is enough: the
+# storefront shows it to readers of the other language as well.
 POLICY_LOCALES = ("en", "bn")
 
 MAX_TITLE_LENGTH = 200
@@ -83,30 +83,27 @@ def normalize_policy_content(content) -> dict:
     }
 
 
-def _blank_locales(value, path: str) -> list[str]:
+def _blank_text(value, path: str) -> list[str]:
+    """[path] when the text is blank in every locale; one written locale is enough."""
     value = value if isinstance(value, dict) else {}
-    return [
-        f"{path}.{locale}"
-        for locale in POLICY_LOCALES
-        if not isinstance(value.get(locale), str) or not value[locale].strip()
-    ]
+    written = any(
+        isinstance(value.get(locale), str) and value[locale].strip() for locale in POLICY_LOCALES
+    )
+    return [] if written else [path]
 
 
 def missing_policy_fields(content) -> list[str]:
-    """Paths that must be filled before the policy may be published. The intro
-    is optional, but if written in one language it must exist in the other —
-    otherwise one audience reads terms the other never sees."""
+    """Paths that must be filled before the policy may be published: the title
+    and every section heading and body, each in English or Bangla (or both).
+    The intro is optional."""
     content = content if isinstance(content, dict) else {}
-    missing = _blank_locales(content.get("title"), "content.title")
-    intro = content.get("intro") if isinstance(content.get("intro"), dict) else {}
-    if any(isinstance(text, str) and text.strip() for text in intro.values()):
-        missing += _blank_locales(intro, "content.intro")
+    missing = _blank_text(content.get("title"), "content.title")
     sections = content.get("sections")
     if not isinstance(sections, list) or not sections:
         missing.append("content.sections")
         return missing
     for index, section in enumerate(sections):
         section = section if isinstance(section, dict) else {}
-        missing += _blank_locales(section.get("heading"), f"content.sections[{index}].heading")
-        missing += _blank_locales(section.get("body"), f"content.sections[{index}].body")
+        missing += _blank_text(section.get("heading"), f"content.sections[{index}].heading")
+        missing += _blank_text(section.get("body"), f"content.sections[{index}].body")
     return missing

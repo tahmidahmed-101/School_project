@@ -97,14 +97,13 @@ const normalize = (content: Content): Content => ({
 
 /**
  * Form paths still blank that block publishing — the same rules as missing_policy_fields
- * on the backend: title, and every section heading and body, in both languages; an intro is
- * optional, but one written in one language must exist in the other.
+ * on the backend: the title and every section heading and body, each in English or Bangla
+ * (one is enough; the storefront shows it in both). The intro is optional. A text blank in
+ * both languages is marked on its English box.
  */
 function missingFields(content: Content): string[] {
-  const blanks = (text: { en: string; bn: string }, path: string) =>
-    LOCALES.filter(({ code }) => !text[code]).map(({ code }) => `${path}.${code}`)
+  const blanks = (text: { en: string; bn: string }, path: string) => (text.en || text.bn ? [] : [`${path}.en`])
   const missing = blanks(content.title, "content.title")
-  if (content.intro.en || content.intro.bn) missing.push(...blanks(content.intro, "content.intro"))
   if (content.sections.length === 0) missing.push("content.sections")
   content.sections.forEach((section, i) => {
     missing.push(...blanks(section.heading, `content.sections.${i}.heading`))
@@ -120,6 +119,7 @@ const toFormPath = (path: string) => path.replace(/\[(\d+)\]/g, ".$1")
 function describePath(path: string): string {
   const parts = toFormPath(path).split(".")
   if (parts.length === 2 && parts[1] === "sections") return "At least one section"
+  // The backend names a text blank in both languages without a locale: "content.title".
   const locale = LOCALES.find((l) => l.code === parts[parts.length - 1])?.label
   const field =
     parts[1] === "sections"
@@ -185,7 +185,7 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
     if (published) {
       const problems: [string, string][] = missingFields(content).map((path) => [
         path,
-        path === "content.sections" ? "Add at least one section" : "Needed in both languages before publishing",
+        path === "content.sections" ? "Add at least one section" : "Write this in English or Bangla before publishing",
       ])
       if (!values.effective_date) problems.push(["effective_date", "Set an effective date before publishing"])
       if (problems.length) {
@@ -249,7 +249,7 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
             <CardDescription>
               {policy.is_published
                 ? `Customers see this policy on the storefront, effective ${formatDate(policy.effective_date)}.`
-                : "Not on the storefront. Publishing needs every text in both languages and an effective date."}
+                : "Not on the storefront. Publishing needs a title, at least one section and an effective date. Each text can be in English, Bangla or both: a text written in one language is shown to readers of the other too."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -281,7 +281,7 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
           <CardHeader>
             <CardTitle>Title & introduction</CardTitle>
             <CardDescription>
-              The introduction is optional, but if you write it in one language it is needed in the other.
+              The introduction is optional. Write in English, Bangla or both.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -301,7 +301,7 @@ export function PolicyEditor({ policy, canManage }: { policy: StorePolicy; canMa
           <CardHeader>
             <CardTitle>Sections</CardTitle>
             <CardDescription>
-              Shown in this order under the introduction. Each needs a heading and body in both languages.
+              Shown in this order under the introduction. Each needs a heading and body in English or Bangla.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

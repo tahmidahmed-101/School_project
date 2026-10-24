@@ -21,7 +21,7 @@ class StorePolicy(TimeStampedModel):
     """One row per storefront policy, written only through
     `apps.business.services.policies.update_store_policy`.
 
-    `content` is bilingual and sectioned (see `POLICY_LOCALES`):
+    `content` is sectioned, with each text in English and/or Bangla (see `POLICY_LOCALES`):
     `{"title": {"en", "bn"}, "intro": {...}, "sections": [{"heading": {...}, "body": {...}}]}`.
     Nothing is public until staff publish a complete version with an
     `effective_date` — the row's own `updated_at` is bookkeeping, not a

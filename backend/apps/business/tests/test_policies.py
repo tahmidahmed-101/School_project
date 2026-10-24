@@ -223,17 +223,12 @@ def test_public_read_uses_a_bounded_number_of_queries(admin_client):
         {},
         {"title": bilingual("   ", "   "), "sections": []},
         {
-            "title": bilingual("Only English", ""),
-            "sections": [{"heading": bilingual("H", "H"), "body": bilingual("B", "B")}],
+            "title": bilingual("T", "T"),
+            "sections": [{"heading": bilingual("H", "H"), "body": bilingual("  ", "  ")}],
         },
         {
-            "title": bilingual("T", "T"),
-            "sections": [{"heading": bilingual("H", "H"), "body": bilingual("B", "  ")}],
-        },
-        {
-            "title": bilingual("T", "T"),
-            "intro": bilingual("Intro in English only", ""),
-            "sections": [{"heading": bilingual("H", "H"), "body": bilingual("B", "B")}],
+            "title": bilingual("T", ""),
+            "sections": [{"heading": bilingual("", ""), "body": bilingual("B", "")}],
         },
     ],
 )
@@ -252,13 +247,45 @@ def test_incomplete_or_whitespace_policy_cannot_be_published(admin_client, conte
 def test_incomplete_draft_can_be_saved_and_reports_what_is_missing(admin_client):
     response = admin_client.patch(
         admin_url(PolicyKind.SHIPPING),
-        {"content": {"title": bilingual("Draft", "")}},
+        {"content": {"title": bilingual("", ""), "sections": [{"heading": bilingual("H", "")}]}},
         format="json",
     )
 
     assert response.status_code == 200
-    assert "content.title.bn" in response.data["data"]["missing_fields"]
-    assert "content.sections" in response.data["data"]["missing_fields"]
+    assert response.data["data"]["missing_fields"] == ["content.title", "content.sections[0].body"]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        {
+            "title": bilingual("Only English", ""),
+            "intro": bilingual("Intro in English only", ""),
+            "sections": [{"heading": bilingual("H", ""), "body": bilingual("B", "")}],
+        },
+        {
+            "title": bilingual("", "শুধু বাংলা"),
+            "sections": [{"heading": bilingual("", "শিরোনাম"), "body": bilingual("", "বিস্তারিত")}],
+        },
+        {
+            "title": bilingual("Mixed", ""),
+            "sections": [{"heading": bilingual("", "শিরোনাম"), "body": bilingual("Body", "")}],
+        },
+    ],
+)
+def test_policy_written_in_one_language_can_be_published(admin_client, content):
+    response = admin_client.patch(
+        admin_url(PolicyKind.REFUND),
+        {"content": content, "effective_date": str(today()), "is_published": True},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["data"]["missing_fields"] == []
+    admin_client.force_authenticate(user=None)
+    public = admin_client.get(public_url(PolicyKind.REFUND))
+    assert public.status_code == 200
+    assert public.data["data"]["title"] == content["title"]
 
 
 @pytest.mark.parametrize(
