@@ -77,7 +77,15 @@ export function FreeDeliveryForm({ canManage }: { canManage: boolean }) {
             {...register("free_delivery_min_amount")}
           />
           {canManage && (
-            <SubmitButton loading={isSubmitting} icon={Save} disabled={!isDirty}>
+            // Pushed down past the field's label (text-sm, leading-snug, gap-2) and as tall as the input, so it
+            // lines up with the input rather than the label.
+            <SubmitButton
+              loading={isSubmitting}
+              icon={Save}
+              disabled={!isDirty}
+              size="action"
+              className="h-11 sm:mt-[calc(0.875rem*1.375+0.5rem)]"
+            >
               Save free delivery
             </SubmitButton>
           )}
