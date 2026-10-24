@@ -19,7 +19,7 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
   const { ui } = useLang();
 
   const shortcuts = [
-    { href: "/shop", label: ui("navShop"), icon: Store },
+    { href: "/shop", label: ui("navReadyStock"), icon: Store },
     { href: "/track-order", label: ui("navTrackOrder"), icon: Truck },
     { href: "/pre-order", label: ui("navPreOrder"), icon: Clock },
   ];

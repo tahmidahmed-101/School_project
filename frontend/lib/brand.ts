@@ -27,6 +27,11 @@ export const BRAND_INFO = {
   phoneTel: "+8801603671030",
   email: "kullmart2026@gmail.com",
   facebook: "https://www.facebook.com/kullmartbd",
+  /**
+   * The floating contact button's links, taken only from the admin business profile (never the static values
+   * above); an empty one hides that option, and with all three empty the button is not shown.
+   */
+  contact: { phoneTel: "", whatsapp: "", messenger: "" },
   /** Filled from the admin business profile; an empty link hides that icon. */
   social: { instagram: "", tiktok: "", youtube: "", linkedin: "" },
   mapsUrl: "",
@@ -50,6 +55,12 @@ export const BRAND_INFO = {
 export type BrandInfo = typeof BRAND_INFO;
 
 const digitsOnly = (value: string) => value.replace(/\D/g, "");
+
+/** m.me link for a Facebook page URL (facebook.com/kullmartbd -> m.me/kullmartbd); "" when it is not one. */
+function messengerLink(facebook: string): string {
+  const match = /^https?:\/\/(?:[\w-]+\.)?facebook\.com\/([^/?#]+)/i.exec(facebook);
+  return match && match[1] !== "profile.php" ? `https://m.me/${match[1]}` : "";
+}
 
 /** Values a fresh backend ships with before anyone fills in the business profile; never shown to shoppers. */
 const PLACEHOLDER_PHONES = new Set(["01700000000", "8801700000000"]);
@@ -101,6 +112,11 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     ...(facebook && { facebook }),
     ...(logo && { logo, logoCart: logo }),
     social,
+    contact: {
+      phoneTel: phone.replace(/[^\d+]/g, ""),
+      whatsapp,
+      messenger: messengerLink(facebook ?? ""),
+    },
     mapsUrl,
     openingHours: profile.opening_hours?.trim() ?? "",
     about: { en: profile.about?.en?.trim() ?? "", bn: profile.about?.bn?.trim() ?? "" },

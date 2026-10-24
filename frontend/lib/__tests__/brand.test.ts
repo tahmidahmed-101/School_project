@@ -122,3 +122,36 @@ describe("mergeBrand", () => {
     expect(brand.logoCart).toBe(BRAND_INFO.logoCart);
   });
 });
+
+describe("mergeBrand contact (floating button)", () => {
+  it("is empty without a dashboard value, even though the static phone and Facebook exist", () => {
+    expect(mergeBrand(null).contact).toEqual({ phoneTel: "", whatsapp: "", messenger: "" });
+    expect(mergeBrand(profile({ phone: "01700000000", whatsapp: "01700000000" })).contact).toEqual({
+      phoneTel: "",
+      whatsapp: "",
+      messenger: "",
+    });
+  });
+
+  it("takes the phone, WhatsApp and a Messenger link from the Facebook page", () => {
+    const brand = mergeBrand(
+      profile({
+        phone: "01811-222 333",
+        whatsapp: "+880 1811-222333",
+        social: { facebook: "https://www.facebook.com/kullmartbd/" },
+      }),
+    );
+    expect(brand.contact).toEqual({
+      phoneTel: "01811222333",
+      whatsapp: "8801811222333",
+      messenger: "https://m.me/kullmartbd",
+    });
+  });
+
+  it("has no Messenger link for a URL that is not a Facebook page", () => {
+    expect(mergeBrand(profile({ social: { facebook: "https://example.com/kull" } })).contact.messenger).toBe("");
+    expect(
+      mergeBrand(profile({ social: { facebook: "https://www.facebook.com/profile.php?id=1" } })).contact.messenger,
+    ).toBe("");
+  });
+});

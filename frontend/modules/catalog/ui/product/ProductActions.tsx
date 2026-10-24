@@ -63,6 +63,8 @@ export function ProductActions({
       onClick={buyNow}
       disabled={waiting}
       aria-describedby={hintId}
+      // Animated only once it can be pressed: a shaking button that does nothing reads as broken.
+      className={waiting ? undefined : "cta-attention"}
       leadingIcon={<Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />}
     >
       {ui("buyNow")}

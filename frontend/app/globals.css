@@ -70,6 +70,7 @@
   --color-danger-line: var(--danger-line);
   --color-facebook: var(--facebook);
   --color-whatsapp: var(--whatsapp);
+  --color-call: var(--call);
   --shadow-bar: var(--bar-shadow);
 }
 
@@ -97,8 +98,77 @@
   }
 }
 
+/* "Buy now" asks for attention: a soft glow pulse, a short shake every 3 s and a light sweeping across it. */
+@keyframes cta-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(255 255 255 / 0.25),
+      0 4px 18px 0 rgb(0 0 0 / 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgb(255 255 255 / 0),
+      0 6px 24px 4px rgb(0 0 0 / 0.35);
+  }
+}
+
+@keyframes cta-shake {
+  0%,
+  85%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  87%,
+  91% {
+    transform: translateX(-4px) rotate(-1.5deg);
+  }
+  89%,
+  93% {
+    transform: translateX(4px) rotate(1.5deg);
+  }
+  95% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  97% {
+    transform: translateX(3px) rotate(1deg);
+  }
+  99% {
+    transform: translateX(-1px) rotate(-0.5deg);
+  }
+}
+
+@keyframes cta-sweep {
+  from {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  to {
+    transform: translateX(350%) skewX(-15deg);
+  }
+}
+
+.cta-attention {
+  position: relative;
+  overflow: hidden;
+  animation:
+    cta-pulse 2s ease-in-out infinite,
+    cta-shake 3s ease-in-out infinite;
+}
+
+.cta-attention::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  animation: cta-sweep 2.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee-rtl {
+  .animate-marquee-rtl,
+  .cta-attention,
+  .cta-attention::after {
     animation: none;
   }
 }
