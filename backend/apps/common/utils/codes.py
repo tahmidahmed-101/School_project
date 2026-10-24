@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-import uuid
 
 
 def generate_numeric_code(length: int = 6) -> str:
@@ -16,7 +15,17 @@ def hash_code(code: str) -> str:
 
 
 def generate_document_number(prefix: str) -> str:
-    """Not guaranteed globally unique on its own — callers with a uniqueness
-    constraint should retry on collision, same as
-    `apps.common.utils.text.unique_slug_for`."""
-    return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+    """Generate a document number: PREFIX-<9 digits>. Not guaranteed globally
+    unique on its own — callers with a uniqueness constraint should retry on
+    collision, same as `apps.common.utils.text.unique_slug_for`."""
+    return f"{prefix}-{secrets.randbelow(10**9):09d}"
+
+
+def generate_order_number(kind: str = "stock") -> str:
+    """Generate an order number with the correct prefix for the order kind.
+
+    Stock orders use SO-<9 digits>, pre-orders use PRE-<9 digits>. Not
+    guaranteed unique on its own — callers retry on collision.
+    """
+    prefix = "PRE" if kind == "preorder" else "SO"
+    return generate_document_number(prefix)

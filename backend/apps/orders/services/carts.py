@@ -11,7 +11,7 @@ from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.params import KIND_PREORDER, KIND_STOCK
-from apps.common.utils.codes import generate_document_number, hash_code
+from apps.common.utils.codes import generate_order_number, hash_code
 from apps.common.utils.phone import BD_MOBILE_HELP, is_bd_mobile
 from apps.orders.models import SalesOrder, SalesOrderLine
 from apps.orders.selectors.sales_orders import get_cart
@@ -48,17 +48,26 @@ def get_or_create_cart(customer) -> SalesOrder:
 
 
 @transaction.atomic
-def create_order(*, customer, created_by=None, guest_token_hash: str | None = None) -> SalesOrder:
+def create_order(
+    *,
+    customer,
+    created_by=None,
+    guest_token_hash: str | None = None,
+    kind: str = "stock",
+) -> SalesOrder:
     """Start a brand-new pending order, never reusing an existing one.
 
     Staff-entered orders must use this rather than `get_or_create_cart`: that
     helper returns whatever pending cart the customer already has, so a phone
     order would otherwise be merged into the items sitting in the customer's
     own browser cart and charged along with them.
+
+    `kind` selects the order-number prefix: stock orders use SO-, pre-orders
+    use PRE-.
     """
-    order_number = generate_document_number("SO")
+    order_number = generate_order_number(kind)
     while SalesOrder.objects.filter(order_number=order_number).exists():
-        order_number = generate_document_number("SO")
+        order_number = generate_order_number(kind)
     return SalesOrder.objects.create(
         customer=customer,
         order_number=order_number,

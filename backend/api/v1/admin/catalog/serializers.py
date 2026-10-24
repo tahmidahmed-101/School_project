@@ -76,6 +76,7 @@ STOCK_FIELD_BLANKS = {
 class ProductVariantSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     product_id = serializers.UUIDField(read_only=True)
+    product_code = serializers.CharField(source="product.product_code", read_only=True)
     category_type = serializers.CharField(source="product.category.category_type", read_only=True)
     product_name = serializers.SerializerMethodField()
     sku = serializers.CharField()
@@ -466,6 +467,7 @@ class CategoryUpdateSerializer(serializers.Serializer):
 
 class ProductSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
+    product_code = serializers.CharField(read_only=True)
     category_id = serializers.UUIDField(read_only=True)
     category_type = serializers.CharField(source="category.category_type", read_only=True)
     brand_id = serializers.UUIDField(read_only=True, allow_null=True)

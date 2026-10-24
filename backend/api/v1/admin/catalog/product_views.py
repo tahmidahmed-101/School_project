@@ -79,7 +79,7 @@ def _resolve_brand(brand_id):
 
 class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, GenericListAPIView):
     serializer_class = ProductSerializer
-    search_fields = ("name",)
+    search_fields = ("name", "product_code")
     ordering_fields = ("name", "created_at")
     default_ordering = "-created_at"
     include_deleted_permission = CatalogManagePermission

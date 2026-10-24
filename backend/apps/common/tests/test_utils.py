@@ -9,7 +9,7 @@ from apps.common.utils.barcodes import generate_barcode
 from apps.common.utils.codes import generate_numeric_code, hash_code
 from apps.common.utils.files import human_readable_size
 from apps.common.utils.qr_codes import generate_qr_code
-from apps.common.utils.text import generate_slug, unique_slug_for
+from apps.common.utils.text import generate_slug, unique_product_code_for, unique_slug_for
 from apps.common.utils.validators import validate_phone_number
 
 pytestmark = pytest.mark.django_db
@@ -66,3 +66,68 @@ def test_generate_barcode_returns_png_bytes():
     data = generate_barcode("123456789012")
 
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_unique_product_code_for_is_at_most_four_chars():
+    from apps.catalog.models import Product
+
+    code = unique_product_code_for(model=Product, text="Oversized Graphic Tee")
+    assert len(code) == 4
+    assert code.isdigit()
+
+
+def test_unique_product_code_for_truncates_long_name():
+    from apps.catalog.models import Product
+
+    code = unique_product_code_for(model=Product, text="A Very Long Product Name That Exceeds Four Chars")
+    assert len(code) == 4
+    assert code.isdigit()
+
+
+def test_unique_product_code_for_handles_collision_within_four_chars():
+    from apps.catalog.models import Product
+
+    from apps.catalog.factories import CategoryFactory
+
+    category = CategoryFactory()
+    Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
+    # Collision: "0000" taken → try "0001"…
+    code = unique_product_code_for(model=Product, text="Tee Shirt")
+    assert len(code) == 4
+    assert code.isdigit()
+    assert code != "0000"
+
+
+def test_unique_product_code_for_excludes_self_on_update():
+    from apps.catalog.models import Product
+
+    from apps.catalog.factories import CategoryFactory
+
+    category = CategoryFactory()
+    product = Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
+    # Re-generating for the same instance should return its own code (excluded from collision check).
+    code = unique_product_code_for(model=Product, text="Tee Shirt", instance=product)
+    assert code == "0000"
+
+
+def test_unique_product_code_for_raises_when_exhausted():
+    from apps.catalog.models import Product
+
+    from apps.catalog.factories import CategoryFactory
+
+    category = CategoryFactory()
+    # Take every 4-digit code from 0000 to 9999
+    for suffix in range(10000):
+        code = f"{suffix:04d}"
+        Product.objects.create(
+            category=category,
+            name=f"Product {code}",
+            slug=f"product-{code}-{suffix}",
+            product_code=code,
+        )
+
+    from apps.common.exceptions import BusinessRuleViolationError
+
+    with pytest.raises(BusinessRuleViolationError) as exc:
+        unique_product_code_for(model=Product, text="Anything")
+    assert exc.value.code == "product_code_exhausted"

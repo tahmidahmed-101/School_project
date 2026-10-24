@@ -14,7 +14,7 @@ from apps.business.selectors.modules import is_feature_enabled
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.catalog.selectors.options import label_key, normalise_label
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.utils.text import unique_sku_for, unique_slug_for
+from apps.common.utils.text import unique_product_code_for, unique_sku_for, unique_slug_for
 
 from .kind_rules import check_variant_kind, is_preorder_category
 from .options import (
@@ -128,6 +128,7 @@ def create_product(
         specs=_clean_specs(specs),
         meta_keywords=meta_keywords,
         slug=unique_slug_for(model=Product, text=name),
+        product_code=unique_product_code_for(model=Product, text=name),
         is_active=is_active,
         created_by=actor,
     )

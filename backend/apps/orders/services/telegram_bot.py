@@ -41,7 +41,7 @@ from apps.orders.services.payments import record_cod_verification
 READ = (StaffPermissionCode.ORDERS_VIEW, StaffPermissionCode.ORDERS_MANAGE)
 MANAGE = (StaffPermissionCode.ORDERS_MANAGE,)
 
-ORDER_NUMBER = re.compile(r"^SO-[0-9A-F]{8}$")
+ORDER_NUMBER = re.compile(r"^(SO|PRE)-[0-9]{9}$")
 PAGE_SIZE = 10
 MESSAGES_PER_MINUTE = 30
 LINK_ATTEMPTS = 5
@@ -57,7 +57,7 @@ NOT_LINKED = (
 HELP = (
     "/today — today's numbers\n"
     "/pending — orders awaiting payment\n"
-    "/order SO-XXXXXXXX — look up an order"
+    "/order SO-123456789 — look up an order"
 )
 
 
@@ -185,7 +185,7 @@ def _pending(arg: str) -> str:
 def _lookup(staff, sender: int, raw: str) -> None:
     number = raw.strip().upper()
     if not ORDER_NUMBER.match(number):
-        send_telegram(chat_id=sender, text="Send an order number like SO-1A2B3C4D.")
+        send_telegram(chat_id=sender, text="Send an order number like SO-123456789.")
         return
     order = get_order_by_number(number)
     if order is None:

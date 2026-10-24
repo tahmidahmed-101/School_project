@@ -218,3 +218,63 @@ def test_variation_without_price_needs_an_existing_variant():
     with pytest.raises(BusinessRuleViolationError) as exc:
         create_variant(product=product)
     assert exc.value.code == "price_required"
+
+
+def test_create_product_auto_generates_product_code():
+    product = create_product(category=CategoryFactory(), name="Cotton Tee", price=Decimal("10.00"))
+    assert product.product_code
+    assert len(product.product_code) == 4
+    assert product.product_code.isdigit()
+
+
+def test_create_product_code_is_unique_across_similar_names():
+    p1 = create_product(category=CategoryFactory(), name="Cotton Tee", price=Decimal("10.00"))
+    p2 = create_product(category=CategoryFactory(), name="Cotton Tee", price=Decimal("12.00"))
+    assert p1.product_code != p2.product_code
+    assert len(p2.product_code) <= 4
+
+
+def test_create_product_code_is_unique_against_soft_deleted():
+    p1 = create_product(category=CategoryFactory(), name="Silk Scarf", price=Decimal("10.00"))
+    p1_code = p1.product_code
+    p1.soft_delete()
+    p2 = create_product(category=CategoryFactory(), name="Silk Scarf", price=Decimal("12.00"))
+    assert p2.product_code != p1_code
+
+
+def test_product_code_is_exactly_four_digits():
+    from apps.catalog.models import Product
+
+    category = CategoryFactory()
+    for name in ["Alpha", "Beta", "Gamma", "Delta"]:
+        product = Product.objects.create(
+            category=category, name=name, slug=f"product-{name.lower()}"
+        )
+        assert len(product.product_code) == 4
+        assert product.product_code.isdigit()
+
+
+def test_product_code_unique_across_all_products_including_deleted():
+    from apps.catalog.models import Product
+
+    category = CategoryFactory()
+    codes = set()
+    for i in range(20):
+        product = Product.objects.create(
+            category=category,
+            name=f"Product {i}",
+            slug=f"product-{i}",
+        )
+        assert product.product_code not in codes
+        codes.add(product.product_code)
+
+    # Soft-delete one and make sure a new product doesn't reuse its code
+    first = Product.objects.first()
+    first_code = first.product_code
+    first.soft_delete()
+
+    new_product = Product.objects.create(
+        category=category, name="New Product", slug="product-new"
+    )
+    assert new_product.product_code != first_code
+    assert new_product.product_code not in codes - {first_code}

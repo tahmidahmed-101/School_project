@@ -262,6 +262,57 @@ def test_global_variant_list_search_by_sku(api_client):
     assert skus == ["FINDME-123"]
 
 
+def test_global_variant_list_search_by_product_code(api_client):
+    staff = create_user(email="catalog-variant-code-viewer@example.com", role=UserRole.STAFF)
+    admin = create_user(email="catalog-variant-code-grantor@example.com", role=UserRole.ADMIN)
+    set_staff_permission(
+        staff_user=staff,
+        permission_code=StaffPermissionCode.CATALOG_VIEW,
+        is_enabled=True,
+        granted_by=admin,
+    )
+    api_client.force_authenticate(user=staff)
+    product = ProductFactory(name="Cotton Tee", product_code="TEES")
+    ProductVariantFactory(product=product, sku="TEES-01")
+    ProductVariantFactory(sku="OTHER-456")
+
+    response = api_client.get("/api/v1/admin/catalog/variants/?search=TEES")
+
+    assert response.status_code == 200
+    results = response.data["data"]["results"]
+    assert len(results) == 1
+    assert results[0]["sku"] == "TEES-01"
+    assert results[0]["product_code"] == "TEES"
+
+
+def test_variant_serializer_includes_product_code(api_client):
+    admin = create_user(email="variant-code-serializer@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    product = ProductFactory(name="Silk Scarf", product_code="SCAR")
+    variant = ProductVariantFactory(product=product, sku="SCAR-01")
+
+    response = api_client.get(f"/api/v1/admin/catalog/variants/{variant.id}/")
+
+    assert response.status_code == 200
+    assert response.data["data"]["product_code"] == "SCAR"
+
+
+def test_admin_product_list_search_by_product_code(api_client):
+    admin = create_user(email="product-code-search@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    ProductFactory(name="Cotton Tee", product_code="TEES")
+    ProductFactory(name="Wool Sweater", product_code="SWET")
+    ProductFactory(name="Other Item", product_code="OTHR")
+
+    response = api_client.get("/api/v1/admin/catalog/products/?search=TEES")
+
+    assert response.status_code == 200
+    results = response.data["data"]["results"]
+    assert len(results) == 1
+    assert results[0]["name"] == "Cotton Tee"
+    assert results[0]["product_code"] == "TEES"
+
+
 def test_admin_product_list_filters_by_status(api_client):
     admin = create_user(email="catalog-status-filter-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)

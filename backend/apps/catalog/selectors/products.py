@@ -135,7 +135,9 @@ def products_list(
         queryset = queryset.filter(preorder_filter).distinct()
     if search:
         queryset = queryset.filter(
-            Q(name__icontains=search) | Q(variants__sku__icontains=search)
+            Q(name__icontains=search)
+            | Q(product_code__icontains=search)
+            | Q(variants__sku__icontains=search)
         ).distinct()
     return queryset.order_by("name")
 

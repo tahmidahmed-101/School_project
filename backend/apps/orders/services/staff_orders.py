@@ -70,7 +70,7 @@ def place_staff_order(
             "A hand-typed discount is not taken. Use a coupon.", code="manual_discount_unsupported"
         )
     order = _checked_out(
-        create_order(customer=customer, created_by=actor),
+        create_order(customer=customer, created_by=actor, kind=kind),
         lines=lines,
         kind=kind,
         shipping_address=shipping_address,

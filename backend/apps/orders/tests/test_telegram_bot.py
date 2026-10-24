@@ -295,7 +295,7 @@ def test_lookup_rejects_a_malformed_or_unknown_number(telegram_outbox):
     _say("/order 1; DROP TABLE")
     assert "Send an order number like" in _texts(telegram_outbox)[-1]
 
-    _say("/order SO-00000000")
+    _say("/order SO-000000000")
     assert "No order with that number" in _texts(telegram_outbox)[-1]
 
 

@@ -6,6 +6,7 @@ from django.db import models
 
 from apps.common.models import FullAuditModel
 from apps.common.utils.files import unique_upload_path
+from apps.common.utils.text import unique_product_code_for
 
 from .brand import Brand
 from .category import Category
@@ -37,6 +38,11 @@ class Product(FullAuditModel):
     brand = models.ForeignKey(
         Brand, on_delete=models.SET_NULL, related_name="products", null=True, blank=True
     )
+    # Human-readable unique product code, auto-generated on creation, so staff
+    # can tell similar-named products apart when searching (e.g. when adding stock).
+    # At most 4 characters. The unique constraint already provides a lookup index,
+    # so no separate index is declared.
+    product_code = models.CharField(max_length=4, unique=True, blank=True, editable=False)
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     description = models.TextField(blank=True)
@@ -71,6 +77,15 @@ class Product(FullAuditModel):
             models.Index(fields=["trending", "deleted_at"], name="prod_trend_del_idx"),
             models.Index(fields=["new_arrival", "deleted_at"], name="prod_newarr_del_idx"),
         ]
+
+    def save(self, *args, **kwargs):
+        # Auto-generate a human-readable unique product code so staff can tell
+        # similar-named products apart when searching (e.g. when adding stock).
+        if not self.product_code:
+            self.product_code = unique_product_code_for(
+                model=Product, text=self.name, instance=self
+            )
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.name

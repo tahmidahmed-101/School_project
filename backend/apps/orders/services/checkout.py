@@ -181,6 +181,18 @@ def checkout(
     order.order_type = (
         SalesOrder.OrderType.PREORDER if True in kinds else SalesOrder.OrderType.STOCK
     )
+    # A cart is born with an SO- number; if it turns out to be a pre-order,
+    # re-issue the number with the PRE- prefix so stock and pre-order orders
+    # are distinguishable at a glance.
+    if order.order_type == SalesOrder.OrderType.PREORDER and order.order_number.startswith(
+        "SO-"
+    ):
+        from apps.common.utils.codes import generate_document_number
+
+        order_number = generate_document_number("PRE")
+        while SalesOrder.objects.filter(order_number=order_number).exists():
+            order_number = generate_document_number("PRE")
+        order.order_number = order_number
 
     if shipping_address is not None:
         order.shipping_address = shipping_address
