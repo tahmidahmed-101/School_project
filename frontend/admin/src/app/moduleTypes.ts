@@ -21,6 +21,8 @@ export interface NavItem {
    * Admins/superusers get ["*"] and see everything. Omit for links every staff user sees.
    */
   permission?: string | readonly string[]
+  /** Settings → Modules key ("reporting", "logistics", "procurement"); the link and its pages go while it is off. */
+  module?: string
 }
 
 export interface NavSection {

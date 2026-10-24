@@ -8,6 +8,7 @@ import { getNavGroups, hasPermission } from "@/app/modules"
 import { NAV_GROUP_LABELS } from "@/app/moduleTypes"
 import { customerDetailPath } from "@/features/users/paths"
 import { withKind, type Kind } from "@/hooks/use-kind"
+import { useOffModules } from "@/hooks/use-modules"
 
 export interface SearchDestination {
   id: string
@@ -21,9 +22,10 @@ export interface SearchDestination {
 
 /** Every sidebar link the user can open, as search destinations (from the module registry). */
 export function useNavDestinations(permissions: readonly string[] | undefined): SearchDestination[] {
+  const offModules = useOffModules()
   return useMemo(
     () =>
-      getNavGroups(permissions).flatMap((group) =>
+      getNavGroups(permissions, offModules).flatMap((group) =>
         group.sections.flatMap((section) =>
           section.items.map((item) => ({
             id: `nav-${item.url}`,
@@ -36,7 +38,7 @@ export function useNavDestinations(permissions: readonly string[] | undefined): 
           }))
         )
       ),
-    [permissions]
+    [permissions, offModules]
   )
 }
 

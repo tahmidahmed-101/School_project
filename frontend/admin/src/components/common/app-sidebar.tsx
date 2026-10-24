@@ -16,6 +16,7 @@ import { getNavGroups } from "@/app/modules"
 import { userDisplayName } from "@/lib/user-display"
 import { NAV_GROUP_LABELS, type NavItem } from "@/app/moduleTypes"
 import { useKind } from "@/hooks/use-kind"
+import { useOffModules } from "@/hooks/use-modules"
 import { findNavEntry } from "./navEntry"
 
 // A link is active for its own path and anything nested under it; a detail or form route
@@ -37,10 +38,11 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
   const user = useAppSelector((state) => state.auth.user)
   const permissions = user?.permissions
+  const offModules = useOffModules()
   const half = HALVES.find((h) => h.kind === kind) ?? HALVES[0]
   const navGroups = useMemo(
-    () => getNavGroups(permissions).filter((g) => g.label === half.group || g.label === "BUSINESS"),
-    [permissions, half.group],
+    () => getNavGroups(permissions, offModules).filter((g) => g.label === half.group || g.label === "BUSINESS"),
+    [permissions, offModules, half.group],
   )
   const sidebarItems = useMemo(() => navGroups.flatMap((g) => g.sections), [navGroups])
 

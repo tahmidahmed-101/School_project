@@ -490,9 +490,7 @@ def test_variations_off_refuses_adding_options_to_a_product():
     set_module_config(key=ModuleKey.CATALOG, config={"product_variations": False})
 
     with pytest.raises(BusinessRuleViolationError) as exc:
-        set_product_options(
-            product=product, options=[{"name": "Size", "values": [{"value": "S"}]}]
-        )
+        set_product_options(product=product, options=[{"name": "Size", "values": [{"value": "S"}]}])
     assert exc.value.code == "feature_disabled"
 
 
@@ -741,3 +739,31 @@ def test_picker_can_be_switched_off_with_no_expenses_at_all():
     set_module_config(key=ModuleKey.ACCOUNTING, config={"chart_of_accounts_picker": False})
 
     assert is_feature_enabled(ModuleKey.ACCOUNTING, "chart_of_accounts_picker") is False
+
+
+def test_any_staff_member_can_read_the_module_list(api_client, staff_user):
+    """The dashboard hides a switched-off module's pages for everyone, so a
+    staff member without settings.view still has to know which are off."""
+    set_module_enabled(key=ModuleKey.REPORTING, is_enabled=False)
+    api_client.force_authenticate(user=staff_user)
+
+    response = api_client.get(LIST_ENDPOINT)
+
+    assert response.status_code == 200
+    states = {module["key"]: module["is_enabled"] for module in response.data["data"]}
+    assert states[ModuleKey.REPORTING] is False
+
+
+def test_customer_cannot_read_the_module_list(api_client, customer_user):
+    api_client.force_authenticate(user=customer_user)
+
+    assert api_client.get(LIST_ENDPOINT).status_code == 403
+
+
+def test_staff_member_without_settings_manage_cannot_switch_a_module(api_client, staff_user):
+    api_client.force_authenticate(user=staff_user)
+
+    response = api_client.patch(_detail(ModuleKey.REPORTING), {"is_enabled": False}, format="json")
+
+    assert response.status_code == 403
+    assert is_module_enabled(ModuleKey.REPORTING)

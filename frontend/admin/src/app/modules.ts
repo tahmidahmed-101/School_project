@@ -44,14 +44,17 @@ export function hasPermission(
   return required.some((code) => permissions.includes(code))
 }
 
-/** Sidebar sections by group, with links the user can't access removed. */
+/** Sidebar sections by group, with links the user can't access, or whose module is switched off, removed. */
 export function getNavGroups(
-  permissions: readonly string[] | undefined
+  permissions: readonly string[] | undefined,
+  offModules: readonly string[] = []
 ): { label: NavGroup; sections: NavSection[] }[] {
   const sections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => hasPermission(permissions, item.permission)),
+      items: section.items.filter(
+        (item) => hasPermission(permissions, item.permission) && !(item.module && offModules.includes(item.module))
+      ),
     }))
     .filter((section) => section.items.length > 0)
 
@@ -59,4 +62,11 @@ export function getNavGroups(
     label,
     sections: sections.filter((s) => s.group === label),
   })).filter((group) => group.sections.length > 0)
+}
+
+/** The module a page belongs to, from the sidebar link it sits under (a detail page under its list). */
+export function moduleOfPath(pathname: string): string | undefined {
+  return navSections
+    .flatMap((section) => section.items)
+    .find((item) => item.module && (pathname === item.url || pathname.startsWith(`${item.url}/`)))?.module
 }

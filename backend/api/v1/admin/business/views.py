@@ -50,7 +50,11 @@ from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
 from apps.common.params import KIND_STOCK, get_kind
-from apps.common.permissions import require_any_staff_permission, require_staff_permission
+from apps.common.permissions import (
+    IsStaffMember,
+    require_any_staff_permission,
+    require_staff_permission,
+)
 from apps.common.responses import error_from_exception, error_response, not_found
 from apps.common.throttling import EmailTestRateThrottle
 from apps.marketing.models import ConversionEvent
@@ -139,7 +143,9 @@ class AdminBusinessProfileView(APIView):
 @extend_schema(tags=["Business Settings"])
 class AdminModuleListView(APIView):
     serializer_class = AdminModuleSerializer
-    permission_classes: ClassVar[list] = [SettingsViewPermission]
+    # Any staff member, not only settings.view: the dashboard hides the pages of
+    # a switched-off module for everyone, so everyone needs to know which are off.
+    permission_classes: ClassVar[list] = [IsStaffMember]
 
     def get(self, request) -> Response:
         return Response(

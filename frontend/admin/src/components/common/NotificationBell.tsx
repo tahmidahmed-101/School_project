@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/app/hooks";
 import { hasPermission } from "@/app/modules";
+import { useModulesKnown, useOffModules } from "@/hooks/use-modules";
 import { api } from "@/lib/api/client";
 
 /**
@@ -30,6 +31,8 @@ interface Source {
   hint: string;
   to: string;
   permission: string[];
+  /** Settings → Modules key; not asked for while that module is switched off. */
+  module?: string;
   /** How many are waiting. */
   count: () => Promise<number>;
 }
@@ -102,6 +105,7 @@ const SOURCES: Source[] = [
     hint: "At or below their reorder point.",
     to: "/inventory",
     permission: ["reports.view", "accounting.view"],
+    module: "reporting",
     count: async () => {
       const res = await api.get("/admin/reporting/low-stock/", { params: { count_only: 1, kind: "stock" } });
       const data = res.data?.data;
@@ -183,15 +187,22 @@ function readSeen(): string {
 export function NotificationBell() {
   const navigate = useNavigate();
   const permissions = useAppSelector((state) => state.auth.user?.permissions);
+  const offModules = useOffModules();
+  const modulesKnown = useModulesKnown();
   const [notices, setNotices] = useState<Notice[] | null>(null);
   const [seen, setSeen] = useState(readSeen);
 
   const load = useCallback(async () => {
-    const allowed = SOURCES.filter((source) => hasPermission(permissions, source.permission));
+    // Until the module list is in, a switched-off module's count would only be refused.
+    if (!modulesKnown) return;
+    const allowed = SOURCES.filter(
+      (source) =>
+        hasPermission(permissions, source.permission) && !(source.module && offModules.includes(source.module)),
+    );
     // A source that fails (no permission after all, backend hiccup) is left out rather than failing the bell.
     const counts = await Promise.all(allowed.map((source) => source.count().catch(() => 0)));
     setNotices(allowed.map((source, i) => ({ source, count: counts[i] })).filter((notice) => notice.count > 0));
-  }, [permissions]);
+  }, [permissions, offModules, modulesKnown]);
 
   useEffect(() => {
     // A hidden tab stops asking; it catches up the moment it is shown again.

@@ -294,7 +294,11 @@ const businessSettingsSlice = createSlice({
       .addCase(fetchModules.fulfilled, (state, action) => {
         state.modules = { data: action.payload, status: "succeeded", error: null }
       })
-      .addCase(fetchModules.rejected, (state, action) => failed(state.modules, action.payload ?? action.error))
+      .addCase(fetchModules.rejected, (state, action) => {
+        // Settings cancels its copy of this request on unmount while the layout's is still running; a
+        // cancelled request is not a failed one, and "failed" would read as "the list is known".
+        if (!action.meta.aborted) failed(state.modules, action.payload ?? action.error)
+      })
 
       .addCase(fetchPaymentMethods.pending, (state) => pending(state.paymentMethods))
       .addCase(fetchPaymentMethods.fulfilled, (state, action) => {

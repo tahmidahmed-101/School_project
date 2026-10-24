@@ -184,6 +184,11 @@ export async function apiCall<T>(request: () => Promise<{ data: unknown }>): Pro
   }
 }
 
+/** True for the 403 the backend sends for a module switched off in Settings → Modules (not a missing permission). */
+export function isModuleDisabled(error: unknown): boolean {
+  return isForbidden(error) && (error as Partial<ApiError>).code === "module_disabled"
+}
+
 /** True for a 403 — the user lacks the permission the endpoint needs. */
 export function isForbidden(error: unknown): boolean {
   return !!error && typeof error === "object" && (error as Partial<ApiError>).status === 403

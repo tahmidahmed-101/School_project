@@ -31,7 +31,7 @@ export const navSections: NavSection[] = [
     group: "STOCK",
     items: [
       { title: "Overview", url: "/" },
-      { title: "Analytics", url: "/analytics", permission: "reports.view" },
+      { title: "Analytics", url: "/analytics", permission: "reports.view", module: "reporting" },
     ],
   },
   {
@@ -89,8 +89,8 @@ export const navSections: NavSection[] = [
     group: "STOCK",
     items: [
       { title: "Shipments", url: "/shipments", permission: SHIPMENTS },
-      { title: "Delivery zones", url: "/shipping_zones", permission: SHIPMENTS },
-      { title: "Shipping rates", url: "/shipping_rates", permission: SHIPMENTS },
+      { title: "Delivery zones", url: "/shipping_zones", permission: SHIPMENTS, module: "logistics" },
+      { title: "Shipping rates", url: "/shipping_rates", permission: SHIPMENTS, module: "logistics" },
     ],
   },
   {
@@ -98,11 +98,11 @@ export const navSections: NavSection[] = [
     icon: ShoppingBasket,
     group: "STOCK",
     items: [
-      { title: "Suppliers", url: "/purchasing/suppliers", permission: PURCHASING },
-      { title: "Purchase orders", url: "/purchasing/orders", permission: PURCHASING },
-      { title: "Goods receipts", url: "/purchasing/receipts", permission: PURCHASING },
-      { title: "Supplier bills", url: "/purchasing/bills", permission: BILLS },
-      { title: "Supplier payments", url: "/purchasing/payments", permission: BILLS },
+      { title: "Suppliers", url: "/purchasing/suppliers", permission: PURCHASING, module: "procurement" },
+      { title: "Purchase orders", url: "/purchasing/orders", permission: PURCHASING, module: "procurement" },
+      { title: "Goods receipts", url: "/purchasing/receipts", permission: PURCHASING, module: "procurement" },
+      { title: "Supplier bills", url: "/purchasing/bills", permission: BILLS, module: "procurement" },
+      { title: "Supplier payments", url: "/purchasing/payments", permission: BILLS, module: "procurement" },
     ],
   },
   {
@@ -128,7 +128,7 @@ export const navSections: NavSection[] = [
     group: "PREORDER",
     items: [
       { title: "Overview", url: "/preorder_overview" },
-      { title: "Analytics", url: "/preorder_analytics", permission: "reports.view" },
+      { title: "Analytics", url: "/preorder_analytics", permission: "reports.view", module: "reporting" },
     ],
   },
   {
@@ -182,8 +182,8 @@ export const navSections: NavSection[] = [
     group: "PREORDER",
     items: [
       { title: "Shipments", url: "/preorder_shipments", permission: SHIPMENTS },
-      { title: "Delivery zones", url: "/preorder_shipping_zones", permission: SHIPMENTS },
-      { title: "Shipping rates", url: "/preorder_shipping_rates", permission: SHIPMENTS },
+      { title: "Delivery zones", url: "/preorder_shipping_zones", permission: SHIPMENTS, module: "logistics" },
+      { title: "Shipping rates", url: "/preorder_shipping_rates", permission: SHIPMENTS, module: "logistics" },
     ],
   },
   {
@@ -191,11 +191,11 @@ export const navSections: NavSection[] = [
     icon: ShoppingBasket,
     group: "PREORDER",
     items: [
-      { title: "Suppliers", url: "/preorder_purchasing/suppliers", permission: PURCHASING },
-      { title: "Purchase orders", url: "/preorder_purchasing/orders", permission: PURCHASING },
-      { title: "Goods receipts", url: "/preorder_purchasing/receipts", permission: PURCHASING },
-      { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: BILLS },
-      { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: BILLS },
+      { title: "Suppliers", url: "/preorder_purchasing/suppliers", permission: PURCHASING, module: "procurement" },
+      { title: "Purchase orders", url: "/preorder_purchasing/orders", permission: PURCHASING, module: "procurement" },
+      { title: "Goods receipts", url: "/preorder_purchasing/receipts", permission: PURCHASING, module: "procurement" },
+      { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: BILLS, module: "procurement" },
+      { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: BILLS, module: "procurement" },
     ],
   },
   {

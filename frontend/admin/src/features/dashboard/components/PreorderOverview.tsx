@@ -6,7 +6,9 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
 import { kindOfPath } from "@/hooks/use-kind"
-import { isForbidden } from "@/lib/api/client"
+import { isForbidden, isModuleDisabled } from "@/lib/api/client"
+import { useModulesKnown, useOffModules } from "@/hooks/use-modules"
+import { ModuleSwitchedOff } from "@/components/common/ModuleSwitchedOff"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
 import { REPORT_PERMISSIONS, useDashboardReport, useSalesTrendReport } from "@/features/analytics/hooks"
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
@@ -21,22 +23,27 @@ const OWN_PAGES = ["/preorder_overview", "/preorder_analytics"]
 const PreorderOverview = () => {
   useDocumentTitle("Pre-order overview")
 
+  const offModules = useOffModules()
+  const reportingOff = offModules.includes("reporting")
+  // Waits for the module list, so a switched-off Reports never sends its request first.
+  const reportingOn = useModulesKnown() && !reportingOff
   const canView = useCan(...REPORT_PERMISSIONS)
   const canOpenAnalytics = useCan("reports.view")
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
-  const report = useDashboardReport(range, "preorder", canView)
-  const trend = useSalesTrendReport(range, "preorder", canView)
-  const blocked = !canView || isForbidden(report.error)
+  const report = useDashboardReport(range, "preorder", canView && reportingOn)
+  const trend = useSalesTrendReport(range, "preorder", canView && reportingOn)
+  const switchedOff = reportingOff || isModuleDisabled(report.error)
+  const blocked = switchedOff || !canView || isForbidden(report.error)
 
   const fallbackLinks = useMemo(
     () =>
-      getNavGroups(permissions)
+      getNavGroups(permissions, offModules)
         .flatMap((g) => g.sections.flatMap((s) => s.items))
         .filter((item) => kindOfPath(item.url) === "preorder" && !OWN_PAGES.includes(item.url))
         .slice(0, 4)
         .map((item) => ({ to: item.url, label: item.title })),
-    [permissions]
+    [permissions, offModules]
   )
 
   const d = report.data
@@ -60,7 +67,11 @@ const PreorderOverview = () => {
       />
 
       {blocked ? (
-        <ReportsUnavailable links={fallbackLinks} />
+        switchedOff ? (
+          <ModuleSwitchedOff module="reporting" />
+        ) : (
+          <ReportsUnavailable links={fallbackLinks} />
+        )
       ) : (
         <>
           {d?.preorder && <PreorderSummaryCard summary={d.preorder} />}

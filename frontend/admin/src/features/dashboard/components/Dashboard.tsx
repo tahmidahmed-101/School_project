@@ -6,7 +6,9 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
 import { kindOfPath } from "@/hooks/use-kind"
-import { isForbidden } from "@/lib/api/client"
+import { isForbidden, isModuleDisabled } from "@/lib/api/client"
+import { useModulesKnown, useOffModules } from "@/hooks/use-modules"
+import { ModuleSwitchedOff } from "@/components/common/ModuleSwitchedOff"
 import { rangeSearch, useDateRange } from "@/features/analytics/dateRange"
 import { REPORT_PERMISSIONS, useDashboardReport } from "@/features/analytics/hooks"
 import { DateRangeControl } from "@/features/analytics/components/DateRangeControl"
@@ -21,21 +23,26 @@ import { ReportsUnavailable } from "@/features/analytics/components/ReportsUnava
 const Dashboard = () => {
   useDocumentTitle("Overview")
 
+  const offModules = useOffModules()
+  const reportingOff = offModules.includes("reporting")
+  // Waits for the module list, so a switched-off Reports never sends its request first.
+  const reportingOn = useModulesKnown() && !reportingOff
   const canView = useCan(...REPORT_PERMISSIONS)
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
-  const report = useDashboardReport(range, "stock", canView)
-  const blocked = !canView || isForbidden(report.error)
+  const report = useDashboardReport(range, "stock", canView && reportingOn)
+  const switchedOff = reportingOff || isModuleDisabled(report.error)
+  const blocked = switchedOff || !canView || isForbidden(report.error)
 
   // Where to send a user who can't see metrics: the first few pages they *can* open.
   const fallbackLinks = useMemo(
     () =>
-      getNavGroups(permissions)
+      getNavGroups(permissions, offModules)
         .flatMap((g) => g.sections.flatMap((s) => s.items))
         .filter((item) => kindOfPath(item.url) === "stock" && item.url !== "/" && item.url !== "/analytics")
         .slice(0, 4)
         .map((item) => ({ to: item.url, label: item.title })),
-    [permissions]
+    [permissions, offModules]
   )
 
   const d = report.data
@@ -59,7 +66,11 @@ const Dashboard = () => {
       />
 
       {blocked ? (
-        <ReportsUnavailable links={fallbackLinks} />
+        switchedOff ? (
+          <ModuleSwitchedOff module="reporting" />
+        ) : (
+          <ReportsUnavailable links={fallbackLinks} />
+        )
       ) : (
         <>
           <KpiCards kpis={d?.kpis} {...state} />

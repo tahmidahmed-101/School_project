@@ -27,6 +27,20 @@ class IsAdmin(BasePermission):
         return bool(user and user.is_authenticated and (user.is_superuser or user.role == "admin"))
 
 
+class IsStaffMember(BasePermission):
+    """Any dashboard account: an admin, or a staff member whatever their
+    permissions. For reads every dashboard user needs, such as which modules
+    are switched on."""
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_superuser or user.role in ("admin", "staff"))
+        )
+
+
 class IsCustomer(BasePermission):
     def has_permission(self, request, view) -> bool:
         user = request.user

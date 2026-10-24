@@ -1,10 +1,13 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { useEffect } from "react";
-import { Outlet, useNavigation } from "react-router-dom";
+import { Outlet, useLocation, useNavigation } from "react-router-dom";
 import { useAppDispatch } from "@/app/hooks";
+import { moduleOfPath } from "@/app/modules";
 import { useCan } from "@/hooks/use-can";
-import { fetchBusinessProfile } from "@/features/system/slices/businessSettingsSlice";
+import { useModulesKnown, useOffModules } from "@/hooks/use-modules";
+import { fetchBusinessProfile, fetchModules } from "@/features/system/slices/businessSettingsSlice";
+import { ModuleSwitchedOff } from "@/components/common/ModuleSwitchedOff";
 import Navbar from "@/components/common/Navbar";
 import ScrollToTop from "@/components/common/ScrollToTop";
 
@@ -19,6 +22,17 @@ const DashboardLayout = () => {
   useEffect(() => {
     if (canViewSettings) dispatch(fetchBusinessProfile());
   }, [dispatch, canViewSettings]);
+
+  // Which modules are switched off: their links leave the sidebar and their pages say so instead.
+  useEffect(() => {
+    dispatch(fetchModules());
+  }, [dispatch]);
+  const offModules = useOffModules();
+  const modulesKnown = useModulesKnown();
+  const pageModule = moduleOfPath(useLocation().pathname);
+  const switchedOff = pageModule && offModules.includes(pageModule) ? pageModule : null;
+  // A module's page waits for the list on a cold load, so a switched-off one never sends a request first.
+  const waitForModules = !!pageModule && !modulesKnown;
 
   return (
     <SidebarProvider>
@@ -48,7 +62,13 @@ const DashboardLayout = () => {
             className="relative isolate m-3 flex-1 overflow-y-auto rounded-xl border border-border bg-muted p-0 mt-0 dark:bg-background"
           >
             <ScrollToTop />
-            <Outlet />
+            {waitForModules ? null : switchedOff ? (
+              <div className="section-container">
+                <ModuleSwitchedOff module={switchedOff} />
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </main>
         </div>
       </div>
