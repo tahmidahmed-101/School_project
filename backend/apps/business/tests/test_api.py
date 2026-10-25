@@ -217,3 +217,14 @@ def test_preorder_terms_are_set_by_staff_and_read_by_the_storefront(api_client, 
     api_client.force_authenticate(user=admin_user)
     cleared = api_client.patch(ENDPOINT, {"preorder_terms_en": ""}, format="json")
     assert cleared.data["data"]["preorder_terms_en"] == ""
+
+
+def test_cart_recovery_is_off_by_default_and_staff_switch_it(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    assert api_client.get(ENDPOINT).data["data"]["cart_recovery_enabled"] is False
+
+    on = api_client.patch(ENDPOINT, {"cart_recovery_enabled": True}, format="json")
+    off = api_client.patch(ENDPOINT, {"cart_recovery_enabled": False}, format="json")
+
+    assert on.data["data"]["cart_recovery_enabled"] is True
+    assert off.data["data"]["cart_recovery_enabled"] is False

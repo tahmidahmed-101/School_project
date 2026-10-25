@@ -36,6 +36,7 @@ UPDATABLE_FIELDS = (
     "free_delivery_min_amount",
     "referral_friend_discount",
     "referral_reward_amount",
+    "cart_recovery_enabled",
     "about_en",
     "about_bn",
 )

@@ -11,13 +11,39 @@ logger = logging.getLogger("apps")
 
 SEND_TIMEOUT_SECONDS = 10
 
+NOT_CONFIGURED = "not_configured"
+NO_RECIPIENT = "no_recipient"
+# The number can never receive this message; retrying it only costs money.
+RECIPIENT_REFUSED = "recipient_refused"
+PROVIDER_ERROR = "provider_error"
+NETWORK_ERROR = "network_error"
 
-def send_sms(*, to: str, body: str) -> bool:
-    if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
-        return False
+# Twilio: 21211 invalid To, 21614 To is not a mobile, 21610 recipient replied STOP.
+_REFUSED_CODES = {21211, 21614, 21610}
 
+
+class SmsDeliveryError(Exception):
+    """`reason` is one of the codes above, never the provider's own text."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def sms_configured() -> bool:
+    return bool(
+        settings.TWILIO_ACCOUNT_SID
+        and settings.TWILIO_AUTH_TOKEN
+        and settings.TWILIO_PHONE_NUMBER
+    )
+
+
+def deliver_sms(*, to: str, body: str) -> None:
+    """Send one message or raise SmsDeliveryError saying why not."""
+    if not sms_configured():
+        raise SmsDeliveryError(NOT_CONFIGURED)
     if not to:
-        return False
+        raise SmsDeliveryError(NO_RECIPIENT)
 
     try:
         # Without an explicit timeout the request can hang for as long as the
@@ -27,14 +53,23 @@ def send_sms(*, to: str, body: str) -> bool:
             settings.TWILIO_AUTH_TOKEN,
             http_client=TwilioHttpClient(timeout=SEND_TIMEOUT_SECONDS),
         )
-        message = client.messages.create(
-            body=body,
-            from_=settings.TWILIO_PHONE_NUMBER,
-            to=to,
-        )
-        return message.sid is not None
-    except (TwilioRestException, TwilioException, OSError):
-        # Swallowing this silently made every delivery failure look identical
-        # to "Twilio not configured" in production.
-        logger.exception("SMS send failed")
+        message = client.messages.create(body=body, from_=settings.TWILIO_PHONE_NUMBER, to=to)
+    except TwilioRestException as exc:
+        logger.warning("SMS provider refused the message (code %s)", exc.code)
+        raise SmsDeliveryError(
+            RECIPIENT_REFUSED if exc.code in _REFUSED_CODES else PROVIDER_ERROR
+        ) from exc
+    except (TwilioException, OSError) as exc:
+        logger.warning("SMS send failed: %s", type(exc).__name__)
+        raise SmsDeliveryError(NETWORK_ERROR) from exc
+    if message.sid is None:
+        raise SmsDeliveryError(PROVIDER_ERROR)
+
+
+def send_sms(*, to: str, body: str) -> bool:
+    """The OTP path: it only needs to know whether the message went."""
+    try:
+        deliver_sms(to=to, body=body)
+    except SmsDeliveryError:
         return False
+    return True

@@ -53,6 +53,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
   const [confirmingPreorder, setConfirmingPreorder] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(false);
   // Set once the backend refuses cash on delivery for this phone ("advance payment only").
   const [codRefusedFor, setCodRefusedFor] = useState<string | null>(null);
   const preorderItems = items.filter((item) => productKind(item.product) === "preorder");
@@ -139,6 +140,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
         paymentMethod,
         couponCode: acceptsCoupon(items) ? coupon.applied?.code : undefined,
         tracking: readTrackingContext(),
+        smsOptIn,
       });
       // Logged in: the order is placed on the customer's account. Guest: exactly as before.
       const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
@@ -231,6 +233,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
               paymentMethods={paymentMethods}
               paymentMethod={paymentMethod ?? ""}
               onPaymentMethodChange={setChosenPayment}
+              smsOptIn={smsOptIn}
+              onSmsOptInChange={setSmsOptIn}
             />
           </div>
 

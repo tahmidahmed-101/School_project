@@ -31,6 +31,7 @@ from apps.marketing.services.campaigns import (
     remove_suppression,
     schedule_campaign,
     send_campaign_test,
+    sms_footer_length,
     unschedule_campaign,
     update_campaign,
 )
@@ -64,7 +65,7 @@ def _campaign_response(campaign: EmailCampaign, *, status_code=status.HTTP_200_O
 
 @extend_schema(tags=["Marketing"])
 class AdminCampaignListView(_ReadOpenWriteManaged, GenericListAPIView):
-    """Newsletter campaigns. Filter: status. POST creates a draft."""
+    """Email and SMS campaigns. Filters: status, channel. POST creates a draft."""
 
     serializer_class = AdminCampaignSerializer
     search_fields = ("name", "subject")
@@ -72,8 +73,10 @@ class AdminCampaignListView(_ReadOpenWriteManaged, GenericListAPIView):
     default_ordering = "-created_at"
 
     def get_queryset(self):
+        params = self.request.query_params
         return campaigns_list(
-            status=get_choice(self.request.query_params, "status", EmailCampaign.Status.values)
+            status=get_choice(params, "status", EmailCampaign.Status.values),
+            channel=get_choice(params, "channel", EmailCampaign.Channel.values),
         )
 
     def get_serializer_context(self, items: list) -> dict:
@@ -179,7 +182,9 @@ class AdminCampaignTestView(APIView):
             return not_found("campaign_not_found", "Campaign not found.")
         serializer = AdminCampaignTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        recipient = serializer.validated_data.get("recipient") or request.user.email or ""
+        is_sms = campaign.channel == EmailCampaign.Channel.SMS
+        own = request.user.phone if is_sms else request.user.email
+        recipient = serializer.validated_data.get("recipient") or own or ""
         try:
             result = send_campaign_test(campaign=campaign, recipient=recipient, actor=request.user)
         except DomainError as exc:
@@ -195,7 +200,7 @@ class AdminCampaignDeliveryListView(GenericListAPIView):
 
     serializer_class = AdminCampaignDeliverySerializer
     permission_classes: ClassVar[list] = [MarketingViewPermission]
-    search_fields = ("email",)
+    search_fields = ("email", "phone")
     ordering_fields = ("created_at", "sent_at")
     default_ordering = "created_at"
 
@@ -222,9 +227,8 @@ class AdminCampaignAudienceView(APIView):
     permission_classes: ClassVar[list] = [MarketingViewPermission]
 
     def get(self, request) -> Response:
-        return Response(
-            {"data": AdminAudienceSerializer(audience_summary()).data, "message": "Success"}
-        )
+        summary = {**audience_summary(), "sms_footer_length": sms_footer_length()}
+        return Response({"data": AdminAudienceSerializer(summary).data, "message": "Success"})
 
 
 @extend_schema(tags=["Marketing"])

@@ -19,7 +19,9 @@ const columns: ColumnDef<CampaignDelivery>[] = [
   {
     accessorKey: "email",
     header: "RECIPIENT",
-    cell: ({ row }) => <span className="text-sm font-medium">{row.original.email}</span>,
+    cell: ({ row }) => (
+      <span className="text-sm font-medium break-all">{row.original.email || row.original.phone}</span>
+    ),
   },
   {
     accessorKey: "status",

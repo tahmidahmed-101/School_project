@@ -84,6 +84,8 @@ class SalesOrder(FullAuditModel):
     cod_verified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # When the cart-recovery SMS went out; set once so a cart is never texted twice.
+    recovery_sent_at = models.DateTimeField(null=True, blank=True)
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     shipping_total = models.DecimalField(

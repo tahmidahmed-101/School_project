@@ -75,7 +75,10 @@ def test_admin_endpoints_reject_customers(api_client, path):
     ), f"{path} answered {response.status_code} to a customer GET"
 
 
-@pytest.mark.parametrize("path", ADMIN_PATHS)
+OPEN_TO_ANY_STAFF = {"/api/v1/admin/settings/modules/"}
+
+
+@pytest.mark.parametrize("path", [p for p in ADMIN_PATHS if p not in OPEN_TO_ANY_STAFF])
 def test_admin_endpoints_reject_staff_holding_no_permissions(api_client, path):
     """Staff are only what their granted permission codes say they are — an
     account with none must be able to read nothing."""

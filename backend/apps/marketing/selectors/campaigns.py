@@ -14,6 +14,7 @@ from apps.marketing.models import (
     EmailCampaign,
     EmailSuppression,
     NewsletterSubscriber,
+    SmsSubscriber,
 )
 
 # A recipient gets at most this many tries; a refused address gets one.
@@ -23,10 +24,14 @@ MAX_DELIVERY_ATTEMPTS = 3
 STALE_SENDING_AFTER = timedelta(minutes=15)
 
 
-def campaigns_list(*, status: str | None = None) -> QuerySet[EmailCampaign]:
+def campaigns_list(
+    *, status: str | None = None, channel: str | None = None
+) -> QuerySet[EmailCampaign]:
     queryset = EmailCampaign.objects.all()
     if status:
         queryset = queryset.filter(status=status)
+    if channel:
+        queryset = queryset.filter(channel=channel)
     return queryset
 
 
@@ -45,12 +50,17 @@ def eligible_subscribers() -> QuerySet[NewsletterSubscriber]:
     )
 
 
+def eligible_sms_subscribers() -> QuerySet[SmsSubscriber]:
+    return SmsSubscriber.objects.filter(is_active=True, consented_at__isnull=False)
+
+
 def audience_summary() -> dict:
     active = NewsletterSubscriber.objects.filter(is_active=True).count()
     return {
         "active_subscribers": active,
         "eligible_recipients": eligible_subscribers().count(),
         "suppressed_addresses": EmailSuppression.objects.count(),
+        "sms_eligible_recipients": eligible_sms_subscribers().count(),
     }
 
 

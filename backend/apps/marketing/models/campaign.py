@@ -7,14 +7,19 @@ from django.db import models
 
 from apps.common.models import TimeStampedModel
 
-from .subscriber import NewsletterSubscriber
+from .subscriber import NewsletterSubscriber, SmsSubscriber
 
 
 class EmailCampaign(TimeStampedModel):
-    """A newsletter sent to every active, unsuppressed subscriber.
+    """A newsletter sent to every active, unsuppressed subscriber, or, with
+    channel "sms", a text to every opted-in phone. The lifecycle is the same.
 
-    Marketing mail only: it never reaches someone who has not subscribed, and
-    nothing here affects account email (password resets, verification)."""
+    Marketing only: it never reaches someone who has not opted in, and
+    nothing here affects account email or OTP codes."""
+
+    class Channel(models.TextChoices):
+        EMAIL = "email", "Email"
+        SMS = "sms", "SMS"
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -24,7 +29,9 @@ class EmailCampaign(TimeStampedModel):
         CANCELLED = "cancelled", "Cancelled"
 
     name = models.CharField(max_length=120, help_text="Internal; subscribers never see it.")
-    subject = models.CharField(max_length=200)
+    channel = models.CharField(max_length=5, choices=Channel.choices, default=Channel.EMAIL)
+    # Empty for SMS.
+    subject = models.CharField(max_length=200, blank=True)
     # Plain text. The unsubscribe footer is added when each copy is sent.
     body = models.TextField()
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
@@ -59,8 +66,8 @@ class CampaignDelivery(TimeStampedModel):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         SENDING = "sending", "Sending"
-        # Accepted by the SMTP server. Not proof it reached the inbox.
-        SENT = "sent", "Accepted by the mail server"
+        # Accepted by the SMTP server or the SMS provider. Not proof it arrived.
+        SENT = "sent", "Accepted by the provider"
         FAILED = "failed", "Failed"
         # Not sent on purpose: unsubscribed or suppressed after the campaign
         # started, or the campaign was cancelled.
@@ -71,7 +78,12 @@ class CampaignDelivery(TimeStampedModel):
     subscriber = models.ForeignKey(
         NewsletterSubscriber, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
-    email = models.EmailField()
+    sms_subscriber = models.ForeignKey(
+        SmsSubscriber, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    # Exactly one of email / phone is set, by the campaign's channel.
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     attempts = models.PositiveSmallIntegerField(default=0)
     # A fixed code (apps.business.services.email.failure_reason), never the
@@ -82,14 +94,23 @@ class CampaignDelivery(TimeStampedModel):
     class Meta:
         ordering: ClassVar[list] = ["created_at"]
         constraints: ClassVar[list] = [
-            models.UniqueConstraint(fields=["campaign", "email"], name="uniq_delivery_per_address"),
+            models.UniqueConstraint(
+                fields=["campaign", "email"],
+                condition=~models.Q(email=""),
+                name="uniq_delivery_per_address",
+            ),
+            models.UniqueConstraint(
+                fields=["campaign", "phone"],
+                condition=~models.Q(phone=""),
+                name="uniq_delivery_per_phone",
+            ),
         ]
         indexes: ClassVar[list] = [
             models.Index(fields=["campaign", "status"], name="delivery_campaign_status_idx"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.campaign_id} -> {self.email} ({self.status})"
+        return f"{self.campaign_id} -> {self.email or self.phone} ({self.status})"
 
 
 class EmailSuppression(TimeStampedModel):

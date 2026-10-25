@@ -103,10 +103,13 @@ export interface NewsletterSubscriber {
 export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "cancelled"
 export type DeliveryStatus = "pending" | "sending" | "sent" | "failed" | "skipped"
 
-/** AdminCampaignSerializer. `delivery_counts.sent` means accepted by the mail server, not delivered. */
+export type CampaignChannel = "email" | "sms"
+
+/** AdminCampaignSerializer. `delivery_counts.sent` means accepted by the mail server or SMS provider, not delivered. */
 export interface EmailCampaign {
   id: string
   name: string
+  channel: CampaignChannel
   subject: string
   body: string
   status: CampaignStatus
@@ -124,6 +127,7 @@ export interface EmailCampaign {
 /** AdminCampaignWriteSerializer (POST creates a draft; PATCH edits a draft). */
 export interface EmailCampaignPayload {
   name: string
+  channel?: CampaignChannel
   subject: string
   body: string
 }
@@ -132,6 +136,7 @@ export interface EmailCampaignPayload {
 export interface CampaignDelivery {
   id: string
   email: string
+  phone: string
   status: DeliveryStatus
   attempts: number
   failure_reason: string
@@ -144,6 +149,8 @@ export interface CampaignAudience {
   active_subscribers: number
   eligible_recipients: number
   suppressed_addresses: number
+  sms_eligible_recipients: number
+  sms_footer_length: number
 }
 
 /** AdminCampaignTestResultSerializer. `accepted` means the mail server took it. */

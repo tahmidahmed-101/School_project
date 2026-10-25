@@ -82,6 +82,8 @@ class BusinessProfile(TimeStampedModel):
         blank=True,
         validators=[MinValueValidator(Decimal("0"))],
     )
+    # One reminder SMS to a shopper who left a cart; every message costs money.
+    cart_recovery_enabled = models.BooleanField(default=False)
 
     about_en = models.TextField(blank=True)
     about_bn = models.TextField(blank=True)

@@ -10,6 +10,7 @@ import { containerClass } from "@/design-system/ui/Container";
 import type { AuthUser } from "../context";
 import { InviteFriends } from "./InviteFriends";
 import { OrderHistory } from "./OrderHistory";
+import { SmsPreference } from "./SmsPreference";
 import { UserAvatar } from "./UserAvatar";
 
 /**
@@ -81,6 +82,8 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
         </nav>
 
         {user.role === "customer" && <InviteFriends />}
+        {user.role === "customer" && <SmsPreference />}
+
         {user.role === "customer" && <OrderHistory />}
       </div>
     </div>

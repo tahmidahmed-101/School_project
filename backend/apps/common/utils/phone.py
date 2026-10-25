@@ -45,6 +45,12 @@ def is_bd_mobile(raw: str) -> bool:
     return bool(BD_MOBILE.match(local_bd_mobile(raw)))
 
 
+def e164_bd_mobile(raw: str) -> str:
+    """``+8801XXXXXXXXX`` for a valid BD mobile, else ``""``."""
+    local = local_bd_mobile(raw)
+    return f"+{COUNTRY_CODE}{local[1:]}" if BD_MOBILE.match(local) else ""
+
+
 def validate_bd_mobile(value: str) -> None:
     if not is_bd_mobile(value):
         raise ValidationError(BD_MOBILE_HELP)

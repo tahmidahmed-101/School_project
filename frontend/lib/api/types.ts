@@ -363,6 +363,8 @@ export interface ApiCheckoutRequest {
     ttclid?: string;
     source_url?: string;
   };
+  /** Sent only when the shopper ticked the box; it never withdraws an earlier opt-in. */
+  sms_marketing_opt_in?: boolean;
 }
 
 interface ApiGuestCartLine {

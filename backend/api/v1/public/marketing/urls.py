@@ -6,6 +6,7 @@ from .views import (
     NewsletterSubscribeView,
     NewsletterUnsubscribeView,
     newsletter_unsubscribe_page,
+    sms_unsubscribe_page,
 )
 
 app_name = "public_marketing"
@@ -17,5 +18,10 @@ urlpatterns = [
         "unsubscribe/<str:token>/",
         newsletter_unsubscribe_page,
         name="newsletter-unsubscribe-page",
+    ),
+    path(
+        "sms-unsubscribe/<str:token>/",
+        sms_unsubscribe_page,
+        name="sms-unsubscribe-page",
     ),
 ]

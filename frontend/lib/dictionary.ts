@@ -421,6 +421,22 @@ export const DICT = {
     en: "Any instructions for the delivery rider...",
     bn: "ডেলিভারিম্যানের জন্য কোনো নির্দেশনা থাকলে লিখুন...",
   },
+  checkoutSmsOptIn: { en: "Text me offers and news", bn: "অফার আর নতুন পণ্যের খবর এসএমএসে পেতে চাই" },
+  checkoutSmsOptInHint: {
+    en: "You can turn this off any time.",
+    bn: "পছন্দ না হলে যেকোনো সময় বন্ধ করে দিতে পারবেন।",
+  },
+  accountSmsTitle: { en: "Offers by SMS", bn: "এসএমএসে অফার" },
+  accountSmsDescription: {
+    en: "Offers and news about new products go to this number. Order messages come as before.",
+    bn: "এই নম্বরে অফার আর নতুন পণ্যের খবর পাবেন। অর্ডারের মেসেজ আগের মতোই আসবে।",
+  },
+  accountSmsNoPhone: {
+    en: "Add a mobile number to your account to get offers by SMS.",
+    bn: "এসএমএসে অফার পেতে অ্যাকাউন্টে মোবাইল নম্বর যোগ করুন।",
+  },
+  accountSmsError: { en: "Not saved. Please try again.", bn: "সেভ হয়নি। আরেকবার চেষ্টা করুন।" },
+  accountSmsLoadError: { en: "Couldn't load this setting.", bn: "সেটিংটা লোড করা যায়নি।" },
   checkoutPaymentMethod: { en: "Payment method", bn: "পেমেন্ট মাধ্যম" },
   checkoutNoPaymentMethod: {
     en: "No payment method is open for this order right now. Please contact the store to place it.",

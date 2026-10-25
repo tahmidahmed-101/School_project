@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.marketing.models import NewsletterSubscriber
+from apps.marketing.models import EmailCampaign, NewsletterSubscriber
 
 
 class AdminNewsletterSubscriberSerializer(serializers.Serializer):
@@ -44,7 +44,8 @@ class AdminCampaignSerializer(serializers.Serializer):
 
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(read_only=True)
-    subject = serializers.CharField(read_only=True)
+    channel = serializers.CharField(read_only=True)
+    subject = serializers.CharField(read_only=True, allow_blank=True)
     body = serializers.CharField(read_only=True)
     status = serializers.CharField(read_only=True)
     scheduled_at = serializers.DateTimeField(read_only=True, allow_null=True)
@@ -68,7 +69,12 @@ class AdminCampaignSerializer(serializers.Serializer):
 
 class AdminCampaignWriteSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, max_length=120)
-    subject = serializers.CharField(required=False, max_length=200)
+    channel = serializers.ChoiceField(
+        choices=EmailCampaign.Channel.choices,
+        required=False,
+        help_text="Set when creating; a campaign keeps its channel.",
+    )
+    subject = serializers.CharField(required=False, allow_blank=True, max_length=200)
     body = serializers.CharField(required=False, max_length=50_000, trim_whitespace=False)
 
     def validate(self, attrs):
@@ -85,7 +91,9 @@ class AdminCampaignScheduleSerializer(serializers.Serializer):
 
 class AdminCampaignTestSerializer(serializers.Serializer):
     recipient = serializers.CharField(
-        required=False, max_length=254, help_text="Defaults to your own email address."
+        required=False,
+        max_length=254,
+        help_text="Defaults to your own email address (SMS: your own phone).",
     )
 
 
@@ -97,7 +105,8 @@ class AdminCampaignTestResultSerializer(serializers.Serializer):
 
 class AdminCampaignDeliverySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
-    email = serializers.EmailField(read_only=True)
+    email = serializers.CharField(read_only=True, allow_blank=True)
+    phone = serializers.CharField(read_only=True, allow_blank=True)
     status = serializers.CharField(read_only=True)
     attempts = serializers.IntegerField(read_only=True)
     failure_reason = serializers.CharField(read_only=True, allow_blank=True)
@@ -109,6 +118,10 @@ class AdminAudienceSerializer(serializers.Serializer):
     active_subscribers = serializers.IntegerField(read_only=True)
     eligible_recipients = serializers.IntegerField(read_only=True)
     suppressed_addresses = serializers.IntegerField(read_only=True)
+    sms_eligible_recipients = serializers.IntegerField(read_only=True)
+    sms_footer_length = serializers.IntegerField(
+        read_only=True, help_text="Characters the opt-out line adds to every text."
+    )
 
 
 class AdminSuppressionSerializer(serializers.Serializer):

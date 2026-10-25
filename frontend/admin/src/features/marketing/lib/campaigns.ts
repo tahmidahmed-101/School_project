@@ -1,6 +1,6 @@
 import type { StatusTone } from "@/components/common/status-tones"
 import { SMTP_FAILURE_REASONS } from "@/lib/smtpReasons"
-import type { CampaignStatus, DeliveryStatus, EmailCampaign, SuppressionReason } from "../types"
+import type { CampaignChannel, CampaignStatus, DeliveryStatus, EmailCampaign, SuppressionReason } from "../types"
 
 export const CAMPAIGN_STATUS_LABEL: Record<CampaignStatus, string> = {
   draft: "Draft",
@@ -46,9 +46,19 @@ export const SUPPRESSION_REASON_TONE: Record<SuppressionReason, StatusTone> = {
   manual: "warning",
 }
 
-// Why a copy was skipped (campaigns.py) or failed (the SMTP codes).
+export const CAMPAIGN_CHANNEL_LABEL: Record<CampaignChannel, string> = {
+  email: "Email",
+  sms: "SMS",
+}
+
+// Why a copy was skipped (campaigns.py) or failed (the SMTP and SMS codes).
 const DELIVERY_REASONS: Record<string, string> = {
   ...SMTP_FAILURE_REASONS,
+  recipient_refused: "The mail server or SMS provider refused the recipient.",
+  not_configured: "SMS sending isn't set up on the server.",
+  no_recipient: "There was no valid phone number to send to.",
+  provider_error: "The SMS provider rejected the message.",
+  network_error: "Couldn't reach the SMS provider.",
   cancelled: "The campaign was cancelled before this copy went out.",
   suppressed: "The address was blocked after the campaign started.",
   unsubscribed: "The subscriber unsubscribed after the campaign started.",
