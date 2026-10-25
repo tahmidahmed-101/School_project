@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.kullmart.com/api/v1/public" } }));
 
-const { normalizeImageUrl, toCategoryInfo, toProduct } = await import("../data/adapters");
+const { normalizeImageUrl, toBundleItems, toCategoryInfo, toProduct } = await import("../data/adapters");
 
 describe("normalizeImageUrl", () => {
   it("puts media paths on the API origin", () => {
@@ -190,5 +190,29 @@ describe("toProduct section switches", () => {
   it("leaves them unset when the API sends none, which the product page reads as on", () => {
     const shown = toProduct(base as never, []);
     expect([shown.showQuestions, shown.showPriceReport]).toEqual([undefined, undefined]);
+  });
+});
+
+describe("toBundleItems", () => {
+  const item = (image: string | null) => ({
+    quantity: 2,
+    price: "150.00",
+    product: { id: "p1", slug: "churi", name: "churi", category_id: "c1", image },
+  });
+
+  it("maps each combo item with its unit price and quantity", () => {
+    const [shown] = toBundleItems({ components: [item("/media/uploads/a.jpg")] } as never);
+    expect(shown).toEqual({
+      slug: "churi",
+      name: { en: "churi", bn: "" },
+      image: "https://api.kullmart.com/media/uploads/a.jpg",
+      quantity: 2,
+      unitPrice: 150,
+    });
+  });
+
+  it("falls back to the placeholder when an item has no photo", () => {
+    const [shown] = toBundleItems({ components: [item(null)] } as never);
+    expect(shown?.image).toBe("brand/logo-mark.png");
   });
 });

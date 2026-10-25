@@ -1,8 +1,15 @@
 import "server-only";
 import { cache } from "react";
-import { getProduct, getProductReviews, getRelatedProducts, listAllProducts, listCategories } from "./queries";
+import {
+  getBundle,
+  getProduct,
+  getProductReviews,
+  getRelatedProducts,
+  listAllProducts,
+  listCategories,
+} from "./queries";
 import { ApiError } from "@/lib/api/client";
-import { toCategoryInfo, toProduct, withReviewSummary } from "./adapters";
+import { toBundleItems, toCategoryInfo, toProduct, withReviewSummary } from "./adapters";
 import type { CategoryInfo, Product } from "@/lib/types";
 
 /**
@@ -59,7 +66,11 @@ export const getProductBySlug = cache(async (slug: string): Promise<Product | nu
       getProductReviews(slug, { page_size: 1 }).catch(() => null),
     ]);
     const base = toProduct(product, categories);
-    return reviews ? withReviewSummary(base, reviews) : base;
+    // Only a combo has items to list, so the extra request is made for combos alone. Like the review summary,
+    // the list is optional: without it the page still sells the combo.
+    const bundle = product.product_type === "bundle" ? await getBundle(slug).catch(() => null) : null;
+    const withItems = bundle?.components.length ? { ...base, bundleItems: toBundleItems(bundle) } : base;
+    return reviews ? withReviewSummary(withItems, reviews) : withItems;
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;

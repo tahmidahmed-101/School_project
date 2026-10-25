@@ -1,10 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { FileText, Flag, MessageCircleQuestion, Share2, Star, Truck } from "lucide-react";
+import { FileText, Flag, MessageCircleQuestion, Package, Share2, Star, Truck } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { ACCORDION_BODY, AccordionItem } from "@/design-system/ui/AccordionItem";
+import { BundleItems } from "./BundleItems";
 import { PanelLoading } from "./ListStatus";
 
 // Each panel's code loads when its accordion is first opened, not with the product page. (next/dynamic needs its
@@ -40,7 +41,7 @@ interface ProductAccordionsProps {
 }
 
 /**
- * Description, reviews, questions, shipping, price report and share accordions.
+ * Combo items, description, reviews, questions, shipping, price report and share accordions.
  * The API-backed ones fetch when opened: a closed accordion does not mount its content.
  */
 export function ProductAccordions({ product, variantId, currentPrice }: ProductAccordionsProps) {
@@ -54,6 +55,12 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
   return (
     <>
       <div className="mt-8 divide-y divide-ink-100 border-b border-t border-ink-200 sm:mt-12">
+        {product.bundleItems && product.bundleItems.length > 0 && (
+          <AccordionItem icon={<Package className={ICON} />} title={ui("bundleItemsTitle")} defaultOpen>
+            <BundleItems items={product.bundleItems} />
+          </AccordionItem>
+        )}
+
         {(description || hasHighlights) && (
           <AccordionItem icon={<FileText className={ICON} />} title={ui("productDetails")} defaultOpen>
             <div className={`space-y-3 ${ACCORDION_BODY}`}>

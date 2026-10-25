@@ -1,8 +1,17 @@
-import type { CategoryInfo, Product, ProductOption, ProductSale, ProductSpec, SkuVariant, T } from "@/lib/types";
+import type {
+  BundleItem,
+  CategoryInfo,
+  Product,
+  ProductOption,
+  ProductSale,
+  ProductSpec,
+  SkuVariant,
+  T,
+} from "@/lib/types";
 import { toNumber } from "@/lib/api/parse";
 import { normalizeImageUrl } from "@/lib/photo";
 import { ORDER_QUANTITY_CAP, applyVariant } from "@/lib/variants";
-import type { ApiCategory, ApiProduct, ApiProductOption, ApiProductSale, ApiVariant } from "@/lib/api/types";
+import type { ApiBundle, ApiCategory, ApiProduct, ApiProductOption, ApiProductSale, ApiVariant } from "@/lib/api/types";
 
 /**
  * Backend -> storefront model. The UI keeps using `Product` / `CategoryInfo`; everything the API cannot supply
@@ -184,6 +193,16 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     sale: toSale(api.sale),
   };
   return applyVariant(base, preferred);
+}
+
+export function toBundleItems(api: ApiBundle): BundleItem[] {
+  return api.components.map((item) => ({
+    slug: item.product.slug,
+    name: plain(item.product.name),
+    image: item.product.image ? normalizeImageUrl(item.product.image) : PLACEHOLDER_IMAGE,
+    quantity: item.quantity,
+    unitPrice: toNumber(item.price),
+  }));
 }
 
 export function withReviewSummary(
