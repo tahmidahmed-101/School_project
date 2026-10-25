@@ -22,8 +22,11 @@ BD_MOBILE = re.compile(r"^01[3-9]\d{8}$")
 BD_MOBILE_HELP = "Enter a Bangladeshi mobile number, like 01712345678 or +8801712345678."
 
 
+BANGLA_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")
+
+
 def digits(raw: str) -> str:
-    return re.sub(r"\D", "", raw or "")
+    return re.sub(r"\D", "", (raw or "").translate(BANGLA_DIGITS))
 
 
 def local_bd_mobile(raw: str) -> str:

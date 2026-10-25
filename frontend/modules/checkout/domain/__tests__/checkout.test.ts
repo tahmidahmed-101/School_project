@@ -7,6 +7,7 @@ import {
   acceptsCoupon,
   buildCheckoutRequest,
   couponErrorKey,
+  isBdMobile,
   mapApiFieldErrors,
   paymentMethodsFor,
   validateOrderForm,
@@ -41,6 +42,15 @@ describe("validateOrderForm", () => {
     for (const phone of ["12345", "01212345678", "0171234567", "017123456789", "+1 415 555 0100"]) {
       expect(validateOrderForm({ ...validForm, phone }).phone).toBe("invalidPhone");
     }
+  });
+});
+
+describe("isBdMobile", () => {
+  it("takes Bangla digits and the usual spellings", () => {
+    for (const raw of ["01712345678", "+8801712345678", "০১৭১২৩৪৫৬৭৮", "+৮৮০ ১৭১২-৩৪৫৬৭৮"]) {
+      expect(isBdMobile(raw)).toBe(true);
+    }
+    expect(isBdMobile("০১০১২৩৪৫৬৭৮")).toBe(false);
   });
 });
 

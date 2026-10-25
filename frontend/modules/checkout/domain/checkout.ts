@@ -82,7 +82,7 @@ export function buildCheckoutRequest(
  * 01[3-9] followed by eight digits, written with or without the +880 country code, spaces or dashes.
  */
 export function isBdMobile(raw: string): boolean {
-  let digits = raw.replace(/\D/g, "");
+  let digits = raw.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))).replace(/\D/g, "");
   if (digits.startsWith("880")) digits = digits.slice(3);
   if (digits.length === 10 && digits.startsWith("1")) digits = `0${digits}`;
   return /^01[3-9]\d{8}$/.test(digits);
