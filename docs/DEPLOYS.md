@@ -7,3 +7,4 @@
 | 2026-10-18 06:41 | release-2026-10-18b | 38bdd6aae7 | prod |
 | 2026-10-25 07:26 | release-2026-10-25a | 8d9538dc1f | prod |
 | 2026-10-25 14:07 | release-2026-10-25b | c65a2bec08 | prod |
+| 2026-10-25 14:10 | release-2026-10-25c | 9e349ef2cd | prod |
