@@ -8,6 +8,7 @@ import { Button } from "@/design-system/ui/Button";
 import { FormAlert } from "@/design-system/ui/FormField";
 import { containerClass } from "@/design-system/ui/Container";
 import type { AuthUser } from "../context";
+import { InviteFriends } from "./InviteFriends";
 import { OrderHistory } from "./OrderHistory";
 import { UserAvatar } from "./UserAvatar";
 
@@ -79,6 +80,7 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
           ))}
         </nav>
 
+        {user.role === "customer" && <InviteFriends />}
         {user.role === "customer" && <OrderHistory />}
       </div>
     </div>

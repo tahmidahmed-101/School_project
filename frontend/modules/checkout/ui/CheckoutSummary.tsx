@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, Sparkles, Calendar, Trash2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { useCart } from "@/modules/cart";
 import { useCollectedVouchers, useVoucherText } from "@/modules/marketing";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
+import { readStoredRef } from "@/lib/referral";
 import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { Button } from "@/design-system/ui/Button";
 import { FieldError, INPUT_CLASS } from "@/design-system/ui/FormField";
@@ -50,6 +51,10 @@ export function CheckoutSummary({
 }: CheckoutSummaryProps) {
   const { t, ui, money, n } = useLang();
   const [couponInput, setCouponInput] = useState("");
+  useEffect(() => {
+    const saved = readStoredRef();
+    if (saved) setCouponInput((current) => current || saved);
+  }, []);
   const shippingFee = shipping.status === "ok" ? shipping.fee : 0;
   const ownCouponMessage = coupon.error instanceof ApiError ? couponErrorKey(coupon.error.code) : undefined;
   const couponError = !coupon.error

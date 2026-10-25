@@ -34,6 +34,8 @@ UPDATABLE_FIELDS = (
     "preorder_terms_en",
     "preorder_terms_bn",
     "free_delivery_min_amount",
+    "referral_friend_discount",
+    "referral_reward_amount",
     "about_en",
     "about_bn",
 )

@@ -125,6 +125,8 @@ const COUPON_ERROR_KEYS: Record<string, UiKey> = {
   coupon_minimum_not_met: "couponMinimumNotMet",
   coupon_not_applicable: "couponNotApplicable",
   coupon_customer_limit_reached: "couponCustomerLimitReached",
+  referral_own_code: "referralOwnCode",
+  referral_not_first_order: "referralNotFirstOrder",
 };
 
 export const couponErrorKey = (code: string): UiKey | undefined =>

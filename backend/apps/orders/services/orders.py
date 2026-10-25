@@ -23,6 +23,7 @@ from apps.orders.services.carts import (
     ensure_single_kind,
 )
 from apps.orders.services.notifications import notify_order, order_label
+from apps.orders.services.referrals import reward_referral, void_referral
 from apps.orders.services.reservations import (
     hold_line_stock,
     reinstate_lapsed_holds,
@@ -139,6 +140,7 @@ def cancel_order(*, order: SalesOrder, actor=None) -> SalesOrder:
     order.status = SalesOrder.Status.CANCELLED
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
+    void_referral(order)
     notify_order(order, f"{order_label(order)} was cancelled.")
     return order
 
@@ -305,6 +307,8 @@ def set_order_status(*, order: SalesOrder, new_status: str, actor=None) -> Sales
     order.status = new_status
     order.updated_by = actor
     order.save(update_fields=["status", "updated_by", "updated_at"])
+    if new_status == SalesOrder.Status.DELIVERED:
+        reward_referral(order)
     if new_status == SalesOrder.Status.CONFIRMED and previous != SalesOrder.Status.SHIPPED:
         from apps.orders.services.payments import _order_confirmed
 

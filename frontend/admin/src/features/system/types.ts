@@ -34,6 +34,8 @@ export interface BusinessProfile {
   preorder_terms_en: string
   preorder_terms_bn: string
   free_delivery_min_amount: string | null
+  referral_friend_discount: string | null
+  referral_reward_amount: string | null
   about_en: string
   about_bn: string
   updated_at: string

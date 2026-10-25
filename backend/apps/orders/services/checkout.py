@@ -22,6 +22,7 @@ from apps.orders.services.carts import (
 )
 from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
+from apps.orders.services.referrals import record_referral
 from apps.orders.services.reservations import hold_line_stock
 from apps.risk.services import blocklist, ip_blocklist
 
@@ -230,5 +231,6 @@ def checkout(
         ]
     )
     order.recalculate_totals()
+    record_referral(order)
 
     return order

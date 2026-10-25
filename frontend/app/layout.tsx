@@ -15,7 +15,7 @@ import { WishlistProvider } from "@/modules/wishlist";
 import { ClientShell } from "@/modules/shell";
 import { Footer } from "@/modules/shell/server";
 import { JsonLd } from "@/modules/seo";
-import { AnalyticsScripts } from "@/modules/marketing";
+import { AnalyticsScripts, ReferralCapture } from "@/modules/marketing";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -105,6 +105,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className={`ts-font-scope ${jostFont.variable} ${bengaliFont.variable} ${takaFont.variable}`}>
           <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
             <LangProvider initialLang={lang}>
+              <ReferralCapture />
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>

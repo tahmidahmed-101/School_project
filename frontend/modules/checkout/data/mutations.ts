@@ -47,10 +47,22 @@ export async function placeOrder(
 /**
  * POST /checkout/coupon/ — checks a code against the cart before the order is placed. Throws ApiError with code
  * invalid_coupon | coupon_expired | coupon_usage_limit_reached | coupon_minimum_not_met | coupon_stock_only |
- * coupon_not_started | coupon_not_applicable | coupon_customer_limit_reached (message is shopper-ready).
+ * coupon_not_started | coupon_not_applicable | coupon_customer_limit_reached | referral_own_code |
+ * referral_not_first_order (message is shopper-ready). The phone and the customer's auth headers let the backend
+ * apply the per-customer and referral rules already here.
  */
-export const validateCoupon = (code: string, items: ApiCheckoutItem[], signal?: AbortSignal) =>
-  apiRequest<ApiCouponPreview>("/checkout/coupon/", { method: "POST", body: { code, items }, signal });
+export const validateCoupon = (
+  code: string,
+  items: ApiCheckoutItem[],
+  who: { phone?: string; authHeaders?: Record<string, string> } = {},
+  signal?: AbortSignal,
+) =>
+  apiRequest<ApiCouponPreview>("/checkout/coupon/", {
+    method: "POST",
+    body: { code, items, ...(who.phone ? { phone: who.phone } : {}) },
+    headers: who.authHeaders,
+    signal,
+  });
 
 /**
  * POST /checkout/shipping-quote/ — delivery fee for the cart to a typed address (matched against the shipping zones).

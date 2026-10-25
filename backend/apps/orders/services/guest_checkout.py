@@ -189,6 +189,8 @@ def guest_checkout(
                 "coupon_customer_limit_reached",
                 "coupon_usage_limit_reached",
                 "coupon_minimum_not_met",
+                "referral_own_code",
+                "referral_not_first_order",
             ):
                 raise
 

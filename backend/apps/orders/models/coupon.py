@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from django.conf import settings
 from django.db import models
 
 from apps.common.models import FullAuditModel
@@ -41,6 +42,16 @@ class Coupon(FullAuditModel):
             "Advertise this code in the storefront's voucher strip. "
             "Leave off for private codes."
         ),
+    )
+
+    # Set on the shareable code of one customer's referral. Its discount is the
+    # live dashboard setting, not `value`, and it stays out of the staff coupon list.
+    referrer = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="referral_coupon",
     )
 
     class Meta:

@@ -565,6 +565,31 @@ export const DICT = {
     en: "You have already used this coupon as many times as allowed.",
     bn: "এই কুপন যতবার ব্যবহার করা যায়, ততবার করে ফেলেছেন।",
   },
+  referralOwnCode: {
+    en: "You can't use your own referral code.",
+    bn: "নিজের রেফারেল কোড নিজে ব্যবহার করা যায় না।",
+  },
+  referralNotFirstOrder: {
+    en: "A referral code works on a first order only.",
+    bn: "রেফারেল কোড শুধু প্রথম অর্ডারে চলে।",
+  },
+  referralTitle: { en: "Invite friends", bn: "বন্ধুদের ইনভাইট করুন" },
+  referralIntro: {
+    en: "Share your code. Your friend gets {discount} off their first order, and you get a {reward} coupon once that order is delivered.",
+    bn: "কোডটা বন্ধুকে দিন। প্রথম অর্ডারে সে {discount} ছাড় পাবে, আর অর্ডার হাতে পৌঁছালে আপনি পাবেন {reward}-এর কুপন।",
+  },
+  referralCodeLabel: { en: "Your code", bn: "আপনার কোড" },
+  referralLinkLabel: { en: "Share link", bn: "শেয়ারের লিংক" },
+  referralCopy: { en: "Copy", bn: "কপি করুন" },
+  referralCopied: { en: "Copied", bn: "কপি হয়েছে" },
+  referralRewardsTitle: { en: "Your reward coupons", bn: "আপনার রিওয়ার্ড কুপন" },
+  referralRewardsEmpty: {
+    en: "No reward yet. Your coupon shows up here once a friend's first order is delivered.",
+    bn: "এখনও কুপন পাননি। বন্ধুর প্রথম অর্ডার পৌঁছে গেলেই কুপন এখানে দেখা যাবে।",
+  },
+  referralRewardUsed: { en: "Used", bn: "ব্যবহার হয়ে গেছে" },
+  referralRewardUnused: { en: "Not used yet", bn: "ব্যবহার হয়নি" },
+  referralRewardExpires: { en: "Valid until {date}", bn: "{date} পর্যন্ত" },
   checkoutShippingChecking: { en: "Calculating…", bn: "হিসাব হচ্ছে…" },
   checkoutShippingUnavailable: { en: "Not available for this address", bn: "এই ঠিকানায় ডেলিভারি নেই" },
   errNoShipping: {

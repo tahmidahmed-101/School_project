@@ -21,6 +21,7 @@ from apps.orders.selectors.shipments import (
 )
 from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.orders import lock_order
+from apps.orders.services.referrals import reward_referral
 from apps.orders.services.reservations import (
     hold_line_stock,
     hold_returned_stock,
@@ -143,6 +144,7 @@ def _mark_order_delivered_if_complete(order: SalesOrder) -> None:
         return
     order.status = SalesOrder.Status.DELIVERED
     order.save(update_fields=["status", "updated_at"])
+    reward_referral(order)
 
 
 # Forward-only progression for the states a parcel passes through en route.

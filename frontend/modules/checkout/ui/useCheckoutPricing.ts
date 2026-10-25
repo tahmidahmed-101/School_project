@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import { toShippingQuoteState, type ShippingQuoteState } from "../data/adapters";
 import { quoteShipping, validateCoupon } from "../data/mutations";
@@ -56,8 +56,15 @@ export interface AppliedCoupon {
 }
 
 /** Coupon checked against the cart before submitting. Editing the cart drops it, since the discount depends on the subtotal. */
-export function useCoupon(items: CartItem[]) {
+export function useCoupon(
+  items: CartItem[],
+  shopper: { phone: string; withAuth: <T>(send: (headers: Record<string, string>) => Promise<T>) => Promise<T> },
+) {
   const itemsKey = itemsKeyOf(items);
+  const shopperRef = useRef(shopper);
+  useEffect(() => {
+    shopperRef.current = shopper;
+  });
   const [applied, setApplied] = useState<(AppliedCoupon & { itemsKey: string }) | null>(null);
   const [error, setError] = useState<ApiError | Error | null>(null);
   const [checking, setChecking] = useState(false);
@@ -69,7 +76,10 @@ export function useCoupon(items: CartItem[]) {
       setChecking(true);
       setError(null);
       try {
-        const preview = await validateCoupon(trimmed, toApiItems(items));
+        const { phone, withAuth } = shopperRef.current;
+        const preview = await withAuth((authHeaders) =>
+          validateCoupon(trimmed, toApiItems(items), { phone: phone.trim(), authHeaders }),
+        );
         setApplied({ code: preview.code, discountAmount: Number(preview.discount_amount), itemsKey });
       } catch (e) {
         setApplied(null);

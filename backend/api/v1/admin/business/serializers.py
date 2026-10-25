@@ -55,6 +55,12 @@ class AdminBusinessProfileSerializer(serializers.Serializer):
     free_delivery_min_amount = serializers.DecimalField(
         max_digits=14, decimal_places=2, allow_null=True
     )
+    referral_friend_discount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, allow_null=True
+    )
+    referral_reward_amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, allow_null=True
+    )
     about_en = serializers.CharField(allow_blank=True)
     about_bn = serializers.CharField(allow_blank=True)
 
@@ -106,6 +112,12 @@ class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
     preorder_terms_bn = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     free_delivery_min_amount = serializers.DecimalField(
         required=False, allow_null=True, max_digits=14, decimal_places=2, min_value=Decimal("0")
+    )
+    referral_friend_discount = serializers.DecimalField(
+        required=False, allow_null=True, max_digits=12, decimal_places=2, min_value=Decimal("0")
+    )
+    referral_reward_amount = serializers.DecimalField(
+        required=False, allow_null=True, max_digits=12, decimal_places=2, min_value=Decimal("0")
     )
     about_en = serializers.CharField(required=False, allow_blank=True, max_length=5000)
     about_bn = serializers.CharField(required=False, allow_blank=True, max_length=5000)
