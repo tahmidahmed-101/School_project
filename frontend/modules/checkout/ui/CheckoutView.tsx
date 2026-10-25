@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { readTrackingContext, trackInitiateCheckout, trackPurchase } from "@/lib/analytics";
 import { useAuth } from "@/modules/auth";
 import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from "@/modules/cart";
 import { useBrand } from "@/modules/catalog";
@@ -72,6 +73,12 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const contactPhone = form.phone.trim();
   const contactName = form.name.trim();
   const hasItems = items.length > 0;
+  const checkoutStarted = useRef(false);
+  useEffect(() => {
+    if (!hasItems || checkoutStarted.current) return;
+    checkoutStarted.current = true;
+    trackInitiateCheckout(items);
+  }, [hasItems, items]);
   useEffect(() => {
     if (!hasItems || !isBdMobile(contactPhone)) return;
     const timer = setTimeout(() => void saveCartContact({ phone: contactPhone, name: contactName }), 800);
@@ -130,17 +137,18 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       const request = buildCheckoutRequest(form, items, {
         paymentMethod,
         couponCode: acceptsCoupon(items) ? coupon.applied?.code : undefined,
+        tracking: readTrackingContext(),
       });
       // Logged in: the order is placed on the customer's account. Guest: exactly as before.
       const order = await withAuth((authHeaders) => placeOrder(request, cartToken, authHeaders));
       if (cartToken) forgetGuestCart();
-      setOrderResult(
-        toOrderResult(
-          order,
-          { name: form.name.trim(), address: form.address.trim(), district: form.district },
-          paymentMethods.find((m) => m.key === paymentMethod)?.pay_to ?? "",
-        ),
+      const result = toOrderResult(
+        order,
+        { name: form.name.trim(), address: form.address.trim(), district: form.district },
+        paymentMethods.find((m) => m.key === paymentMethod)?.pay_to ?? "",
       );
+      trackPurchase({ id: order.id, orderNumber: result.orderNumber, total: result.total, items });
+      setOrderResult(result);
       clearCart();
       window.scrollTo({ top: 0 });
     } catch (error) {

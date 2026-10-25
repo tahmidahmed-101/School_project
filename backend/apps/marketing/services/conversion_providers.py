@@ -1,10 +1,11 @@
-"""GA4 Measurement Protocol and Meta Conversions API clients for Purchase.
+"""GA4 Measurement Protocol, Meta Conversions API and TikTok Events API clients
+for Purchase.
 
-Only order facts leave the server: order number, totals, currency, coupon code
-and the line snapshot (SKU, name, variant, unit price, quantity). No name,
-email, phone, address or IP address is ever sent. The only identifier is a
-SHA-256 of the internal customer id, sent to Meta because its API refuses an
-event with no user data at all.
+Order facts leave the server: order number, totals, currency, coupon code and
+the line snapshot. Content ids are the catalogue product ids, the same ids the
+pixels and the product feed use. No name, email, phone or address is ever sent.
+The shopper's browser context (cookies, user agent, IP) is sent only when
+checkout stored it, and customer identity only as a SHA-256 of the internal id.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ logger = logging.getLogger("apps")
 SEND_TIMEOUT_SECONDS = 5
 GA4_ENDPOINT = "https://www.google-analytics.com/mp/collect"
 META_ENDPOINT = "https://graph.facebook.com/{version}/{pixel_id}/events"
+TIKTOK_ENDPOINT = "https://business-api.tiktok.com/open_api/v1.3/event/track/"
 # GA4 accepts a back-dated timestamp up to 72 hours old; an older retry is
 # sent without one and lands at the time it is received.
 GA4_MAX_BACKDATE = timedelta(hours=72)
@@ -37,6 +39,18 @@ GA4_MAX_BACKDATE = timedelta(hours=72)
 class ConversionDeliveryError(Exception):
     """The provider could not be reached or refused the event. The message is
     safe to store and log: it never carries a credential."""
+
+
+@dataclass(frozen=True)
+class BrowserContext:
+    fbp: str
+    fbc: str
+    ga_client_id: str
+    ttp: str
+    ttclid: str
+    source_url: str
+    user_agent: str
+    ip_address: str
 
 
 @dataclass(frozen=True)
@@ -52,6 +66,7 @@ class PurchaseFacts:
     shipping: Decimal
     coupon: str
     items: tuple[dict, ...]
+    context: BrowserContext | None = None
 
 
 def _money(value: Decimal) -> float:
@@ -61,9 +76,9 @@ def _money(value: Decimal) -> float:
 def ga4_purchase_payload(facts: PurchaseFacts) -> dict:
     """The order's own totals, unchanged: `value` is the grand total charged.
 
-    The browser's `_ga` client id never reaches the server, so the client id
-    is derived from the order. GA4 still counts the purchase and its revenue;
-    it just cannot tie it to the session that placed it."""
+    The browser's `_ga` client id ties the purchase to its visit when checkout
+    stored it; without one the client id is derived from the order, and GA4
+    still counts the purchase and its revenue."""
     event: dict = {
         "name": "purchase",
         "params": {
@@ -74,7 +89,7 @@ def ga4_purchase_payload(facts: PurchaseFacts) -> dict:
             "shipping": _money(facts.shipping),
             "items": [
                 {
-                    "item_id": item["sku"],
+                    "item_id": item["product_id"],
                     "item_name": item["name"],
                     **({"item_variant": item["variant"]} if item["variant"] else {}),
                     "price": _money(item["unit_price"]),
@@ -86,7 +101,8 @@ def ga4_purchase_payload(facts: PurchaseFacts) -> dict:
     }
     if facts.coupon:
         event["params"]["coupon"] = facts.coupon
-    payload: dict = {"client_id": f"server.{facts.order_id}", "events": [event]}
+    client_id = (facts.context.ga_client_id if facts.context else "") or f"server.{facts.order_id}"
+    payload: dict = {"client_id": client_id, "events": [event]}
     if timezone.now() - facts.occurred_at <= GA4_MAX_BACKDATE:
         payload["timestamp_micros"] = int(facts.occurred_at.timestamp() * 1_000_000)
     return payload
@@ -96,51 +112,114 @@ def meta_purchase_payload(facts: PurchaseFacts, *, test_event_code: str = "") ->
     # Pseudonymous and not reversible to contact details; the order id stands
     # in when an order has no customer row.
     external_id = hashlib.sha256((facts.customer_id or facts.order_id).encode()).hexdigest()
-    payload: dict = {
-        "data": [
-            {
-                "event_name": "Purchase",
-                "event_time": int(facts.occurred_at.timestamp()),
-                "event_id": facts.event_id,
-                # Confirmed on the server (a captured payment, a cash on
-                # delivery order accepted), not observed in a browser. A
-                # "website" event would also need the shopper's user agent.
-                "action_source": "system_generated",
-                "user_data": {"external_id": [external_id]},
-                "custom_data": {
-                    "currency": facts.currency,
-                    "value": _money(facts.value),
-                    "order_id": facts.order_number,
-                    "content_type": "product",
-                    "contents": [
-                        {
-                            "id": item["sku"],
-                            "quantity": item["quantity"],
-                            "item_price": _money(item["unit_price"]),
-                        }
-                        for item in facts.items
-                    ],
-                    "num_items": sum(item["quantity"] for item in facts.items),
-                },
-            }
-        ],
+    user_data: dict = {"external_id": [external_id]}
+    event: dict = {
+        "event_name": "Purchase",
+        "event_time": int(facts.occurred_at.timestamp()),
+        "event_id": facts.event_id,
+        "action_source": "system_generated",
+        "user_data": user_data,
+        "custom_data": {
+            "currency": facts.currency,
+            "value": _money(facts.value),
+            "order_id": facts.order_number,
+            "content_type": "product",
+            "contents": [
+                {
+                    "id": item["product_id"],
+                    "quantity": item["quantity"],
+                    "item_price": _money(item["unit_price"]),
+                }
+                for item in facts.items
+            ],
+            "num_items": sum(item["quantity"] for item in facts.items),
+        },
     }
+    context = facts.context
+    # Meta deduplicates against the pixel's Purchase only for a "website" event,
+    # which needs the browser's user agent and the page address.
+    if context and context.user_agent and context.source_url:
+        event["action_source"] = "website"
+        event["event_source_url"] = context.source_url
+        user_data["client_user_agent"] = context.user_agent
+        user_data.update(
+            {
+                key: value
+                for key, value in (
+                    ("client_ip_address", context.ip_address),
+                    ("fbp", context.fbp),
+                    ("fbc", context.fbc),
+                )
+                if value
+            }
+        )
+    payload: dict = {"data": [event]}
     if test_event_code:
         payload["test_event_code"] = test_event_code
     return payload
 
 
-def _post_json(url: str, body: dict, *, provider: str) -> None:
-    # Both callers pass a fixed https:// endpoint, never user input.
+def tiktok_purchase_payload(
+    facts: PurchaseFacts, *, pixel_code: str, test_event_code: str = ""
+) -> dict:
+    external_id = hashlib.sha256((facts.customer_id or facts.order_id).encode()).hexdigest()
+    user: dict = {"external_id": external_id}
+    event: dict = {
+        "event": "CompletePayment",
+        "event_time": int(facts.occurred_at.timestamp()),
+        "event_id": facts.event_id,
+        "user": user,
+        "properties": {
+            "currency": facts.currency,
+            "value": _money(facts.value),
+            "order_id": facts.order_number,
+            "content_type": "product",
+            "contents": [
+                {
+                    "content_id": item["product_id"],
+                    "content_name": item["name"],
+                    "quantity": item["quantity"],
+                    "price": _money(item["unit_price"]),
+                }
+                for item in facts.items
+            ],
+        },
+    }
+    context = facts.context
+    if context:
+        user.update(
+            {
+                key: value
+                for key, value in (
+                    ("ttp", context.ttp),
+                    ("ttclid", context.ttclid),
+                    ("ip", context.ip_address),
+                    ("user_agent", context.user_agent),
+                )
+                if value
+            }
+        )
+        if context.source_url:
+            event["page"] = {"url": context.source_url}
+    payload: dict = {"event_source": "web", "event_source_id": pixel_code, "data": [event]}
+    if test_event_code:
+        payload["test_event_code"] = test_event_code
+    return payload
+
+
+def _post_json(
+    url: str, body: dict, *, provider: str, headers: dict[str, str] | None = None
+) -> bytes:
+    # Every caller passes a fixed https:// endpoint, never user input.
     request = urllib.request.Request(  # noqa: S310
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **(headers or {})},
         method="POST",
     )
     try:
         with urllib.request.urlopen(request, timeout=SEND_TIMEOUT_SECONDS) as response:  # noqa: S310
-            response.read()
+            return response.read()
     except urllib.error.HTTPError as exc:
         # The URL is never part of the message: GA4's carries the API secret.
         reply = exc.read(400).decode("utf-8", "replace")
@@ -168,3 +247,20 @@ def send_meta(facts: PurchaseFacts, credentials: ProviderCredentials) -> None:
         "access_token": credentials.secret,
     }
     _post_json(url, body, provider="Meta")
+
+
+def send_tiktok(facts: PurchaseFacts, credentials: ProviderCredentials) -> None:
+    body = tiktok_purchase_payload(
+        facts, pixel_code=credentials.tracking_id, test_event_code=credentials.test_event_code
+    )
+    reply = _post_json(
+        TIKTOK_ENDPOINT, body, provider="TikTok", headers={"Access-Token": credentials.secret}
+    )
+    # TikTok answers HTTP 200 with a non-zero code when it refuses the event.
+    try:
+        result = json.loads(reply)
+    except ValueError:
+        raise ConversionDeliveryError("TikTok sent an unreadable reply.") from None
+    if result.get("code") != 0:
+        message = str(result.get("message"))[:300]
+        raise ConversionDeliveryError(f"TikTok refused the event: {message}")

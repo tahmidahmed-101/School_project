@@ -48,6 +48,12 @@ def _environment(provider: str) -> tuple[str, str, str]:
     """(tracking id, secret, test event code) from the server environment."""
     if provider == Provider.GA4:
         return settings.GA4_MEASUREMENT_ID, settings.GA4_API_SECRET, ""
+    if provider == Provider.TIKTOK:
+        return (
+            settings.TIKTOK_PIXEL_ID,
+            settings.TIKTOK_EVENTS_ACCESS_TOKEN,
+            settings.TIKTOK_TEST_EVENT_CODE,
+        )
     return settings.META_PIXEL_ID, settings.META_CAPI_ACCESS_TOKEN, settings.META_TEST_EVENT_CODE
 
 

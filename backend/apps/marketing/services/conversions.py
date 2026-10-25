@@ -23,10 +23,12 @@ from apps.marketing.selectors.conversion_settings import (
 )
 from apps.marketing.selectors.conversions import deliverable_conversion_events, purchase_order
 from apps.marketing.services.conversion_providers import (
+    BrowserContext,
     ConversionDeliveryError,
     PurchaseFacts,
     send_ga4,
     send_meta,
+    send_tiktok,
 )
 
 logger = logging.getLogger("apps")
@@ -38,6 +40,7 @@ MAX_ATTEMPTS = 6
 _SENDERS: dict[str, Callable[[PurchaseFacts, ProviderCredentials], None]] = {
     ConversionEvent.Provider.GA4: send_ga4,
     ConversionEvent.Provider.META: send_meta,
+    ConversionEvent.Provider.TIKTOK: send_tiktok,
 }
 
 
@@ -48,7 +51,10 @@ def record_purchase(order) -> None:
     Idempotent: the unique (order, provider, event) row means a confirmation
     that runs twice — or an order confirmed, sent back and confirmed again —
     reports one purchase. With no provider configured it writes nothing; the
-    only cost is the one query that reads the dashboard settings."""
+    only cost is the one query that reads the dashboard settings. An order a
+    staff member entered is not a storefront conversion and owes nothing."""
+    if order.created_by_id is not None:
+        return
     providers = active_providers()
     if not providers:
         return
@@ -79,6 +85,22 @@ def _claim(event_id: UUID) -> bool:
     )
 
 
+def _browser_context(order) -> BrowserContext | None:
+    context = getattr(order, "tracking_context", None)
+    if context is None:
+        return None
+    return BrowserContext(
+        fbp=context.fbp,
+        fbc=context.fbc,
+        ga_client_id=context.ga_client_id,
+        ttp=context.ttp,
+        ttclid=context.ttclid,
+        source_url=context.source_url,
+        user_agent=context.user_agent,
+        ip_address=context.ip_address or "",
+    )
+
+
 def _facts(event: ConversionEvent, order, currency: str) -> PurchaseFacts:
     return PurchaseFacts(
         event_id=event.event_id,
@@ -93,6 +115,7 @@ def _facts(event: ConversionEvent, order, currency: str) -> PurchaseFacts:
         coupon=order.coupon.code if order.coupon_id else "",
         items=tuple(
             {
+                "product_id": str(line.variant.product_id),
                 "sku": line.variant_sku,
                 "name": line.product_name,
                 "variant": line.variant_title,
@@ -101,6 +124,7 @@ def _facts(event: ConversionEvent, order, currency: str) -> PurchaseFacts:
             }
             for line in order.lines.all()
         ),
+        context=_browser_context(order),
     )
 
 

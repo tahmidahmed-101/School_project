@@ -354,6 +354,15 @@ export interface ApiCheckoutRequest {
   carrier_id?: string | null;
   coupon_code?: string;
   notes?: string;
+  /** Browser ids for the server-side Purchase; every field optional. */
+  tracking?: {
+    fbp?: string;
+    fbc?: string;
+    ga_client_id?: string;
+    ttp?: string;
+    ttclid?: string;
+    source_url?: string;
+  };
 }
 
 interface ApiGuestCartLine {

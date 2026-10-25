@@ -26,6 +26,15 @@ class GuestCheckoutAddressSerializer(serializers.Serializer):
     country = serializers.CharField(max_length=100, default="Bangladesh")
 
 
+class CheckoutTrackingSerializer(serializers.Serializer):
+    fbp = serializers.CharField(max_length=128, allow_blank=True, required=False)
+    fbc = serializers.CharField(max_length=256, allow_blank=True, required=False)
+    ga_client_id = serializers.CharField(max_length=64, allow_blank=True, required=False)
+    ttp = serializers.CharField(max_length=128, allow_blank=True, required=False)
+    ttclid = serializers.CharField(max_length=256, allow_blank=True, required=False)
+    source_url = serializers.URLField(max_length=500, allow_blank=True, required=False)
+
+
 class GuestCheckoutSerializer(serializers.Serializer):
     # Optional: a phone-only guest is identified by the number instead.
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -38,6 +47,7 @@ class GuestCheckoutSerializer(serializers.Serializer):
     carrier_id = serializers.UUIDField(required=False, allow_null=True)
     coupon_code = serializers.CharField(max_length=32, required=False, allow_blank=True)
     notes = serializers.CharField(allow_blank=True, required=False)
+    tracking = CheckoutTrackingSerializer(required=False)
 
 
 class GuestCartCheckoutSerializer(GuestCheckoutSerializer):
@@ -63,10 +73,12 @@ class GuestOrderSerializer(serializers.Serializer):
 
     def get_lines(self, obj) -> list[dict]:
         from api.v1.customer.orders.serializers import SalesOrderLineSerializer
+
         return SalesOrderLineSerializer(obj.lines.all(), many=True).data
 
     def get_shipments(self, obj) -> list[dict]:
         from api.v1.customer.orders.serializers import CustomerShipmentSerializer
+
         return CustomerShipmentSerializer(obj.shipments.all(), many=True).data
 
 

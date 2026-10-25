@@ -504,7 +504,7 @@ CONVERSION_PROVIDER_PARAMETER = OpenApiParameter(
     OpenApiTypes.STR,
     location=OpenApiParameter.PATH,
     enum=ConversionEvent.Provider.values,
-    description="ga4 or meta.",
+    description="ga4, meta or tiktok.",
 )
 
 

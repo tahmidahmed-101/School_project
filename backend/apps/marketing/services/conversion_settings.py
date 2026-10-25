@@ -20,17 +20,19 @@ Provider = ConversionEvent.Provider
 _TRACKING_ID: dict[str, tuple[re.Pattern[str], str]] = {
     Provider.GA4: (re.compile(r"^G-[A-Z0-9]{4,20}$"), "a GA4 Measurement ID like G-XXXXXXXXXX"),
     Provider.META: (re.compile(r"^\d{6,20}$"), "a Meta Pixel ID (digits only)"),
+    Provider.TIKTOK: (re.compile(r"^[A-Z0-9]{10,40}$"), "a TikTok Pixel ID like C4ABCDEF123456"),
 }
 _SECRET: dict[str, tuple[re.Pattern[str], str]] = {
     Provider.GA4: (re.compile(r"^\S{8,255}$"), "a Measurement Protocol API secret"),
     Provider.META: (re.compile(r"^\S{20,1024}$"), "a Conversions API access token"),
+    Provider.TIKTOK: (re.compile(r"^\S{20,1024}$"), "an Events API access token"),
 }
 _TEST_EVENT_CODE = re.compile(r"^[A-Za-z0-9]{1,64}$")
 
 
 def _clean_tracking_id(provider: str, value: str) -> str:
     value = value.strip()
-    if provider == Provider.GA4:
+    if provider in (Provider.GA4, Provider.TIKTOK):
         value = value.upper()
     pattern, expected = _TRACKING_ID[provider]
     if not pattern.match(value):
@@ -49,9 +51,9 @@ def _clean_secret(provider: str, value: str) -> str:
 
 def _clean_test_event_code(provider: str, value: str) -> str:
     value = value.strip()
-    if value and provider != Provider.META:
+    if value and provider not in (Provider.META, Provider.TIKTOK):
         raise BusinessRuleViolationError(
-            "Only Meta takes a test event code.", code="test_event_code_not_supported"
+            "Only Meta and TikTok take a test event code.", code="test_event_code_not_supported"
         )
     if value and not _TEST_EVENT_CODE.match(value):
         raise BusinessRuleViolationError(

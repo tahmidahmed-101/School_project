@@ -136,6 +136,48 @@ def test_guest_checkout_accepts_only_the_checkout_form_fields(api_client):
     assert address.postal_code == ""
 
 
+def test_guest_checkout_stores_the_browsers_tracking_context(api_client):
+    variant = _stocked_variant()
+    _dhaka_delivery()
+    payload = {
+        **_minimal_payload(variant),
+        "tracking": {
+            "fbp": "fb.1.1700000000.123",
+            "ga_client_id": "GA1.1.111.222",
+            "ttclid": "tt-click-1",
+            "source_url": "https://shop.example/checkout",
+        },
+    }
+
+    response = api_client.post(
+        GUEST_CHECKOUT_URL,
+        payload,
+        format="json",
+        HTTP_USER_AGENT="TestBrowser/1.0",
+        REMOTE_ADDR="203.0.113.7",
+    )
+
+    assert response.status_code == 201, response.data
+    context = SalesOrder.objects.get(id=response.data["data"]["id"]).tracking_context
+    assert context.fbp == "fb.1.1700000000.123"
+    assert context.ga_client_id == "GA1.1.111.222"
+    assert context.ttclid == "tt-click-1"
+    assert context.source_url == "https://shop.example/checkout"
+    assert context.user_agent == "TestBrowser/1.0"
+    assert context.ip_address == "203.0.113.7"
+
+
+def test_guest_checkout_without_tracking_still_places_the_order(api_client):
+    variant = _stocked_variant()
+    _dhaka_delivery()
+
+    response = api_client.post(GUEST_CHECKOUT_URL, _minimal_payload(variant), format="json")
+
+    assert response.status_code == 201, response.data
+    order = SalesOrder.objects.get(id=response.data["data"]["id"])
+    assert not hasattr(order, "tracking_context") or order.tracking_context.fbp == ""
+
+
 def test_guest_checkout_requires_district_city(api_client):
     variant = _stocked_variant()
     _dhaka_delivery()

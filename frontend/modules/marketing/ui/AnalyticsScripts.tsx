@@ -1,6 +1,7 @@
 import Script from "next/script";
 
 import { publicEnv } from "@/lib/env";
+import { ClickIdCapture } from "./ClickIdCapture";
 
 const { gaId: GA_ID, fbPixelId: FB_PIXEL_ID, tiktokPixelId: TIKTOK_PIXEL_ID } = publicEnv;
 
@@ -8,6 +9,7 @@ const { gaId: GA_ID, fbPixelId: FB_PIXEL_ID, tiktokPixelId: TIKTOK_PIXEL_ID } = 
 export function AnalyticsScripts() {
   return (
     <>
+      <ClickIdCapture />
       {GA_ID && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />

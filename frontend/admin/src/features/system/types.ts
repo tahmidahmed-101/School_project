@@ -321,7 +321,7 @@ export interface EmailTestResult {
 
 // ---- Server-side conversion tracking (AdminConversionProviderSerializer) ----
 
-export type ConversionProviderKey = "ga4" | "meta"
+export type ConversionProviderKey = "ga4" | "meta" | "tiktok"
 
 export interface ConversionProvider {
   provider: ConversionProviderKey

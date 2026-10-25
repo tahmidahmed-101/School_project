@@ -77,7 +77,12 @@ class GuestCheckoutView(APIView):
         # one goes to a guest identity, whatever email or phone was typed.
         customer = request.user if request.user.is_authenticated else None
         try:
-            order = guest_checkout(**data, ip_address=client_ip(request), customer=customer)
+            order = guest_checkout(
+                **data,
+                ip_address=client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                customer=customer,
+            )
         except DomainError as exc:
             return error_from_exception(exc)
 
@@ -188,9 +193,7 @@ class ShippingOptionListView(APIView):
 
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(
-                zone=zone, weight=weight, kind=kind, subtotal=subtotal
-            )
+            for option in shipping_options(zone=zone, weight=weight, kind=kind, subtotal=subtotal)
         ]
         return Response(
             {

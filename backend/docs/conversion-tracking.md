@@ -1,9 +1,21 @@
 # Server-side conversion tracking
 
-The storefront loads GA4 and the Meta Pixel itself (`frontend/modules/marketing/ui/AnalyticsScripts.tsx`)
-and sends page views only. The backend adds the one event the browser cannot
-know for certain: **Purchase**, once the order is really confirmed. It never
-sends page views or any other browser event.
+The storefront loads GA4, the Meta Pixel and the TikTok Pixel itself
+(`frontend/modules/marketing/ui/AnalyticsScripts.tsx`). Its funnel events
+(`frontend/lib/analytics.ts`) are ViewContent on a product page, AddToCart,
+InitiateCheckout and a Purchase on the order-success step. The backend adds the
+one event the browser cannot know for certain: **Purchase**, once the order is
+really confirmed. It never sends page views or any other browser event.
+
+Both Purchases share one id, so each platform counts the sale once:
+
+| | Browser | Server |
+| --- | --- | --- |
+| Meta / TikTok `event_id` | `purchase-<order id>` | `purchase-<order id>` |
+| GA4 `transaction_id` | order number | order number |
+| Content id | catalogue product id | catalogue product id (same as the `/products.xml` feed `id`) |
+
+TikTok's name for Purchase is `CompletePayment`.
 
 ## When a Purchase is sent
 
@@ -50,10 +62,16 @@ Totals come straight from the order, unchanged: `value` is `grand_total`, plus
 `currency_code`. Line items come from the order lines' own snapshot (SKU,
 product name, variant title, unit price, quantity).
 
-No name, email, phone, address or IP address is sent. Meta refuses an event
-without any user data, so it gets one pseudonymous value: the SHA-256 of the
-internal customer id (`external_id`). GA4 gets nothing that identifies the
-shopper.
+No name, email, phone or address is sent. Meta and TikTok refuse an event
+without any user data, so they get one pseudonymous value: the SHA-256 of the
+internal customer id (`external_id`).
+
+Checkout also stores the shopper's browser context on the order
+(`OrderTrackingContext`: `_fbp`, `_fbc`, GA client id, `_ttp`, `ttclid`, page
+URL, user agent, IP address, all optional) and the Purchase sends it, so each
+platform can match the sale to the ad click. Orders a staff member enters
+carry no context and send no Purchase. The shop's privacy policy should say
+that these values are shared with the ad platforms.
 
 ## Setup
 
@@ -62,24 +80,24 @@ credentials are present; with neither, confirmation writes nothing.
 
 ### From the dashboard API (recommended)
 
-Staff save the shop's own GA4 and Meta settings without touching the server.
+Staff save the shop's own GA4, Meta and TikTok settings without touching the server.
 Changes apply to the next send, including retries of events already waiting:
 nothing is re-recorded or sent twice.
 
 | Method | Path (`/api/v1/admin/settings/...`) | Permission |
 | --- | --- | --- |
 | GET | `conversion-tracking/` | `settings.view` (or `settings.manage`; admins always) |
-| PATCH | `conversion-tracking/<ga4\|meta>/` | `settings.manage` |
-| DELETE | `conversion-tracking/<ga4\|meta>/` | `settings.manage` |
+| PATCH | `conversion-tracking/<ga4\|meta\|tiktok>/` | `settings.manage` |
+| DELETE | `conversion-tracking/<ga4\|meta\|tiktok>/` | `settings.manage` |
 
 PATCH body, every key optional after the first save:
 
-| Field | GA4 | Meta |
-| --- | --- | --- |
-| `tracking_id` | Measurement ID, `G-XXXXXXXXXX` | Pixel ID, digits only |
-| `secret` (write-only) | Measurement Protocol API secret | Conversions API access token |
-| `test_event_code` | not accepted | Events Manager → Test events code; send `""` to clear |
-| `is_enabled` | on / off | on / off |
+| Field | GA4 | Meta | TikTok |
+| --- | --- | --- | --- |
+| `tracking_id` | Measurement ID, `G-XXXXXXXXXX` | Pixel ID, digits only | Pixel code, `C4…` |
+| `secret` (write-only) | Measurement Protocol API secret | Conversions API access token | Events API access token |
+| `test_event_code` | not accepted | Events Manager → Test events code; send `""` to clear | same, from TikTok Events Manager |
+| `is_enabled` | on / off | on / off | on / off |
 
 - The first save of a provider must bring both `tracking_id` and `secret`
   (it is then switched on unless `is_enabled: false` is sent), or be exactly
@@ -137,12 +155,16 @@ server-only `SECRETS_ENCRYPTION_KEYS` (`apps/common/utils/secrets.py`):
 | `GA4_API_SECRET` | GA4 Admin → Data streams → web stream → Measurement Protocol API secrets → Create |
 | `META_PIXEL_ID` | The storefront's pixel id |
 | `META_CAPI_ACCESS_TOKEN` | Events Manager → pixel → Settings → Conversions API → Generate access token |
+| `TIKTOK_PIXEL_ID` | The storefront's TikTok pixel code |
+| `TIKTOK_EVENTS_ACCESS_TOKEN` | TikTok Ads Manager → Events → web pixel → Settings → Events API → Generate access token |
+| `TIKTOK_TEST_EVENT_CODE` | Optional: TikTok Events Manager → Test events. Remove it afterwards |
 | `META_GRAPH_API_VERSION` | Optional, defaults to `v21.0` (applies to both sources) |
 | `META_TEST_EVENT_CODE` | Optional: Events Manager → Test events, to see events there while checking the setup. Remove it afterwards |
 
 These are server-only. Never copy them into the frontend's `NEXT_PUBLIC_*`
 settings. The GA4 secret travels in the request URL, which is why no URL is
-ever logged; the Meta token travels in the request body.
+ever logged; the Meta token travels in the request body and the TikTok token in an
+`Access-Token` header.
 
 ### Retries and query cost
 
@@ -154,13 +176,13 @@ providers that were active at confirmation.
 
 ## Known limits
 
-- The browser's GA4 client id and Meta `_fbp` / `_fbc` cookies do not reach the
-  backend, so a server Purchase is counted with its revenue but is not tied to
-  the visit that placed it. GA4 gets a client id derived from the order; Meta
-  gets `action_source: system_generated`.
-- The browser sends no Purchase, so there is nothing to deduplicate against on
-  that side. If a browser Purchase is added later, give it the same
-  `event_id` (`purchase-<order id>`) and GA4 `transaction_id` (order number).
+- A shopper who declines cookies or blocks the pixels sends no `_fbp`, `_ga`
+  or `_ttp`. Their order is still counted with its revenue, but GA4 gets a
+  client id derived from the order and Meta gets `action_source:
+  system_generated`.
+- The TikTok payload follows the Events API v1.3 `event/track` shape but has not
+  been checked against a live pixel. Set `test_event_code` first and look for
+  `CompletePayment` in TikTok Events Manager → Test events before trusting it.
 - A cancellation or refund after confirmation is not reported back.
 - GA4 accepts back-dated events up to 72 hours old and Meta up to 7 days; a
   retry later than that lands at the time it is sent (GA4) or is refused (Meta).

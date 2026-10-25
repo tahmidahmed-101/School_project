@@ -28,6 +28,9 @@ GA4_API_SECRET = ""
 META_PIXEL_ID = ""
 META_CAPI_ACCESS_TOKEN = ""
 META_TEST_EVENT_CODE = ""
+TIKTOK_PIXEL_ID = ""
+TIKTOK_EVENTS_ACCESS_TOKEN = ""
+TIKTOK_TEST_EVENT_CODE = ""
 SECRETS_ENCRYPTION_KEYS: list[str] = []
 
 # WhiteNoise serves the `collectstatic` output, which only the Docker image

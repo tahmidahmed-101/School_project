@@ -36,12 +36,16 @@ const COPY: Record<
     secretHelp: "Events Manager → your pixel → Settings → Conversions API → Generate access token.",
     about: "Sends each confirmed order to Meta (Facebook / Instagram ads) as a Purchase, so ads can optimise for sales.",
   },
+  tiktok: {
+    idLabel: "Pixel ID",
+    idPlaceholder: "C4ABCDEF123456",
+    secretLabel: "Events API access token",
+    secretHelp: "TikTok Ads Manager → Events → your web pixel → Settings → Events API → Generate access token.",
+    about: "Sends each confirmed order to TikTok as a CompletePayment, so TikTok ads can optimise for sales.",
+  },
 }
 
-/**
- * Server-side Purchase tracking: the backend tells GA4 and Meta about every order once it is
- * confirmed. Page views still come from the storefront's own tags.
- */
+// Server-side Purchase tracking: the backend tells GA4, Meta and TikTok about each confirmed order.
 export function TrackingPanel({ canManage }: { canManage: boolean }) {
   const [providers, setProviders] = useState<ConversionProvider[] | null>(null)
   const [status, setStatus] = useState<"loading" | "succeeded" | "failed">("loading")
@@ -89,8 +93,9 @@ export function TrackingPanel({ canManage }: { canManage: boolean }) {
           </CardTitle>
           <CardDescription>
             When an order is confirmed, the server sends a Purchase event to the services connected below. No customer
-            name, email, phone or address is sent. Page views on the storefront are tracked separately by its own
-            Google Analytics and Meta Pixel tags.
+            name, email, phone or address is sent; the shopper's browser ids, IP address and browser name are, so the
+            ad platforms can match the sale to the ad. Page views and cart events come from the storefront's own
+            Google Analytics, Meta Pixel and TikTok Pixel tags.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -144,7 +149,7 @@ function ProviderCard({
     const payload: ConversionProviderPayload = {}
     if (!saved || dirtyFields.tracking_id) payload.tracking_id = values.tracking_id.trim()
     if (values.secret.trim()) payload.secret = values.secret.trim()
-    if (provider.provider === "meta" && (!saved || dirtyFields.test_event_code)) {
+    if (provider.provider !== "ga4" && (!saved || dirtyFields.test_event_code)) {
       payload.test_event_code = values.test_event_code.trim()
     }
     if (saved && dirtyFields.is_enabled) payload.is_enabled = values.is_enabled
@@ -236,11 +241,11 @@ function ProviderCard({
                 validate: (value) => saved || value.trim() !== "" || `Enter the ${copy.secretLabel}`,
               })}
             />
-            {provider.provider === "meta" && (
+            {provider.provider !== "ga4" && (
               <TextField
                 label="Test event code (optional)"
                 placeholder="TEST12345"
-                description="From Events Manager → Test events. While set, purchases show there instead of counting. Clear it when you're done testing."
+                description={`From ${provider.label} Events Manager → Test events. While set, purchases show there instead of counting. Clear it when you're done testing.`}
                 disabled={!canManage}
                 error={errors.test_event_code}
                 {...register("test_event_code")}

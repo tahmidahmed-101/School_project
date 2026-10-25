@@ -77,6 +77,13 @@ describe("buildCheckoutRequest", () => {
     const bare = buildCheckoutRequest({ ...validForm, notes: "  " }, items, { paymentMethod: "cod" });
     expect(bare).not.toHaveProperty("notes");
     expect(bare).not.toHaveProperty("coupon_code");
+    expect(bare).not.toHaveProperty("tracking");
+  });
+
+  it("carries the browser's tracking ids only when there are some", () => {
+    const tracked = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", tracking: { fbp: "fb.1.1.2" } });
+    expect(tracked.tracking).toEqual({ fbp: "fb.1.1.2" });
+    expect(buildCheckoutRequest(validForm, items, { paymentMethod: "cod", tracking: {} })).not.toHaveProperty("tracking");
   });
 
   it("never sends the fields the form no longer asks for", () => {

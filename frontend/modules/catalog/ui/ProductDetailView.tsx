@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
+import { trackViewContent } from "@/lib/analytics";
 import { useLang } from "@/lib/i18n";
 import { getMinOrderQuantity, isPreOrderSoldOut, productKind, shopHome, shopListing } from "@/lib/product";
 import { applyVariant, galleryFor, initialSelection, missingOption, resolveVariant, selectValue } from "@/lib/variants";
@@ -46,6 +47,7 @@ export function ProductDetailView({ product, relatedProducts, moreProducts = [] 
   const kind = productKind(product);
   const summary = t(product.description) || t(product.tagline);
   useReportPageProductKind(kind);
+  useEffect(() => trackViewContent(product), [product]);
 
   return (
     <div className="w-full bg-canvas pb-5 pt-8 sm:pt-12 lg:pb-14">

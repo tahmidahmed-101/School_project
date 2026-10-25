@@ -20,6 +20,7 @@ class ConversionEvent(TimeStampedModel):
     class Provider(models.TextChoices):
         GA4 = "ga4", "Google Analytics 4"
         META = "meta", "Meta Conversions API"
+        TIKTOK = "tiktok", "TikTok Events API"
 
     class EventName(models.TextChoices):
         PURCHASE = "purchase", "Purchase"

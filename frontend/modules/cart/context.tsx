@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { CartItem, Product } from "@/lib/types";
 import { getMaxOrderQuantity, productKind, type ProductKind } from "@/lib/product";
+import { trackAddToCart } from "@/lib/analytics";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, soleVariant, variantById } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
@@ -170,6 +171,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ];
       });
 
+      trackAddToCart(line, quantity);
       if (openDrawer) setIsDrawerOpen(true);
       return true;
     },

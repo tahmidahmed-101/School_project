@@ -176,6 +176,8 @@ def test_secrets_cannot_be_saved_without_an_encryption_key(admin_client, setting
             {"tracking_id": "1234567890", "secret": META_TOKEN, "test_event_code": "bad code!"},
             "invalid_test_event_code",
         ),
+        ("tiktok", {"tracking_id": "bad pixel", "secret": "x" * 24}, "invalid_tracking_id"),
+        ("tiktok", {"tracking_id": "C4TESTPIXEL123", "secret": "short"}, "invalid_secret"),
     ],
 )
 def test_invalid_settings_are_refused(admin_client, provider, payload, code):
@@ -187,10 +189,27 @@ def test_invalid_settings_are_refused(admin_client, provider, payload, code):
 
 
 def test_unknown_providers_and_empty_updates_are_refused(admin_client):
-    assert (
-        admin_client.patch(f"{URL}tiktok/", {"is_enabled": True}, format="json").status_code == 404
-    )
+    assert admin_client.patch(f"{URL}bing/", {"is_enabled": True}, format="json").status_code == 404
     assert admin_client.patch(f"{URL}ga4/", {}, format="json").status_code == 400
+
+
+def test_tiktok_settings_save_encrypted_and_take_a_test_event_code(admin_client):
+    response = admin_client.patch(
+        f"{URL}tiktok/",
+        {
+            "tracking_id": "c4testpixel123",
+            "secret": "tiktok-token-value-0123456789",
+            "test_event_code": "TEST12345",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    row = ConversionProviderSetting.objects.get(provider="tiktok")
+    assert row.tracking_id == "C4TESTPIXEL123"
+    assert row.test_event_code == "TEST12345"
+    assert "tiktok-token-value" not in row.secret_ciphertext
+    assert "tiktok-token-value" not in json.dumps(response.data)
 
 
 def test_a_measurement_id_is_normalised_to_upper_case(admin_client):

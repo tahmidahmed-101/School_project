@@ -459,6 +459,9 @@ META_CAPI_ACCESS_TOKEN: str = config("META_CAPI_ACCESS_TOKEN", default="")
 META_GRAPH_API_VERSION: str = config("META_GRAPH_API_VERSION", default="v21.0")
 # Events Manager > Test events code; routes events to the test view only.
 META_TEST_EVENT_CODE: str = config("META_TEST_EVENT_CODE", default="")
+TIKTOK_PIXEL_ID: str = config("TIKTOK_PIXEL_ID", default="")
+TIKTOK_EVENTS_ACCESS_TOKEN: str = config("TIKTOK_EVENTS_ACCESS_TOKEN", default="")
+TIKTOK_TEST_EVENT_CODE: str = config("TIKTOK_TEST_EVENT_CODE", default="")
 
 # Modern Storages (Django 4.2+)
 STORAGES: dict[str, Any] = {

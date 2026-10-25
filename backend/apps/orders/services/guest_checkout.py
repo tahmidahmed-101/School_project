@@ -137,6 +137,8 @@ def guest_checkout(
     ip_address: str = "",
     customer: User | None = None,
     cart: SalesOrder | None = None,
+    tracking: dict | None = None,
+    user_agent: str = "",
 ) -> SalesOrder:
     """`customer` is the authenticated requester, if any — the only way an
     order reaches a registered account from here. `cart` is a saved guest
@@ -201,8 +203,12 @@ def guest_checkout(
 
     order = checkout(order=order, shipping_address=address, carrier=carrier, ip_address=ip_address)
 
+    from apps.marketing.services.tracking_context import save_tracking_context
     from apps.orders.services.payments import record_payment_due
 
+    save_tracking_context(
+        order=order, tracking=tracking, user_agent=user_agent, ip_address=ip_address
+    )
     # A storefront order never counts as paid: nobody has verified any money.
     record_payment_due(order=order, method=payment_method)
     order.refresh_from_db()
