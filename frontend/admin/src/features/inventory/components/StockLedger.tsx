@@ -192,8 +192,9 @@ const StockLedgerList = () => {
         emptyIcon={History}
         emptyTitle="No movements"
         emptyDescription="No ledger entries match these filters."
-        minWidth="1140px"
-        columnWidths={["210px", "270px", "100px", "160px", "80px", "90px", "110px", "200px"]}
+        // ITEM is the widest, so it takes the space the others leave: 380px at the minimum width.
+        minWidth="1330px"
+        columnWidths={["210px", "380px", "100px", "160px", "80px", "90px", "110px", "200px"]}
       />
     </div>
   )

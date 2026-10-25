@@ -45,6 +45,7 @@ def _bundle_context(items) -> dict:
 class AdminBundleListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, GenericListAPIView):
     serializer_class = BundleSerializer
     search_fields = ("sku", "product__name")
+    product_code_field = "product__product_code"
     ordering_fields = ("sku", "price", "created_at")
     default_ordering = "-created_at"
     include_deleted_permission = CatalogManagePermission

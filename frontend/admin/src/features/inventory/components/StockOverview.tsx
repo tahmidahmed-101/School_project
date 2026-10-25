@@ -117,7 +117,12 @@ const StockOverview = () => {
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
           <Thumbnail src={row.original.product_image} />
-          <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />
+          <ProductCell
+            name={[row.original.product_name, row.original.variant_title].filter(Boolean).join(" · ")}
+            sub={row.original.product_code && `Code ${row.original.product_code}`}
+            sku={row.original.variant_sku}
+            wrapName
+          />
         </div>
       ),
     },
@@ -248,7 +253,7 @@ const StockOverview = () => {
       </div>
 
       <FilterToolbar
-        searchPlaceholder="Search SKU, barcode or product…"
+        searchPlaceholder="Search code, SKU, barcode or product…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[

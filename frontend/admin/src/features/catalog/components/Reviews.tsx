@@ -203,7 +203,7 @@ const Reviews = ({ kind }: { kind: Kind }) => {
       <PageHeader title={title} />
 
       <FilterToolbar
-        searchPlaceholder="Search review text or product…"
+        searchPlaceholder="Search code, review text or product…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={filters}

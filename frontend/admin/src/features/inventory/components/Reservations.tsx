@@ -84,7 +84,7 @@ const Reservations = () => {
     {
       id: "item",
       header: "ITEM",
-      cell: ({ row }) => <ProductCell name={row.original.product_name} sku={row.original.variant_sku} />,
+      cell: ({ row }) => <ProductCell name={row.original.product_name} sku={row.original.variant_sku} wrapName />,
     },
     {
       id: "order",
@@ -222,8 +222,9 @@ const Reservations = () => {
         emptyIcon={Lock}
         emptyTitle="No reservations"
         emptyDescription="No stock holds match these filters."
-        minWidth="1180px"
-        columnWidths={["280px", "140px", "150px", "80px", "150px", "210px", "210px", ...(canRelease ? ["80px"] : [])]}
+        // ITEM is the widest, so it takes the space the others leave: 380px at the minimum width.
+        minWidth={canRelease ? "1400px" : "1320px"}
+        columnWidths={["380px", "140px", "150px", "80px", "150px", "210px", "210px", ...(canRelease ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
       />
 

@@ -160,7 +160,7 @@ const Questions = ({ kind }: { kind: Kind }) => {
 
       {/* ?search= matches the question, the answer and the product name. */}
       <FilterToolbar
-        searchPlaceholder="Search question, answer or product…"
+        searchPlaceholder="Search code, question, answer or product…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={filters}

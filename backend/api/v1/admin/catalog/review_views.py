@@ -53,6 +53,7 @@ class AdminProductReviewListView(CatalogPermissionMixin, GenericListAPIView):
 
     serializer_class = AdminProductReviewSerializer
     search_fields = ("comment", "product__name")
+    product_code_field = "product__product_code"
     ordering_fields = ("created_at", "rating")
     default_ordering = "-created_at"
 

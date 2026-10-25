@@ -55,6 +55,48 @@ def test_stock_item_search_filters_by_variant_sku(admin_client):
     assert len(results) == 1
 
 
+def test_stock_item_search_by_product_code_finds_that_product_only(admin_client):
+    wanted = ProductVariantFactory()
+    code = wanted.product.product_code
+    StockItemFactory(variant=wanted)
+    # Another product whose SKU happens to contain the same digits.
+    StockItemFactory(variant=ProductVariantFactory(sku=f"OTHER-{code}"))
+
+    results = _results(admin_client.get("/api/v1/admin/inventory/stock-items/", {"search": code}))
+
+    assert [str(row["variant_id"]) for row in results] == [str(wanted.id)]
+
+
+def test_product_search_by_code_finds_that_product_only(admin_client):
+    wanted = ProductFactory()
+    ProductFactory(name=f"Other {wanted.product_code}")
+
+    results = _results(
+        admin_client.get("/api/v1/admin/catalog/products/", {"search": wanted.product_code})
+    )
+
+    assert [row["id"] for row in results] == [str(wanted.id)]
+
+
+def test_variant_search_by_code_finds_that_products_variants_only(admin_client):
+    wanted = ProductVariantFactory()
+    code = wanted.product.product_code
+    ProductVariantFactory(sku=f"OTHER-{code}")
+
+    results = _results(admin_client.get("/api/v1/admin/catalog/variants/", {"search": code}))
+
+    assert [row["id"] for row in results] == [str(wanted.id)]
+
+
+def test_stock_item_search_by_code_of_a_product_without_stock_finds_nothing(admin_client):
+    code = ProductVariantFactory().product.product_code
+    StockItemFactory(variant=ProductVariantFactory(sku=f"OTHER-{code}"))
+
+    results = _results(admin_client.get("/api/v1/admin/inventory/stock-items/", {"search": code}))
+
+    assert results == []
+
+
 def test_ledger_entry_search_filters_by_variant_sku(admin_client):
     StockLedgerEntryFactory(variant=ProductVariantFactory(sku="NEEDLE-LEDGER"))
     StockLedgerEntryFactory(variant=ProductVariantFactory(sku="OTHER-LEDGER"))
@@ -112,3 +154,24 @@ def test_shipment_search_filters_by_tracking_number(admin_client):
     results = _results(admin_client.get("/api/v1/admin/orders/shipments/", {"search": "needle"}))
 
     assert [shipment["tracking_number"] for shipment in results] == ["TRACK-NEEDLE"]
+
+
+def test_variant_list_for_a_warehouse_lists_what_it_holds_with_its_own_count(admin_client):
+    from apps.inventory.models import Warehouse
+
+    source = Warehouse.objects.create(name="Source WH", code="SRC-WH")
+    other = Warehouse.objects.create(name="Other WH", code="OTH-WH")
+    held = ProductVariantFactory()
+    StockItemFactory(variant=held, warehouse=source, quantity_on_hand=5, quantity_reserved=2)
+    StockItemFactory(variant=held, warehouse=other, quantity_on_hand=40)
+    # Elsewhere only, or all of it reserved: nothing this warehouse can give.
+    StockItemFactory(variant=ProductVariantFactory(), warehouse=other, quantity_on_hand=9)
+    StockItemFactory(
+        variant=ProductVariantFactory(), warehouse=source, quantity_on_hand=3, quantity_reserved=3
+    )
+
+    results = _results(
+        admin_client.get("/api/v1/admin/catalog/variants/", {"warehouse_id": str(source.id)})
+    )
+
+    assert [(row["id"], row["stock"]) for row in results] == [(str(held.id), 3)]
