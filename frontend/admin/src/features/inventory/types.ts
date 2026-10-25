@@ -54,7 +54,10 @@ export interface StockItem {
   id: string
   variant_id: string
   variant_sku: string
+  /** Option values, e.g. "lg / blue"; "" for a product without options. */
+  variant_title: string
   product_name: string
+  product_code: string
   product_image: string | null
   warehouse_id: string
   warehouse_name: string

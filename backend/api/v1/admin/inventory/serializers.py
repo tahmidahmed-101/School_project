@@ -45,6 +45,7 @@ class StockItemSerializer(serializers.Serializer):
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
     variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
+    product_code = serializers.CharField(source="variant.product.product_code", read_only=True)
     product_image = serializers.SerializerMethodField()
     warehouse_id = serializers.UUIDField(read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
