@@ -424,8 +424,17 @@ NEWSLETTER_UNSUBSCRIBE_URL: str = config("NEWSLETTER_UNSUBSCRIBE_URL", default="
 # Messages per `send_campaigns` run, across all campaigns. Keeps one run short
 # and stays under the mail provider's hourly limits.
 CAMPAIGN_BATCH_SIZE: int = config("CAMPAIGN_BATCH_SIZE", default=200, cast=int)
+# Same, for SMS campaigns: each message is one paid provider call.
+SMS_CAMPAIGN_BATCH_SIZE: int = config("SMS_CAMPAIGN_BATCH_SIZE", default=100, cast=int)
 
-# Twilio configuration (SMS OTP)
+# Abandoned-cart SMS (backend/docs/sms-and-recovery.md). Off until staff turn
+# it on in business settings.
+STOREFRONT_BASE_URL: str = config("STOREFRONT_BASE_URL", default="").rstrip("/")
+CART_RECOVERY_IDLE_HOURS: int = config("CART_RECOVERY_IDLE_HOURS", default=2, cast=int)
+CART_RECOVERY_MAX_AGE_HOURS: int = config("CART_RECOVERY_MAX_AGE_HOURS", default=48, cast=int)
+CART_RECOVERY_DAILY_CAP: int = config("CART_RECOVERY_DAILY_CAP", default=50, cast=int)
+
+# Twilio configuration (SMS OTP and SMS campaigns)
 TWILIO_ACCOUNT_SID: str = config("TWILIO_ACCOUNT_SID", default="")
 TWILIO_AUTH_TOKEN: str = config("TWILIO_AUTH_TOKEN", default="")
 TWILIO_PHONE_NUMBER: str = config("TWILIO_PHONE_NUMBER", default="")

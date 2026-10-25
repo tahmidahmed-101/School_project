@@ -1,7 +1,7 @@
 from .campaign import CampaignDelivery, EmailCampaign, EmailSuppression
 from .conversion_event import ConversionEvent
 from .conversion_provider_setting import ConversionProviderSetting
-from .subscriber import NewsletterSubscriber
+from .subscriber import NewsletterSubscriber, SmsSubscriber
 
 __all__ = [
     "CampaignDelivery",
@@ -10,4 +10,5 @@ __all__ = [
     "EmailCampaign",
     "EmailSuppression",
     "NewsletterSubscriber",
+    "SmsSubscriber",
 ]

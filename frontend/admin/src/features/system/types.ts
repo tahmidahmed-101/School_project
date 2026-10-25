@@ -34,6 +34,7 @@ export interface BusinessProfile {
   preorder_terms_en: string
   preorder_terms_bn: string
   free_delivery_min_amount: string | null
+  cart_recovery_enabled: boolean
   about_en: string
   about_bn: string
   updated_at: string

@@ -2,8 +2,8 @@
 
 Staff write a plain-text newsletter, send themselves a test copy, then
 schedule it. A background run sends it in batches to every subscriber who may
-receive it. Backend only: these are API endpoints, the dashboard has no
-screens for them yet.
+receive it. The dashboard has Campaigns screens for it. A campaign can also be
+an SMS: see `sms-and-recovery.md`.
 
 ## Lifecycle
 

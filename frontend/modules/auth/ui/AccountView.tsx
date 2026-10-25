@@ -9,6 +9,7 @@ import { FormAlert } from "@/design-system/ui/FormField";
 import { containerClass } from "@/design-system/ui/Container";
 import type { AuthUser } from "../context";
 import { OrderHistory } from "./OrderHistory";
+import { SmsPreference } from "./SmsPreference";
 import { UserAvatar } from "./UserAvatar";
 
 /**
@@ -78,6 +79,8 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
             </Link>
           ))}
         </nav>
+
+        {user.role === "customer" && <SmsPreference />}
 
         {user.role === "customer" && <OrderHistory />}
       </div>

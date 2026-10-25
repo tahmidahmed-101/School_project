@@ -29,6 +29,7 @@ from apps.logistics.services.rates import (
     shipping_options,
     try_quote_shipping,
 )
+from apps.marketing.services.sms_subscribers import sms_opt_in
 from apps.orders.selectors.basket_kind import kind_for_items
 from apps.orders.selectors.coupons import storefront_coupons
 from apps.orders.services.coupons import preview_coupon
@@ -70,6 +71,7 @@ class GuestCheckoutView(APIView):
         serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
+        sms_opt_in_wanted = data.pop("sms_marketing_opt_in", False)
         if cart is not None:
             data["cart"] = cart
 
@@ -80,6 +82,8 @@ class GuestCheckoutView(APIView):
             order = guest_checkout(**data, ip_address=client_ip(request), customer=customer)
         except DomainError as exc:
             return error_from_exception(exc)
+        if sms_opt_in_wanted:
+            sms_opt_in(phone=data["phone"])
 
         return Response(
             {"data": GuestOrderSerializer(order).data, "message": "Success"},

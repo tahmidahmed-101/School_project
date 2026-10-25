@@ -12,10 +12,17 @@ from rest_framework.views import APIView
 from api.v1.customer.auth.views import _user_data
 from apps.accounts.services.authentication import change_password
 from apps.accounts.services.users import update_user_profile, update_user_profile_image
-from apps.common.exceptions import DomainError
+from apps.common.exceptions import BusinessRuleViolationError, DomainError
 from apps.common.responses import error_from_exception
+from apps.common.utils.phone import e164_bd_mobile
+from apps.marketing.services.sms_subscribers import is_sms_opted_in, sms_opt_in, sms_opt_out
 
-from .serializers import ChangePasswordSerializer, ProfileImageSerializer, ProfileUpdateSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    ProfileImageSerializer,
+    ProfileUpdateSerializer,
+    SmsMarketingSerializer,
+)
 
 
 @extend_schema(tags=["Profile"])
@@ -155,3 +162,34 @@ class ChangePasswordView(APIView):
         except (DomainError, DjangoValidationError) as exc:
             return error_from_exception(exc)
         return Response({"data": {}, "message": "Password changed."})
+
+
+@extend_schema(tags=["Profile"])
+class SmsMarketingView(APIView):
+    """Whether marketing texts go to the number on the account. Order and
+    login messages are not affected."""
+
+    permission_classes: ClassVar[list] = [IsAuthenticated]
+    serializer_class = SmsMarketingSerializer
+
+    def _state(self, user) -> Response:
+        data = {"phone": e164_bd_mobile(user.phone), "opted_in": is_sms_opted_in(user.phone)}
+        return Response({"data": data, "message": "Success"})
+
+    def get(self, request) -> Response:
+        return self._state(request.user)
+
+    @extend_schema(request=SmsMarketingSerializer)
+    def patch(self, request) -> Response:
+        serializer = SmsMarketingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not serializer.validated_data["opted_in"]:
+            sms_opt_out(phone=request.user.phone)
+        elif sms_opt_in(phone=request.user.phone) is None:
+            return error_from_exception(
+                BusinessRuleViolationError(
+                    "Add a Bangladeshi mobile number to your account first.",
+                    code="invalid_phone",
+                )
+            )
+        return self._state(request.user)

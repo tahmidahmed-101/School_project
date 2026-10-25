@@ -1,7 +1,8 @@
 #!/bin/sh
 # Periodically release checkout holds of unpaid orders past their expiry, and
 # retry server-side conversion events (GA4 / Meta Purchase) that failed or were
-# interrupted, and send the next batch of newsletter campaign email. Every
+# interrupted, send the next batch of campaign email and SMS, and text
+# abandoned-cart reminders (off until switched on in business settings). Every
 # command is safe to run any number of times.
 #
 # Optional: checkout already frees expired holds on the stock it is about to
@@ -19,5 +20,6 @@ while true; do
     python manage.py release_expired_reservations || echo "sweep failed; retrying" >&2
     python manage.py send_conversion_events || echo "conversion retry failed; retrying" >&2
     python manage.py send_campaigns || echo "campaign batch failed; retrying" >&2
+    python manage.py send_cart_recovery || echo "cart recovery failed; retrying" >&2
     sleep "$INTERVAL"
 done

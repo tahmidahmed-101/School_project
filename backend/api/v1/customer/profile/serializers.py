@@ -17,3 +17,7 @@ class ProfileImageSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+
+class SmsMarketingSerializer(serializers.Serializer):
+    opted_in = serializers.BooleanField()

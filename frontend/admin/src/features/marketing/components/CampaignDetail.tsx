@@ -20,10 +20,15 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { formatDateTime, fromDatetimeLocal } from "@/lib/format"
-import { SMTP_FAILURE_REASONS } from "@/lib/smtpReasons"
 
 import { sendCampaignTest } from "../api"
-import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_TONE, copiesLeft } from "../lib/campaigns"
+import {
+  CAMPAIGN_CHANNEL_LABEL,
+  CAMPAIGN_STATUS_LABEL,
+  CAMPAIGN_STATUS_TONE,
+  copiesLeft,
+  deliveryReason,
+} from "../lib/campaigns"
 import {
   cancelCampaign,
   deleteData,
@@ -60,6 +65,7 @@ function TestDialog({
 }) {
   const [recipient, setRecipient] = useState("")
   const [sending, setSending] = useState(false)
+  const isSms = campaign.channel === "sms"
 
   const send = async () => {
     setSending(true)
@@ -69,10 +75,13 @@ function TestDialog({
         toast.success(`Test sent to ${result.recipient}`)
         onOpenChange(false)
       } else {
-        toast.error(SMTP_FAILURE_REASONS[result.reason] ?? "The mail server did not accept the test email.")
+        toast.error(
+          deliveryReason(result.reason) ||
+            (isSms ? "The SMS provider did not accept the test text." : "The mail server did not accept the test email.")
+        )
       }
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't send the test email"))
+      toast.error(getApiErrorMessage(err, isSms ? "Couldn't send the test text" : "Couldn't send the test email"))
     } finally {
       setSending(false)
     }
@@ -83,7 +92,11 @@ function TestDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Send a test"
-      description='One copy marked "[Test]", so you can check how it looks. Up to 5 tests an hour.'
+      description={
+        isSms
+          ? 'One copy marked "[Test]", so you can check how it reads. Up to 5 tests an hour.'
+          : 'One copy marked "[Test]", so you can check how it looks. Up to 5 tests an hour.'
+      }
       onSubmit={(e) => {
         e.preventDefault()
         send()
@@ -94,9 +107,9 @@ function TestDialog({
       <TextField
         label="Send to"
         id="campaign-test-recipient"
-        type="email"
-        placeholder="Your own email"
-        description="Leave empty to send it to yourself."
+        type={isSms ? "tel" : "email"}
+        placeholder={isSms ? "Your own phone number" : "Your own email"}
+        description={isSms ? "Leave empty to send it to your own number." : "Leave empty to send it to yourself."}
         value={recipient}
         onChange={(e) => setRecipient(e.target.value)}
       />
@@ -144,7 +157,11 @@ function ScheduleDialog({
         if (!next) setError(null)
       }}
       title={`Schedule ${campaign.name}?`}
-      description="It goes to every subscriber who can receive it at the moment sending starts. You can unschedule it until then."
+      description={
+        campaign.channel === "sms"
+          ? "It goes to every customer who opted in to SMS at the moment sending starts. You can unschedule it until then."
+          : "It goes to every subscriber who can receive it at the moment sending starts. You can unschedule it until then."
+      }
       onSubmit={(e) => {
         e.preventDefault()
         schedule()
@@ -231,6 +248,7 @@ const CampaignDetail = () => {
   }
 
   const { status, delivery_counts: counts } = campaign
+  const isSms = campaign.channel === "sms"
   const isDraft = status === "draft"
   const started = campaign.recipient_count > 0
 
@@ -240,9 +258,12 @@ const CampaignDetail = () => {
         back={{ to: "/campaigns", label: "Back to campaigns" }}
         title={campaign.name}
         badges={
-          <StatusBadge status={status} tone={CAMPAIGN_STATUS_TONE[status]} label={CAMPAIGN_STATUS_LABEL[status]} />
+          <>
+            <StatusBadge status={status} tone={CAMPAIGN_STATUS_TONE[status]} label={CAMPAIGN_STATUS_LABEL[status]} />
+            <StatusBadge status={campaign.channel} tone="secondary" label={CAMPAIGN_CHANNEL_LABEL[campaign.channel]} />
+          </>
         }
-        description={campaign.subject}
+        description={isSms ? undefined : campaign.subject}
         actions={
           canManage && (
             <>
@@ -281,7 +302,7 @@ const CampaignDetail = () => {
                   title={`Cancel ${campaign.name}?`}
                   description={
                     status === "sending"
-                      ? "Copies not sent yet are skipped. Emails already handed to the mail server can't be recalled. This can't be undone."
+                      ? `Copies not sent yet are skipped. ${isSms ? "Texts already handed to the SMS provider" : "Emails already handed to the mail server"} can't be recalled. This can't be undone.`
                       : "It won't be sent. This can't be undone; to send it later, unschedule it instead."
                   }
                   confirmLabel="Cancel campaign"
@@ -319,7 +340,7 @@ const CampaignDetail = () => {
       {started ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <SummaryStat label="Recipients" value={campaign.recipient_count} />
-          <SummaryStat label="Accepted" value={counts.sent} sub="Taken by the mail server" />
+          <SummaryStat label="Accepted" value={counts.sent} sub={isSms ? "Taken by the SMS provider" : "Taken by the mail server"} />
           <SummaryStat label="Still to send" value={copiesLeft(campaign)} />
           <SummaryStat
             label="Not sent"
@@ -347,11 +368,13 @@ const CampaignDetail = () => {
             <CardTitle>Message</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <DetailRow label="Subject">{campaign.subject}</DetailRow>
+            {!isSms && <DetailRow label="Subject">{campaign.subject}</DetailRow>}
             <div className="rounded-lg border border-border bg-muted/30 p-4">
               <p className="text-sm whitespace-pre-wrap break-words">{campaign.body}</p>
               <p className="mt-4 border-t border-dashed border-border pt-3 text-xs text-muted-foreground">
-                Each email ends with your business name and address and the recipient's own unsubscribe link.
+                {isSms
+                  ? "Each text ends with the customer's own opt-out link."
+                  : "Each email ends with your business name and address and the recipient's own unsubscribe link."}
               </p>
             </div>
           </CardContent>

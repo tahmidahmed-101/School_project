@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.urls import path
 
-from .views import ChangePasswordView, ProfileImageView, ProfileView
+from .views import ChangePasswordView, ProfileImageView, ProfileView, SmsMarketingView
 
 app_name = "customer_profile"
 
@@ -10,4 +10,5 @@ urlpatterns = [
     path("", ProfileView.as_view(), name="profile"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("image/", ProfileImageView.as_view(), name="profile-image"),
+    path("sms-marketing/", SmsMarketingView.as_view(), name="sms-marketing"),
 ]

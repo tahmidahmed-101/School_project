@@ -312,3 +312,48 @@ def units_sold_by_product(product_ids: list) -> dict:
         .annotate(sold=Sum(F("quantity") - F("returned_quantity")))
     )
     return {row["variant__product_id"]: row["sold"] or 0 for row in rows}
+
+
+def _phone_spellings(raw: str) -> set[str]:
+    local = local_bd_mobile(raw)
+    return {local, f"88{local}", f"+88{local}"}
+
+
+def recovery_candidates(
+    *, idle: timedelta, max_age: timedelta, now=None
+) -> QuerySet[SalesOrder]:
+    """Open storefront carts with something in them and a phone, untouched for
+    at least `idle` and at most `max_age`, not yet reminded. Staff-entered
+    orders (`created_by` set) are not carts a shopper walked away from."""
+    now = now or timezone.now()
+    return (
+        SalesOrder.objects.filter(
+            status=SalesOrder.Status.PENDING,
+            deleted_at__isnull=True,
+            created_by__isnull=True,
+            recovery_sent_at__isnull=True,
+            updated_at__lte=now - idle,
+            updated_at__gte=now - max_age,
+        )
+        .exclude(contact_phone="")
+        .filter(Exists(SalesOrderLine.objects.filter(order=OuterRef("pk"))))
+        .order_by("updated_at")
+    )
+
+
+def shopper_ordered_since(cart: SalesOrder) -> bool:
+    """A placed order by the same phone or account whose cart was opened after
+    this one: the shopper bought, just not through this cart."""
+    spellings = _phone_spellings(cart.contact_phone)
+    who = Q(contact_phone__in=spellings) | Q(shipping_address__phone__in=spellings)
+    if cart.customer_id:
+        who |= Q(customer_id=cart.customer_id)
+    return (
+        _placed_orders().filter(who, created_at__gte=cart.created_at).exclude(pk=cart.pk).exists()
+    )
+
+
+def phone_reminded_since(phone: str, since) -> bool:
+    return SalesOrder.objects.filter(
+        contact_phone__in=_phone_spellings(phone), recovery_sent_at__gte=since
+    ).exists()

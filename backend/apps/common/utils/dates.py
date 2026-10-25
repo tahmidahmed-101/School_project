@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
 
 from django.conf import settings
 from django.utils import timezone
+
+# Bangladesh has no DST, and a fixed offset needs no tzdata in a slim image.
+DHAKA = dt_timezone(timedelta(hours=6), "Asia/Dhaka")
 
 
 def day_start(day: date) -> datetime:
@@ -23,3 +27,10 @@ def day_after(day: date) -> datetime:
     """Midnight ending `day` — the exclusive upper bound for an inclusive
     `<= day` range."""
     return day_start(day + timedelta(days=1))
+
+
+def dhaka_day_start(now: datetime | None = None) -> datetime:
+    """Midnight of the current Bangladesh day. The project runs in UTC, where
+    a Dhaka evening is already tomorrow."""
+    local = (now or timezone.now()).astimezone(DHAKA)
+    return datetime.combine(local.date(), time.min, tzinfo=DHAKA)

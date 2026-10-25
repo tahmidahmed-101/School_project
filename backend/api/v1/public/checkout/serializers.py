@@ -38,6 +38,8 @@ class GuestCheckoutSerializer(serializers.Serializer):
     carrier_id = serializers.UUIDField(required=False, allow_null=True)
     coupon_code = serializers.CharField(max_length=32, required=False, allow_blank=True)
     notes = serializers.CharField(allow_blank=True, required=False)
+    # Only ever grants consent; leaving it off never revokes an earlier opt-in.
+    sms_marketing_opt_in = serializers.BooleanField(required=False, default=False)
 
 
 class GuestCartCheckoutSerializer(GuestCheckoutSerializer):

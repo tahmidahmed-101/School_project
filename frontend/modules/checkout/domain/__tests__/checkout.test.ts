@@ -79,6 +79,14 @@ describe("buildCheckoutRequest", () => {
     expect(bare).not.toHaveProperty("coupon_code");
   });
 
+  it("asks for SMS offers only when the shopper ticked the box", () => {
+    expect(request).not.toHaveProperty("sms_marketing_opt_in");
+    const unticked = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", smsOptIn: false });
+    expect(unticked).not.toHaveProperty("sms_marketing_opt_in");
+    const ticked = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", smsOptIn: true });
+    expect(ticked.sms_marketing_opt_in).toBe(true);
+  });
+
   it("never sends the fields the form no longer asks for", () => {
     expect(request).not.toHaveProperty("email");
     expect(request).not.toHaveProperty("last_name");

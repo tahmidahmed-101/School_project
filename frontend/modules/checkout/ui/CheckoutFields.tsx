@@ -39,6 +39,8 @@ interface CheckoutFieldsProps {
   paymentMethods: ApiPaymentMethod[];
   paymentMethod: string;
   onPaymentMethodChange: (key: string) => void;
+  smsOptIn: boolean;
+  onSmsOptInChange: (checked: boolean) => void;
 }
 
 export function CheckoutFields({
@@ -48,6 +50,8 @@ export function CheckoutFields({
   paymentMethods,
   paymentMethod,
   onPaymentMethodChange,
+  smsOptIn,
+  onSmsOptInChange,
 }: CheckoutFieldsProps) {
   const { ui } = useLang();
   const inputClass = (field: keyof OrderForm) => fieldClass({ invalid: Boolean(errors[field]) });
@@ -124,6 +128,19 @@ export function CheckoutFields({
               className={fieldClass({ invalid: Boolean(errors.notes), className: "resize-y" })}
             />
           </FormField>
+
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={smsOptIn}
+              onChange={(e) => onSmsOptInChange(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 text-gold-500 accent-gold-500 focus:ring-gold-500"
+            />
+            <span className="min-w-0 text-xs font-semibold text-fg">
+              {ui("checkoutSmsOptIn")}
+              <span className="mt-0.5 block font-normal text-fg-muted">{ui("checkoutSmsOptInHint")}</span>
+            </span>
+          </label>
         </div>
       </div>
 

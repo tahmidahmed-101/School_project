@@ -79,15 +79,15 @@ def test_unique_product_code_for_is_at_most_four_chars():
 def test_unique_product_code_for_truncates_long_name():
     from apps.catalog.models import Product
 
-    code = unique_product_code_for(model=Product, text="A Very Long Product Name That Exceeds Four Chars")
+    long_name = "A Very Long Product Name That Exceeds Four Chars"
+    code = unique_product_code_for(model=Product, text=long_name)
     assert len(code) == 4
     assert code.isdigit()
 
 
 def test_unique_product_code_for_handles_collision_within_four_chars():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
@@ -99,21 +99,19 @@ def test_unique_product_code_for_handles_collision_within_four_chars():
 
 
 def test_unique_product_code_for_excludes_self_on_update():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     product = Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
-    # Re-generating for the same instance should return its own code (excluded from collision check).
+    # Regenerating for the same instance returns its own code.
     code = unique_product_code_for(model=Product, text="Tee Shirt", instance=product)
     assert code == "0000"
 
 
 def test_unique_product_code_for_raises_when_exhausted():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     # Take every 4-digit code from 0000 to 9999

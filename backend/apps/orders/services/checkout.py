@@ -89,6 +89,17 @@ def _free_expired_holds(order: SalesOrder) -> None:
     release_expired_reservations(variant_ids=line_variant_ids | set(component_ids))
 
 
+def _refuse_blocked(order: SalesOrder, shipping_address, ip_address: str) -> None:
+    if ip_address and ip_blocklist.is_blocked(ip_address):
+        raise BusinessRuleViolationError("This checkout could not be completed.", code="ip_blocked")
+    # Both numbers: a guest's contact phone is the one the courier calls.
+    phones = [order.contact_phone, shipping_address.phone if shipping_address else ""]
+    if any(phone and blocklist.is_blocked(phone) for phone in phones):
+        raise BusinessRuleViolationError(
+            "This checkout could not be completed.", code="phone_blocked"
+        )
+
+
 @transaction.atomic
 def checkout(
     *, order: SalesOrder, shipping_address=None, carrier=None, ip_address: str = ""
@@ -113,16 +124,7 @@ def checkout(
     stock is touched. Advance-only phone blocks are a payment-method decision,
     not a checkout refusal, and are left to the payment step.
     """
-    if ip_address and ip_blocklist.is_blocked(ip_address):
-        raise BusinessRuleViolationError(
-            "This checkout could not be completed.", code="ip_blocked"
-        )
-    # Both numbers: a guest's contact phone is the one the courier calls.
-    phones = [order.contact_phone, shipping_address.phone if shipping_address else ""]
-    if any(phone and blocklist.is_blocked(phone) for phone in phones):
-        raise BusinessRuleViolationError(
-            "This checkout could not be completed.", code="phone_blocked"
-        )
+    _refuse_blocked(order, shipping_address, ip_address)
 
     _free_expired_holds(order)
 

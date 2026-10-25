@@ -1,15 +1,15 @@
-"""Newsletter campaigns: draft, schedule, send in batches, cancel.
+"""Newsletter and SMS campaigns: draft, schedule, send in batches, cancel.
 
 Sending runs in `manage.py send_campaigns` (the sweeper loop), never inside a
 request. Each run fixes the recipients of campaigns now due, then sends up to
-CAMPAIGN_BATCH_SIZE copies over one SMTP connection per campaign. Every copy is
-a `CampaignDelivery` row claimed before it is sent, so a recipient gets one
-copy however often runs overlap or retry.
+CAMPAIGN_BATCH_SIZE emails (SMS_CAMPAIGN_BATCH_SIZE texts) over one SMTP
+connection per campaign. Every copy is a `CampaignDelivery` row claimed before
+it is sent, so a recipient gets one copy however often runs overlap or retry.
 
 Marketing mail stays apart from account mail: it goes only to subscribers with
 consent on record, skips the suppression list, and carries an unsubscribe
 link and List-Unsubscribe headers. Password resets and verification codes
-never consult any of it.
+never consult any of it. SMS follows the same rules with its own opt-in list.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import re
 from collections import defaultdict
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -35,17 +35,30 @@ from apps.business.services.email import (
     send_email,
 )
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.services.sms import (
+    NOT_CONFIGURED,
+    SmsDeliveryError,
+    deliver_sms,
+    sms_configured,
+)
+from apps.common.utils.phone import e164_bd_mobile
 from apps.marketing.models import (
     CampaignDelivery,
     EmailCampaign,
     EmailSuppression,
     NewsletterSubscriber,
+    SmsSubscriber,
 )
 from apps.marketing.selectors.campaigns import (
     MAX_DELIVERY_ATTEMPTS,
     campaign_has_work_left,
     claimable_deliveries,
+    eligible_sms_subscribers,
     eligible_subscribers,
+)
+from apps.marketing.services.sms_subscribers import (
+    sms_unsubscribe_links_available,
+    sms_unsubscribe_url,
 )
 from apps.marketing.services.subscribers import (
     unsubscribe_links_available,
@@ -55,8 +68,10 @@ from apps.marketing.services.subscribers import (
 logger = logging.getLogger("apps")
 
 Status = EmailCampaign.Status
+Channel = EmailCampaign.Channel
 DeliveryStatus = CampaignDelivery.Status
 EDITABLE_FIELDS = ("name", "subject", "body")
+SMS_MAX_BODY = 640
 _LINE_BREAK = re.compile(r"[\r\n]")
 # Refusals that will not change on a retry: the address itself is bad.
 PERMANENT_REASONS = frozenset({"recipient_refused"})
@@ -67,14 +82,14 @@ def _fail(message: str, code: str):
     raise BusinessRuleViolationError(message, code=code)
 
 
-def _clean(data: dict) -> dict:
+def _clean(data: dict, channel: str = Channel.EMAIL) -> dict:
     cleaned: dict = {}
     if "name" in data:
         name = data["name"].strip()
         if not name:
             _fail("Give the campaign a name.", "invalid_name")
         cleaned["name"] = name
-    if "subject" in data:
+    if "subject" in data and channel == Channel.EMAIL:
         subject = data["subject"].strip()
         if not subject or _LINE_BREAK.search(subject):
             _fail("Enter a one-line subject.", "invalid_subject")
@@ -82,7 +97,9 @@ def _clean(data: dict) -> dict:
     if "body" in data:
         if not data["body"].strip():
             _fail("Write the message.", "invalid_body")
-        cleaned["body"] = data["body"]
+        if channel == Channel.SMS and len(data["body"].strip()) > SMS_MAX_BODY:
+            _fail(f"A text message can be at most {SMS_MAX_BODY} characters.", "invalid_body")
+        cleaned["body"] = data["body"].strip() if channel == Channel.SMS else data["body"]
     return cleaned
 
 
@@ -98,12 +115,17 @@ def _audit(actor, action: str, campaign: EmailCampaign, **metadata) -> None:
 
 @transaction.atomic
 def create_campaign(*, data: dict, actor=None) -> EmailCampaign:
-    cleaned = _clean(data)
-    missing = [field for field in EDITABLE_FIELDS if field not in cleaned]
-    if missing:
+    channel = data.get("channel", Channel.EMAIL)
+    if channel not in Channel.values:
+        _fail("Choose email or SMS.", "invalid_channel")
+    cleaned = _clean(data, channel)
+    required = EDITABLE_FIELDS if channel == Channel.EMAIL else ("name", "body")
+    if any(field not in cleaned for field in required):
         _fail("A campaign needs a name, a subject and a message.", "incomplete")
     who = actor if getattr(actor, "pk", None) else None
-    campaign = EmailCampaign.objects.create(created_by=who, updated_by=who, **cleaned)
+    campaign = EmailCampaign.objects.create(
+        channel=channel, created_by=who, updated_by=who, **cleaned
+    )
     _audit(actor, "created", campaign)
     return campaign
 
@@ -128,7 +150,7 @@ def update_campaign(*, campaign: EmailCampaign, data: dict, actor=None) -> Email
     Unschedule it to edit again."""
     _locked(campaign)
     _require_status(campaign, Status.DRAFT, doing="edited")
-    cleaned = _clean(data)
+    cleaned = _clean(data, campaign.channel)
     changed = [field for field, value in cleaned.items() if getattr(campaign, field) != value]
     for field in changed:
         setattr(campaign, field, cleaned[field])
@@ -147,7 +169,21 @@ def delete_campaign(*, campaign: EmailCampaign, actor=None) -> None:
     campaign.delete()
 
 
-def _ensure_can_send() -> None:
+def _ensure_can_send(channel: str = Channel.EMAIL) -> None:
+    if channel == Channel.SMS:
+        if not sms_configured():
+            _fail(
+                "SMS is not set up (Twilio account and sender number), so texts would not "
+                "be delivered.",
+                "sms_not_configured",
+            )
+        if not sms_unsubscribe_links_available():
+            _fail(
+                "Campaign texts need a working opt-out link: set PUBLIC_API_BASE_URL "
+                "on the server.",
+                "unsubscribe_url_missing",
+            )
+        return
     if not email_state()["sends_real_email"]:
         _fail(
             "No SMTP server is active, so campaign email would not be delivered. "
@@ -168,8 +204,11 @@ def schedule_campaign(*, campaign: EmailCampaign, send_at=None, actor=None) -> E
     starts the campaign."""
     _locked(campaign)
     _require_status(campaign, Status.DRAFT, doing="scheduled")
-    _ensure_can_send()
-    if not eligible_subscribers().exists():
+    _ensure_can_send(campaign.channel)
+    audience = (
+        eligible_sms_subscribers() if campaign.channel == Channel.SMS else eligible_subscribers()
+    )
+    if not audience.exists():
         _fail("No subscriber can receive this campaign yet.", "no_recipients")
     campaign.status = Status.SCHEDULED
     campaign.scheduled_at = send_at or timezone.now()
@@ -224,9 +263,36 @@ def _footer(link: str) -> str:
     return f"{before}{link}{after}"
 
 
+def sms_footer(link: str) -> str:
+    return f"\nOpt out: {link}"
+
+
+def sms_footer_length() -> int:
+    """Characters the opt-out line adds, measured on a real-looking link."""
+    return len(sms_footer(sms_unsubscribe_url(uuid4())))
+
+
+def _send_sms_test(*, campaign: EmailCampaign, recipient: str, actor=None) -> dict:
+    number = e164_bd_mobile(recipient)
+    if not number:
+        _fail("Enter a valid Bangladeshi mobile number.", "invalid_recipient")
+    if not sms_configured():
+        _fail("SMS is not set up.", "sms_not_configured")
+    accepted, reason = True, ""
+    body = f"[Test] {campaign.body}{sms_footer('(your own opt-out link)')}"
+    try:
+        deliver_sms(to=number, body=body)
+    except SmsDeliveryError as exc:
+        accepted, reason = False, exc.reason
+    _audit(actor, "test_sent", campaign, accepted=accepted, reason=reason)
+    return {"accepted": accepted, "reason": reason, "recipient": number}
+
+
 def send_campaign_test(*, campaign: EmailCampaign, recipient: str, actor=None) -> dict:
-    """One marked copy to a staff address, outside the campaign: it creates no
-    delivery row and its unsubscribe link is a placeholder."""
+    """One marked copy to a staff address or phone, outside the campaign: it
+    creates no delivery row and its unsubscribe link is a placeholder."""
+    if campaign.channel == Channel.SMS:
+        return _send_sms_test(campaign=campaign, recipient=recipient, actor=actor)
     from django.core.exceptions import ValidationError
     from django.core.validators import validate_email
 
@@ -261,15 +327,26 @@ def _start(campaign_id) -> bool:
     campaign = EmailCampaign.objects.select_for_update().filter(pk=campaign_id).first()
     if campaign is None or campaign.status != Status.SCHEDULED:
         return False
-    rows = eligible_subscribers().values_list("id", "email").iterator(chunk_size=SNAPSHOT_CHUNK)
+    is_sms = campaign.channel == Channel.SMS
+    source = eligible_sms_subscribers() if is_sms else eligible_subscribers()
+    rows = source.values_list("id", "phone" if is_sms else "email").iterator(
+        chunk_size=SNAPSHOT_CHUNK
+    )
     batch: list[CampaignDelivery] = []
     seen: set[str] = set()
-    for subscriber_id, email in rows:
-        key = email.lower()
+    for subscriber_id, address in rows:
+        key = address.lower()
         if key in seen:
             continue
         seen.add(key)
-        batch.append(CampaignDelivery(campaign=campaign, subscriber_id=subscriber_id, email=email))
+        if is_sms:
+            batch.append(
+                CampaignDelivery(campaign=campaign, sms_subscriber_id=subscriber_id, phone=address)
+            )
+        else:
+            batch.append(
+                CampaignDelivery(campaign=campaign, subscriber_id=subscriber_id, email=address)
+            )
         if len(batch) >= SNAPSHOT_CHUNK:
             CampaignDelivery.objects.bulk_create(batch, ignore_conflicts=True)
             batch = []
@@ -312,6 +389,36 @@ def _record(outcomes: dict[tuple[str, str], list]) -> None:
         if reason in PERMANENT_REASONS:
             fields["attempts"] = MAX_DELIVERY_ATTEMPTS
         CampaignDelivery.objects.filter(pk__in=ids).update(**fields)
+
+
+def _send_sms_batch(campaign: EmailCampaign, ids: list) -> int:
+    deliveries = list(
+        CampaignDelivery.objects.filter(pk__in=ids).only("id", "phone", "sms_subscriber_id")
+    )
+    still_opted_in = set(
+        SmsSubscriber.objects.filter(
+            id__in=[d.sms_subscriber_id for d in deliveries if d.sms_subscriber_id],
+            is_active=True,
+        ).values_list("id", flat=True)
+    )
+    outcomes: dict[tuple[str, str], list] = defaultdict(list)
+    sent = 0
+    for delivery in deliveries:
+        if delivery.sms_subscriber_id not in still_opted_in:
+            outcomes[(DeliveryStatus.SKIPPED, "unsubscribed")].append(delivery.pk)
+            continue
+        body = campaign.body + sms_footer(sms_unsubscribe_url(delivery.sms_subscriber_id))
+        try:
+            deliver_sms(to=delivery.phone, body=body)
+        except SmsDeliveryError as exc:
+            outcomes[(DeliveryStatus.FAILED, exc.reason)].append(delivery.pk)
+            if exc.reason == NOT_CONFIGURED:
+                logger.warning("Campaign %s: SMS is not configured", campaign.pk)
+            continue
+        outcomes[(DeliveryStatus.SENT, "")].append(delivery.pk)
+        sent += 1
+    _record(outcomes)
+    return sent
 
 
 def _send_batch(campaign: EmailCampaign, ids: list) -> int:
@@ -399,22 +506,27 @@ def _finish_if_done(campaign_id) -> None:
 def process_campaigns(*, batch_size: int | None = None, now=None) -> dict:
     """One sender run. Safe to run any number of times, and concurrently."""
     now = now or timezone.now()
-    budget = batch_size if batch_size is not None else settings.CAMPAIGN_BATCH_SIZE
+    budgets = {
+        Channel.EMAIL: batch_size if batch_size is not None else settings.CAMPAIGN_BATCH_SIZE,
+        Channel.SMS: batch_size if batch_size is not None else settings.SMS_CAMPAIGN_BATCH_SIZE,
+    }
     started = 0
     for campaign_id in EmailCampaign.objects.filter(
         status=Status.SCHEDULED, scheduled_at__lte=now
     ).values_list("pk", flat=True):
         if _start(campaign_id):
             started += 1
-    sent = 0
+    sent = {Channel.EMAIL: 0, Channel.SMS: 0}
     for campaign in EmailCampaign.objects.filter(status=Status.SENDING).order_by("started_at"):
-        if budget > 0:
-            ids = _claim(campaign.pk, budget)
+        channel = campaign.channel
+        if budgets[channel] > 0:
+            ids = _claim(campaign.pk, budgets[channel])
             if ids:
-                budget -= len(ids)
-                sent += _send_batch(campaign, ids)
+                budgets[channel] -= len(ids)
+                send = _send_sms_batch if channel == Channel.SMS else _send_batch
+                sent[channel] += send(campaign, ids)
         _finish_if_done(campaign.pk)
-    return {"started": started, "sent": sent}
+    return {"started": started, "sent": sent[Channel.EMAIL], "sms_sent": sent[Channel.SMS]}
 
 
 # --- Suppression list -------------------------------------------------------

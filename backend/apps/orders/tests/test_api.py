@@ -1324,14 +1324,14 @@ def test_create_order_numbers_are_unique():
 
 
 def test_checkout_changes_prefix_to_pre_for_preorder(api_client):
-    from django.utils import timezone
     from datetime import timedelta
 
-    from apps.catalog.models import ProductVariant
+    from django.utils import timezone
+
     from apps.common.params import KIND_PREORDER
+    from apps.inventory.constants import MovementType
     from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
     from apps.inventory.services.stock import record_movement
-    from apps.inventory.constants import MovementType
     from apps.orders.services.carts import add_line, get_or_create_cart
     from apps.orders.services.checkout import checkout
 
@@ -1366,11 +1366,11 @@ def test_checkout_changes_prefix_to_pre_for_preorder(api_client):
 
 
 def test_place_staff_order_uses_pre_prefix_for_preorder(api_client):
-    from django.utils import timezone
     from datetime import timedelta
 
+    from django.utils import timezone
+
     from apps.accounts.factories import CustomerUserFactory
-    from apps.catalog.models import ProductVariant
     from apps.orders.constants import PaymentMethodKey
     from apps.orders.services.staff_orders import place_staff_order
 

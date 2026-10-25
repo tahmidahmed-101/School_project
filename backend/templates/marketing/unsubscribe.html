@@ -23,13 +23,21 @@
   <main>
     {% if invalid %}
       <h1>This link is not valid</h1>
-      <p>It may have been copied incompletely. Use the unsubscribe link at the bottom of any of our emails.</p>
+      <p>It may have been copied incompletely. Use the unsubscribe link at the bottom of any of our {% if sms %}texts{% else %}emails{% endif %}.</p>
     {% elif done %}
       <h1>You are unsubscribed</h1>
+      {% if sms %}
+      <p>You will not receive marketing texts from {{ shop }} any more. Codes and messages about your orders are not affected.</p>
+      {% else %}
       <p>You will not receive newsletter emails from {{ shop }} any more. Emails about your account and orders are not affected.</p>
+      {% endif %}
     {% else %}
       <h1>Unsubscribe from {{ shop }} news?</h1>
+      {% if sms %}
+      <p>You will stop receiving our marketing texts. Codes and messages about your orders are not affected.</p>
+      {% else %}
       <p>You will stop receiving our newsletter. Emails about your account and orders are not affected.</p>
+      {% endif %}
       <form method="post">
         <button type="submit">Unsubscribe</button>
       </form>

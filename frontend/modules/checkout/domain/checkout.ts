@@ -47,7 +47,7 @@ export type FormErrors = Partial<Record<keyof OrderForm, string>>;
 export function buildCheckoutRequest(
   form: OrderForm,
   items: CartItem[],
-  extras: { paymentMethod: string; couponCode?: string },
+  extras: { paymentMethod: string; couponCode?: string; smsOptIn?: boolean },
 ): ApiCheckoutRequest {
   const name = form.name.trim();
   const phone = form.phone.trim();
@@ -66,6 +66,7 @@ export function buildCheckoutRequest(
     },
     payment_method: extras.paymentMethod,
     ...(extras.couponCode && { coupon_code: extras.couponCode }),
+    ...(extras.smsOptIn && { sms_marketing_opt_in: true }),
     ...(form.notes.trim() && { notes: form.notes.trim() }),
   };
 }
