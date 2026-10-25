@@ -55,7 +55,7 @@ export function ProductAccordions({ product, variantId, currentPrice }: ProductA
     <>
       <div className="mt-8 divide-y divide-ink-100 border-b border-t border-ink-200 sm:mt-12">
         {(description || hasHighlights) && (
-          <AccordionItem icon={<FileText className={ICON} />} title={ui("description")} defaultOpen>
+          <AccordionItem icon={<FileText className={ICON} />} title={ui("productDetails")} defaultOpen>
             <div className={`space-y-3 ${ACCORDION_BODY}`}>
               {description && <p>{description}</p>}
               {product.highlights && product.highlights.length > 0 && (
