@@ -66,12 +66,14 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
       header: "ITEMS",
       // Transfers are read in full here, so every line is listed instead of a count.
       cell: ({ row }) => (
-        <ul className="space-y-0.5 whitespace-normal text-sm">
+        <ul className="space-y-1.5 whitespace-normal text-sm">
           {row.original.lines.map((line) => (
             <li key={line.id}>
-              <span className="font-medium tabular-nums">{line.quantity} ×</span> {line.product_name}
-              {line.variant_title ? ` — ${line.variant_title}` : ""}{" "}
-              <span className="text-xs text-muted-foreground">{line.variant_sku}</span>
+              <div>
+                <span className="font-medium tabular-nums">{line.quantity} ×</span> {line.product_name}
+                {line.variant_title ? ` — ${line.variant_title}` : ""}
+              </div>
+              <div className="font-mono text-xs text-muted-foreground">{line.variant_sku}</div>
             </li>
           ))}
         </ul>
@@ -141,8 +143,9 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
               ? "Transfers move stock between warehouses. Add a second warehouse to start."
               : "Stock moved between warehouses appears here."
         }
-        minWidth="980px"
-        columnWidths={["150px", "260px", "auto", "200px", "170px"]}
+        // ITEMS takes what the fixed columns leave: 380px at the minimum width.
+        minWidth="1200px"
+        columnWidths={["150px", "260px", "auto", "200px", "210px"]}
       />
 
       {canManage && (
