@@ -1,5 +1,5 @@
-import { useEffect } from "react"
-import { Controller, useFieldArray, useForm } from "react-hook-form"
+import { useEffect, useRef } from "react"
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -68,6 +68,8 @@ export function StockTransferDialog({
     control,
     register,
     reset,
+    getValues,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -75,10 +77,22 @@ export function StockTransferDialog({
     defaultValues: { from_warehouse_id: defaultFrom, to_warehouse_id: "", notes: "", lines: [emptyLine()] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: "lines" })
+  // The product search lists what the source warehouse holds, with its own available count.
+  const fromWarehouseId = useWatch({ control, name: "from_warehouse_id" })
 
   useEffect(() => {
     if (open) reset({ from_warehouse_id: defaultFrom, to_warehouse_id: "", notes: "", lines: [emptyLine()] })
   }, [open, reset, defaultFrom])
+
+  // Items picked from the previous source may not be in the new one, so a source change clears them.
+  const lastFrom = useRef(fromWarehouseId)
+  useEffect(() => {
+    if (lastFrom.current === fromWarehouseId) return
+    lastFrom.current = fromWarehouseId
+    getValues("lines").forEach((line, i) => {
+      if (line.variant) setValue(`lines.${i}.variant`, null)
+    })
+  }, [fromWarehouseId, getValues, setValue])
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -156,7 +170,7 @@ export function StockTransferDialog({
                 <VariantPicker
                   value={field.value ?? null}
                   onChange={field.onChange}
-                  filters={{ category_type: kind }}
+                  filters={{ category_type: kind, ...(fromWarehouseId && { warehouse_id: fromWarehouseId }) }}
                 />
               )}
             />

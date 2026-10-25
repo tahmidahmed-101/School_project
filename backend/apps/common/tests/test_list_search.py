@@ -154,3 +154,24 @@ def test_shipment_search_filters_by_tracking_number(admin_client):
     results = _results(admin_client.get("/api/v1/admin/orders/shipments/", {"search": "needle"}))
 
     assert [shipment["tracking_number"] for shipment in results] == ["TRACK-NEEDLE"]
+
+
+def test_variant_list_for_a_warehouse_lists_what_it_holds_with_its_own_count(admin_client):
+    from apps.inventory.models import Warehouse
+
+    source = Warehouse.objects.create(name="Source WH", code="SRC-WH")
+    other = Warehouse.objects.create(name="Other WH", code="OTH-WH")
+    held = ProductVariantFactory()
+    StockItemFactory(variant=held, warehouse=source, quantity_on_hand=5, quantity_reserved=2)
+    StockItemFactory(variant=held, warehouse=other, quantity_on_hand=40)
+    # Elsewhere only, or all of it reserved: nothing this warehouse can give.
+    StockItemFactory(variant=ProductVariantFactory(), warehouse=other, quantity_on_hand=9)
+    StockItemFactory(
+        variant=ProductVariantFactory(), warehouse=source, quantity_on_hand=3, quantity_reserved=3
+    )
+
+    results = _results(
+        admin_client.get("/api/v1/admin/catalog/variants/", {"warehouse_id": str(source.id)})
+    )
+
+    assert [(row["id"], row["stock"]) for row in results] == [(str(held.id), 3)]

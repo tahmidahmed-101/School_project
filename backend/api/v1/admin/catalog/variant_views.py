@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from django.db.models import F
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -37,10 +38,12 @@ from apps.common.params import get_bool, get_choice, get_related
 from apps.common.responses import error_from_exception, not_found
 from apps.common.utils.export import CsvRenderer
 from apps.common.utils.files import validate_upload_size
+from apps.inventory.models import StockItem
 from apps.inventory.selectors.stock import (
     available_quantities_for_variants,
     reorder_points_for_variants,
 )
+from apps.inventory.selectors.warehouse import get_warehouse_by_id
 from apps.orders.services.carts import get_preordered_quantities
 
 from .permissions import (
@@ -133,6 +136,7 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
     product_code_field = "product__product_code"
     ordering_fields = ("sku", "price", "created_at")
     default_ordering = "sku"
+    warehouse = None
 
     def get_queryset(self):
         params = self.request.query_params
@@ -142,6 +146,11 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
         is_active = get_bool(params, "is_active")
         preorder_only = bool(get_bool(params, "preorder_only", default=False))
         preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
+        # ?warehouse_id= lists what that warehouse can give (e.g. a transfer's
+        # source), with its own available count instead of the selling total.
+        self.warehouse = get_related(
+            params, "warehouse_id", get_warehouse_by_id, "Warehouse not found."
+        )
         queryset = variants_list(
             product=product,
             category=category,
@@ -150,6 +159,12 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             preorder_only=preorder_only,
             preorder_status=preorder_status,
         )
+        if self.warehouse is not None:
+            queryset = queryset.filter(
+                id__in=StockItem.objects.filter(
+                    warehouse=self.warehouse, quantity_on_hand__gt=F("quantity_reserved")
+                ).values("variant_id")
+            )
         stock_status = get_choice(params, "stock_status", ("out", "low", "in"))
         if stock_status == "low":
             queryset = queryset.filter(
@@ -157,8 +172,8 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             )
         if stock_status:
             variant_ids = list(queryset.values_list("id", flat=True))
-            stock_by_variant = available_quantities_for_variants(variant_ids)
-            reorder_point_by_variant = reorder_points_for_variants(variant_ids)
+            stock_by_variant = available_quantities_for_variants(variant_ids, self.warehouse)
+            reorder_point_by_variant = reorder_points_for_variants(variant_ids, self.warehouse)
             matching_ids = [
                 vid
                 for vid in variant_ids
@@ -180,8 +195,8 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
         # The paginator has already counted; a second COUNT(*) would repeat it.
         total_count = paginator.page.paginator.count if page is not None else len(items)
         variant_ids = [v.id for v in items]
-        stock_by_variant = available_quantities_for_variants(variant_ids)
-        reorder_point_by_variant = reorder_points_for_variants(variant_ids)
+        stock_by_variant = available_quantities_for_variants(variant_ids, self.warehouse)
+        reorder_point_by_variant = reorder_points_for_variants(variant_ids, self.warehouse)
         preordered_by_variant = get_preordered_quantities(items)
         serializer = self.serializer_class(
             items,
