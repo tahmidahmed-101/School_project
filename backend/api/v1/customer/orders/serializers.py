@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.catalog.selectors.options import (
@@ -20,13 +22,20 @@ from apps.orders.selectors.payments import (
 class SalesOrderLineSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     variant_id = serializers.UUIDField(read_only=True)
-    # The snapshot only: carts and checkout must not load a variant per line.
+    # The snapshots only: carts and checkout must not load a variant per line.
+    product_name = serializers.CharField(read_only=True)
+    variant_sku = serializers.CharField(read_only=True)
     variant_title = serializers.CharField(read_only=True)
     quantity = serializers.IntegerField()
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    # unit_price x quantity: the lines add up to the order's subtotal.
+    total = serializers.SerializerMethodField()
     is_preorder = serializers.BooleanField(read_only=True)
+
+    def get_total(self, obj) -> str:
+        return str((obj.unit_price * obj.quantity).quantize(Decimal("0.01")))
 
 
 class CustomerShipmentSerializer(serializers.Serializer):

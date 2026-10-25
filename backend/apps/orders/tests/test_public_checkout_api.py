@@ -136,6 +136,20 @@ def test_guest_checkout_accepts_only_the_checkout_form_fields(api_client):
     assert address.postal_code == ""
 
 
+def test_guest_checkout_answer_names_each_line_and_its_total(api_client):
+    # The order-success screen lists the lines from this answer alone.
+    variant = _stocked_variant(price=Decimal("150.00"))
+    _dhaka_delivery()
+
+    response = api_client.post(GUEST_CHECKOUT_URL, _minimal_payload(variant), format="json")
+
+    assert response.status_code == 201, response.data
+    [line] = response.data["data"]["lines"]
+    assert line["product_name"] == variant.product.name
+    assert line["variant_sku"] == variant.sku
+    assert line["total"] == "300.00"
+
+
 def test_guest_checkout_requires_district_city(api_client):
     variant = _stocked_variant()
     _dhaka_delivery()
