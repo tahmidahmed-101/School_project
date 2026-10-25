@@ -12,8 +12,8 @@ export function BundleItems({ items }: { items: BundleItem[] }) {
 
   return (
     <div className="mb-3 mt-3 overflow-x-auto rounded-xl border border-line">
-      <table className="w-full text-left text-xs sm:text-sm">
-        <thead className="bg-surface text-2xs font-bold uppercase tracking-wide text-fg-muted sm:text-xs">
+      <table className="w-full text-left text-sm sm:text-base">
+        <thead className="bg-surface text-xs font-bold uppercase tracking-wide text-fg-muted sm:text-sm">
           <tr>
             <th scope="col" className="px-3 py-2.5">
               {ui("bundleItem")}
@@ -34,7 +34,8 @@ export function BundleItems({ items }: { items: BundleItem[] }) {
                   <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink-100 bg-surface">
                     <Image src={photo(item.image)} alt={t(item.name)} fill sizes="48px" className="object-cover" />
                   </span>
-                  <span className="line-clamp-2 font-bold text-fg transition-colors group-hover:text-gold-800">
+                  {/* A long name wraps onto more lines (even a single long word) instead of widening the table. */}
+                  <span className="min-w-0 font-bold leading-snug text-fg transition-colors wrap-anywhere group-hover:text-gold-800">
                     {t(item.name)}
                   </span>
                 </Link>
