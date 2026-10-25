@@ -71,49 +71,38 @@ def test_generate_barcode_returns_png_bytes():
 def test_unique_product_code_for_is_at_most_four_chars():
     from apps.catalog.models import Product
 
-    code = unique_product_code_for(model=Product, text="Oversized Graphic Tee")
-    assert len(code) == 4
-    assert code.isdigit()
-
-
-def test_unique_product_code_for_truncates_long_name():
-    from apps.catalog.models import Product
-
-    code = unique_product_code_for(model=Product, text="A Very Long Product Name That Exceeds Four Chars")
+    code = unique_product_code_for(model=Product)
     assert len(code) == 4
     assert code.isdigit()
 
 
 def test_unique_product_code_for_handles_collision_within_four_chars():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
     # Collision: "0000" taken → try "0001"…
-    code = unique_product_code_for(model=Product, text="Tee Shirt")
+    code = unique_product_code_for(model=Product)
     assert len(code) == 4
     assert code.isdigit()
     assert code != "0000"
 
 
 def test_unique_product_code_for_excludes_self_on_update():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     product = Product.objects.create(category=category, name="Tee Shirt", product_code="0000")
-    # Re-generating for the same instance should return its own code (excluded from collision check).
-    code = unique_product_code_for(model=Product, text="Tee Shirt", instance=product)
+    # The instance's own code is excluded from the collision check.
+    code = unique_product_code_for(model=Product, instance=product)
     assert code == "0000"
 
 
 def test_unique_product_code_for_raises_when_exhausted():
-    from apps.catalog.models import Product
-
     from apps.catalog.factories import CategoryFactory
+    from apps.catalog.models import Product
 
     category = CategoryFactory()
     # Take every 4-digit code from 0000 to 9999
@@ -129,5 +118,5 @@ def test_unique_product_code_for_raises_when_exhausted():
     from apps.common.exceptions import BusinessRuleViolationError
 
     with pytest.raises(BusinessRuleViolationError) as exc:
-        unique_product_code_for(model=Product, text="Anything")
+        unique_product_code_for(model=Product)
     assert exc.value.code == "product_code_exhausted"

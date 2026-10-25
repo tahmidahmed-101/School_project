@@ -7,13 +7,9 @@ from apps.common.utils.text import unique_product_code_for
 
 def backfill_product_codes(apps, schema_editor):
     Product = apps.get_model("catalog", "Product")
-    for product in Product.objects.filter(product_code__isnull=True).exclude(
-        product_code=""
-    ):
-        pass
     for product in Product.objects.filter(product_code=""):
         product.product_code = unique_product_code_for(
-            model=Product, text=product.name, instance=product
+            model=Product, instance=product
         )
         product.save(update_fields=["product_code"])
 

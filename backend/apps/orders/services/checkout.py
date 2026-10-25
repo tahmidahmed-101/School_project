@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.utils.codes import generate_document_number
 from apps.inventory.services.stock import lock_variant_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
 from apps.logistics.services.rates import quote_shipping
@@ -87,6 +88,19 @@ def _free_expired_holds(order: SalesOrder) -> None:
         bundle_variant_id__in=line_variant_ids
     ).values_list("component_variant_id", flat=True)
     release_expired_reservations(variant_ids=line_variant_ids | set(component_ids))
+
+
+def _prefix_preorder_number(order: SalesOrder) -> None:
+    # A cart is born with an SO- number; a pre-order is re-issued with PRE- so
+    # the two kinds are distinguishable at a glance.
+    if order.order_type != SalesOrder.OrderType.PREORDER or not order.order_number.startswith(
+        "SO-"
+    ):
+        return
+    order_number = generate_document_number("PRE")
+    while SalesOrder.objects.filter(order_number=order_number).exists():
+        order_number = generate_document_number("PRE")
+    order.order_number = order_number
 
 
 @transaction.atomic
@@ -181,18 +195,7 @@ def checkout(
     order.order_type = (
         SalesOrder.OrderType.PREORDER if True in kinds else SalesOrder.OrderType.STOCK
     )
-    # A cart is born with an SO- number; if it turns out to be a pre-order,
-    # re-issue the number with the PRE- prefix so stock and pre-order orders
-    # are distinguishable at a glance.
-    if order.order_type == SalesOrder.OrderType.PREORDER and order.order_number.startswith(
-        "SO-"
-    ):
-        from apps.common.utils.codes import generate_document_number
-
-        order_number = generate_document_number("PRE")
-        while SalesOrder.objects.filter(order_number=order_number).exists():
-            order_number = generate_document_number("PRE")
-        order.order_number = order_number
+    _prefix_preorder_number(order)
 
     if shipping_address is not None:
         order.shipping_address = shipping_address

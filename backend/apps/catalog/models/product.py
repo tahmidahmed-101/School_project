@@ -83,7 +83,7 @@ class Product(FullAuditModel):
         # similar-named products apart when searching (e.g. when adding stock).
         if not self.product_code:
             self.product_code = unique_product_code_for(
-                model=Product, text=self.name, instance=self
+                model=Product, instance=self
             )
         return super().save(*args, **kwargs)
 

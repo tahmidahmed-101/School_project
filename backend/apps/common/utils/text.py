@@ -57,7 +57,6 @@ def unique_sku_for(
 def unique_product_code_for(
     *,
     model: type[Model],
-    text: str,
     field: str = "product_code",
     instance: Model | None = None,
 ) -> str:

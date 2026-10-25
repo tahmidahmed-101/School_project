@@ -128,7 +128,7 @@ def create_product(
         specs=_clean_specs(specs),
         meta_keywords=meta_keywords,
         slug=unique_slug_for(model=Product, text=name),
-        product_code=unique_product_code_for(model=Product, text=name),
+        product_code=unique_product_code_for(model=Product),
         is_active=is_active,
         created_by=actor,
     )
