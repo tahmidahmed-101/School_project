@@ -15,6 +15,7 @@ from .views import (
     OrderCancelView,
     OrderDetailView,
     OrderHistoryListView,
+    OrderTrackView,
     RMADetailView,
     RMAListCreateView,
 )
@@ -37,6 +38,7 @@ urlpatterns = [
     path("cart/checkout/", CheckoutView.as_view(), name="checkout"),
     path("", OrderHistoryListView.as_view(), name="order-history"),
     path("<uuid:order_id>/", OrderDetailView.as_view(), name="order-detail"),
+    path("<uuid:order_id>/track/", OrderTrackView.as_view(), name="order-track"),
     path("<uuid:order_id>/cancel/", OrderCancelView.as_view(), name="order-cancel"),
     path("<uuid:order_id>/returns/", RMAListCreateView.as_view(), name="rma-list"),
     path("returns/<uuid:rma_id>/", RMADetailView.as_view(), name="rma-detail"),
