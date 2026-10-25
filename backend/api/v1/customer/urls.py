@@ -15,4 +15,5 @@ urlpatterns = [
     path("questions/", include("api.v1.customer.questions.urls")),
     path("notifications/", include("api.v1.customer.notifications.urls")),
     path("price-reports/", include("api.v1.customer.price_reports.urls")),
+    path("referral/", include("api.v1.customer.referral.urls")),
 ]

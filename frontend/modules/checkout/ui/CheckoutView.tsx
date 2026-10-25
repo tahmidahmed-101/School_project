@@ -9,6 +9,7 @@ import { forgetGuestCart, saveCartContact, syncedGuestCartToken, useCart } from 
 import { useBrand } from "@/modules/catalog";
 import { ApiError } from "@/lib/api/client";
 import { freeDeliveryStatus } from "@/lib/free-delivery";
+import { clearStoredRef } from "@/lib/referral";
 import { isBelowMinimum, productKind, shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey } from "@/lib/api/errors";
@@ -61,7 +62,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
-  const coupon = useCoupon(items);
+  const coupon = useCoupon(items, { phone: form.phone, withAuth });
   const brand = useBrand();
   const freeDeliveryEstimate = freeDeliveryStatus(brand.freeDeliveryMinAmount, items);
   // The quote is the store's answer: once it charges a fee, the estimate must not claim free delivery beside it.
@@ -142,6 +143,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
         ),
       );
       clearCart();
+      clearStoredRef();
       window.scrollTo({ top: 0 });
     } catch (error) {
       if (error instanceof ApiError) {

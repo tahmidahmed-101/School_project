@@ -67,6 +67,22 @@ class BusinessProfile(TimeStampedModel):
         validators=[MinValueValidator(Decimal("0"))],
     )
 
+    # The referral programme is on only while both amounts are above zero.
+    referral_friend_discount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    referral_reward_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
     about_en = models.TextField(blank=True)
     about_bn = models.TextField(blank=True)
 

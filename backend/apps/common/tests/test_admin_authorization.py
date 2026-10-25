@@ -27,6 +27,8 @@ PLACEHOLDER = str(uuid.uuid4())
 
 UNAUTHORIZED = {401, 403}
 
+OPEN_TO_ANY_STAFF = {"/api/v1/admin/settings/modules/"}
+
 
 def _admin_paths() -> list[str]:
     paths: list[str] = []
@@ -76,6 +78,8 @@ def test_admin_endpoints_reject_customers(api_client, path):
 def test_admin_endpoints_reject_staff_holding_no_permissions(api_client, path):
     """Staff are only what their granted permission codes say they are — an
     account with none must be able to read nothing."""
+    if path in OPEN_TO_ANY_STAFF:
+        pytest.skip("the dashboard needs it for every staff member to hide switched-off modules")
     staff = create_user(email="sweep-staff@example.com", role=UserRole.STAFF)
     api_client.force_authenticate(user=staff)
 

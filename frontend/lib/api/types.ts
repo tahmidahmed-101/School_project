@@ -479,3 +479,12 @@ export interface ApiTrackOrder {
   paid_total: string;
   balance_due: string;
 }
+
+/** GET /customer/referral/: the signed-in customer's share code and earned reward coupons (decimal strings). */
+export interface ApiReferralSummary {
+  enabled: boolean;
+  code: string | null;
+  friend_discount: string | null;
+  reward_amount: string | null;
+  rewards: { code: string; amount: string; used: boolean; expires_at: string }[];
+}

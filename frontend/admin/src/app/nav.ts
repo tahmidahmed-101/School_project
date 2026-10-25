@@ -112,6 +112,7 @@ export const navSections: NavSection[] = [
     items: [
       { title: "Promotions", url: "/sales", permission: ORDERS },
       { title: "Coupons", url: "/coupons", permission: ORDERS },
+      { title: "Referrals", url: "/referrals", permission: ORDERS },
       { title: "Promotion popups", url: "/promotion_popups", permission: "settings.view" },
     ],
   },

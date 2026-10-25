@@ -28,6 +28,21 @@ export interface Coupon {
   deleted_at: string | null
 }
 
+export type ReferralStatus = "pending" | "rewarded" | "void"
+
+export interface Referral {
+  id: string
+  status: ReferralStatus
+  referrer_name: string
+  referrer_contact: string
+  order_id: string
+  order_number: string
+  reward_amount: string
+  reward_coupon_code: string | null
+  rewarded_at: string | null
+  created_at: string
+}
+
 /** CouponCreateSerializer — note: no is_active (new coupons start active). */
 export interface CouponCreatePayload {
   code: string

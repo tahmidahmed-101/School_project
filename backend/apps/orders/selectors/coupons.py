@@ -9,14 +9,18 @@ from apps.orders.models import Coupon
 
 
 def coupons_list(*, include_deleted: bool = False) -> QuerySet[Coupon]:
-    queryset = Coupon.objects.prefetch_related("categories", "brands")
+    queryset = Coupon.objects.prefetch_related("categories", "brands").filter(
+        referrer__isnull=True
+    )
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.order_by("-created_at")
 
 
 def get_coupon_by_id(coupon_id: str | UUID, *, include_deleted: bool = False) -> Coupon | None:
-    queryset = Coupon.objects.prefetch_related("categories", "brands")
+    queryset = Coupon.objects.prefetch_related("categories", "brands").filter(
+        referrer__isnull=True
+    )
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)
     return queryset.filter(id=coupon_id).first()

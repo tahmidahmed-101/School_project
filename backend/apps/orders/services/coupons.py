@@ -18,6 +18,7 @@ from apps.orders.models import Coupon, SalesOrder
 from apps.orders.selectors.coupons import get_active_coupon_by_code
 from apps.orders.services.carts import _ensure_pending, lines_of_kind
 from apps.orders.services.orders import lock_order
+from apps.orders.services.referrals import is_self_referral, referral_amounts
 
 COUPON_STOCK_ONLY_MESSAGE = "Coupons work on stock orders only, not on a pre-order."
 
@@ -74,13 +75,20 @@ def delete_coupon(*, coupon: Coupon, actor=None) -> Coupon:
     return soft_delete_instance(coupon, actor=actor, code="coupon_in_use")
 
 
+def _coupon_value(coupon: Coupon) -> Decimal:
+    if coupon.referrer_id is None:
+        return coupon.value
+    amounts = referral_amounts()
+    return amounts.friend_discount if amounts is not None else Decimal("0")
+
+
 def _compute_discount(coupon: Coupon, base: Decimal) -> Decimal:
     """Discount on `base` (the part of the order the coupon covers), held under
     the coupon's own cap and never more than `base`. Rounded once, here."""
     if coupon.discount_type == Coupon.DiscountType.PERCENTAGE:
         discount = percent_of(base, coupon.value)
     else:
-        discount = coupon.value
+        discount = _coupon_value(coupon)
     if coupon.max_discount_amount is not None:
         discount = min(discount, coupon.max_discount_amount)
     return quantize(min(discount, base))
@@ -153,6 +161,20 @@ def _check_customer_limit(
         )
 
 
+def _check_referral_eligible(
+    coupon: Coupon, *, customer, phone: str, email: str, exclude_order_id=None
+) -> None:
+    if referral_amounts() is None:
+        raise DomainError("Coupon not found.", code="invalid_coupon")
+    if is_self_referral(coupon.referrer, customer=customer, phone=phone, email=email):
+        raise DomainError("You cannot use your own referral code.", code="referral_own_code")
+    orders = _orders_of_shopper(customer=customer, phone=phone, email=email)
+    if orders is not None and orders.exclude(id=exclude_order_id).exists():
+        raise DomainError(
+            "A referral code works on your first order only.", code="referral_not_first_order"
+        )
+
+
 def _check_coupon_eligible(
     coupon: Coupon,
     subtotal: Decimal,
@@ -166,6 +188,14 @@ def _check_coupon_eligible(
     """Shared by `apply_coupon`, `preview_coupon` and the re-check at checkout,
     so a code that passes one cannot fail another on a rule checked in only one
     place. `count_this_use` is off when `times_used` already counts this order."""
+    if coupon.referrer_id is not None:
+        _check_referral_eligible(
+            coupon,
+            customer=customer,
+            phone=phone,
+            email=email,
+            exclude_order_id=exclude_order_id,
+        )
     if subtotal < coupon.min_order_amount:
         raise DomainError(
             f"Order subtotal must be at least {coupon.min_order_amount} to use this coupon.",
@@ -210,7 +240,7 @@ def preview_coupon(
     return {
         "code": coupon.code,
         "discount_type": coupon.discount_type,
-        "value": coupon.value,
+        "value": _coupon_value(coupon),
         "discount_amount": _compute_discount(coupon, base),
     }
 

@@ -174,6 +174,25 @@ def test_free_delivery_amount_is_set_by_staff_and_read_by_the_storefront(api_cli
     assert cleared.data["data"]["free_delivery_min_amount"] is None
 
 
+def test_referral_amounts_are_set_by_staff_and_start_unset(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    first = api_client.get(ENDPOINT).data["data"]
+    assert first["referral_friend_discount"] is None
+    assert first["referral_reward_amount"] is None
+
+    saved = api_client.patch(
+        ENDPOINT,
+        {"referral_friend_discount": "50.00", "referral_reward_amount": "30.00"},
+        format="json",
+    )
+    negative = api_client.patch(ENDPOINT, {"referral_reward_amount": "-1"}, format="json")
+
+    assert saved.status_code == 200, saved.data
+    assert saved.data["data"]["referral_friend_discount"] == "50.00"
+    assert saved.data["data"]["referral_reward_amount"] == "30.00"
+    assert negative.status_code == 400
+
+
 def test_preorder_terms_are_set_by_staff_and_read_by_the_storefront(api_client, admin_user):
     api_client.force_authenticate(user=admin_user)
     assert api_client.get(ENDPOINT).data["data"]["preorder_terms_en"] == ""
