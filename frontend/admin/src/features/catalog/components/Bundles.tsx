@@ -147,7 +147,7 @@ const Bundles = () => {
       />
 
       <FilterToolbar
-        searchPlaceholder="Search by SKU or name…"
+        searchPlaceholder="Search by code, SKU or name…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[

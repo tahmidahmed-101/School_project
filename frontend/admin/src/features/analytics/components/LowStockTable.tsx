@@ -31,8 +31,14 @@ export function LowStockTable({ items, isLoading, error, onRetry }: Props) {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
+    // Product codes are 4 digits: one finds that product only, never another whose SKU holds the same digits.
+    const isCode = /^\d{4}$/.test(q)
     return [...(items ?? [])]
-      .filter((i) => !q || i.product_name.toLowerCase().includes(q) || i.variant_sku.toLowerCase().includes(q))
+      .filter((i) => {
+        if (!q) return true
+        if (isCode) return i.product_code === q
+        return i.product_name.toLowerCase().includes(q) || i.variant_sku.toLowerCase().includes(q)
+      })
       .sort((a, b) => a.available - b.available || a.product_name.localeCompare(b.product_name))
   }, [items, query])
 
@@ -105,7 +111,7 @@ export function LowStockTable({ items, isLoading, error, onRetry }: Props) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search product or SKU"
+              placeholder="Search code, product or SKU"
               aria-label="Search low-stock items"
               className="h-9 w-56 pl-8"
             />

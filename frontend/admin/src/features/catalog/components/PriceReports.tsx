@@ -157,7 +157,7 @@ const PriceReports = ({ kind }: { kind: Kind }) => {
 
       {/* ?search= matches the comment, the product name and the variant SKU. */}
       <FilterToolbar
-        searchPlaceholder="Search comment, product or SKU…"
+        searchPlaceholder="Search code, comment, product or SKU…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={filters}

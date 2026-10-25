@@ -143,6 +143,7 @@ export interface LowStockItem {
   variant_id: string
   variant_sku: string
   product_name: string
+  product_code: string
   quantity_on_hand: number
   quantity_reserved: number
   available: number

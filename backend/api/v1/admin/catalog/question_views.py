@@ -49,6 +49,7 @@ class AdminProductQuestionListView(CatalogPermissionMixin, GenericListAPIView):
 
     serializer_class = AdminProductQuestionSerializer
     search_fields = ("question", "answer", "product__name")
+    product_code_field = "product__product_code"
     ordering_fields = ("created_at", "answered_at")
     default_ordering = "-created_at"
 

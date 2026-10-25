@@ -130,6 +130,7 @@ class AdminProductVariantListCreateView(CatalogPermissionMixin, APIView):
 class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIView):
     serializer_class = ProductVariantSerializer
     search_fields = VARIANT_SEARCH_FIELDS
+    product_code_field = "product__product_code"
     ordering_fields = ("sku", "price", "created_at")
     default_ordering = "sku"
 
@@ -269,7 +270,14 @@ class AdminVariantExportView(APIView):
         category_type = get_choice(params, "category_type", Category.CategoryType.values)
         queryset = variants_list(product=product, category=category, category_type=category_type)
         content = export_variants(
-            filter_search(queryset, request, VARIANT_SEARCH_FIELDS), fmt=fmt, kind=category_type
+            filter_search(
+                queryset,
+                request,
+                VARIANT_SEARCH_FIELDS,
+                product_code_field="product__product_code",
+            ),
+            fmt=fmt,
+            kind=category_type,
         )
         content_type = (
             "text/csv"

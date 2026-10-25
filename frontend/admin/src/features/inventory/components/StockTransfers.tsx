@@ -110,7 +110,7 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
       />
 
       <FilterToolbar
-        searchPlaceholder="Search transfer number, note or SKU…"
+        searchPlaceholder="Search code, transfer number, note or SKU…"
         searchValue={list.search}
         onSearchChange={list.setSearch}
         filters={[

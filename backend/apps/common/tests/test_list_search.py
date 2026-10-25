@@ -55,6 +55,48 @@ def test_stock_item_search_filters_by_variant_sku(admin_client):
     assert len(results) == 1
 
 
+def test_stock_item_search_by_product_code_finds_that_product_only(admin_client):
+    wanted = ProductVariantFactory()
+    code = wanted.product.product_code
+    StockItemFactory(variant=wanted)
+    # Another product whose SKU happens to contain the same digits.
+    StockItemFactory(variant=ProductVariantFactory(sku=f"OTHER-{code}"))
+
+    results = _results(admin_client.get("/api/v1/admin/inventory/stock-items/", {"search": code}))
+
+    assert [str(row["variant_id"]) for row in results] == [str(wanted.id)]
+
+
+def test_product_search_by_code_finds_that_product_only(admin_client):
+    wanted = ProductFactory()
+    ProductFactory(name=f"Other {wanted.product_code}")
+
+    results = _results(
+        admin_client.get("/api/v1/admin/catalog/products/", {"search": wanted.product_code})
+    )
+
+    assert [row["id"] for row in results] == [str(wanted.id)]
+
+
+def test_variant_search_by_code_finds_that_products_variants_only(admin_client):
+    wanted = ProductVariantFactory()
+    code = wanted.product.product_code
+    ProductVariantFactory(sku=f"OTHER-{code}")
+
+    results = _results(admin_client.get("/api/v1/admin/catalog/variants/", {"search": code}))
+
+    assert [row["id"] for row in results] == [str(wanted.id)]
+
+
+def test_stock_item_search_by_code_of_a_product_without_stock_finds_nothing(admin_client):
+    code = ProductVariantFactory().product.product_code
+    StockItemFactory(variant=ProductVariantFactory(sku=f"OTHER-{code}"))
+
+    results = _results(admin_client.get("/api/v1/admin/inventory/stock-items/", {"search": code}))
+
+    assert results == []
+
+
 def test_ledger_entry_search_filters_by_variant_sku(admin_client):
     StockLedgerEntryFactory(variant=ProductVariantFactory(sku="NEEDLE-LEDGER"))
     StockLedgerEntryFactory(variant=ProductVariantFactory(sku="OTHER-LEDGER"))

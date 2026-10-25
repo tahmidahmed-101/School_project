@@ -62,6 +62,7 @@ class AdminPriceReportListView(CatalogPermissionMixin, GenericListAPIView):
 
     serializer_class = AdminPriceReportSerializer
     search_fields = ("comment", "product__name", "variant__sku")
+    product_code_field = "product__product_code"
     ordering_fields = ("created_at", "status")
     default_ordering = "-created_at"
 

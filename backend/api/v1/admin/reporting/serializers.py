@@ -16,6 +16,7 @@ class LowStockItemSerializer(serializers.Serializer):
     variant_sku = serializers.CharField(source="variant.sku", read_only=True)
     variant_title = VariantTitleField()
     product_name = serializers.CharField(source="variant.product.name", read_only=True)
+    product_code = serializers.CharField(source="variant.product.product_code", read_only=True)
     quantity_on_hand = serializers.IntegerField()
     quantity_reserved = serializers.IntegerField()
     available = serializers.IntegerField()

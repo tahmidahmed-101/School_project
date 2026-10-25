@@ -98,6 +98,7 @@ class AdminStockItemListView(GenericListAPIView):
         "variant__barcode",
         "variant__product__name",
     )
+    product_code_field = "variant__product__product_code"
     ordering_fields = ("quantity_on_hand", "created_at")
     default_ordering = "-created_at"
 
@@ -155,6 +156,7 @@ class LedgerQuerysetMixin:
     """Shared so the CSV export cannot drift from what the list endpoint shows."""
 
     search_fields = ("variant__sku", "variant__product__name", "notes")
+    product_code_field = "variant__product__product_code"
     ordering_fields = ("created_at",)
     default_ordering = "-created_at"
 
@@ -454,6 +456,7 @@ class AdminStockTransferListCreateView(InventoryPermissionMixin, GenericListAPIV
 
     serializer_class = StockTransferSerializer
     search_fields = ("transfer_number", "notes", "lines__variant__sku")
+    product_code_field = "lines__variant__product__product_code"
     ordering_fields = ("created_at",)
     default_ordering = "-created_at"
 

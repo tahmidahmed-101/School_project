@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import Any
 
+from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.db.models import Q, QuerySet
@@ -32,9 +33,30 @@ def apply_ordering(
     return queryset
 
 
-def filter_search(queryset: QuerySet, request, search_fields: Iterable[str] = ()) -> QuerySet:
+def filter_search(
+    queryset: QuerySet,
+    request,
+    search_fields: Iterable[str] = (),
+    *,
+    product_code_field: str | None = None,
+) -> QuerySet:
+    """`?search=` as a case-insensitive substring match on `search_fields`.
+
+    On a list of product rows (or rows that point at a product), name the path to
+    the product code in `product_code_field`: a search that is exactly some
+    product's code then lists that product's rows only. A substring match would
+    also pull in other products whose SKU or name happens to hold the same digits,
+    and a product with no rows here gives an empty list rather than someone else's.
+    """
     search = get_search(request.query_params)
-    if not search or not search_fields:
+    if not search:
+        return queryset
+    if product_code_field:
+        code = search.strip()
+        Product = apps.get_model("catalog", "Product")
+        if Product.objects.filter(product_code=code).exists():
+            return queryset.filter(**{product_code_field: code}).distinct()
+    if not search_fields:
         return queryset
     query = Q()
     for field in search_fields:
@@ -98,6 +120,8 @@ class GenericListAPIView(APIView):
     serializer_class: type | None = None
     queryset_fn: Callable[[], QuerySet] | None = None
     search_fields: Iterable[str] = ()
+    # Path to the product code on a list of product rows; see `filter_search`.
+    product_code_field: str | None = None
     ordering_fields: Iterable[str] = ()
     default_ordering: str | None = None
     pagination_class = DefaultPageNumberPagination
@@ -108,7 +132,9 @@ class GenericListAPIView(APIView):
         return self.queryset_fn()
 
     def filter_search(self, queryset: QuerySet, request) -> QuerySet:
-        return filter_search(queryset, request, self.search_fields)
+        return filter_search(
+            queryset, request, self.search_fields, product_code_field=self.product_code_field
+        )
 
     def apply_ordering(self, queryset: QuerySet, request) -> QuerySet:
         return apply_ordering(
