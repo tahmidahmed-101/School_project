@@ -6,6 +6,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
+from apps.accounts.factories import CustomerUserFactory
 from apps.business.models import BusinessProfile
 from apps.business.selectors.business_profile import get_business_profile
 from apps.orders.factories import PaymentFactory, SalesOrderFactory, SalesOrderLineFactory
@@ -94,3 +95,22 @@ def test_tracking_tells_a_preorder_apart_and_shows_what_is_paid(api_client, cust
     assert data["order_type"] == "preorder"
     assert data["paid_total"] == "300.00"
     assert data["balance_due"] == "700.00"
+
+
+def test_customer_tracks_their_own_order_without_a_phone(api_client, customer_user):
+    api_client.force_authenticate(user=customer_user)
+    order = _order(customer_user, SalesOrder.OrderType.STOCK)
+
+    response = api_client.get(f"{HISTORY}{order.id}/track/")
+
+    assert response.status_code == 200, response.data
+    assert response.data["data"]["order_number"] == order.order_number
+
+
+def test_customer_cannot_track_someone_elses_order(api_client, customer_user):
+    api_client.force_authenticate(user=customer_user)
+    order = _order(CustomerUserFactory(), SalesOrder.OrderType.STOCK)
+
+    response = api_client.get(f"{HISTORY}{order.id}/track/")
+
+    assert response.status_code == 404

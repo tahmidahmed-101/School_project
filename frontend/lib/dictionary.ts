@@ -127,6 +127,7 @@ export const DICT = {
   // Hero
   heroCategoriesTitle: { en: "Shop by Category", bn: "ক্যাটাগরি দেখুন" },
   heroWelcomeTitle: { en: "Welcome to Kull Mart", bn: "কুল মার্টে স্বাগতম" },
+  heroMyAccount: { en: "My account", bn: "আমার অ্যাকাউন্ট" },
   heroWelcomeSubtitle: {
     en: "Women's fashion, innerwear, kids & gadgets",
     bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
@@ -184,7 +185,11 @@ export const DICT = {
   off: { en: "off", bn: "ছাড়" },
   promotionPopupOpen: { en: "See the offer", bn: "অফারটি দেখুন" },
   category: { en: "Category", bn: "ক্যাটাগরি" },
-  description: { en: "Description", bn: "বিবরণ" },
+  productDetails: { en: "Product details", bn: "পণ্যের বিবরণ" },
+  bundleItemsTitle: { en: "Items in this combo", bn: "এই কম্বোতে যা আছে" },
+  bundleItem: { en: "Item", bn: "পণ্য" },
+  bundleQuantity: { en: "Qty", bn: "পরিমাণ" },
+  bundlePrice: { en: "Price", bn: "দাম" },
   specifications: { en: "Specifications", bn: "বৈশিষ্ট্য ও বিবরণ" },
   highlights: { en: "Product highlights", bn: "মূল সুবিধাসমূহ" },
   relatedProducts: { en: "Related products", bn: "সম্পর্কিত পণ্য" },

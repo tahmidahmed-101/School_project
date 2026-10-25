@@ -171,7 +171,7 @@ function OrderList({ kind, emptyKey }: { kind: OrderKind; emptyKey: (typeof TABS
                   <span className="text-fg-muted">
                     {ui("ordersTotal")}: <strong className="text-fg">{money(Number(order.grand_total))}</strong>
                   </span>
-                  <Link href="/track-order" prefetch={false} className={linkClass}>
+                  <Link href={`/track-order?order=${order.id}`} prefetch={false} className={linkClass}>
                     {ui("ordersTrack")}
                   </Link>
                 </div>

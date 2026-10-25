@@ -86,7 +86,7 @@ test.describe("Catalog", () => {
     await row.getByRole("cell").nth(2).click()
     await expect(page).toHaveURL(/\/product_detail\//)
     await expectPageHeading(page, name)
-    await expect(page.getByText("Description", { exact: true })).toBeVisible()
+    await expect(page.getByText("Product details", { exact: true })).toBeVisible()
   })
 
   test("new product form shows validation errors on empty submit", async ({ adminPage: page }) => {

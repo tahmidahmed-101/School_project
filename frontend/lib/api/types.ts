@@ -129,6 +129,24 @@ export interface ApiProduct {
   show_price_report?: boolean;
 }
 
+/** One item of a combo. `price` is the item's own unit price; `quantity` units of it come in the combo. */
+export interface ApiBundleItem {
+  quantity: number;
+  price: string;
+  product: { id: string; slug: string; name: string; category_id: string; image: string | null };
+}
+
+/** GET /catalog/bundles/{slug}/ — a combo product (product_type "bundle") with the items it is made of. */
+export interface ApiBundle {
+  id: string;
+  slug: string;
+  name: string;
+  price: string;
+  /** The higher of the combo's list price and buying its items separately. */
+  original_price: string;
+  components: ApiBundleItem[];
+}
+
 export interface ApiReview {
   id: string;
   customer_name: string;

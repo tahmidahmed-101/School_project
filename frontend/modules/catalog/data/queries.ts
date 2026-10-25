@@ -1,6 +1,6 @@
 import { CACHE_LIFE, CACHE_TAGS } from "@/lib/cache";
 import { apiRequest, fetchAllPages } from "@/lib/api/client";
-import type { ApiCategory, ApiProduct, ApiReviewPage, ProductListParams } from "@/lib/api/types";
+import type { ApiBundle, ApiCategory, ApiProduct, ApiReviewPage, ProductListParams } from "@/lib/api/types";
 
 /** Server-side cache for catalogue reads. Pages revalidate in the background after CACHE_LIFE.catalog. */
 const CACHE = { revalidate: CACHE_LIFE.catalog, tags: [CACHE_TAGS.catalog] };
@@ -15,6 +15,10 @@ export const listAllProducts = (params: Omit<ProductListParams, "page" | "page_s
 /** GET /catalog/products/{slug}/ */
 export const getProduct = (slug: string) =>
   apiRequest<ApiProduct>(`/catalog/products/${encodeURIComponent(slug)}/`, CACHE);
+
+/** GET /catalog/bundles/{slug}/ — a combo's items; the slug is the combo product's own. */
+export const getBundle = (slug: string) =>
+  apiRequest<ApiBundle>(`/catalog/bundles/${encodeURIComponent(slug)}/`, CACHE);
 
 /** GET /catalog/products/{slug}/related/ — "you may also like", ranked by the API (same category and brand first). */
 export const getRelatedProducts = (slug: string, limit: number) =>

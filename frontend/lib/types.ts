@@ -54,6 +54,16 @@ export interface ProductSale {
   endsAt?: T;
 }
 
+/** One item inside a combo product. */
+export interface BundleItem {
+  slug: string;
+  name: T;
+  image: string;
+  quantity: number;
+  /** Price of one unit when bought on its own. */
+  unitPrice: number;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -96,6 +106,8 @@ export interface Product {
   /** False when staff turned the Questions / Price report sections off for this product (detail endpoint only). */
   showQuestions?: boolean;
   showPriceReport?: boolean;
+  /** What a combo is made of (detail endpoint only); undefined for an ordinary product. */
+  bundleItems?: BundleItem[];
   /** Which shop the product belongs to, from its category. */
   kind: "stock" | "preorder";
   // Pre-order attributes

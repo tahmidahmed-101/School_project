@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Clock, Gift, Sparkles, Store } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { shopListing, type ProductKind } from "@/lib/product";
+import { firstName, useAuth } from "@/modules/auth";
 
 const QUICK_LINKS = [
   {
@@ -38,6 +39,7 @@ const QUICK_LINKS = [
 /** Welcome card + quick-link stack on the right of the hero on desktop; every tile stays in the page's own shop. */
 export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind: ProductKind }) {
   const { ui } = useLang();
+  const { status, user } = useAuth();
   const links = QUICK_LINKS.flatMap((link) => {
     const to = link.href[kind];
     return to && (hasOffers || link.id !== "promotion") ? [{ ...link, to }] : [];
@@ -50,23 +52,36 @@ export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind
           <Store className="h-4 w-4 text-brand-700" />
         </span>
         <div>
-          <h2 className="ts-display text-sm font-extrabold leading-tight text-white">{ui("heroWelcomeTitle")}</h2>
+          <h2 className="ts-display text-sm font-extrabold leading-tight text-white">
+            {user ? [ui("accountWelcome"), firstName(user)].filter(Boolean).join(", ") : ui("heroWelcomeTitle")}
+          </h2>
           <p className="mt-0.5 line-clamp-1 text-2xs text-white/70">{ui("heroWelcomeSubtitle")}</p>
         </div>
-        <div className="flex w-full flex-col gap-1.5">
+        {user ? (
+          // The account page lives at /login: it shows the account to a signed-in customer.
           <Link
             href="/login"
-            className="flex items-center justify-center rounded-full bg-gold-400 px-3 py-2 text-2xs font-bold text-ink-950 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-gold-300 active:scale-[0.98]"
+            className="flex w-full items-center justify-center rounded-full bg-gold-400 px-3 py-2 text-2xs font-bold text-ink-950 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-gold-300 active:scale-[0.98]"
           >
-            {ui("loginTitle")}
+            {ui("heroMyAccount")}
           </Link>
-          <Link
-            href="/register"
-            className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-2 text-2xs font-bold text-white ring-1 ring-inset ring-white/30 transition-all duration-200 hover:bg-white/20"
-          >
-            {ui("registerTitle")}
-          </Link>
-        </div>
+        ) : (
+          // Hidden while the session is restored, so a signed-in customer never sees the buttons flash.
+          <div className={`flex w-full flex-col gap-1.5 ${status === "loading" ? "invisible" : ""}`}>
+            <Link
+              href="/login"
+              className="flex items-center justify-center rounded-full bg-gold-400 px-3 py-2 text-2xs font-bold text-ink-950 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-gold-300 active:scale-[0.98]"
+            >
+              {ui("loginTitle")}
+            </Link>
+            <Link
+              href="/register"
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-2 text-2xs font-bold text-white ring-1 ring-inset ring-white/30 transition-all duration-200 hover:bg-white/20"
+            >
+              {ui("registerTitle")}
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2">

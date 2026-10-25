@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { CheckCircle2, ClipboardList, MapPin, Package, PackageCheck, Search, Truck, XCircle } from "lucide-react";
+import { useAuth } from "@/modules/auth";
 import { ContactButtons } from "@/modules/catalog";
 import { shortDate } from "@/lib/date";
 import { useLang } from "@/lib/i18n";
@@ -11,6 +12,7 @@ import { preorderStageLabel } from "@/lib/preorder-stages";
 import { errorKey } from "@/lib/api/errors";
 import type { ApiTrackOrder, ApiTrackStatus } from "@/lib/api/types";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
+import { Loader } from "@/design-system/patterns/Loader";
 import { Button } from "@/design-system/ui/Button";
 import { Container } from "@/design-system/ui/Container";
 import { PageHeader } from "@/design-system/ui/PageHeader";
@@ -28,15 +30,45 @@ const STAGES = [
   { status: "Delivered", labelKey: "trackStageDelivered", icon: PackageCheck },
 ] as const satisfies readonly { status: ApiTrackStatus; labelKey: string; icon: unknown }[];
 
-export function TrackOrderView() {
+/** `orderId` comes from the account page's "Track order" link: that order is shown without typing anything. */
+export function TrackOrderView({ orderId }: { orderId?: string }) {
   const { lang, t, ui, money } = useLang();
+  const { status, user, authRequest } = useAuth();
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(Boolean(orderId));
   const [result, setResult] = useState<ApiTrackOrder | null>(null);
 
   const formatDate = (iso: string) => shortDate(iso, lang);
+
+  // A signed-in customer's own order is looked up by its id; a guest (or a failed lookup) gets the form.
+  useEffect(() => {
+    if (!orderId || status === "loading") return;
+    if (status !== "authenticated") {
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    authRequest<ApiTrackOrder>(`/orders/${encodeURIComponent(orderId)}/track/`)
+      .then((order) => {
+        if (cancelled) return;
+        setResult(order);
+        setOrderNumber(order.order_number);
+        setPhone(user?.phone ?? "");
+      })
+      .catch((error) => {
+        if (!cancelled) setErrorMsg(ui(errorKey(error)));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // `user` and `ui` are read for the result only; the lookup runs once per order and session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, status, authRequest]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,41 +118,50 @@ export function TrackOrderView() {
   const carrierShipments = result?.shipments.filter((shipment) => shipment.carrier_name) ?? [];
 
   const breadcrumbs = [{ label: ui("navTrackOrder") }];
+  // Opened from the account page and not (yet) failed: the order is shown without the form.
+  const fromAccount = Boolean(orderId) && !errorMsg && (isLoading || result !== null);
 
   return (
     <div className="min-h-screen bg-canvas py-8 sm:py-12">
       <Container width="compact">
         <PageHeader breadcrumbs={<Breadcrumbs className="mb-4" items={breadcrumbs} />} title={ui("trackOrderTitle")} />
 
-        <form onSubmit={handleSubmit} className={cardClass("surface", "shadow-xs space-y-4 p-5")}>
-          {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
+        {fromAccount && isLoading ? (
+          <div role="status" className="flex items-center gap-2 text-xs text-fg-muted">
+            <Loader variant="inline" />
+            <span>{ui("loading")}</span>
+          </div>
+        ) : fromAccount ? null : (
+          <form onSubmit={handleSubmit} className={cardClass("surface", "shadow-xs space-y-4 p-5")}>
+            {errorMsg && <FormAlert>{errorMsg}</FormAlert>}
 
-          <FormField htmlFor="track-order-number" label={ui("orderNumberLabel")}>
-            <input
-              id="track-order-number"
-              type="text"
-              value={orderNumber}
-              onChange={(e) => setOrderNumber(e.target.value)}
-              placeholder={ui("trackOrderNumberPlaceholder")}
-              className={INPUT_CLASS}
-            />
-          </FormField>
+            <FormField htmlFor="track-order-number" label={ui("orderNumberLabel")}>
+              <input
+                id="track-order-number"
+                type="text"
+                value={orderNumber}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                placeholder={ui("trackOrderNumberPlaceholder")}
+                className={INPUT_CLASS}
+              />
+            </FormField>
 
-          <FormField htmlFor="track-order-phone" label={ui("checkoutPhone")}>
-            <input
-              id="track-order-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01XXX-XXXXXX"
-              className={INPUT_CLASS}
-            />
-          </FormField>
+            <FormField htmlFor="track-order-phone" label={ui("checkoutPhone")}>
+              <input
+                id="track-order-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="01XXX-XXXXXX"
+                className={INPUT_CLASS}
+              />
+            </FormField>
 
-          <Button type="submit" size="lg" fullWidth loading={isLoading} leadingIcon={<Search className="h-4 w-4" />}>
-            {ui("trackOrderSubmit")}
-          </Button>
-        </form>
+            <Button type="submit" size="lg" fullWidth loading={isLoading} leadingIcon={<Search className="h-4 w-4" />}>
+              {ui("trackOrderSubmit")}
+            </Button>
+          </form>
+        )}
 
         {result && (
           <div className={cardClass("canvas", "shadow-xs mt-6 space-y-5 p-5")}>

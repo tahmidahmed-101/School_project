@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.v1.public.tracking.serializers import PublicTrackOrderSerializer
 from apps.accounts.selectors.addresses import get_address_for_user
 from apps.catalog.selectors.products import get_variant_by_id
 from apps.common.exceptions import DomainError
@@ -418,6 +419,21 @@ class OrderDetailView(APIView):
         if order is None:
             return not_found("order_not_found", "Order not found.")
         return Response({"data": SalesOrderSerializer(order).data, "message": "Success"})
+
+
+@extend_schema(tags=["Orders"])
+class OrderTrackView(APIView):
+    """Tracking for one of the customer's own orders: the same answer as the
+    public order-number + phone lookup, without asking for either."""
+
+    serializer_class = PublicTrackOrderSerializer
+    permission_classes: ClassVar[list] = [IsCustomer]
+
+    def get(self, request, order_id) -> Response:
+        order = _own_order_or_404(request, order_id)
+        if order is None:
+            return not_found("order_not_found", "Order not found.")
+        return Response({"data": PublicTrackOrderSerializer(order).data, "message": "Success"})
 
 
 @extend_schema(tags=["Orders"])
