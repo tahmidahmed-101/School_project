@@ -157,7 +157,7 @@ export function BasicsCard({
 
         <TextareaField
           className="md:col-span-2"
-          label="Description"
+          label="Product details"
           id="description"
           rows={8}
           error={errors.description}

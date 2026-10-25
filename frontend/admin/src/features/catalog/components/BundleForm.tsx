@@ -234,7 +234,7 @@ const BundleForm = () => {
             <TextField label="Barcode" id="barcode" error={errors.barcode} {...register("barcode")} />
             <TextareaField
               className="md:col-span-2"
-              label="Description"
+              label="Product details"
               id="description"
               rows={3}
               {...register("description")}

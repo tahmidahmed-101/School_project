@@ -305,7 +305,7 @@ const ProductDetail = () => {
             {product.description && (
               <section className="min-w-0">
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                  <ScrollText className="size-4 text-primary" /> Description
+                  <ScrollText className="size-4 text-primary" /> Product details
                 </h3>
                 <p className="whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground">
                   {product.description}
