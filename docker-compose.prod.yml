@@ -4,7 +4,7 @@ name: kull-mart-api
 
 x-api: &api
   build: ./backend
-  image: kull-mart-api:latest
+  image: kull-mart-api:${IMAGE_TAG:-latest}
   restart: unless-stopped
   env_file: .env
   environment:

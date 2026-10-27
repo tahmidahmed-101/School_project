@@ -2,7 +2,7 @@
 # Deploy the Django API (api.kullmart.com) to the shared edge VPS.
 #
 # Usage:
-#   deploy/deploy-api.sh              # rsync, build, start, vhost, smoke test
+#   deploy/deploy-api.sh              # build the image here, ship it, start, vhost, smoke test
 #   SKIP_VHOST=1 deploy/deploy-api.sh # rebuild/restart only, don't touch Caddy
 set -euo pipefail
 
@@ -15,7 +15,9 @@ HEALTH_PORT=4361
 SITE_HOST="${SITE_HOST:-api.kullmart.com}"
 SKIP_VHOST="${SKIP_VHOST:-0}"
 
-ssh_run() { ssh -p "$SSH_PORT" -i "$SSH_KEY" "$SSH_HOST" "$@"; }
+source "$(dirname "$0")/deploy-ship.sh"
+ssh_opts
+ssh_run() { ssh "${SSH_OPTS[@]}" "$SSH_HOST" "$@"; }
 
 step() { printf '\n\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!! \033[0m%s\n' "$*" >&2; }
@@ -25,7 +27,7 @@ cd "$(dirname "$0")/.."
 LOCAL_ROOT="$(pwd)"
 
 step "Local pre-flight"
-git diff --quiet -- backend docker-compose.prod.yml || warn "Uncommitted backend changes: rsync ships disk, not HEAD."
+git diff --quiet -- backend docker-compose.prod.yml || warn "Uncommitted backend changes: the image is built from disk, not HEAD."
 echo "  target: $SSH_HOST:$REMOTE_DIR"
 
 step "Verify SSH, docker, edge network and .env on the VPS"
@@ -36,16 +38,16 @@ ssh_run "test -f '$REMOTE_DIR/.env'" || die "$REMOTE_DIR/.env missing: copy depl
 resolved=$(dig +short "$SITE_HOST" | head -1)
 [[ "$resolved" == "169.58.218.225" ]] || warn "$SITE_HOST resolves to '${resolved:-nothing}', not 169.58.218.225 (DNS-only): Caddy cannot issue a certificate until it does"
 
-step "Sync backend via rsync"
-rsync -az --delete \
-    --exclude '.env' --exclude '.venv' --exclude '__pycache__' --exclude 'db.sqlite3' \
-    --exclude '/media' --exclude '/staticfiles' --exclude '/logs' --exclude '*.log' \
-    -e "ssh -p $SSH_PORT -i $SSH_KEY" \
-    "$LOCAL_ROOT/backend/" "$SSH_HOST:$REMOTE_DIR/backend/"
-rsync -az -e "ssh -p $SSH_PORT -i $SSH_KEY" "$LOCAL_ROOT/docker-compose.prod.yml" "$SSH_HOST:$REMOTE_DIR/"
+step "Sync compose file"
+rsync -az -e "ssh ${SSH_OPTS[*]}" "$LOCAL_ROOT/docker-compose.prod.yml" "$SSH_HOST:$REMOTE_DIR/"
 
-step "Build + start"
-ssh_run "cd '$REMOTE_DIR' && docker compose -f docker-compose.prod.yml up -d --build --remove-orphans db api"
+step "Build image locally"
+TAG="$(deploy_tag)"
+DOCKER_BUILDKIT=1 docker build -t "kull-mart-api:$TAG" "$LOCAL_ROOT/backend"
+step "Ship $TAG + start"
+PREV="$(running_tag kull-mart-api "$SSH_HOST")"
+ship_image "kull-mart-api:$TAG" "$SSH_HOST"
+ssh_run "cd '$REMOTE_DIR' && IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans db api"
 # SECURE_SSL_REDIRECT is on, so the health probe presents itself as Caddy would.
 ssh_run "
 ok=0
@@ -62,7 +64,7 @@ fi
 if [[ "$SKIP_VHOST" != "1" ]]; then
     step "Push Caddy vhost + reload (locked against concurrent edge deploys)"
     scp -P "$SSH_PORT" -i "$SSH_KEY" "$LOCAL_ROOT/deploy/kullmart-api.caddy" "$SSH_HOST:/tmp/kullmart-api.caddy"
-    "$EDGE_REPO/scripts/with-edge-lock.sh" "$SSH_HOST" -p "$SSH_PORT" -i "$SSH_KEY" -- bash -s <<'REMOTE'
+    "$EDGE_REPO/scripts/with-edge-lock.sh" "$SSH_HOST" "${SSH_OPTS[@]}" -- bash -s <<'REMOTE'
 set -euo pipefail
 cp /tmp/kullmart-api.caddy /home/arif/website/edge/sites/kullmart-api.caddy
 docker run --rm -v /home/arif/website/edge/Caddyfile:/etc/caddy/Caddyfile:ro \
@@ -76,6 +78,9 @@ fi
 
 source "$LOCAL_ROOT/deploy/release-tag.sh"
 record_release prod || true
+
+prune_old_tags kull-mart-api "$TAG" "$PREV" "$SSH_HOST"
+prune_old_tags kull-mart-api "$TAG" "$PREV"
 
 step "Smoke test"
 for i in 1 2 3 4 5 6; do
