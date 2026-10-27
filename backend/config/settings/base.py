@@ -297,7 +297,7 @@ CACHES = {
         }
         if config("REDIS_URL", default="")
         else {
-            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "BACKEND": "apps.common.cache.UpsertDatabaseCache",
             "LOCATION": "django_cache",
         }
     )
