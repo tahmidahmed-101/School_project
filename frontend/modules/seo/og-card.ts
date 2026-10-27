@@ -1,7 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-export const OG_WIDTH = 1200;
-export const OG_HEIGHT = 630;
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
 // Mirrors --color-ink-50 in globals.css; the image service cannot read CSS variables.
 const CANVAS_COLOR = "#f6f9f5";
 const OG_CACHE_SECONDS = 3600; // CACHE_LIFE.seoFeeds in lib/cache.ts
@@ -17,7 +17,7 @@ interface ImagesBinding {
   };
 }
 
-function failure(status: number, message: string): Response {
+export function failure(status: number, message: string): Response {
   return new Response(message, { status, headers: { "Cache-Control": "no-store" } });
 }
 

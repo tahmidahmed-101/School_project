@@ -10,6 +10,8 @@ interface Env {
   CF_VERSION_METADATA?: { id: string };
 }
 
+const defaultCache = () => (caches as unknown as { default: Cache }).default;
+
 function pageCacheKey(request: Request, env: Env): Request | null {
   if (request.method !== "GET") return null;
   const url = new URL(request.url);
@@ -22,8 +24,9 @@ function pageCacheKey(request: Request, env: Env): Request | null {
 
 // A share card costs a photo fetch and a render; the route's own Cache-Control only reaches the browser, so keep it here.
 async function cachedOgCard(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const cache = (caches as unknown as { default: Cache }).default;
-  const key = new Request(request.url);
+  const cache = defaultCache();
+  const { origin, pathname } = new URL(request.url);
+  const key = new Request(`${origin}${pathname}`);
   const hit = await cache.match(key);
   if (hit) return hit;
   const response = await openNext.fetch(request, env, ctx);
@@ -39,7 +42,7 @@ export default {
     const key = pageCacheKey(request, env);
     if (!key) return openNext.fetch(request, env, ctx);
 
-    const cache = (caches as unknown as { default: Cache }).default;
+    const cache = defaultCache();
     const hit = await cache.match(key);
     if (hit) {
       const fresh = new Response(hit.body, hit);

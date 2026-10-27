@@ -1,2 +1,2 @@
 // Server-only public API of this module.
-export { ogCardResponse } from "./og-card";
+export { failure, ogCardResponse } from "./og-card";

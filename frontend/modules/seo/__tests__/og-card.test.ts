@@ -41,7 +41,7 @@ describe("ogCardResponse", () => {
     expect((await ogCardResponse("https://api.example.com/p.webp")).status).toBe(502);
   });
 
-  it("pads the photo onto a 1200x630 canvas and caches the result", async () => {
+  it("pads the photo onto a 1200x630 canvas as a JPEG with a one-hour Cache-Control", async () => {
     const { images, transform } = binding(async () => ({ response: () => new Response("jpeg") }));
     env.IMAGES = images;
     vi.spyOn(globalThis, "fetch").mockResolvedValue(photoResponse());

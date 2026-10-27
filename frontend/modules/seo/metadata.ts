@@ -47,8 +47,9 @@ const MIN_DESCRIPTION = 50;
 /** Meta description from the product's own text; a record with only a word or two gets the store's standard sentence after it. */
 export function productDescription(product: Pick<Product, "name" | "tagline" | "description">): string {
   const own = (product.description.en || product.tagline.en || product.name.en).replace(/\s+/g, " ").trim();
+  if (!own) return "";
   if (own.length >= MIN_DESCRIPTION) return truncate(own);
-  return `${own.replace(/[\s.,;:-]+$/, "")}. Order online from ${SITE_NAME} with delivery all across Bangladesh.`;
+  return `${own.replace(/[\s.,;:!?…-]+$/, "")}. Order online from ${SITE_NAME} with delivery all across Bangladesh.`;
 }
 
 interface SocialOptions {

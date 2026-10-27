@@ -72,6 +72,12 @@ describe("productDescription", () => {
     expect(result.length).toBeGreaterThanOrEqual(50);
   });
 
+  it("drops trailing ! ? and ellipsis before the store sentence, and returns nothing for an empty record", () => {
+    const blank = { en: "", bn: "" };
+    expect(productDescription(makeProduct({ description: { en: "Wow!?…", bn: "" } }))).toMatch(/^Wow\. Order online/);
+    expect(productDescription(makeProduct({ name: blank, description: blank, tagline: blank }))).toBe("");
+  });
+
   it("falls back to the tagline, then the name, when there is no description", () => {
     const blank = { en: "", bn: "" };
     expect(productDescription(makeProduct({ description: blank, tagline: { en: "Glass bangles", bn: "" } }))).toMatch(
