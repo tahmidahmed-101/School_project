@@ -6,7 +6,7 @@
 record_release() (
   local target=${1:-prod} given=${2:-} root sha tag day l dirty="" pushed=0 log
   [ "${RELEASE_TAG:-1}" = 0 ] && return 0
-  root=$(git rev-parse --show-toplevel 2>/dev/null) || return 0
+  root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null) || return 0
   cd "$root" || return 0
   log=docs/DEPLOYS.md
 
