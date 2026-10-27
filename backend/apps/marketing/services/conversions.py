@@ -25,6 +25,7 @@ from apps.marketing.selectors.conversions import deliverable_conversion_events, 
 from apps.marketing.services.conversion_providers import (
     BrowserContext,
     ConversionDeliveryError,
+    ConversionSkippedError,
     PurchaseFacts,
     send_ga4,
     send_meta,
@@ -136,10 +137,11 @@ def _currency_code() -> str:
 
 def deliver_conversion_events(event_ids: Iterable[UUID]) -> int:
     """Send these rows, each at most once at a time. Returns how many reached
-    their provider. Never raises: a failure is recorded on the row and left
-    for the retry run. Callers run it after the commit (`record_purchase`'s
-    hook, the management command), so no row lock is held while a provider
-    answers; each row update here is its own autocommit statement.
+    their provider (a skipped row is not counted). Never raises: a failure is
+    recorded on the row and left for the retry run. Callers run it after the
+    commit (`record_purchase`'s hook, the management command), so no row lock
+    is held while a provider answers; each row update here is its own
+    autocommit statement.
 
     Credentials are read once per call, at send time, so a GA4 or Meta
     setting changed in the dashboard applies to the next send and retry."""
@@ -170,6 +172,14 @@ def deliver_conversion_events(event_ids: Iterable[UUID]) -> int:
             if currency is None:
                 currency = _currency_code()
             _SENDERS[event.provider](_facts(event, order, currency), provider_credentials)
+        except ConversionSkippedError as skip:
+            ConversionEvent.objects.filter(pk=event.pk).update(
+                status=ConversionEvent.Status.SKIPPED,
+                attempts=attempts,
+                last_error=str(skip)[:500],
+                updated_at=timezone.now(),
+            )
+            continue
         except Exception as exc:
             message = str(exc) if isinstance(exc, ConversionDeliveryError) else type(exc).__name__
             if not isinstance(exc, ConversionDeliveryError):

@@ -41,6 +41,10 @@ class ConversionDeliveryError(Exception):
     safe to store and log: it never carries a credential."""
 
 
+class ConversionSkippedError(Exception):
+    """The event is not sent because this provider would misattribute it."""
+
+
 @dataclass(frozen=True)
 class BrowserContext:
     fbp: str
@@ -76,9 +80,12 @@ def _money(value: Decimal) -> float:
 def ga4_purchase_payload(facts: PurchaseFacts) -> dict:
     """The order's own totals, unchanged: `value` is the grand total charged.
 
-    The browser's `_ga` client id ties the purchase to its visit when checkout
-    stored it; without one the client id is derived from the order, and GA4
-    still counts the purchase and its revenue."""
+    The browser's `_ga` client id ties the purchase to its visit. Without one
+    the purchase is skipped: a made-up client id would count a visitor who
+    never came."""
+    ga_client_id = facts.context.ga_client_id if facts.context else ""
+    if not ga_client_id:
+        raise ConversionSkippedError("No _ga client id was stored at checkout.")
     event: dict = {
         "name": "purchase",
         "params": {
@@ -101,14 +108,19 @@ def ga4_purchase_payload(facts: PurchaseFacts) -> dict:
     }
     if facts.coupon:
         event["params"]["coupon"] = facts.coupon
-    client_id = (facts.context.ga_client_id if facts.context else "") or f"server.{facts.order_id}"
-    payload: dict = {"client_id": client_id, "events": [event]}
+    payload: dict = {"client_id": ga_client_id, "events": [event]}
     if timezone.now() - facts.occurred_at <= GA4_MAX_BACKDATE:
         payload["timestamp_micros"] = int(facts.occurred_at.timestamp() * 1_000_000)
     return payload
 
 
 def meta_purchase_payload(facts: PurchaseFacts, *, test_event_code: str = "") -> dict:
+    # Meta deduplicates against the pixel's Purchase only for a "website" event,
+    # which needs the browser's user agent and the page address. A
+    # "system_generated" one is never deduplicated, so the sale would count twice.
+    context = facts.context
+    if not (context and context.user_agent and context.source_url):
+        raise ConversionSkippedError("No user agent and page address were stored.")
     # Pseudonymous and not reversible to contact details; the order id stands
     # in when an order has no customer row.
     external_id = hashlib.sha256((facts.customer_id or facts.order_id).encode()).hexdigest()
@@ -117,7 +129,8 @@ def meta_purchase_payload(facts: PurchaseFacts, *, test_event_code: str = "") ->
         "event_name": "Purchase",
         "event_time": int(facts.occurred_at.timestamp()),
         "event_id": facts.event_id,
-        "action_source": "system_generated",
+        "action_source": "website",
+        "event_source_url": context.source_url,
         "user_data": user_data,
         "custom_data": {
             "currency": facts.currency,
@@ -135,24 +148,18 @@ def meta_purchase_payload(facts: PurchaseFacts, *, test_event_code: str = "") ->
             "num_items": sum(item["quantity"] for item in facts.items),
         },
     }
-    context = facts.context
-    # Meta deduplicates against the pixel's Purchase only for a "website" event,
-    # which needs the browser's user agent and the page address.
-    if context and context.user_agent and context.source_url:
-        event["action_source"] = "website"
-        event["event_source_url"] = context.source_url
-        user_data["client_user_agent"] = context.user_agent
-        user_data.update(
-            {
-                key: value
-                for key, value in (
-                    ("client_ip_address", context.ip_address),
-                    ("fbp", context.fbp),
-                    ("fbc", context.fbc),
-                )
-                if value
-            }
-        )
+    user_data["client_user_agent"] = context.user_agent
+    user_data.update(
+        {
+            key: value
+            for key, value in (
+                ("client_ip_address", context.ip_address),
+                ("fbp", context.fbp),
+                ("fbc", context.fbc),
+            )
+            if value
+        }
+    )
     payload: dict = {"data": [event]}
     if test_event_code:
         payload["test_event_code"] = test_event_code

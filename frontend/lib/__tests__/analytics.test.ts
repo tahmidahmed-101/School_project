@@ -1,7 +1,10 @@
+import vm from "node:vm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeProduct } from "@/tests/fixtures";
 import {
+  ga4Bootstrap,
   gaClientId,
+  metaBootstrap,
   purchaseEventId,
   readTrackingContext,
   trackAddToCart,
@@ -91,5 +94,31 @@ describe("trackPurchase", () => {
     expect(fbq.mock.calls[0]![3]).toEqual({ eventID: purchaseEventId("order-1") });
     expect(track.mock.calls[0]![2]).toEqual({ event_id: "purchase-order-1" });
     expect(gtag.mock.calls[0]![2]).toMatchObject({ transaction_id: "SO-1", value: 1100 });
+  });
+});
+
+describe("pixel bootstrap", () => {
+  it("queues an event fired before the lazy library scripts load", () => {
+    const win: Record<string, unknown> & { dataLayer?: ArrayLike<unknown>[]; fbq?: { queue: ArrayLike<unknown>[] } } = {};
+    win.window = win;
+    vm.runInNewContext(`${ga4Bootstrap("G-TEST")}${metaBootstrap("123")}`, win);
+    vi.stubGlobal("window", { ...win, sessionStorage: { getItem: () => null, setItem: () => {} } });
+
+    trackViewContent(makeProduct({ id: "prod-1", price: 500 }));
+
+    const gtagCalls = win.dataLayer!.map((args) => Array.from(args));
+    expect(gtagCalls.map((call) => call[0])).toEqual(["js", "config", "event"]);
+    expect(gtagCalls[2][1]).toBe("view_item");
+    const fbqCalls = win.fbq!.queue.map((args) => Array.from(args));
+    expect(fbqCalls.map((call) => call.slice(0, 2))).toEqual([
+      ["init", "123"],
+      ["track", "PageView"],
+      ["track", "ViewContent"],
+    ]);
+  });
+
+  it("sends one PageView and never re-initialises the pixel", () => {
+    expect(metaBootstrap("123").match(/'PageView'/g)).toHaveLength(1);
+    expect(metaBootstrap("123").match(/fbq\('init'/g)).toHaveLength(1);
   });
 });

@@ -32,6 +32,14 @@ interface Line {
   quantity: number;
 }
 
+// Queue stubs run inline at parse time so an event fired on mount, before the lazy
+// library scripts load, is queued and replayed instead of lost.
+export const ga4Bootstrap = (id: string) =>
+  `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config',${JSON.stringify(id)});`;
+
+export const metaBootstrap = (id: string) =>
+  `!function(f,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);fbq('init',${JSON.stringify(id)});fbq('track','PageView');`;
+
 const readStorage = (key: string): string => {
   try {
     return window.sessionStorage.getItem(key) ?? "";

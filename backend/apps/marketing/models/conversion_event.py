@@ -32,6 +32,9 @@ class ConversionEvent(TimeStampedModel):
         SENDING = "sending", "Sending"
         SENT = "sent", "Sent"
         FAILED = "failed", "Failed"
+        # Terminal: the order has no browser context this provider can use
+        # without double counting or counting a visitor who never came.
+        SKIPPED = "skipped", "Skipped"
 
     order = models.ForeignKey(
         "orders.SalesOrder", on_delete=models.CASCADE, related_name="conversion_events"
