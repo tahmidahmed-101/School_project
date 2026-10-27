@@ -3,6 +3,7 @@ import openNext from "./.open-next/worker.js";
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-next/worker.js";
 
 const PAGE_SECONDS = 60;
+const OG_PATH = /^\/og\/(product|category)\/[^/]+$/;
 const PAGE_PATHS = /^\/(shop|pre-order|product\/[^/]+|(shipping|return|refund)-policy)$/;
 
 interface Env {
@@ -19,8 +20,22 @@ function pageCacheKey(request: Request, env: Env): Request | null {
   return new Request(url.toString());
 }
 
+// A share card costs a photo fetch and a render; the route's own Cache-Control only reaches the browser, so keep it here.
+async function cachedOgCard(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const cache = (caches as unknown as { default: Cache }).default;
+  const key = new Request(request.url);
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const response = await openNext.fetch(request, env, ctx);
+  if (response.status === 200 && response.headers.get("content-type")?.startsWith("image/")) {
+    ctx.waitUntil(cache.put(key, response.clone()));
+  }
+  return response;
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    if (request.method === "GET" && OG_PATH.test(new URL(request.url).pathname)) return cachedOgCard(request, env, ctx);
     const key = pageCacheKey(request, env);
     if (!key) return openNext.fetch(request, env, ctx);
 

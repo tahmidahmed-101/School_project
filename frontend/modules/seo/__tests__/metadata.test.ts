@@ -3,8 +3,10 @@ import { makeProduct, makeSku } from "@/tests/fixtures";
 import { BRAND_INFO } from "@/lib/brand";
 import {
   breadcrumbJsonLd,
+  ogCardImage,
   organizationJsonLd,
   pageMetadata,
+  productDescription,
   productJsonLd,
   truncate,
   websiteJsonLd,
@@ -51,6 +53,50 @@ describe("pageMetadata", () => {
       "smart watch",
     ]);
     expect(pageMetadata({ description: "d", path: "/", keywords: "" })).not.toHaveProperty("keywords");
+  });
+});
+
+describe("productDescription", () => {
+  it("keeps a description that is long enough, trimmed to the limit", () => {
+    const long = "A long enough description of the product that already says plenty about it. ".repeat(4);
+    const result = productDescription(makeProduct({ description: { en: long, bn: "" } }));
+    expect(result.length).toBeLessThanOrEqual(160);
+    expect(result.startsWith("A long enough description")).toBe(true);
+  });
+
+  it("adds the store sentence to a one-word description", () => {
+    const result = productDescription(
+      makeProduct({ description: { en: "churi", bn: "" }, tagline: { en: "", bn: "" } }),
+    );
+    expect(result).toBe("churi. Order online from Kull Mart with delivery all across Bangladesh.");
+    expect(result.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it("falls back to the tagline, then the name, when there is no description", () => {
+    const blank = { en: "", bn: "" };
+    expect(productDescription(makeProduct({ description: blank, tagline: { en: "Glass bangles", bn: "" } }))).toMatch(
+      /^Glass bangles\. Order online/,
+    );
+    expect(productDescription(makeProduct({ description: blank, tagline: blank }))).toMatch(
+      /^Test Product\. Order online/,
+    );
+  });
+});
+
+describe("ogCardImage", () => {
+  it("points a page with a real photo at its own 1200x630 card", () => {
+    expect(ogCardImage("product", "a b", "https://api.kullmart.com/media/x.webp", "Alt")).toEqual({
+      url: "/og/product/a%20b",
+      alt: "Alt",
+      width: 1200,
+      height: 630,
+    });
+  });
+
+  it("uses the site image when the photo is the local placeholder", () => {
+    expect(ogCardImage("category", "tools", "/brand/category-placeholder.png", "Tools").url).toBe(
+      "/brand/og-default.jpg",
+    );
   });
 });
 

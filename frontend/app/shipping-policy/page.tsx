@@ -12,5 +12,5 @@ export const metadata: Metadata = pageMetadata({
 export default async function KullMartShippingPolicyPage() {
   const policy = await getPublishedPolicy("shipping");
   if (!policy) notFound();
-  return <PolicyView policy={policy} />;
+  return <PolicyView policy={policy} path="/shipping-policy" />;
 }

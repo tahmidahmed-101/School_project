@@ -33,6 +33,24 @@ export function truncate(text: string, max = 160): string {
   return `${cut.slice(0, cut.lastIndexOf(" ") > 0 ? cut.lastIndexOf(" ") : cut.length).replace(/[\s,;:.-]+$/, "")}…`;
 }
 
+/**
+ * The share image for a product or category page: a 1200x630 card made from its own photo (see app/og). Without a
+ * real photo (the storefront's local placeholder) the site-wide image stands in.
+ */
+export function ogCardImage(kind: "product" | "category", slug: string, imagePath: string, alt: string): SocialImage {
+  if (!/^https?:\/\//.test(imagePath)) return DEFAULT_SOCIAL_IMAGE;
+  return { url: `/og/${kind}/${encodeURIComponent(slug)}`, alt, width: 1200, height: 630 };
+}
+
+const MIN_DESCRIPTION = 50;
+
+/** Meta description from the product's own text; a record with only a word or two gets the store's standard sentence after it. */
+export function productDescription(product: Pick<Product, "name" | "tagline" | "description">): string {
+  const own = (product.description.en || product.tagline.en || product.name.en).replace(/\s+/g, " ").trim();
+  if (own.length >= MIN_DESCRIPTION) return truncate(own);
+  return `${own.replace(/[\s.,;:-]+$/, "")}. Order online from ${SITE_NAME} with delivery all across Bangladesh.`;
+}
+
 interface SocialOptions {
   title: string;
   description: string;

@@ -1,6 +1,7 @@
 import { MessageCircle, Phone } from "lucide-react";
 import type { PolicyContent } from "../domain/policy-content";
 import { getBrand } from "@/modules/business/server";
+import { JsonLd, breadcrumbJsonLd } from "@/modules/seo";
 import { getServerText } from "@/lib/i18n.server";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Container } from "@/design-system/ui/Container";
@@ -9,13 +10,21 @@ import { cardClass } from "@/design-system/ui/Card";
 
 interface PolicyViewProps {
   policy: PolicyContent;
+  /** Site path of the page, for its breadcrumb data. */
+  path: string;
 }
 
-export async function PolicyView({ policy }: PolicyViewProps) {
+export async function PolicyView({ policy, path }: PolicyViewProps) {
   const [{ t, ui }, BRAND_INFO] = await Promise.all([getServerText(), getBrand()]);
 
   return (
     <div className="min-h-screen bg-canvas py-8 sm:py-12">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: policy.title.en || policy.title.bn, path },
+        ])}
+      />
       <Container>
         <PageHeader
           breadcrumbs={<Breadcrumbs className="mb-4" items={[{ label: t(policy.title) }]} />}

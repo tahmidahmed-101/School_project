@@ -10,5 +10,5 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function KullMartReturnPolicyPage() {
-  return <PolicyView policy={await getPolicyContent("returns", RETURN_POLICY)} />;
+  return <PolicyView policy={await getPolicyContent("returns", RETURN_POLICY)} path="/return-policy" />;
 }

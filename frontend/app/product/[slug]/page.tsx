@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ProductDetailView, forListing, moreForProduct, relatedForProduct } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
-import { breadcrumbJsonLd, pageMetadata, productJsonLd, truncate } from "@/modules/seo";
+import { breadcrumbJsonLd, ogCardImage, pageMetadata, productDescription, productJsonLd } from "@/modules/seo";
 import { getCatalog, getProductBySlug, getRelatedProductsBySlug } from "@/modules/catalog/server";
 import { photo } from "@/lib/photo";
 import { PromotionPopup } from "@/modules/storefront";
@@ -34,9 +34,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   return pageMetadata({
     title: product.name.en,
-    description: truncate(product.description.en || product.tagline.en || product.name.en),
+    description: productDescription(product),
     path: `/product/${product.slug}`,
-    image: { url: photo(product.image), alt: product.name.en },
+    image: ogCardImage("product", product.slug, photo(product.image), product.name.en),
     keywords: product.metaKeywords,
   });
 }
