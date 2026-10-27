@@ -176,10 +176,11 @@ providers that were active at confirmation.
 
 ## Known limits
 
-- A shopper who declines cookies or blocks the pixels sends no `_fbp`, `_ga`
-  or `_ttp`. Their order is still counted with its revenue, but GA4 gets a
-  client id derived from the order and Meta gets `action_source:
-  system_generated`.
+- A shopper who declines cookies or blocks the pixels sends no `_ga` id, or no
+  user agent or page address. GA4 and Meta Purchase are then skipped (status
+  `skipped`, reason in `last_error`) rather than sent unmatched.
+- Meta dedupes the pixel and server Purchase only within 48 h; a COD order
+  confirmed later than that can count twice.
 - The TikTok payload follows the Events API v1.3 `event/track` shape but has not
   been checked against a live pixel. Set `test_event_code` first and look for
   `CompletePayment` in TikTok Events Manager → Test events before trusting it.

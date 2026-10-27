@@ -38,6 +38,8 @@ pytestmark = pytest.mark.django_db
 URLOPEN = "apps.marketing.services.conversion_providers.urllib.request.urlopen"
 GA4_SECRET = "ga4-secret-value"
 META_TOKEN = "meta-token-value"
+META_SKIP = "No user agent or no page address was stored."
+GA4_SKIP = "No _ga client id was stored at checkout."
 
 
 @pytest.fixture(autouse=True)
@@ -367,10 +369,10 @@ def test_browser_context_makes_meta_a_website_event_and_ties_ga4_to_the_visit(
     assert "01711223344" not in sent
 
 
-def _assert_skipped(order, provider, urlopen):
+def _assert_skipped(order, provider, urlopen, reason):
     event = ConversionEvent.objects.get(order=order, provider=provider)
     assert event.status == "skipped"
-    assert event.last_error
+    assert event.last_error == reason
     assert provider not in _bodies(urlopen)
 
 
@@ -384,7 +386,7 @@ def test_meta_is_skipped_not_system_generated_without_page_or_user_agent(
     with patch(URLOPEN, side_effect=_ok) as urlopen:
         _confirm_cod(order, django_capture_on_commit_callbacks)
 
-    _assert_skipped(order, "meta", urlopen)
+    _assert_skipped(order, "meta", urlopen, META_SKIP)
     assert ConversionEvent.objects.get(order=order, provider="ga4").status == "sent"
 
 
@@ -397,9 +399,8 @@ def test_meta_and_ga4_are_skipped_when_checkout_stored_no_browser_context(
         _confirm_cod(order, django_capture_on_commit_callbacks)
 
     urlopen.assert_not_called()
-    _assert_skipped(order, "meta", urlopen)
-    _assert_skipped(order, "ga4", urlopen)
-    assert "system_generated" not in json.dumps(_bodies(urlopen))
+    _assert_skipped(order, "meta", urlopen, META_SKIP)
+    _assert_skipped(order, "ga4", urlopen, GA4_SKIP)
 
 
 def test_ga4_is_skipped_without_a_stored_ga_client_id_and_never_retried(
@@ -412,7 +413,7 @@ def test_ga4_is_skipped_without_a_stored_ga_client_id_and_never_retried(
         _confirm_cod(order, django_capture_on_commit_callbacks)
         assert retry_conversion_events() == 0
 
-    _assert_skipped(order, "ga4", urlopen)
+    _assert_skipped(order, "ga4", urlopen, GA4_SKIP)
     assert "server." not in json.dumps(_bodies(urlopen))
     assert ConversionEvent.objects.get(order=order, provider="meta").status == "sent"
     assert urlopen.call_count == 1

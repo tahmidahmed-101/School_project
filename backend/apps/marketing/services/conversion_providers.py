@@ -120,7 +120,7 @@ def meta_purchase_payload(facts: PurchaseFacts, *, test_event_code: str = "") ->
     # "system_generated" one is never deduplicated, so the sale would count twice.
     context = facts.context
     if not (context and context.user_agent and context.source_url):
-        raise ConversionSkippedError("No user agent and page address were stored.")
+        raise ConversionSkippedError("No user agent or no page address was stored.")
     # Pseudonymous and not reversible to contact details; the order id stands
     # in when an order has no customer row.
     external_id = hashlib.sha256((facts.customer_id or facts.order_id).encode()).hexdigest()

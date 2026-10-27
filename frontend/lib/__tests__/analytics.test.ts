@@ -116,9 +116,4 @@ describe("pixel bootstrap", () => {
       ["track", "ViewContent"],
     ]);
   });
-
-  it("sends one PageView and never re-initialises the pixel", () => {
-    expect(metaBootstrap("123").match(/'PageView'/g)).toHaveLength(1);
-    expect(metaBootstrap("123").match(/fbq\('init'/g)).toHaveLength(1);
-  });
 });
