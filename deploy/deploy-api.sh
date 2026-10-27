@@ -47,7 +47,7 @@ DOCKER_BUILDKIT=1 docker build -t "kull-mart-api:$TAG" "$LOCAL_ROOT/backend"
 step "Ship $TAG + start"
 PREV="$(running_tag kull-mart-api "$SSH_HOST")"
 ship_image "kull-mart-api:$TAG" "$SSH_HOST"
-ssh_run "cd '$REMOTE_DIR' && IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans db api"
+ssh_run "cd '$REMOTE_DIR' && sed -i '/^IMAGE_TAG=/d' .env && echo IMAGE_TAG=$TAG >> .env && IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans db api"
 # SECURE_SSL_REDIRECT is on, so the health probe presents itself as Caddy would.
 ssh_run "
 ok=0
