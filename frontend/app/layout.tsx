@@ -12,7 +12,7 @@ import { isPolicyPublished } from "@/modules/policies/server";
 import { AuthProvider } from "@/modules/auth";
 import { CartProvider } from "@/modules/cart";
 import { WishlistProvider } from "@/modules/wishlist";
-import { ClientShell } from "@/modules/shell";
+import { ClientErrorListener, ClientShell } from "@/modules/shell";
 import { Footer } from "@/modules/shell/server";
 import { JsonLd } from "@/modules/seo";
 import { AnalyticsScripts, ReferralCapture } from "@/modules/marketing";
@@ -106,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <CatalogProvider categories={catalog.categories} failed={catalog.failed} brand={brand}>
             <LangProvider initialLang={lang}>
               <ReferralCapture />
+              <ClientErrorListener />
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>

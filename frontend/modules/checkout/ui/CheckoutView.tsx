@@ -13,7 +13,8 @@ import { freeDeliveryStatus } from "@/lib/free-delivery";
 import { clearStoredRef } from "@/lib/referral";
 import { isBelowMinimum, productKind, shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
-import { errorKey } from "@/lib/api/errors";
+import { errorKey, isUnexpectedError } from "@/lib/api/errors";
+import { reportClientError } from "@/lib/client-error";
 import { toOrderResult } from "../data/adapters";
 import {
   ADVANCE_PAYMENT_REQUIRED_CODE,
@@ -156,6 +157,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       clearStoredRef();
       window.scrollTo({ top: 0 });
     } catch (error) {
+      if (isUnexpectedError(error)) reportClientError(error, "checkout-submit");
       if (error instanceof ApiError) {
         const mapped = mapApiFieldErrors(error);
         if (Object.keys(mapped).length > 0) {

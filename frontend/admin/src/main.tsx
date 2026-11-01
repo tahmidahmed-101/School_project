@@ -15,6 +15,9 @@ import { SESSION_EXPIRED_EVENT } from '@/lib/api/client'
 import { LOGOUT_BROADCAST_KEY, clearTokens } from '@/lib/api/tokenStore'
 import { bootstrapAuth, devBypassLogin, sessionExpired } from '@/features/authentication/slices/authSlice'
 import { DEV_AUTH_BYPASS } from '@/features/authentication/devAuth'
+import { installClientErrorListeners } from '@/lib/client-error'
+
+installClientErrorListeners()
 
 // Attempt to restore a session from a persisted refresh token before the app renders.
 if (DEV_AUTH_BYPASS) {

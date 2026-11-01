@@ -13,6 +13,7 @@ from django.views.static import serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from api.health import health_check
+from apps.common.client_error import client_error
 
 from . import admin as admin_branding  # noqa: F401  (applies admin.site branding on import)
 
@@ -42,6 +43,7 @@ def index(request):
 urlpatterns = [
     path("", index),
     path("health/", health_check, name="health-check"),
+    path("api/client-error/", client_error, name="client-error"),
     path("admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

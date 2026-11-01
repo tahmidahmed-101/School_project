@@ -73,6 +73,7 @@ const nextConfig = {
     return [
       { source: "/api/public/:path*", destination: `${API_URL}/:path*/` },
       { source: "/api/v1/customer/:path*", destination: `${CUSTOMER_API_URL}/:path*/` },
+      { source: "/api/client-error", destination: `${API_ORIGIN}/api/client-error/` },
       { source: "/media/:path*", destination: `${API_ORIGIN}/media/:path*` },
     ];
   },

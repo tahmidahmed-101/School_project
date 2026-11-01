@@ -26,6 +26,15 @@ die()  { printf '\033[1;31m!! \033[0m%s\n' "$*" >&2; exit 1; }
 cd "$(dirname "$0")/.."
 LOCAL_ROOT="$(pwd)"
 
+step "Deploy pre-flight (DNS, certificate, running API, build fetch targets)"
+source "$LOCAL_ROOT/deploy/deploy-preflight.sh"
+pf_args=(--target "${SSH_HOST##*@}" --domain "$SITE_HOST"
+    --fetch https://registry-1.docker.io/v2/ --fetch https://ghcr.io/v2/ --fetch https://pypi.org/simple/ --fetch https://deb.debian.org/)
+if ssh_run "docker inspect kull-mart-api >/dev/null 2>&1"; then
+    pf_args+=(--upstream "curl -sf -H 'Host: $SITE_HOST' -H 'X-Forwarded-Proto: https' http://127.0.0.1:$HEALTH_PORT/health/")
+fi
+PREFLIGHT_EXEC=ssh_run PREFLIGHT_FETCH_EXEC=preflight_local deploy_preflight "${pf_args[@]}" || die "preflight failed; nothing was deployed"
+
 step "Local pre-flight"
 git diff --quiet -- backend docker-compose.prod.yml || warn "Uncommitted backend changes: the image is built from disk, not HEAD."
 echo "  target: $SSH_HOST:$REMOTE_DIR"

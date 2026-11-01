@@ -1,7 +1,9 @@
+import { useEffect } from "react"
 import { isRouteErrorResponse, useRouteError } from "react-router-dom"
 import { TriangleAlert } from "lucide-react"
 import { EmptyState } from "@/components/common/EmptyState"
 import NotFound from "@/routes/NotFound"
+import { reportClientError } from "@/lib/client-error"
 
 const RELOAD_FLAG = "route-error:chunk-reloaded"
 
@@ -15,6 +17,10 @@ function isChunkLoadError(error: unknown): boolean {
 
 const RouteError = () => {
   const error = useRouteError()
+
+  useEffect(() => {
+    if (!isRouteErrorResponse(error)) reportClientError(error, "error-boundary")
+  }, [error])
 
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound />

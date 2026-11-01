@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportClientError } from "@/lib/client-error";
 
 /**
  * Last-resort boundary for a failure in the root layout itself (where error.tsx cannot help). It replaces the
@@ -10,6 +11,7 @@ import { useEffect } from "react";
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
+    reportClientError(error, "error-boundary");
   }, [error]);
 
   return (

@@ -1,0 +1,14 @@
+{
+  "routes": [
+    { "path": "/", "expect": "All rights reserved." },
+    { "path": "/shop", "expect": "Shop all" },
+    { "path": "/login", "expect": "Log in" },
+    { "path": "/checkout", "expect": "Your cart is currently empty" },
+    { "path": "/track-order", "expect": "Track your order" },
+    { "path": "/this-page-does-not-exist", "status": 404, "expect": "Page not found" }
+  ],
+  "todo": [
+    "TODO(ask): a product detail route (/product/<slug>) needs a slug that exists on the live catalogue",
+    "TODO(ask): a checkout flow needs a purchasable product and a test phone in SMOKE_PHONE"
+  ]
+}

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { isUnexpectedError } from "@/lib/api/errors";
+import { reportClientError } from "@/lib/client-error";
 import { useAuth } from "../context";
 import { safeNextPath } from "../domain/redirect";
 import { authErrorMessage } from "./authError";
@@ -36,6 +38,7 @@ export function LoginView() {
       // Read at submit time rather than with useSearchParams, which would force this static page to suspend.
       router.push(safeNextPath(new URLSearchParams(window.location.search).get("next")));
     } catch (error) {
+      if (isUnexpectedError(error)) reportClientError(error, "login");
       setErrorMsg(authErrorMessage(error, ui));
       setSubmitting(false);
     }

@@ -13,3 +13,8 @@ export function errorKey(error: unknown): ApiErrorKey {
   if (error.status === 400) return "errValidation";
   return "errGeneric";
 }
+
+/** Wrong passwords and validation answers are expected; only crashes and 5xx belong in the error log. */
+export function isUnexpectedError(error: unknown): boolean {
+  return !(error instanceof ApiError) || error.status >= 500;
+}

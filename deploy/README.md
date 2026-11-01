@@ -28,6 +28,10 @@ deploy/deploy-api.sh                      # API
 (cd frontend/admin && npm run cf:deploy)  # admin
 ```
 
+`deploy-api.sh` starts with `deploy/deploy-preflight.sh` (DNS, certificate, running API, registries the image build pulls); `PREFLIGHT_UPSTREAM=0` skips the running-API probe.
+
+Browser errors from the storefront (`/api/client-error`, proxied in `next.config.mjs`) and the admin post to the API, which logs one `[client-error]` line. After an API deploy: `curl -i -X POST -H 'content-type: application/json' -d '{"message":"probe","path":"/","where":"curl"}' https://kullmart.com/api/client-error` must answer 204 and `docker logs kull-mart-api` must show one line; no line means the Worker proxy dropped `content-length`.
+
 Wrangler needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment (or `npx wrangler login`).
 
 The reservation sweeper is off; read `backend/scripts/reservation_sweeper.sh` before
