@@ -23,9 +23,7 @@ class Category(FullAuditModel):
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
     )
     description = models.TextField(blank=True)
-    image = models.ImageField(
-        upload_to=_category_image_path, null=True, blank=True
-    )
+    image = models.ImageField(upload_to=_category_image_path, null=True, blank=True)
     # A subcategory always shares its parent's type (enforced in
     # apps.catalog.services.categories) — stored per row rather than derived by
     # walking the parent chain, so filtering by type stays a single indexed query.

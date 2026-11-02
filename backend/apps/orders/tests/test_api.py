@@ -1271,12 +1271,13 @@ def test_admin_status_cancel_releases_reservations(api_client):
 # Order number format tests
 # ---------------------------------------------------------------------------
 
+
 def test_generate_order_number_stock_uses_so_prefix_and_digits_only():
     from apps.common.utils.codes import generate_order_number
 
     number = generate_order_number(kind="stock")
     assert number.startswith("SO-")
-    suffix = number[len("SO-"):]
+    suffix = number[len("SO-") :]
     assert len(suffix) == 9
     assert suffix.isdigit()
 
@@ -1286,7 +1287,7 @@ def test_generate_order_number_preorder_uses_pre_prefix_and_digits_only():
 
     number = generate_order_number(kind="preorder")
     assert number.startswith("PRE-")
-    suffix = number[len("PRE-"):]
+    suffix = number[len("PRE-") :]
     assert len(suffix) == 9
     assert suffix.isdigit()
 
@@ -1298,7 +1299,7 @@ def test_create_order_stock_uses_so_prefix():
     customer = CustomerUserFactory()
     order = create_order(customer=customer, kind="stock")
     assert order.order_number.startswith("SO-")
-    assert order.order_number[len("SO-"):].isdigit()
+    assert order.order_number[len("SO-") :].isdigit()
 
 
 def test_create_order_preorder_uses_pre_prefix():
@@ -1308,7 +1309,7 @@ def test_create_order_preorder_uses_pre_prefix():
     customer = CustomerUserFactory()
     order = create_order(customer=customer, kind="preorder")
     assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-"):].isdigit()
+    assert order.order_number[len("PRE-") :].isdigit()
 
 
 def test_create_order_numbers_are_unique():
@@ -1362,7 +1363,7 @@ def test_checkout_changes_prefix_to_pre_for_preorder(api_client):
     order = checkout(order=cart)
     # After checkout, pre-order gets PRE- prefix
     assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-"):].isdigit()
+    assert order.order_number[len("PRE-") :].isdigit()
 
 
 def test_place_staff_order_uses_pre_prefix_for_preorder(api_client):
@@ -1394,7 +1395,7 @@ def test_place_staff_order_uses_pre_prefix_for_preorder(api_client):
         actor=admin,
     )
     assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-"):].isdigit()
+    assert order.order_number[len("PRE-") :].isdigit()
 
 
 def test_place_staff_order_uses_so_prefix_for_stock(api_client):
@@ -1416,4 +1417,4 @@ def test_place_staff_order_uses_so_prefix_for_stock(api_client):
         actor=admin,
     )
     assert order.order_number.startswith("SO-")
-    assert order.order_number[len("SO-"):].isdigit()
+    assert order.order_number[len("SO-") :].isdigit()

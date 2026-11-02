@@ -4,7 +4,7 @@ import csv
 import io
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Any, Literal
 
 from django.db import transaction
 from django.db.models import QuerySet
@@ -236,7 +236,7 @@ def _import_row(row: dict, product: Product, variant: ProductVariant | None, sku
         raise ValueError(f"Invalid numeric value: {exc}") from exc
     is_active = str(row.get("is_active") or "1").strip().lower() in {"1", "true", "yes"}
     pairs = _option_pairs(row)
-    values = {
+    values: dict[str, Any] = {
         "barcode": row.get("barcode") or "",
         "price": price,
         "cost_price": cost_price,

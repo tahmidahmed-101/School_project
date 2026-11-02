@@ -22,27 +22,27 @@ class UpsertDatabaseCache(DatabaseCache):
 
     def _base_set(self, mode: str, key: str, value: Any, timeout: Any = DEFAULT_TIMEOUT):
         if mode == "touch":
-            return super()._base_set(mode, key, value, timeout)
+            return super()._base_set(mode, key, value, timeout)  # type: ignore[misc]
 
         timeout = self.get_backend_timeout(timeout)
         db = router.db_for_write(self.cache_model_class)
         connection = connections[db]
         quote = connection.ops.quote_name
-        table = quote(self._table)
+        table = quote(self._table)  # type: ignore[attr-defined]
         now = timezone.now().replace(microsecond=0)
-        expires = datetime.max if timeout is None else datetime.fromtimestamp(timeout, tz=UTC)
-        expires = connection.ops.adapt_datetimefield_value(expires.replace(microsecond=0))
+        expires_at = datetime.max if timeout is None else datetime.fromtimestamp(timeout, tz=UTC)
+        expires = connection.ops.adapt_datetimefield_value(expires_at.replace(microsecond=0))
         encoded = base64.b64encode(pickle.dumps(value, self.pickle_protocol)).decode("latin1")
 
         with connection.cursor() as cursor:
             cursor.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608 -- quoted table name
             count = cursor.fetchone()[0]
             if count > self._max_entries:
-                self._cull(db, cursor, now, count)
+                self._cull(db, cursor, now, count)  # type: ignore[attr-defined]
 
             # `add` must leave a live entry alone but may replace an expired one.
             only_if_expired = f"WHERE {table}.{quote('expires')} < %s" if mode == "add" else ""
-            params = [key, encoded, expires]
+            params: list[Any] = [key, encoded, expires]
             if mode == "add":
                 params.append(connection.ops.adapt_datetimefield_value(now))
             cursor.execute(

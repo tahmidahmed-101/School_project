@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import product as cartesian_product
+from typing import Any
 
 from django.db.models import Count, Min, Prefetch, QuerySet
 from django.db.models.functions import Lower
@@ -120,6 +121,7 @@ def product_options(product: Product, *, sellable_only: bool = False) -> list[di
     if sellable_only:
         variants = [variant for variant in variants if variant.is_active]
     stored = list(product.options.all())
+    options: list[dict[str, Any]]
     if stored:
         options = [
             {

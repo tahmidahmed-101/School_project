@@ -64,13 +64,7 @@ class PublicTrackOrderView(APIView):
         if order.shipping_address_snapshot:
             shipping_phone = (order.shipping_address_snapshot.get("phone") or "").strip()
 
-        if not (
-            order_phone == phone
-            or customer_phone == phone
-            or shipping_phone == phone
-        ):
+        if not (order_phone == phone or customer_phone == phone or shipping_phone == phone):
             return not_found("order_not_found", "Order not found or phone does not match.")
 
-        return Response(
-            {"data": PublicTrackOrderSerializer(order).data, "message": "Success"}
-        )
+        return Response({"data": PublicTrackOrderSerializer(order).data, "message": "Success"})

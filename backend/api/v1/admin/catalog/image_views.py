@@ -48,7 +48,6 @@ def _swap_option_value(data: dict) -> None:
 
 
 class AdminProductImageListCreateView(CatalogPermissionMixin, APIView):
-
     serializer_class = ProductImageSerializer
 
     def get(self, request, product_id) -> Response:
@@ -91,7 +90,6 @@ class AdminProductImageListCreateView(CatalogPermissionMixin, APIView):
 
 @extend_schema(tags=["Catalog"])
 class AdminProductImageDetailView(CatalogPermissionMixin, APIView):
-
     serializer_class = ProductImageSerializer
 
     def get(self, request, image_id) -> Response:

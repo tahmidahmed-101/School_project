@@ -17,22 +17,16 @@ class Payment(TimeStampedModel):
         FAILED = "failed", "Failed"
         REFUNDED = "refunded", "Refunded"
 
-    order = models.ForeignKey(
-        SalesOrder, on_delete=models.PROTECT, related_name="payments"
-    )
+    order = models.ForeignKey(SalesOrder, on_delete=models.PROTECT, related_name="payments")
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     # Cumulative refunded total, so a payment can be refunded in instalments
     # without the running total having to be re-derived from journal entries.
     # `status` only reaches REFUNDED once this reaches `amount`.
-    refunded_amount = models.DecimalField(
-        max_digits=14, decimal_places=2, default=0
-    )
+    refunded_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     method = models.CharField(
         max_length=32, choices=PaymentMethodKey.choices, default=PaymentMethodKey.MANUAL
     )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     gateway_reference = models.CharField(max_length=100, blank=True)
 
     class Meta:

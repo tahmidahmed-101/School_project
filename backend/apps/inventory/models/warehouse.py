@@ -38,7 +38,7 @@ class Warehouse(FullAuditModel):
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            Warehouse.objects.filter(is_default=True, kind=self.kind).exclude(
-                pk=self.pk
-            ).update(is_default=False)
+            Warehouse.objects.filter(is_default=True, kind=self.kind).exclude(pk=self.pk).update(
+                is_default=False
+            )
         super().save(*args, **kwargs)

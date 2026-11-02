@@ -15,9 +15,7 @@ class StaffPermission(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="staff_permissions",
     )
-    permission_code = models.CharField(
-        max_length=64, choices=StaffPermissionCode.choices
-    )
+    permission_code = models.CharField(max_length=64, choices=StaffPermissionCode.choices)
     is_enabled = models.BooleanField(default=False)
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

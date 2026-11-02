@@ -35,7 +35,7 @@ def preorder_book_summary() -> dict:
 def preorder_demand() -> list[dict]:
     """Units still owed to open pre-orders, per variant, against what is on
     the shelf. `to_buy` is what a purchase has to cover."""
-    rows = (
+    demand = (
         SalesOrderLine.objects.filter(
             is_preorder=True,
             order__order_type=SalesOrder.OrderType.PREORDER,
@@ -47,7 +47,7 @@ def preorder_demand() -> list[dict]:
         .annotate(ordered=Sum("quantity"), allocated=Sum("allocated_quantity"))
         .order_by("variant__product__name", "variant__sku")
     )
-    rows = list(rows)
+    rows = list(demand)
     available = {
         row["variant_id"]: row["total"]
         for row in StockItem.objects.filter(variant_id__in=[r["variant_id"] for r in rows])

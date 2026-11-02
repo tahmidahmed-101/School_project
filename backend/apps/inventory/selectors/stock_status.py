@@ -26,9 +26,7 @@ def stock_status_summary(*, kind: str | None = None) -> dict:
         grn_lines = grn_lines.filter(
             purchase_order_line__variant__product__category__category_type=kind
         )
-        rma_lines = rma_lines.filter(
-            order_line__variant__product__category__category_type=kind
-        )
+        rma_lines = rma_lines.filter(order_line__variant__product__category__category_type=kind)
 
     item_totals = items.aggregate(
         reserved=Sum("quantity_reserved"),

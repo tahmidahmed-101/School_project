@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.cache import cache
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
@@ -21,7 +23,7 @@ def admin_dashboard_stats(request):
         return {}
     stats = cache.get(_CACHE_KEY)
     if stats is None:
-        since = timezone.now() - timezone.timedelta(hours=_WINDOW_HOURS)
+        since = timezone.now() - timedelta(hours=_WINDOW_HOURS)
         try:
             stats = {
                 "failed_logins": LoginHistory.objects.filter(

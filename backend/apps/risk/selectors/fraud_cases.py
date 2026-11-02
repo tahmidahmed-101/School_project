@@ -50,9 +50,11 @@ def fraud_cases_list(
 
 
 def get_fraud_case_by_id(case_id: str | UUID) -> FraudCase | None:
-    return FraudCase.objects.select_related("customer", "order", "assigned_to").filter(
-        id=case_id
-    ).first()
+    return (
+        FraudCase.objects.select_related("customer", "order", "assigned_to")
+        .filter(id=case_id)
+        .first()
+    )
 
 
 def unresolved_high_risk_case(order) -> FraudCase | None:

@@ -263,9 +263,7 @@ def _ensure_no_stock(product: Product, *, variant: ProductVariant | None = None)
     from apps.inventory.services.stock import lock_variant_stock
     from apps.orders.models import StockReservation
 
-    variant_ids = (
-        [variant.id] if variant else list(product.variants.values_list("id", flat=True))
-    )
+    variant_ids = [variant.id] if variant else list(product.variants.values_list("id", flat=True))
     subject = variant.sku if variant else product.name
     noun = "variant" if variant else "product"
     if not variant_ids:
@@ -418,9 +416,9 @@ def create_variant(
         raise BusinessRuleViolationError(
             "A variant with this SKU already exists.", code="duplicate_sku"
         )
-    if product.variants.filter(
-        deleted_at__isnull=True
-    ).exists() and not is_feature_enabled(ModuleKey.CATALOG, "product_variations"):
+    if product.variants.filter(deleted_at__isnull=True).exists() and not is_feature_enabled(
+        ModuleKey.CATALOG, "product_variations"
+    ):
         raise BusinessRuleViolationError(
             "Each product has one price and one SKU. Turn product variations on first.",
             code="simple_product_single_variant",

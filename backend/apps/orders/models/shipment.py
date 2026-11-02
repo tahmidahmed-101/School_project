@@ -22,9 +22,7 @@ class Shipment(FullAuditModel):
 
     TERMINAL_STATUSES = (Status.DELIVERED, Status.RETURNED, Status.CANCELLED)
 
-    order = models.ForeignKey(
-        SalesOrder, on_delete=models.PROTECT, related_name="shipments"
-    )
+    order = models.ForeignKey(SalesOrder, on_delete=models.PROTECT, related_name="shipments")
     carrier = models.ForeignKey(
         "logistics.Carrier",
         on_delete=models.PROTECT,
@@ -33,15 +31,9 @@ class Shipment(FullAuditModel):
         related_name="shipments",
     )
     tracking_number = models.CharField(max_length=100, blank=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
-    shipping_charge = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0
-    )
-    cod_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    shipping_charge = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cod_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     courier_status = models.CharField(max_length=100, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
@@ -61,9 +53,7 @@ class Shipment(FullAuditModel):
 
 
 class ShipmentLine(TimeStampedModel):
-    shipment = models.ForeignKey(
-        Shipment, on_delete=models.CASCADE, related_name="lines"
-    )
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name="lines")
     order_line = models.ForeignKey(
         SalesOrderLine, on_delete=models.PROTECT, related_name="shipment_lines"
     )

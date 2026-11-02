@@ -68,7 +68,7 @@ def media_serve(request, path):
     """Uploads are stored under a random name and never rewritten, so they can be
     cached forever — which keeps repeat fetches off the small sync worker pool
     that `serve` shares with the API."""
-    response = serve(request, path, document_root=settings.MEDIA_ROOT)
+    response = serve(request, path, document_root=str(settings.MEDIA_ROOT))
     response["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 

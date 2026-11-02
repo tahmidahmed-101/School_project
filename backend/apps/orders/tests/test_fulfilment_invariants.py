@@ -376,7 +376,9 @@ def _discounted_shipped_order(
     customer = CustomerUserFactory()
     variant = ProductVariantFactory(price=price)
     record_movement(
-        variant=variant, movement_type=MovementType.PURCHASE_IN, quantity=stock,
+        variant=variant,
+        movement_type=MovementType.PURCHASE_IN,
+        quantity=stock,
         unit_cost=Decimal("5.00"),
     )
     order = get_or_create_cart(customer)

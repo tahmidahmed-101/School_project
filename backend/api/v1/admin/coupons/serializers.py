@@ -29,9 +29,7 @@ class CouponSerializer(serializers.Serializer):
     usage_limit = serializers.IntegerField(allow_null=True)
     times_used = serializers.IntegerField(read_only=True)
     per_customer_limit = serializers.IntegerField(allow_null=True)
-    max_discount_amount = serializers.DecimalField(
-        max_digits=12, decimal_places=2, allow_null=True
-    )
+    max_discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
     starts_at = serializers.DateTimeField(allow_null=True)
     expires_at = serializers.DateTimeField(allow_null=True)
     categories = NamedRowSerializer(many=True, read_only=True)

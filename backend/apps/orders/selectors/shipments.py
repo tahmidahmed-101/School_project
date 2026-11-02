@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from django.db.models import F, Max, Q, QuerySet, Sum
@@ -47,7 +48,7 @@ def delivered_quantity_sum() -> Coalesce:
 
 def with_delivered_quantity(
     lines: QuerySet[SalesOrderLine], *, name: str = "delivered_quantity"
-) -> QuerySet[SalesOrderLine]:
+) -> QuerySet[Any]:
     return lines.annotate(**{name: delivered_quantity_sum()})
 
 
@@ -78,7 +79,7 @@ def order_shipments_complete(order: SalesOrder) -> bool:
     also means nothing else is still in flight. Delivered quantities are
     summed for every line in one query.
     """
-    lines = with_delivered_quantity(order.lines, name="delivered")
+    lines = with_delivered_quantity(order.lines.all(), name="delivered")
     if not lines.exists() or lines.filter(delivered__lt=F("quantity")).exists():
         return False
     return not StockReservation.objects.filter(
@@ -103,9 +104,11 @@ def get_shipment_by_id(shipment_id: str | UUID) -> Shipment | None:
 def get_shipment_by_carrier_and_tracking_number(carrier, tracking_number: str) -> Shipment | None:
     if not tracking_number:
         return None
-    return Shipment.objects.select_related("order").filter(
-        carrier=carrier, tracking_number=tracking_number, deleted_at__isnull=True
-    ).first()
+    return (
+        Shipment.objects.select_related("order")
+        .filter(carrier=carrier, tracking_number=tracking_number, deleted_at__isnull=True)
+        .first()
+    )
 
 
 def shipped_from_warehouses(*, shipment_ids, variant, quantity: int) -> list[tuple]:
@@ -159,7 +162,8 @@ def shipped_unit_cost(*, shipment_ids, variant, warehouse=None):
     if warehouse is not None:
         entries = entries.filter(warehouse=warehouse)
     rows = list(entries.values_list("quantity", "unit_cost"))
+    costed = [(quantity, cost) for quantity, cost in rows if cost is not None]
     units = sum(quantity for quantity, _ in rows)
-    if not units or any(cost is None for _, cost in rows):
+    if not units or len(costed) != len(rows):
         return None
-    return sum(quantity * cost for quantity, cost in rows) / units
+    return sum(quantity * cost for quantity, cost in costed) / units

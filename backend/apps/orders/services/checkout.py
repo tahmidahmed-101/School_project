@@ -85,9 +85,9 @@ def _free_expired_holds(order: SalesOrder) -> None:
     line_variant_ids = set(order.lines.values_list("variant_id", flat=True))
     if not line_variant_ids:
         return
-    component_ids = BundleItem.objects.filter(
-        bundle_variant_id__in=line_variant_ids
-    ).values_list("component_variant_id", flat=True)
+    component_ids = BundleItem.objects.filter(bundle_variant_id__in=line_variant_ids).values_list(
+        "component_variant_id", flat=True
+    )
     release_expired_reservations(variant_ids=line_variant_ids | set(component_ids))
 
 
@@ -203,9 +203,7 @@ def checkout(
     if shipping_address is not None:
         order.shipping_address = shipping_address
         order.shipping_address_snapshot = build_address_snapshot(shipping_address)
-        zone = find_zone_by_address_text(
-            address_zone_text(shipping_address), kind=order.order_type
-        )
+        zone = find_zone_by_address_text(address_zone_text(shipping_address), kind=order.order_type)
         if zone is None:
             raise BusinessRuleViolationError(
                 "Delivery is not available yet — no shipping zones are configured.",

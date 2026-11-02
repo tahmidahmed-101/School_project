@@ -17,9 +17,7 @@ class FraudCase(TimeStampedModel):
         RESOLVED = "resolved", "Resolved"
 
     case_number = models.CharField(max_length=32, unique=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.NEW
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

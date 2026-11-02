@@ -72,7 +72,6 @@ def _variant_rows(variants: list) -> list[dict]:
 
 
 class AdminProductVariantListCreateView(CatalogPermissionMixin, APIView):
-
     serializer_class = ProductVariantSerializer
     pagination_class = DefaultPageNumberPagination
 
@@ -167,9 +166,7 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             )
         stock_status = get_choice(params, "stock_status", ("out", "low", "in"))
         if stock_status == "low":
-            queryset = queryset.filter(
-                product__category__category_type=Category.CategoryType.STOCK
-            )
+            queryset = queryset.filter(product__category__category_type=Category.CategoryType.STOCK)
         if stock_status:
             variant_ids = list(queryset.values_list("id", flat=True))
             stock_by_variant = available_quantities_for_variants(variant_ids, self.warehouse)
@@ -338,7 +335,6 @@ class AdminVariantImportView(APIView):
 
 @extend_schema(tags=["Catalog"])
 class AdminProductVariantDetailView(CatalogPermissionMixin, APIView):
-
     serializer_class = ProductVariantSerializer
 
     def get(self, request, variant_id) -> Response:

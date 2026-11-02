@@ -14,21 +14,13 @@ from .product import Product
 
 
 class ProductVariant(FullAuditModel):
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="variants"
-    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants")
     sku = models.CharField(max_length=64, unique=True)
     barcode = models.CharField(max_length=64, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2)
-    cost_price = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0
-    )
-    discount_price = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True
-    )
-    weight = models.DecimalField(
-        max_digits=10, decimal_places=3, null=True, blank=True
-    )
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
     # Legacy text, read only by the transition rule in selectors/options.py.
     color = models.CharField(max_length=50, blank=True)
     size = models.CharField(max_length=50, blank=True)
@@ -38,28 +30,19 @@ class ProductVariant(FullAuditModel):
     title = models.CharField(max_length=160, blank=True, default="")
 
     # Wholesale fields
-    wholesale_price = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True
-    )
+    wholesale_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     show_wholesale_price = models.BooleanField(default=False)
 
     # Pre-order fields
     is_preorder_enabled = models.BooleanField(default=False)
-    preorder_price = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True
-    )
-    preorder_start_date = models.DateTimeField(
-        null=True, blank=True
-    )
-    preorder_end_date = models.DateTimeField(
-        null=True, blank=True
-    )
-    release_date = models.DateTimeField(
-        null=True, blank=True
-    )
+    preorder_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    preorder_start_date = models.DateTimeField(null=True, blank=True)
+    preorder_end_date = models.DateTimeField(null=True, blank=True)
+    release_date = models.DateTimeField(null=True, blank=True)
     preorder_stock_limit = models.PositiveIntegerField(
-        null=True, blank=True,
-        help_text="Maximum quantity available for pre-order. Leave blank for no limit."
+        null=True,
+        blank=True,
+        help_text="Maximum quantity available for pre-order. Leave blank for no limit.",
     )
     preorder_min_quantity = models.PositiveIntegerField(
         default=1,
@@ -74,7 +57,7 @@ class ProductVariant(FullAuditModel):
             models.Index(fields=["is_preorder_enabled", "deleted_at"], name="variant_preorder_idx"),
             models.Index(
                 fields=["preorder_start_date", "preorder_end_date"],
-                name="variant_preorder_dates_idx"
+                name="variant_preorder_dates_idx",
             ),
         ]
 
@@ -122,9 +105,7 @@ class ProductVariant(FullAuditModel):
         """A pre-order variant whose ordering window has ended. It stays a
         pre-order item and cannot be bought."""
         return (
-            self.is_preorder_kind
-            and not self.is_preorder_active
-            and not self.is_preorder_upcoming
+            self.is_preorder_kind and not self.is_preorder_active and not self.is_preorder_upcoming
         )
 
     def _sale_offer(self) -> tuple:

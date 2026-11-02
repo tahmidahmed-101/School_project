@@ -59,9 +59,7 @@ class SalesOrder(FullAuditModel):
     coupon = models.ForeignKey(
         "orders.Coupon", on_delete=models.SET_NULL, null=True, blank=True, related_name="orders"
     )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     # Set at checkout from the lines; an open cart is untyped and reads "stock".
     order_type = models.CharField(
         max_length=20, choices=OrderType.choices, default=OrderType.STOCK, db_index=True
@@ -88,15 +86,9 @@ class SalesOrder(FullAuditModel):
     recovery_sent_at = models.DateTimeField(null=True, blank=True)
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    shipping_total = models.DecimalField(
-        max_digits=14, decimal_places=2, default=0
-    )
-    discount_total = models.DecimalField(
-        max_digits=14, decimal_places=2, default=0
-    )
-    grand_total = models.DecimalField(
-        max_digits=14, decimal_places=2, default=0
-    )
+    shipping_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    discount_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]
@@ -135,25 +127,20 @@ class SalesOrder(FullAuditModel):
 
 
 class SalesOrderLine(TimeStampedModel):
-    order = models.ForeignKey(
-        SalesOrder, on_delete=models.CASCADE, related_name="lines"
-    )
+    order = models.ForeignKey(SalesOrder, on_delete=models.CASCADE, related_name="lines")
     variant = models.ForeignKey(
         "catalog.ProductVariant", on_delete=models.PROTECT, related_name="sales_order_lines"
     )
     quantity = models.PositiveIntegerField()
+    delivered_quantity: int
     # Snapshotted at add time: an invoice must keep saying what was sold, even
     # after the product is renamed or the SKU is reissued.
     product_name = models.CharField(max_length=200, blank=True)
     variant_sku = models.CharField(max_length=64, blank=True)
     variant_title = models.CharField(max_length=160, blank=True, default="")
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
-    tax_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0
-    )
-    discount_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0
-    )
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # Pre-order tracking
     is_preorder = models.BooleanField(default=False)
     # Units of a pre-order line that arrived stock has been set aside for.

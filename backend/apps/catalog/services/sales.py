@@ -9,7 +9,7 @@ from apps.common.params import KIND_STOCK
 from apps.common.services.soft_delete import soft_delete_instance
 
 SALE_STOCK_ONLY_MESSAGE = "A sale covers stock products only, not pre-order ones."
-TARGET_FIELDS = {
+TARGET_FIELDS: dict[str, str] = {
     Sale.AppliesTo.CATEGORIES: "categories",
     Sale.AppliesTo.BRANDS: "brands",
     Sale.AppliesTo.PRODUCTS: "products",

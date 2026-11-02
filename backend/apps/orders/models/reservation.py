@@ -40,9 +40,7 @@ class StockReservation(TimeStampedModel):
     # Units of this hold that have left with a consignment. Shipping takes them
     # from the holds of their warehouse, so the rest is what is still held here.
     shipped_quantity = models.PositiveIntegerField(default=0)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.ACTIVE
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     expires_at = models.DateTimeField(default=default_reservation_expiry)
 
     class Meta:

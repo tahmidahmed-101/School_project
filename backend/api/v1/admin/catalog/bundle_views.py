@@ -103,7 +103,6 @@ class AdminBundleListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gen
 
 @extend_schema(tags=["Catalog"])
 class AdminBundleDetailView(CatalogPermissionMixin, APIView):
-
     serializer_class = BundleSerializer
 
     def get(self, request, variant_id) -> Response:

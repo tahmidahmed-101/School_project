@@ -506,7 +506,7 @@ def _finish_if_done(campaign_id) -> None:
 def process_campaigns(*, batch_size: int | None = None, now=None) -> dict:
     """One sender run. Safe to run any number of times, and concurrently."""
     now = now or timezone.now()
-    budgets = {
+    budgets: dict[str, int] = {
         Channel.EMAIL: batch_size if batch_size is not None else settings.CAMPAIGN_BATCH_SIZE,
         Channel.SMS: batch_size if batch_size is not None else settings.SMS_CAMPAIGN_BATCH_SIZE,
     }
@@ -516,7 +516,7 @@ def process_campaigns(*, batch_size: int | None = None, now=None) -> dict:
     ).values_list("pk", flat=True):
         if _start(campaign_id):
             started += 1
-    sent = {Channel.EMAIL: 0, Channel.SMS: 0}
+    sent: dict[str, int] = {Channel.EMAIL: 0, Channel.SMS: 0}
     for campaign in EmailCampaign.objects.filter(status=Status.SENDING).order_by("started_at"):
         channel = campaign.channel
         if budgets[channel] > 0:

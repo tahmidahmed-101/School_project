@@ -501,9 +501,7 @@ def _refresh_phone_risk_profile(shipment: Shipment) -> None:
 
         rebuild_phone_profile(shipment.recipient_phone)
     except Exception:
-        logger.exception(
-            "Phone risk profile rebuild failed for shipment %s", shipment.id
-        )
+        logger.exception("Phone risk profile rebuild failed for shipment %s", shipment.id)
 
 
 def _ensure_not_held_for_fraud_review(order: SalesOrder) -> None:
@@ -556,9 +554,7 @@ def dispatch_to_courier(*, shipment: Shipment, actor=None) -> Shipment:
     shipment.tracking_number = result.get("consignment_id") or shipment.tracking_number
     # The courier's own wording, as the webhooks store it. Never left blank:
     # a blank courier_status is what marks the shipment as not yet booked.
-    shipment.courier_status = (
-        result.get("provider_status") or result.get("status") or "booked"
-    )
+    shipment.courier_status = result.get("provider_status") or result.get("status") or "booked"
     shipment.save(update_fields=["tracking_number", "courier_status", "updated_at"])
     log_action(
         actor=actor,

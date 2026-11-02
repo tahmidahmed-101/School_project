@@ -52,9 +52,12 @@ def sms_opt_out(*, phone: str) -> None:
 
 def is_sms_opted_in(phone: str) -> bool:
     number = e164_bd_mobile(phone)
-    return bool(number) and SmsSubscriber.objects.filter(
-        phone=number, is_active=True, consented_at__isnull=False
-    ).exists()
+    return (
+        bool(number)
+        and SmsSubscriber.objects.filter(
+            phone=number, is_active=True, consented_at__isnull=False
+        ).exists()
+    )
 
 
 def make_sms_unsubscribe_token(subscriber_id) -> str:

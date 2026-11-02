@@ -59,9 +59,9 @@ def test_the_sweep_actually_found_the_admin_surface():
 @pytest.mark.parametrize("path", ADMIN_PATHS)
 def test_admin_endpoints_reject_anonymous_callers(api_client, path):
     response = api_client.get(path)
-    assert (
-        response.status_code in UNAUTHORIZED
-    ), f"{path} answered {response.status_code} to an anonymous GET"
+    assert response.status_code in UNAUTHORIZED, (
+        f"{path} answered {response.status_code} to an anonymous GET"
+    )
 
 
 @pytest.mark.parametrize("path", ADMIN_PATHS)
@@ -70,9 +70,9 @@ def test_admin_endpoints_reject_customers(api_client, path):
     api_client.force_authenticate(user=customer)
 
     response = api_client.get(path)
-    assert (
-        response.status_code in UNAUTHORIZED
-    ), f"{path} answered {response.status_code} to a customer GET"
+    assert response.status_code in UNAUTHORIZED, (
+        f"{path} answered {response.status_code} to a customer GET"
+    )
 
 
 OPEN_TO_ANY_STAFF = {"/api/v1/admin/settings/modules/"}
@@ -88,9 +88,9 @@ def test_admin_endpoints_reject_staff_holding_no_permissions(api_client, path):
     api_client.force_authenticate(user=staff)
 
     response = api_client.get(path)
-    assert (
-        response.status_code in UNAUTHORIZED
-    ), f"{path} answered {response.status_code} to a permissionless staff GET"
+    assert response.status_code in UNAUTHORIZED, (
+        f"{path} answered {response.status_code} to a permissionless staff GET"
+    )
 
 
 def test_user_management_is_not_delegable_to_staff(api_client):

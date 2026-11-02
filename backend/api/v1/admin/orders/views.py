@@ -297,7 +297,6 @@ class AdminOrderExportView(OrderQuerysetMixin, GenericListAPIView):
 
 @extend_schema(tags=["Orders"])
 class AdminOrderDetailView(OrdersPermissionMixin, APIView):
-
     serializer_class = AdminSalesOrderSerializer
 
     def get(self, request, order_id) -> Response:

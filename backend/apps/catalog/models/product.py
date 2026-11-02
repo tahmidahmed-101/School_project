@@ -31,9 +31,7 @@ class Product(FullAuditModel):
         LIMITED = "limited", "Limited"
         EXCLUSIVE = "exclusive", "Exclusive"
 
-    category = models.ForeignKey(
-        Category, on_delete=models.PROTECT, related_name="products"
-    )
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="products")
     # Optional: not every product is branded. Deleting a brand keeps its products.
     brand = models.ForeignKey(
         Brand, on_delete=models.SET_NULL, related_name="products", null=True, blank=True
@@ -60,12 +58,8 @@ class Product(FullAuditModel):
     # Per-product switches for the storefront's Questions and Price report sections.
     show_questions = models.BooleanField(default=True)
     show_price_report = models.BooleanField(default=True)
-    badge = models.CharField(
-        max_length=20, choices=Badge.choices, default=Badge.NONE, blank=True
-    )
-    image = models.ImageField(
-        upload_to=_product_image_path, null=True, blank=True
-    )
+    badge = models.CharField(max_length=20, choices=Badge.choices, default=Badge.NONE, blank=True)
+    image = models.ImageField(upload_to=_product_image_path, null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["name"]
@@ -82,9 +76,7 @@ class Product(FullAuditModel):
         # Auto-generate a human-readable unique product code so staff can tell
         # similar-named products apart when searching (e.g. when adding stock).
         if not self.product_code:
-            self.product_code = unique_product_code_for(
-                model=Product, instance=self
-            )
+            self.product_code = unique_product_code_for(model=Product, instance=self)
         return super().save(*args, **kwargs)
 
     def __str__(self) -> str:

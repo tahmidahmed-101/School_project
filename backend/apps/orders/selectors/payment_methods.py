@@ -6,9 +6,7 @@ from apps.orders.models import PaymentMethodSetting
 
 
 def _enabled_map(kind: str) -> dict[str, bool]:
-    stored = dict(
-        PaymentMethodSetting.objects.filter(kind=kind).values_list("key", "is_enabled")
-    )
+    stored = dict(PaymentMethodSetting.objects.filter(kind=kind).values_list("key", "is_enabled"))
     return {spec.key: stored.get(spec.key, True) for spec in PAYMENT_METHOD_REGISTRY}
 
 

@@ -37,7 +37,9 @@ def is_free_delivery(*, kind: str, subtotal: Decimal | None) -> bool:
     if kind != KIND_STOCK or subtotal is None:
         return False
     threshold = get_business_profile().free_delivery_min_amount
-    return bool(threshold) and subtotal >= threshold
+    if not threshold:
+        return False
+    return subtotal >= threshold
 
 
 def _rate_quote(
@@ -50,9 +52,7 @@ def _rate_quote(
     candidates = [carrier] if carrier is not None else list(carriers_list().filter(is_active=True))
     for candidate in candidates:
         try:
-            return calculate_shipping_rate(
-                zone=zone, carrier=candidate, weight=weight, kind=kind
-            )
+            return calculate_shipping_rate(zone=zone, carrier=candidate, weight=weight, kind=kind)
         except BusinessRuleViolationError:
             continue
     return None

@@ -15,7 +15,7 @@ def _refuse_default_change(warehouse: Warehouse | None, data: dict) -> None:
     was_default = bool(warehouse and warehouse.is_default)
     is_default = data.get("is_default", was_default)
     is_active = data.get("is_active", warehouse.is_active if warehouse else True)
-    if was_default and not is_default:
+    if warehouse is not None and was_default and not is_default:
         raise BusinessRuleViolationError(
             f"{warehouse.name} is the default warehouse. Make another warehouse the default "
             "instead; this one then stops being the default.",

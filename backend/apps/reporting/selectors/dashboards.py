@@ -153,8 +153,9 @@ def _trend_by_day(start: date, end: date, kind: str | None = None) -> dict:
     by_day = {row["day"]: (row["total"] or Decimal("0"), row["order_count"]) for row in rows}
     span = (end - start).days + 1
     return {
-        start
-        + timedelta(days=offset): by_day.get(start + timedelta(days=offset), (Decimal("0"), 0))
+        start + timedelta(days=offset): by_day.get(
+            start + timedelta(days=offset), (Decimal("0"), 0)
+        )
         for offset in range(span)
     }
 
@@ -292,9 +293,7 @@ _STATUS_BADGE: dict[str, str] = {
 }
 
 
-def recent_orders(
-    *, start: date, end: date, limit: int = 8, kind: str | None = None
-) -> list[dict]:
+def recent_orders(*, start: date, end: date, limit: int = 8, kind: str | None = None) -> list[dict]:
     window = SalesOrder.objects.filter(
         created_at__gte=day_start(start), created_at__lt=day_after(end), deleted_at__isnull=True
     )
@@ -376,9 +375,7 @@ def _variant_daily_units(
     }
 
 
-def top_products(
-    *, start: date, end: date, limit: int = 6, kind: str | None = None
-) -> list[dict]:
+def top_products(*, start: date, end: date, limit: int = 6, kind: str | None = None) -> list[dict]:
     aggregates = (
         _order_lines(start=start, end=end, kind=kind)
         .values("variant_id")
@@ -428,9 +425,7 @@ def low_stock_rollup(_memo: dict | None = None, kind: str | None = None) -> list
     resolve the (global, point-in-time) low-stock set once across the KPI,
     inventory list and ticker sections."""
     memo = {} if _memo is None else _memo
-    items = _memoize(
-        memo, ("low_stock_items", kind), lambda: list(low_stock_summary(kind=kind))
-    )
+    items = _memoize(memo, ("low_stock_items", kind), lambda: list(low_stock_summary(kind=kind)))
 
     aggregated: dict = {}
     for item in items:

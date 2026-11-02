@@ -30,6 +30,7 @@ pytestmark = pytest.mark.django_db
 def _preorder_warehouse(db):
     return get_or_create_default_warehouse(KIND_PREORDER)
 
+
 BASE = "/api/v1/admin/inventory/"
 STOCK = Category.CategoryType.STOCK
 PREORDER = Category.CategoryType.PREORDER

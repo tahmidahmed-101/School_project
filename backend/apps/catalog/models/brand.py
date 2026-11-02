@@ -21,9 +21,7 @@ class Brand(FullAuditModel):
     )
     slug = models.SlugField(max_length=170, unique=True)
     description = models.TextField(blank=True)
-    image = models.ImageField(
-        upload_to=_brand_image_path, null=True, blank=True
-    )
+    image = models.ImageField(upload_to=_brand_image_path, null=True, blank=True)
 
     class Meta:
         ordering: ClassVar[list] = ["name"]

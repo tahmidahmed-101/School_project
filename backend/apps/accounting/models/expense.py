@@ -16,9 +16,7 @@ class Expense(FullAuditModel):
     payee = models.CharField(max_length=150)
     description = models.CharField(max_length=255, blank=True)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
-    expense_account = models.ForeignKey(
-        Account, on_delete=models.PROTECT, related_name="expenses"
-    )
+    expense_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="expenses")
     # Simple mode's face of `expense_account`; never a replacement for it, the
     # ledger still needs the account.
     category = models.ForeignKey(

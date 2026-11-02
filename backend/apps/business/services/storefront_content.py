@@ -144,12 +144,13 @@ def _check_popup(popup: PromotionPopup) -> None:
         )
     kind = popup.destination_type
     # `none` needs nothing: the image alone is the popup.
-    missing = {
+    requirements: dict[str, tuple[str, object, str]] = {
         Destination.PRODUCT: ("product_id", popup.product_id, "Choose the product."),
         Destination.CATEGORY: ("category_id", popup.category_id, "Choose the category."),
         Destination.CAMPAIGN: ("sale_id", popup.sale_id, "Choose the campaign."),
         Destination.URL: ("link_url", popup.link_url, "Enter the link."),
-    }.get(kind)
+    }
+    missing = requirements.get(kind)
     if missing is not None and not missing[1]:
         raise PromotionPopupFieldError(
             missing[0], missing[2], code="promotion_destination_required"
@@ -170,13 +171,14 @@ def _check_destination_shop(popup: PromotionPopup) -> None:
     and a campaign (catalog sale) only from the stock shop, since sales never
     apply to pre-orders."""
     kind = popup.destination_type
-    if kind == Destination.PRODUCT and popup.product.category.category_type != popup.shop:
+    product, category = popup.product, popup.category
+    if kind == Destination.PRODUCT and product and product.category.category_type != popup.shop:
         raise PromotionPopupFieldError(
             "product_id",
             "Choose a product from this shop.",
             code="promotion_destination_other_shop",
         )
-    if kind == Destination.CATEGORY and popup.category.category_type != popup.shop:
+    if kind == Destination.CATEGORY and category and category.category_type != popup.shop:
         raise PromotionPopupFieldError(
             "category_id",
             "Choose a category from this shop.",

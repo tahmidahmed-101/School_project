@@ -353,9 +353,7 @@ class CartShippingOptionListView(APIView):
         subtotal = order_subtotal_now(cart)
         options = [
             {"id": option["carrier"].id, "name": option["carrier"].name, "cost": option["cost"]}
-            for option in shipping_options(
-                zone=zone, weight=weight, kind=kind, subtotal=subtotal
-            )
+            for option in shipping_options(zone=zone, weight=weight, kind=kind, subtotal=subtotal)
         ]
         return Response(
             {

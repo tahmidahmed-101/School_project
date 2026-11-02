@@ -38,9 +38,7 @@ class PhoneBlock(TimeStampedModel):
     strength = models.CharField(
         max_length=20, choices=Strength.choices, default=Strength.ADVANCE_ONLY
     )
-    origin = models.CharField(
-        max_length=20, choices=Origin.choices, default=Origin.MANUAL
-    )
+    origin = models.CharField(max_length=20, choices=Origin.choices, default=Origin.MANUAL)
     reason = models.TextField(help_text="Why. Shown to staff, never customers.")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -49,9 +47,7 @@ class PhoneBlock(TimeStampedModel):
         blank=True,
         related_name="phone_blocks_created",
     )
-    lifted_at = models.DateTimeField(
-        null=True, blank=True, db_index=True
-    )
+    lifted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     lifted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

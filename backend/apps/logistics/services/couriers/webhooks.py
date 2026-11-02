@@ -37,8 +37,11 @@ def _event_id(carrier: Carrier, event_type: str, payload: dict[str, Any]) -> str
     recognised as a duplicate; a genuinely different event, even one that
     otherwise collides on carrier/type, does not."""
     digest = hashlib.sha256(
-        json.dumps({"carrier": str(carrier.id), "type": event_type, "payload": payload},
-                    sort_keys=True, default=str).encode()
+        json.dumps(
+            {"carrier": str(carrier.id), "type": event_type, "payload": payload},
+            sort_keys=True,
+            default=str,
+        ).encode()
     ).hexdigest()
     return f"{carrier.id}:{digest}"
 

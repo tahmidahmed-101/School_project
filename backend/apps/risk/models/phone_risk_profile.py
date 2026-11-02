@@ -25,9 +25,7 @@ class PhoneRiskProfile(TimeStampedModel):
     delivered_count = models.IntegerField(default=0)
     returned_count = models.IntegerField(default=0)
     cancelled_count = models.IntegerField(default=0)
-    success_rate = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("0.00")
-    )
+    success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     last_order_at = models.DateTimeField(null=True, blank=True)
     last_delivered_at = models.DateTimeField(null=True, blank=True)
     last_returned_at = models.DateTimeField(null=True, blank=True)

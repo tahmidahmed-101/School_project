@@ -136,9 +136,7 @@ def test_public_product_detail_exposes_preorder_capacity(api_client):
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=10,
     )
-    SalesOrderLineFactory(
-        variant=variant, quantity=4, is_preorder=True, order__status="confirmed"
-    )
+    SalesOrderLineFactory(variant=variant, quantity=4, is_preorder=True, order__status="confirmed")
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -165,9 +163,7 @@ def test_public_product_detail_preorder_remaining_is_null_when_unlimited(api_cli
         preorder_end_date=now + timedelta(days=10),
         preorder_stock_limit=None,
     )
-    SalesOrderLineFactory(
-        variant=variant, quantity=3, is_preorder=True, order__status="confirmed"
-    )
+    SalesOrderLineFactory(variant=variant, quantity=3, is_preorder=True, order__status="confirmed")
 
     response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
 
@@ -345,9 +341,7 @@ def test_admin_product_list_filters_by_category(api_client):
     target_product = ProductFactory(name="Target Category Product", category=target_category)
     other_product = ProductFactory(name="Other Category Product", category=other_category)
 
-    response = api_client.get(
-        f"/api/v1/admin/catalog/products/?category_id={target_category.id}"
-    )
+    response = api_client.get(f"/api/v1/admin/catalog/products/?category_id={target_category.id}")
 
     assert response.status_code == 200
     names = [item["name"] for item in response.data["data"]["results"]]
@@ -936,13 +930,9 @@ def test_admin_product_list_filters_by_category_type(api_client):
     admin = create_user(email="catalog-product-type-filter-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
     stock_category = CategoryFactory(name="Stock Product Category", category_type="stock")
-    preorder_category = CategoryFactory(
-        name="Preorder Product Category", category_type="preorder"
-    )
+    preorder_category = CategoryFactory(name="Preorder Product Category", category_type="preorder")
     stock_product = ProductFactory(name="Stock Category Product", category=stock_category)
-    preorder_product = ProductFactory(
-        name="Preorder Category Product", category=preorder_category
-    )
+    preorder_product = ProductFactory(name="Preorder Category Product", category=preorder_category)
 
     response = api_client.get("/api/v1/admin/catalog/products/?category_type=preorder")
 
@@ -954,9 +944,7 @@ def test_admin_product_list_filters_by_category_type(api_client):
 
 def test_public_category_list_filters_by_category_type(api_client):
     stock_category = CategoryFactory(name="Public Stock Category", category_type="stock")
-    preorder_category = CategoryFactory(
-        name="Public Preorder Category", category_type="preorder"
-    )
+    preorder_category = CategoryFactory(name="Public Preorder Category", category_type="preorder")
 
     response = api_client.get("/api/v1/public/catalog/categories/?category_type=preorder")
 

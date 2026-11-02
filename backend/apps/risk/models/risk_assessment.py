@@ -34,14 +34,10 @@ class RiskAssessment(TimeStampedModel):
         related_name="risk_assessments",
     )
     risk_level = models.CharField(max_length=10, choices=RiskLevel.choices)
-    risk_score = models.DecimalField(
-        max_digits=5, decimal_places=2, help_text="0.00 to 100.00"
-    )
+    risk_score = models.DecimalField(max_digits=5, decimal_places=2, help_text="0.00 to 100.00")
     risk_reasons = models.JSONField(default=list, blank=True)
     features_used = models.JSONField(default=dict, blank=True)
-    recommended_action = models.CharField(
-        max_length=10, choices=RecommendedAction.choices
-    )
+    recommended_action = models.CharField(max_length=10, choices=RecommendedAction.choices)
     auto_blocked = models.BooleanField(default=False)
 
     class Meta:

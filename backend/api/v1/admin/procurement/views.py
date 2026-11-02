@@ -197,9 +197,7 @@ class AdminPurchaseOrderListCreateView(PurchasingPermissionMixin, GenericListAPI
 
     def get_queryset(self):
         status_param = get_choice(self.request.query_params, "status", PurchaseOrder.Status.values)
-        return purchase_orders_list(
-            status=status_param, kind=get_kind(self.request.query_params)
-        )
+        return purchase_orders_list(status=status_param, kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)
@@ -489,9 +487,7 @@ class AdminVendorBillListCreateView(VendorBillPermissionMixin, GenericListAPIVie
 
     def get_queryset(self):
         status_param = get_choice(self.request.query_params, "status", VendorBill.Status.values)
-        return vendor_bills_list(
-            status=status_param, kind=get_kind(self.request.query_params)
-        )
+        return vendor_bills_list(status=status_param, kind=get_kind(self.request.query_params))
 
     def get(self, request) -> Response:
         return self.list_response(request)

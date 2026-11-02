@@ -268,7 +268,7 @@ DUPLICATE_ORDER_STATUSES = (SalesOrder.Status.AWAITING_PAYMENT, SalesOrder.Statu
 def _order_phone(order: SalesOrder) -> str:
     if order.contact_phone:
         return order.contact_phone
-    return order.shipping_address.phone if order.shipping_address_id else ""
+    return order.shipping_address.phone if order.shipping_address else ""
 
 
 def _line_quantities(order: SalesOrder) -> dict:
@@ -319,9 +319,7 @@ def _phone_spellings(raw: str) -> set[str]:
     return {local, f"88{local}", f"+88{local}"}
 
 
-def recovery_candidates(
-    *, idle: timedelta, max_age: timedelta, now=None
-) -> QuerySet[SalesOrder]:
+def recovery_candidates(*, idle: timedelta, max_age: timedelta, now=None) -> QuerySet[SalesOrder]:
     """Open storefront carts with something in them and a phone, untouched for
     at least `idle` and at most `max_age`, not yet reminded. Staff-entered
     orders (`created_by` set) are not carts a shopper walked away from."""

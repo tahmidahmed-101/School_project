@@ -17,12 +17,8 @@ class PurchaseOrder(FullAuditModel):
         CANCELLED = "cancelled", "Cancelled"
 
     po_number = models.CharField(max_length=32, unique=True)
-    supplier = models.ForeignKey(
-        Supplier, on_delete=models.PROTECT, related_name="purchase_orders"
-    )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.DRAFT
-    )
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="purchase_orders")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     order_date = models.DateField()
     notes = models.TextField(blank=True)
 

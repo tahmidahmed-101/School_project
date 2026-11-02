@@ -16,12 +16,8 @@ class ShippingRate(TimeStampedModel):
     + ceil((weight - base_weight) / increment_weight) * increment_charge,
     floored at base_charge for weight <= base_weight."""
 
-    zone = models.ForeignKey(
-        ShippingZone, on_delete=models.CASCADE, related_name="rates"
-    )
-    carrier = models.ForeignKey(
-        Carrier, on_delete=models.CASCADE, related_name="rates"
-    )
+    zone = models.ForeignKey(ShippingZone, on_delete=models.CASCADE, related_name="rates")
+    carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, related_name="rates")
     kind = models.CharField(
         max_length=20, choices=Category.CategoryType.choices, default=Category.CategoryType.STOCK
     )

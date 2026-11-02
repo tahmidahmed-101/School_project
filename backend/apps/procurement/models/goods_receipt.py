@@ -32,9 +32,7 @@ class GoodsReceiptNote(FullAuditModel):
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
 
     class Meta:
         ordering: ClassVar[list] = ["-received_date"]

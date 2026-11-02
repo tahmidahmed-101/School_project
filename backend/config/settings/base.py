@@ -452,7 +452,7 @@ TELEGRAM_WEBHOOK_SECRET: str = config("TELEGRAM_WEBHOOK_SECRET", default="")
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # Without it nothing secret can be saved from the dashboard, and secrets saved
 # earlier cannot be read (their provider then stops sending).
-SECRETS_ENCRYPTION_KEYS: list[str] = config("SECRETS_ENCRYPTION_KEYS", default="", cast=Csv())
+SECRETS_ENCRYPTION_KEYS = cast(list[str], config("SECRETS_ENCRYPTION_KEYS", default="", cast=Csv()))
 
 # Server-side Purchase conversions (apps.marketing.services.conversions). Each
 # provider is off until both of its values are set. Server-only: never put

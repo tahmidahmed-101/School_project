@@ -21,9 +21,7 @@ class JournalEntry(FullAuditModel):
     entry_date = models.DateField()
     reference_type = models.CharField(max_length=50, blank=True)
     reference_id = models.UUIDField(null=True, blank=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.DRAFT
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     description = models.CharField(max_length=255, blank=True)
     # Blank means company-wide (rent, salaries, capital): never guessed into a half.
     kind = models.CharField(max_length=10, choices=Kind.choices, blank=True, default="")
@@ -45,12 +43,8 @@ class JournalEntry(FullAuditModel):
 
 
 class JournalEntryLine(TimeStampedModel):
-    journal_entry = models.ForeignKey(
-        JournalEntry, on_delete=models.CASCADE, related_name="lines"
-    )
-    account = models.ForeignKey(
-        Account, on_delete=models.PROTECT, related_name="lines"
-    )
+    journal_entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name="lines")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="lines")
     debit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     credit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 

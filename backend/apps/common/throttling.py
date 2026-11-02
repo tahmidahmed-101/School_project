@@ -20,6 +20,8 @@ class SettingsRateMixin:
     Reading `api_settings` here keeps the configured rate authoritative.
     """
 
+    scope: str
+
     def get_rate(self):
         return api_settings.DEFAULT_THROTTLE_RATES.get(self.scope)
 

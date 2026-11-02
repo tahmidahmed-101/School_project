@@ -50,9 +50,7 @@ class StockTurnoverView(APIView):
     def get(self, request) -> Response:
         serializer = DateRangeSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        turnover = stock_turnover(
-            **serializer.validated_data, kind=get_kind(request.query_params)
-        )
+        turnover = stock_turnover(**serializer.validated_data, kind=get_kind(request.query_params))
         return Response({"data": {"turnover_ratio": turnover}, "message": "Success"})
 
 
@@ -78,7 +76,5 @@ class DashboardView(APIView):
     def get(self, request) -> Response:
         serializer = DateRangeSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        payload = dashboard_data(
-            **serializer.validated_data, kind=get_kind(request.query_params)
-        )
+        payload = dashboard_data(**serializer.validated_data, kind=get_kind(request.query_params))
         return Response({"data": DashboardSerializer(payload).data, "message": "Success"})

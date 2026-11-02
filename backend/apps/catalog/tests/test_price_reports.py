@@ -24,6 +24,7 @@ pytestmark = pytest.mark.django_db
 def _live_sales_already_loaded(db):
     live_sales()
 
+
 ADMIN_URL = "/api/v1/admin/catalog/price-reports/"
 
 

@@ -242,9 +242,7 @@ def record_cod_verification(*, order: SalesOrder, actor=None) -> SalesOrder:
             "This order has no cash on delivery payment waiting.", code="not_cod"
         )
     if order.cod_verified_at is not None:
-        raise BusinessRuleViolationError(
-            "This order is already verified.", code="already_verified"
-        )
+        raise BusinessRuleViolationError("This order is already verified.", code="already_verified")
     order.cod_verified_at = timezone.now()
     order.cod_verified_by = actor
     order.save(update_fields=["cod_verified_at", "cod_verified_by", "updated_at"])

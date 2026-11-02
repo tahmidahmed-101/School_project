@@ -69,9 +69,7 @@ def test_checkout_allows_an_advance_only_blocked_phone():
     customer = CustomerUserFactory()
     cart = _cart_ready_for_checkout(customer)
     address = AddressFactory(user=customer, phone="01711223344")
-    block_phone(
-        "01711223344", reason="thin history", strength=PhoneBlock.Strength.ADVANCE_ONLY
-    )
+    block_phone("01711223344", reason="thin history", strength=PhoneBlock.Strength.ADVANCE_ONLY)
 
     # Should not raise: advance-only is a payment-method decision, not a checkout refusal.
     checkout(order=cart, shipping_address=address)

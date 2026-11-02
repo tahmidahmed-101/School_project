@@ -273,8 +273,6 @@ def test_product_code_unique_across_all_products_including_deleted():
     first_code = first.product_code
     first.soft_delete()
 
-    new_product = Product.objects.create(
-        category=category, name="New Product", slug="product-new"
-    )
+    new_product = Product.objects.create(category=category, name="New Product", slug="product-new")
     assert new_product.product_code != first_code
     assert new_product.product_code not in codes - {first_code}

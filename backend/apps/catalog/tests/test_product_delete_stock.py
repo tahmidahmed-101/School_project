@@ -326,9 +326,11 @@ def test_reserved_units_cannot_be_removed_from_under_an_order(admin_client, url,
     assert response.status_code == 400, response.data
     assert response.data["error"]["code"] == "stock_reserved"
     assert _quantities(variant) == (3, 2)
-    assert not StockLedgerEntry.objects.filter(variant=variant).exclude(
-        movement_type=MovementType.PURCHASE_IN
-    ).exists()
+    assert (
+        not StockLedgerEntry.objects.filter(variant=variant)
+        .exclude(movement_type=MovementType.PURCHASE_IN)
+        .exists()
+    )
 
 
 def test_a_product_is_cleared_and_deleted_through_the_existing_endpoints(admin_client, admin_user):

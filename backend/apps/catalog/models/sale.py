@@ -38,9 +38,7 @@ class Sale(FullAuditModel):
     )
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField(null=True, blank=True)
-    applies_to = models.CharField(
-        max_length=20, choices=AppliesTo.choices, default=AppliesTo.ALL
-    )
+    applies_to = models.CharField(max_length=20, choices=AppliesTo.choices, default=AppliesTo.ALL)
     categories = models.ManyToManyField(Category, blank=True, related_name="sales")
     brands = models.ManyToManyField(Brand, blank=True, related_name="sales")
     products = models.ManyToManyField(Product, blank=True, related_name="sales")

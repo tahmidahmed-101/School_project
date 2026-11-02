@@ -192,7 +192,7 @@ class IncludeDeletedMixin:
         return bool(get_bool(self.request.query_params, "include_deleted", default=False))
 
     def get_permissions(self):
-        permissions = super().get_permissions()
+        permissions = super().get_permissions()  # type: ignore[misc]
         if self.include_deleted_permission is None:
             return permissions
         try:

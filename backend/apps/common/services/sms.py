@@ -32,9 +32,7 @@ class SmsDeliveryError(Exception):
 
 def sms_configured() -> bool:
     return bool(
-        settings.TWILIO_ACCOUNT_SID
-        and settings.TWILIO_AUTH_TOKEN
-        and settings.TWILIO_PHONE_NUMBER
+        settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_PHONE_NUMBER
     )
 
 

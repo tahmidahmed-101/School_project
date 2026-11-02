@@ -73,4 +73,3 @@ STORAGES = {
 
 # Don't throw ValueError if a referenced static file is missing in the manifest
 WHITENOISE_MANIFEST_STRICT = False
-

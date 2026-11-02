@@ -20,9 +20,7 @@ class StockItem(TimeStampedModel):
     variant = models.ForeignKey(
         ProductVariant, on_delete=models.CASCADE, related_name="stock_items"
     )
-    warehouse = models.ForeignKey(
-        Warehouse, on_delete=models.CASCADE, related_name="stock_items"
-    )
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name="stock_items")
     quantity_on_hand = models.IntegerField(default=0)
     quantity_reserved = models.IntegerField(default=0)
     avg_cost = models.DecimalField(max_digits=12, decimal_places=4, default=0)

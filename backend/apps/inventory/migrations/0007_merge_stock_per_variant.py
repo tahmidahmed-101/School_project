@@ -20,7 +20,7 @@ def merge_stock_items(apps, schema_editor):
     for item in StockItem.objects.all().order_by("created_at", "id"):
         by_variant.setdefault(str(item.variant_id), []).append(item)
 
-    doomed_ids = []
+    doomed_ids: list[object] = []
     for items in by_variant.values():
         if len(items) == 1:
             continue

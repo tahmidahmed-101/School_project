@@ -21,14 +21,10 @@ class VendorBill(FullAuditModel):
     purchase_order = models.ForeignKey(
         PurchaseOrder, on_delete=models.PROTECT, related_name="vendor_bills"
     )
-    supplier = models.ForeignKey(
-        Supplier, on_delete=models.PROTECT, related_name="vendor_bills"
-    )
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="vendor_bills")
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     due_date = models.DateField()
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.UNPAID
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.UNPAID)
 
     class Meta:
         ordering: ClassVar[list] = ["-due_date"]
@@ -43,9 +39,7 @@ class VendorBill(FullAuditModel):
 
 
 class VendorPayment(TimeStampedModel):
-    vendor_bill = models.ForeignKey(
-        VendorBill, on_delete=models.PROTECT, related_name="payments"
-    )
+    vendor_bill = models.ForeignKey(VendorBill, on_delete=models.PROTECT, related_name="payments")
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     paid_at = models.DateTimeField()
     method = models.CharField(max_length=50, blank=True)

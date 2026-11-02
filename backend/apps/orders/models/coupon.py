@@ -18,9 +18,7 @@ class Coupon(FullAuditModel):
         max_length=20, choices=DiscountType.choices, default=DiscountType.PERCENTAGE
     )
     value = models.DecimalField(max_digits=12, decimal_places=2)
-    min_order_amount = models.DecimalField(
-        max_digits=14, decimal_places=2, default=0
-    )
+    min_order_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     usage_limit = models.PositiveIntegerField(
         null=True, blank=True, help_text="Leave blank for unlimited uses."
     )
@@ -39,8 +37,7 @@ class Coupon(FullAuditModel):
     show_on_storefront = models.BooleanField(
         default=False,
         help_text=(
-            "Advertise this code in the storefront's voucher strip. "
-            "Leave off for private codes."
+            "Advertise this code in the storefront's voucher strip. Leave off for private codes."
         ),
     )
 

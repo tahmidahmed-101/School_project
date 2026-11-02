@@ -313,9 +313,7 @@ def _sellable_rows(variant) -> list[StockItem]:
 
 
 @transaction.atomic
-def reserve_stock_anywhere(
-    *, variant, quantity: int, prefer=None
-) -> list[tuple[Warehouse, int]]:
+def reserve_stock_anywhere(*, variant, quantity: int, prefer=None) -> list[tuple[Warehouse, int]]:
     """Hold `quantity` units wherever they are available, as few warehouses
     as possible: the preferred warehouse first (where the units came from or
     were held before), then the default, then the fullest. A hold that no
@@ -414,9 +412,7 @@ def post_adjustment(
 
 
 @transaction.atomic
-def post_bulk_adjustments(
-    *, items: list[dict], actor=None, kind: str | None = None
-) -> list[dict]:
+def post_bulk_adjustments(*, items: list[dict], actor=None, kind: str | None = None) -> list[dict]:
     """Apply many adjustments as one all-or-nothing batch.
 
     A partially applied cycle count is worse than a rejected one, so the first
@@ -424,9 +420,9 @@ def post_bulk_adjustments(
     """
     variants = {
         str(variant.id): variant
-        for variant in get_variants_by_ids(
-            [item["variant_id"] for item in items]
-        ).select_related("product__category")
+        for variant in get_variants_by_ids([item["variant_id"] for item in items]).select_related(
+            "product__category"
+        )
     }
     results = []
     for index, item in enumerate(items):

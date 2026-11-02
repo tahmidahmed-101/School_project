@@ -31,7 +31,7 @@ META_TEST_EVENT_CODE = ""
 TIKTOK_PIXEL_ID = ""
 TIKTOK_EVENTS_ACCESS_TOKEN = ""
 TIKTOK_TEST_EVENT_CODE = ""
-SECRETS_ENCRYPTION_KEYS: list[str] = []
+SECRETS_ENCRYPTION_KEYS = []
 
 # WhiteNoise serves the `collectstatic` output, which only the Docker image
 # builds. No test serves static files, and initialising it against the missing

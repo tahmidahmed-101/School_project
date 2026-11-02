@@ -195,9 +195,7 @@ class AdminJournalEntryListView(AccountingPermissionMixin, GenericListAPIView):
         status_param = get_choice(self.request.query_params, "status", JournalEntry.Status.values)
         reference_type = self.request.query_params.get("reference_type")
         kind = get_choice(self.request.query_params, "kind", [*KINDS, COMPANY])
-        return journal_entries_list(
-            status=status_param, reference_type=reference_type, kind=kind
-        )
+        return journal_entries_list(status=status_param, reference_type=reference_type, kind=kind)
 
     def get(self, request) -> Response:
         return self.list_response(request)

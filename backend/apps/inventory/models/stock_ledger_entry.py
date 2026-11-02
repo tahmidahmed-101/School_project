@@ -25,9 +25,7 @@ class StockLedgerEntry(UUIDModel):
     )
     movement_type = models.CharField(max_length=20, choices=MovementType.choices)
     quantity = models.PositiveIntegerField()
-    unit_cost = models.DecimalField(
-        max_digits=12, decimal_places=4, null=True, blank=True
-    )
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     balance_after = models.IntegerField()
     reference_type = models.CharField(max_length=50, blank=True)
     reference_id = models.UUIDField(null=True, blank=True)

@@ -14,9 +14,7 @@ DISABLED_SUB_FEATURES = {
 
 
 class Command(BaseCommand):
-    help = (
-        "Switch the business config to a simple storefront: variations, procurement " "and tax off."
-    )
+    help = "Switch the business config to a simple storefront: variations, procurement and tax off."
 
     def add_arguments(self, parser):
         parser.add_argument(

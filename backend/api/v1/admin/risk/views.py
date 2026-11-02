@@ -112,9 +112,7 @@ class AdminIPBlocklistView(RiskPermissionMixin, APIView):
 
     def get(self, request) -> Response:
         rows = ip_blocklist.blocks_list()
-        return Response(
-            {"data": IPBlockSerializer(rows, many=True).data, "message": "Success"}
-        )
+        return Response({"data": IPBlockSerializer(rows, many=True).data, "message": "Success"})
 
     def post(self, request) -> Response:
         serializer = IPBlockSerializer(data=request.data)
@@ -151,9 +149,7 @@ class AdminPhoneBlocklistView(RiskPermissionMixin, APIView):
     def get(self, request) -> Response:
         include_lifted = request.query_params.get("include_lifted") == "true"
         rows = blocklist.blocks_list(include_lifted=include_lifted)
-        return Response(
-            {"data": PhoneBlockSerializer(rows, many=True).data, "message": "Success"}
-        )
+        return Response({"data": PhoneBlockSerializer(rows, many=True).data, "message": "Success"})
 
     def post(self, request) -> Response:
         serializer = BlockPhoneSerializer(data=request.data)

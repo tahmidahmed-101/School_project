@@ -92,9 +92,7 @@ def test_webhook_refuses_a_missing_or_wrong_secret(api_client, settings, telegra
 def test_webhook_is_closed_while_no_secret_is_configured(api_client, settings):
     settings.TELEGRAM_WEBHOOK_SECRET = ""
 
-    response = api_client.post(
-        WEBHOOK, {}, format="json", HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN=""
-    )
+    response = api_client.post(WEBHOOK, {}, format="json", HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN="")
 
     assert response.status_code == 403
 

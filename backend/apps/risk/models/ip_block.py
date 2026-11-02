@@ -17,9 +17,7 @@ class IPBlock(TimeStampedModel):
     ``expires_at`` null means indefinite.
     """
 
-    ip_address = models.GenericIPAddressField(
-        unique=True, db_index=True
-    )
+    ip_address = models.GenericIPAddressField(unique=True, db_index=True)
     reason = models.TextField(help_text="Why. Shown to staff, never customers.")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

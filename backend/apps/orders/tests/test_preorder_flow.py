@@ -110,9 +110,7 @@ def test_deposit_confirms_a_preorder_and_the_rest_is_taken_later():
     deposit = order_deposit_due(order)
     assert deposit == (order.grand_total * Decimal("0.30")).quantize(Decimal("0.01"))
 
-    capture_payment(
-        order=order, amount=deposit, method=PaymentMethodKey.BKASH, reference="TRX-1"
-    )
+    capture_payment(order=order, amount=deposit, method=PaymentMethodKey.BKASH, reference="TRX-1")
 
     order.refresh_from_db()
     assert order.status == SalesOrder.Status.CONFIRMED

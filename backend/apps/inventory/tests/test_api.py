@@ -712,4 +712,3 @@ def test_admin_can_list_and_create_and_manage_warehouses(api_client):
     # Delete warehouse
     del_resp = api_client.delete(f"/api/v1/admin/inventory/warehouses/{wh_id}/")
     assert del_resp.status_code == 200
-

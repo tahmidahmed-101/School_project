@@ -26,8 +26,7 @@ def build_recipient(shipment: Shipment) -> Recipient:
     address = shipment.order.shipping_address
     if address is None:
         raise CourierRejectedError(
-            f"Order {shipment.order.order_number} has no shipping address to send "
-            "to the courier.",
+            f"Order {shipment.order.order_number} has no shipping address to send to the courier.",
             code="missing_shipping_address",
         )
 

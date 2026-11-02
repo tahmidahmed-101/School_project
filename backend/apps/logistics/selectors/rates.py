@@ -21,9 +21,7 @@ def get_carrier_by_id(carrier_id: str | UUID, *, include_deleted: bool = False) 
     return queryset.filter(id=carrier_id).first()
 
 
-def zones_list(
-    *, include_deleted: bool = False, kind: str | None = None
-) -> QuerySet[ShippingZone]:
+def zones_list(*, include_deleted: bool = False, kind: str | None = None) -> QuerySet[ShippingZone]:
     queryset = ShippingZone.objects.prefetch_related("rates")
     if not include_deleted:
         queryset = queryset.filter(deleted_at__isnull=True)

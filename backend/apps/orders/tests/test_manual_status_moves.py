@@ -50,9 +50,12 @@ def test_moving_a_pending_order_forward_checks_it_out(target):
 
     assert _status(cart) == target
     assert _stock(variant) == (10, 3)
-    assert StockReservation.objects.filter(
-        order_line__order=cart, status=StockReservation.Status.ACTIVE
-    ).count() == 1
+    assert (
+        StockReservation.objects.filter(
+            order_line__order=cart, status=StockReservation.Status.ACTIVE
+        ).count()
+        == 1
+    )
 
 
 def test_a_pending_order_is_not_moved_when_stock_is_short():

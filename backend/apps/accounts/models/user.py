@@ -39,9 +39,7 @@ class User(AbstractUser, SoftDeleteModel):
     # NULLs never collide on the unique constraint; "" would, so save() maps
     # a blank email to NULL.
     email = models.EmailField(unique=True, null=True, blank=True)  # type: ignore[assignment]
-    role = models.CharField(
-        max_length=20, choices=UserRole.choices, default=UserRole.CUSTOMER
-    )
+    role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.CUSTOMER)
     phone = models.CharField(max_length=32, blank=True)
     profile_picture = models.URLField(blank=True)
     is_email_verified = models.BooleanField(default=False)

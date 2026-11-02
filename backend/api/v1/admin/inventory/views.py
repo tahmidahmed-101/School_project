@@ -123,7 +123,6 @@ class AdminStockItemListView(GenericListAPIView):
 
 @extend_schema(tags=["Inventory"])
 class AdminStockItemDetailView(InventoryPermissionMixin, APIView):
-
     serializer_class = StockItemSerializer
 
     def get(self, request, stock_item_id) -> Response:
@@ -446,7 +445,6 @@ class AdminWarehouseDetailView(InventoryPermissionMixin, APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": {}, "message": "Success"})
-
 
 
 @extend_schema(tags=["Inventory"])

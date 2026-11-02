@@ -13,4 +13,3 @@ class BusinessRuleViolationError(DomainError):
 
 # Alias for compatibility across domain services
 BusinessRuleViolation = BusinessRuleViolationError
-

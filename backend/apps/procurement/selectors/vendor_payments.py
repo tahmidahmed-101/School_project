@@ -27,9 +27,7 @@ def vendor_payments_list(
         queryset = queryset.filter(paid_at__gte=day_start(start))
     if end is not None:
         queryset = queryset.filter(paid_at__lt=day_after(end))
-    queryset = filter_by_kind(
-        queryset, kind, purchase_order_field="vendor_bill__purchase_order_id"
-    )
+    queryset = filter_by_kind(queryset, kind, purchase_order_field="vendor_bill__purchase_order_id")
     return queryset.order_by("-paid_at")
 
 

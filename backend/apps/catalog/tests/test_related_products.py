@@ -16,7 +16,6 @@ def _live_sales_already_loaded(db):
     live_sales()
 
 
-
 def _url(product, **params) -> str:
     query = "&".join(f"{key}={value}" for key, value in params.items())
     return f"/api/v1/public/catalog/products/{product.slug}/related/" + (

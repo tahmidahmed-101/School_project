@@ -80,7 +80,6 @@ class AdminCategoryListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, G
 
 @extend_schema(tags=["Catalog"])
 class AdminCategoryDetailView(CatalogPermissionMixin, APIView):
-
     serializer_class = CategorySerializer
 
     def get(self, request, category_id) -> Response:

@@ -105,9 +105,7 @@ class ProductVariantSerializer(serializers.Serializer):
     preorder_start_date = serializers.DateTimeField(allow_null=True, required=False)
     preorder_end_date = serializers.DateTimeField(allow_null=True, required=False)
     release_date = serializers.DateTimeField(allow_null=True, required=False)
-    preorder_stock_limit = serializers.IntegerField(
-        allow_null=True, required=False, min_value=0
-    )
+    preorder_stock_limit = serializers.IntegerField(allow_null=True, required=False, min_value=0)
     preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
     is_preorder_active = serializers.SerializerMethodField()
     can_preorder = serializers.SerializerMethodField()
@@ -221,9 +219,7 @@ class ProductVariantCreateSerializer(serializers.Serializer):
     preorder_start_date = serializers.DateTimeField(required=False, allow_null=True)
     preorder_end_date = serializers.DateTimeField(required=False, allow_null=True)
     release_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_stock_limit = serializers.IntegerField(
-        required=False, allow_null=True, min_value=0
-    )
+    preorder_stock_limit = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
@@ -287,9 +283,7 @@ class ProductVariantUpdateSerializer(serializers.Serializer):
     preorder_start_date = serializers.DateTimeField(required=False, allow_null=True)
     preorder_end_date = serializers.DateTimeField(required=False, allow_null=True)
     release_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_stock_limit = serializers.IntegerField(
-        required=False, allow_null=True, min_value=0
-    )
+    preorder_stock_limit = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):

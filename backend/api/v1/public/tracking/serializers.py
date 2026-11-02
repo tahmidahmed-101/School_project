@@ -105,11 +105,13 @@ class PublicTrackOrderSerializer(serializers.Serializer):
         timeline = []
 
         # Order placed
-        timeline.append({
-            "status": "Placed",
-            "timestamp": obj.created_at,
-            "description": "Order placed",
-        })
+        timeline.append(
+            {
+                "status": "Placed",
+                "timestamp": obj.created_at,
+                "description": "Order placed",
+            }
+        )
 
         # Order confirmed
         if obj.status in (
@@ -118,11 +120,13 @@ class PublicTrackOrderSerializer(serializers.Serializer):
             SalesOrder.Status.DELIVERED,
             SalesOrder.Status.CLOSED,
         ):
-            timeline.append({
-                "status": "Confirmed",
-                "timestamp": obj.updated_at,
-                "description": "Order confirmed",
-            })
+            timeline.append(
+                {
+                    "status": "Confirmed",
+                    "timestamp": obj.updated_at,
+                    "description": "Order confirmed",
+                }
+            )
 
         # Order packed (when shipped but no shipment movement yet)
         if obj.status in (
@@ -137,53 +141,64 @@ class PublicTrackOrderSerializer(serializers.Serializer):
                 Shipment.Status.OUT_FOR_DELIVERY,
                 Shipment.Status.DELIVERED,
             ):
-                timeline.append({
-                    "status": "Packed",
-                    "timestamp": obj.updated_at,
-                    "description": "Order packed and ready for shipment",
-                })
+                timeline.append(
+                    {
+                        "status": "Packed",
+                        "timestamp": obj.updated_at,
+                        "description": "Order packed and ready for shipment",
+                    }
+                )
 
         # Shipment events
         for shipment in obj.shipments.filter(deleted_at__isnull=True).order_by("created_at"):
             if shipment.status == Shipment.Status.SHIPPED:
-                timeline.append({
-                    "status": "Shipped",
-                    "timestamp": shipment.shipped_at or shipment.created_at,
-                    "description": (
-                        f"Shipped via {shipment.carrier.name if shipment.carrier else 'carrier'}"
-                    ),
-                    "tracking_number": shipment.tracking_number,
-                })
+                carrier_name = shipment.carrier.name if shipment.carrier else "carrier"
+                timeline.append(
+                    {
+                        "status": "Shipped",
+                        "timestamp": shipment.shipped_at or shipment.created_at,
+                        "description": f"Shipped via {carrier_name}",
+                        "tracking_number": shipment.tracking_number,
+                    }
+                )
             elif shipment.status == Shipment.Status.IN_TRANSIT:
-                timeline.append({
-                    "status": "In Transit",
-                    "timestamp": shipment.updated_at,
-                    "description": "Package in transit",
-                    "tracking_number": shipment.tracking_number,
-                })
+                timeline.append(
+                    {
+                        "status": "In Transit",
+                        "timestamp": shipment.updated_at,
+                        "description": "Package in transit",
+                        "tracking_number": shipment.tracking_number,
+                    }
+                )
             elif shipment.status == Shipment.Status.OUT_FOR_DELIVERY:
-                timeline.append({
-                    "status": "Out for Delivery",
-                    "timestamp": shipment.updated_at,
-                    "description": "Out for delivery",
-                    "tracking_number": shipment.tracking_number,
-                })
+                timeline.append(
+                    {
+                        "status": "Out for Delivery",
+                        "timestamp": shipment.updated_at,
+                        "description": "Out for delivery",
+                        "tracking_number": shipment.tracking_number,
+                    }
+                )
             elif shipment.status == Shipment.Status.DELIVERED:
-                timeline.append({
-                    "status": "Delivered",
-                    "timestamp": shipment.delivered_at or shipment.updated_at,
-                    "description": "Delivered",
-                    "tracking_number": shipment.tracking_number,
-                })
+                timeline.append(
+                    {
+                        "status": "Delivered",
+                        "timestamp": shipment.delivered_at or shipment.updated_at,
+                        "description": "Delivered",
+                        "tracking_number": shipment.tracking_number,
+                    }
+                )
 
         # If delivered but no shipment events
         if obj.status == SalesOrder.Status.DELIVERED and not any(
             e["status"] == "Delivered" for e in timeline
         ):
-            timeline.append({
-                "status": "Delivered",
-                "timestamp": obj.updated_at,
-                "description": "Order delivered",
-            })
+            timeline.append(
+                {
+                    "status": "Delivered",
+                    "timestamp": obj.updated_at,
+                    "description": "Order delivered",
+                }
+            )
 
         return timeline

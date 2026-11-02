@@ -36,9 +36,7 @@ class CourierWebhookEvent(TimeStampedModel):
     )
     event_id = models.CharField(max_length=255, unique=True)
     event_type = models.CharField(max_length=100, blank=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.RECEIVED
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RECEIVED)
     payload = models.JSONField(default=dict, blank=True)
     error_message = models.TextField(blank=True)
     processed_at = models.DateTimeField(null=True, blank=True)

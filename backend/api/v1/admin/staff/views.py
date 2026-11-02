@@ -47,7 +47,6 @@ STAFF_SEARCH_FIELDS = ("email", "first_name", "last_name", "phone")
 
 @extend_schema(tags=["Staff"])
 class StaffListCreateView(UsersPermissionMixin, APIView):
-
     @extend_schema(
         operation_id="v1_admin_staff_list",
         responses=OpenApiTypes.OBJECT,
