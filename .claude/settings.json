@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brain verify:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh pr create:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git add -A:*)",
+      "Bash(git add .:*)",
+      "Read(./.env*)",
+      "Read(./**/secrets*)",
+      "Read(./**/credentials*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [ { "type": "command", "command": "bash .claude/hooks/post-edit-check.sh" } ] }
+    ]
+  }
+}
