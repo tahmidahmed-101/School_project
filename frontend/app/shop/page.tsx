@@ -47,7 +47,7 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
   return pageMetadata({
     title: "Shop In-Stock Products",
     description:
-      "Browse the Kull Mart in-stock collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery all across Bangladesh.",
+      "Browse the Kull Mart in-stock collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery across Bangladesh.",
     path: "/shop",
   });
 }
