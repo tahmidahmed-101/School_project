@@ -39,7 +39,7 @@ and fix it (owner, 2026-10-18).
 - `seo.canonical`: absolute, self-referencing, on the real domain. `seo.indexable`: nothing in the sitemap is noindex.
 - `hreflang.present` `hreflang.self` `hreflang.reciprocal`: bn/en sites: every page lists all variants (itself included) plus `x-default`, and each variant links back.
 - `og.tags` `og.twitter` `og.image`: og:title, description, url and image on every page; image absolute, 1200×630, loads; `twitter:card` = `summary_large_image`.
-- `icon.favicon` `icon.apple` `icon.manifest` `meta.theme-color`: favicon (ico or svg), 180px apple-touch-icon, manifest with 192 and 512 icons, theme-color.
+- `icon.favicon` `icon.branded` `icon.apple` `icon.manifest` `meta.theme-color`: favicon (ico or svg) that is the client's own mark, never the create-next-app default; 180px apple-touch-icon, manifest with 192 and 512 icons, theme-color.
 - `jsonld.valid` `jsonld.currency`: JSON-LD parses and has @type. Organization/LocalBusiness on home, BreadcrumbList on inner pages, Product+Offer (BDT) and Article where they apply.
   Don't add HowTo, sitelinks SearchBox, or the seven types Google removed in June 2025 (Book, Course Info, ClaimReview, Estimated Salary, Learning Video, Special Announcement, Vehicle Listing).
   FAQPage only for real Q&A: it no longer gets rich results for normal sites.
