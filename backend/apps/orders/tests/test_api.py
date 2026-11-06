@@ -926,6 +926,20 @@ def test_admin_can_export_orders_as_csv(api_client):
     assert order.order_number in body
 
 
+def test_order_export_counts_lines_per_order(api_client):
+    admin = create_user(email="order-admin-export4@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+    order = SalesOrderFactory()
+    SalesOrderLineFactory(order=order)
+    SalesOrderLineFactory(order=order)
+
+    response = api_client.get(f"/api/v1/admin/orders/export/?search={order.order_number}")
+
+    row = response.content.decode().splitlines()[1].split(",")
+    assert row[0] == order.order_number
+    assert row[8] == "2"
+
+
 def test_order_export_honours_status_and_search_filters(api_client):
     admin = create_user(email="order-admin-export2@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)

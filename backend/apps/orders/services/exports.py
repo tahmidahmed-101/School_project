@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import QuerySet
+from django.db.models import Count, QuerySet
 
 from apps.orders.models import SalesOrder
 
@@ -21,7 +21,11 @@ EXPORT_COLUMNS = [
 
 
 def export_orders(queryset: QuerySet[SalesOrder]) -> tuple[list[str], list[list[Any]]]:
-    orders = list(queryset.select_related("customer").prefetch_related("lines"))
+    orders = (
+        queryset.select_related("customer")
+        .annotate(line_count=Count("lines"))
+        .iterator(chunk_size=500)
+    )
     rows = [
         [
             order.order_number,
@@ -32,7 +36,7 @@ def export_orders(queryset: QuerySet[SalesOrder]) -> tuple[list[str], list[list[
             str(order.shipping_total),
             str(order.discount_total),
             str(order.grand_total),
-            len(order.lines.all()),
+            order.line_count,
             order.created_at.isoformat(),
         ]
         for order in orders
