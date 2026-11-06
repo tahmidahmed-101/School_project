@@ -34,3 +34,6 @@ Thumbs.db
 
 # scripts/smoke.mjs output
 .smoke-last.json
+
+# Playwright MCP page snapshot
+snap.md
