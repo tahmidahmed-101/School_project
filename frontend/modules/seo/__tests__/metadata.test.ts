@@ -3,6 +3,7 @@ import { makeProduct, makeSku } from "@/tests/fixtures";
 import { BRAND_INFO } from "@/lib/brand";
 import {
   breadcrumbJsonLd,
+  categoryDescription,
   ogCardImage,
   organizationJsonLd,
   pageMetadata,
@@ -86,6 +87,26 @@ describe("productDescription", () => {
     expect(productDescription(makeProduct({ description: blank, tagline: blank }))).toMatch(
       /^Test Product\. Order online/,
     );
+  });
+});
+
+describe("categoryDescription", () => {
+  const category = (en: string) => ({ name: { en: "Bags", bn: "" }, description: { en, bn: "" } });
+
+  it("keeps a long dashboard text inside 160 characters and still ends with the store sentence", () => {
+    const result = categoryDescription(category("Handpicked tote, clutch and travel bags for every day of the week. ".repeat(4)));
+    expect(result.length).toBeLessThanOrEqual(160);
+    expect(result).toMatch(/Shop online at .* with delivery all across Bangladesh\.$/);
+  });
+
+  it("falls back to the category name and stays at least 50 characters", () => {
+    const result = categoryDescription(category(""));
+    expect(result.startsWith("Bags — Shop online")).toBe(true);
+    expect(result.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it("does not double the full stop after a short own text", () => {
+    expect(categoryDescription(category("Everyday bags."))).toMatch(/^Everyday bags\. Shop online/);
   });
 });
 

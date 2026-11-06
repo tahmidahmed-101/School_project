@@ -5,6 +5,7 @@ export {
   SITE_NAME,
   SITE_TITLE,
   breadcrumbJsonLd,
+  categoryDescription,
   ogCardImage,
   organizationJsonLd,
   pageMetadata,

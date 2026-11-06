@@ -31,3 +31,6 @@ Thumbs.db
 
 # Cloudflare deploy creds
 .env
+
+# scripts/smoke.mjs output
+.smoke-last.json

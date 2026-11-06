@@ -4,7 +4,7 @@ import { ShopCatalog, ShopSkeleton } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
 import { ProductsProvider, forListing, shopKindFor } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
-import { breadcrumbJsonLd, ogCardImage, pageMetadata } from "@/modules/seo";
+import { breadcrumbJsonLd, categoryDescription, ogCardImage, pageMetadata } from "@/modules/seo";
 import { photo } from "@/lib/photo";
 import { PromotionPopup } from "@/modules/storefront";
 import { getStorefrontContent } from "@/modules/storefront/server";
@@ -39,7 +39,7 @@ export async function generateMetadata({ searchParams }: { searchParams: ShopSea
         : `/shop?category=${category.slug}`;
     return pageMetadata({
       title: `Shop ${category.name.en}`,
-      description: `${category.description.en ? `${category.description.en}. ` : `${category.name.en} — `}Shop online at Kull Mart with delivery all across Bangladesh.`,
+      description: categoryDescription(category),
       path,
       image: ogCardImage("category", category.slug, photo(category.image), category.name.en),
     });

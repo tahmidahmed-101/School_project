@@ -3,7 +3,7 @@ import { BRAND_INFO, type BrandInfo } from "@/lib/brand";
 import { photo } from "@/lib/photo";
 import { isPreOrderSoldOut } from "@/lib/product";
 import { absoluteUrl } from "@/lib/site-url";
-import type { Product } from "@/lib/types";
+import type { CategoryInfo, Product } from "@/lib/types";
 
 export const SITE_NAME = BRAND_INFO.name;
 export const SITE_TITLE = `${SITE_NAME} — Women's Fashion, Innerwear, Kids & Gadgets`;
@@ -50,6 +50,16 @@ export function productDescription(product: Pick<Product, "name" | "tagline" | "
   if (!own) return "";
   if (own.length >= MIN_DESCRIPTION) return truncate(own);
   return `${own.replace(/[\s.,;:!?…-]+$/, "")}. Order online from ${SITE_NAME} with delivery all across Bangladesh.`;
+}
+
+const SHOP_SENTENCE = `Shop online at ${SITE_NAME} with delivery all across Bangladesh.`;
+
+/** Category meta description: its own text (cut to fit) plus the store sentence, always 50-160 characters. */
+export function categoryDescription(category: Pick<CategoryInfo, "name" | "description">): string {
+  const own = category.description.en.replace(/\s+/g, " ").trim().replace(/[\s.,;:!?-]+$/, "");
+  if (!own) return `${category.name.en} — ${SHOP_SENTENCE}`;
+  const lead = truncate(own, 160 - SHOP_SENTENCE.length - 2);
+  return `${lead}${lead.endsWith("…") ? "" : "."} ${SHOP_SENTENCE}`;
 }
 
 interface SocialOptions {
