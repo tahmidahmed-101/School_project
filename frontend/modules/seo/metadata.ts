@@ -56,7 +56,10 @@ const SHOP_SENTENCE = `Shop online at ${SITE_NAME} with delivery all across Bang
 
 /** Category meta description: its own text (cut to fit) plus the store sentence, always 50-160 characters. */
 export function categoryDescription(category: Pick<CategoryInfo, "name" | "description">): string {
-  const own = category.description.en.replace(/\s+/g, " ").trim().replace(/[\s.,;:!?-]+$/, "");
+  const own = category.description.en
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[\s.,;:!?-]+$/, "");
   if (!own) return `${category.name.en} — ${SHOP_SENTENCE}`;
   const lead = truncate(own, 160 - SHOP_SENTENCE.length - 2);
   return `${lead}${lead.endsWith("…") ? "" : "."} ${SHOP_SENTENCE}`;

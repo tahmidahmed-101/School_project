@@ -82,9 +82,17 @@ describe("UTM tags", () => {
   it("are replaced by the next campaign visit but survive a click-id-only visit", () => {
     const { storage } = stubBrowser("", "?utm_source=google&utm_term=saree");
     readTrackingContext();
-    vi.stubGlobal("window", { ...window, location: { search: "?fbclid=abc", href: "https://shop.example/" }, sessionStorage: storage });
+    vi.stubGlobal("window", {
+      ...window,
+      location: { search: "?fbclid=abc", href: "https://shop.example/" },
+      sessionStorage: storage,
+    });
     expect(readTrackingContext()).toMatchObject({ utm_source: "google", utm_term: "saree" });
-    vi.stubGlobal("window", { ...window, location: { search: "?utm_source=tiktok", href: "https://shop.example/" }, sessionStorage: storage });
+    vi.stubGlobal("window", {
+      ...window,
+      location: { search: "?utm_source=tiktok", href: "https://shop.example/" },
+      sessionStorage: storage,
+    });
     const context = readTrackingContext();
     expect(context.utm_source).toBe("tiktok");
     expect(context.utm_term).toBeUndefined();
@@ -128,7 +136,8 @@ describe("trackPurchase", () => {
 
 describe("pixel bootstrap", () => {
   it("queues an event fired before the lazy library scripts load", () => {
-    const win: Record<string, unknown> & { dataLayer?: ArrayLike<unknown>[]; fbq?: { queue: ArrayLike<unknown>[] } } = {};
+    const win: Record<string, unknown> & { dataLayer?: ArrayLike<unknown>[]; fbq?: { queue: ArrayLike<unknown>[] } } =
+      {};
     win.window = win;
     vm.runInNewContext(`${ga4Bootstrap("G-TEST")}${metaBootstrap("123")}`, win);
     vi.stubGlobal("window", { ...win, sessionStorage: { getItem: () => null, setItem: () => {} } });

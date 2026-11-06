@@ -93,7 +93,9 @@ describe("buildCheckoutRequest", () => {
   it("carries the browser's tracking ids only when there are some", () => {
     const tracked = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", tracking: { fbp: "fb.1.1.2" } });
     expect(tracked.tracking).toEqual({ fbp: "fb.1.1.2" });
-    expect(buildCheckoutRequest(validForm, items, { paymentMethod: "cod", tracking: {} })).not.toHaveProperty("tracking");
+    expect(buildCheckoutRequest(validForm, items, { paymentMethod: "cod", tracking: {} })).not.toHaveProperty(
+      "tracking",
+    );
   });
 
   it("asks for SMS offers only when the shopper ticked the box", () => {

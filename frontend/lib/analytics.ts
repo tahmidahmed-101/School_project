@@ -133,7 +133,12 @@ const EVENTS = {
   purchase: { ga: "purchase", meta: "Purchase", tiktok: "CompletePayment" },
 } satisfies Record<string, Event>;
 
-function send(event: Event, lines: Line[], eventId: string, extra: { value?: number; transactionId?: string } = {}): void {
+function send(
+  event: Event,
+  lines: Line[],
+  eventId: string,
+  extra: { value?: number; transactionId?: string } = {},
+): void {
   if (typeof window === "undefined") return;
   const value = extra.value ?? total(lines);
   const transactionId = extra.transactionId;
@@ -185,7 +190,8 @@ export const trackViewContent = (product: Product) => send(EVENTS.view, [product
 export const trackAddToCart = (product: Product, quantity: number) =>
   send(EVENTS.add, [productLine(product, quantity)], eventId("add"));
 
-export const trackInitiateCheckout = (items: CartItem[]) => send(EVENTS.checkout, cartLines(items), eventId("checkout"));
+export const trackInitiateCheckout = (items: CartItem[]) =>
+  send(EVENTS.checkout, cartLines(items), eventId("checkout"));
 
 /** The id the backend reports for the same order, so the pixel's Purchase and the server's collapse into one. */
 export const purchaseEventId = (orderId: string) => `purchase-${orderId}`;

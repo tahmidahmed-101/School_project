@@ -7,7 +7,8 @@ export function toPaisa(value: string | null | undefined): bigint {
   if (!match) throw new Error(`not an amount: "${value}"`);
   const negative = match[1] ?? match[4];
   const fraction = (match[3] ?? match[5] ?? "").padEnd(3, "0");
-  const paisa = BigInt(match[2] ?? "0") * BigInt(100) + BigInt(fraction.slice(0, 2)) + BigInt(fraction.charAt(2) >= "5" ? 1 : 0);
+  const paisa =
+    BigInt(match[2] ?? "0") * BigInt(100) + BigInt(fraction.slice(0, 2)) + BigInt(fraction.charAt(2) >= "5" ? 1 : 0);
   return negative ? -paisa : paisa;
 }
 

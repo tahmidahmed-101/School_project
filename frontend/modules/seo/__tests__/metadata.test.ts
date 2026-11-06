@@ -94,7 +94,9 @@ describe("categoryDescription", () => {
   const category = (en: string) => ({ name: { en: "Bags", bn: "" }, description: { en, bn: "" } });
 
   it("keeps a long dashboard text inside 160 characters and still ends with the store sentence", () => {
-    const result = categoryDescription(category("Handpicked tote, clutch and travel bags for every day of the week. ".repeat(4)));
+    const result = categoryDescription(
+      category("Handpicked tote, clutch and travel bags for every day of the week. ".repeat(4)),
+    );
     expect(result.length).toBeLessThanOrEqual(160);
     expect(result).toMatch(/Shop online at .* with delivery all across Bangladesh\.$/);
   });
