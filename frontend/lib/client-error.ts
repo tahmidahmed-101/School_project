@@ -21,9 +21,7 @@ export function reportClientError(error: unknown, where?: string): void {
     });
     const blob = new Blob([body], { type: "application/json" });
     if (!navigator.sendBeacon?.(ENDPOINT, blob)) {
-      fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(
-        () => {},
-      );
+      fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
     }
   } catch {
     // The reporter must never throw from the handler it runs in.
