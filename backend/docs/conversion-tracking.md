@@ -69,7 +69,9 @@ internal customer id (`external_id`).
 Checkout also stores the shopper's browser context on the order
 (`OrderTrackingContext`: `_fbp`, `_fbc`, GA client id, `_ttp`, `ttclid`, page
 URL, user agent, IP address, all optional) and the Purchase sends it, so each
-platform can match the sale to the ad click. Orders a staff member enters
+platform can match the sale to the ad click. The five `utm_*` tags of the
+landing URL are stored on the same row for the order's own reporting; no
+Purchase sends them. Orders a staff member enters
 carry no context and send no Purchase. The shop's privacy policy should say
 that these values are shared with the ad platforms.
 

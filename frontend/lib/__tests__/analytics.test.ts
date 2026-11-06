@@ -28,7 +28,7 @@ function stubBrowser(cookies: string, search = "") {
     fbq,
     ttq: { track },
   });
-  return { gtag, fbq, track };
+  return { gtag, fbq, track, storage: window.sessionStorage };
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -59,6 +59,35 @@ describe("readTrackingContext", () => {
       fbc: `fb.1.${Date.now()}.abc`,
       ttclid: "xyz",
     });
+  });
+});
+
+describe("UTM tags", () => {
+  it("are kept from the landing URL for a later checkout page", () => {
+    const { storage } = stubBrowser("", "?utm_source=facebook&utm_medium=cpc&utm_campaign=eid");
+    readTrackingContext();
+    vi.stubGlobal("window", {
+      ...window,
+      location: { search: "", href: "https://shop.example/checkout" },
+      sessionStorage: storage,
+    });
+    expect(readTrackingContext()).toMatchObject({
+      utm_source: "facebook",
+      utm_medium: "cpc",
+      utm_campaign: "eid",
+      source_url: "https://shop.example/checkout",
+    });
+  });
+
+  it("are replaced by the next campaign visit but survive a click-id-only visit", () => {
+    const { storage } = stubBrowser("", "?utm_source=google&utm_term=saree");
+    readTrackingContext();
+    vi.stubGlobal("window", { ...window, location: { search: "?fbclid=abc", href: "https://shop.example/" }, sessionStorage: storage });
+    expect(readTrackingContext()).toMatchObject({ utm_source: "google", utm_term: "saree" });
+    vi.stubGlobal("window", { ...window, location: { search: "?utm_source=tiktok", href: "https://shop.example/" }, sessionStorage: storage });
+    const context = readTrackingContext();
+    expect(context.utm_source).toBe("tiktok");
+    expect(context.utm_term).toBeUndefined();
   });
 });
 

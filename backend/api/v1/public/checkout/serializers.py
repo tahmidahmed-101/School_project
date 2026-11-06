@@ -32,6 +32,11 @@ class CheckoutTrackingSerializer(serializers.Serializer):
     ga_client_id = serializers.CharField(max_length=64, allow_blank=True, required=False)
     ttp = serializers.CharField(max_length=128, allow_blank=True, required=False)
     ttclid = serializers.CharField(max_length=256, allow_blank=True, required=False)
+    utm_source = serializers.CharField(max_length=128, allow_blank=True, required=False)
+    utm_medium = serializers.CharField(max_length=128, allow_blank=True, required=False)
+    utm_campaign = serializers.CharField(max_length=256, allow_blank=True, required=False)
+    utm_term = serializers.CharField(max_length=256, allow_blank=True, required=False)
+    utm_content = serializers.CharField(max_length=256, allow_blank=True, required=False)
     source_url = serializers.URLField(max_length=500, allow_blank=True, required=False)
 
 

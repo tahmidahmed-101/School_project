@@ -22,8 +22,16 @@ export interface TrackingContext {
   ga_client_id?: string;
   ttp?: string;
   ttclid?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
   source_url?: string;
 }
+
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+type SavedClickIds = { fbc?: string; ttclid?: string } & Partial<Record<(typeof UTM_KEYS)[number], string>>;
 
 interface Line {
   id: string;
@@ -61,22 +69,23 @@ const cookie = (name: string): string => {
   return hit ? decodeURIComponent(hit.slice(name.length + 1)) : "";
 };
 
-/** Remembers the ad click ids of the landing URL: checkout is usually a later page. */
+/** Remembers the ad click ids and UTM tags of the landing URL: checkout is usually a later page. */
 export function captureClickIds(): void {
   if (typeof window === "undefined") return;
   const params = new URLSearchParams(window.location.search);
   const fbclid = params.get("fbclid");
   const ttclid = params.get("ttclid");
-  if (!fbclid && !ttclid) return;
+  const utm = UTM_KEYS.filter((key) => params.get(key));
+  if (!fbclid && !ttclid && !utm.length) return;
   const saved = readStorage(CLICK_IDS_KEY);
-  const previous = saved ? (JSON.parse(saved) as { fbc?: string; ttclid?: string }) : {};
-  writeStorage(
-    CLICK_IDS_KEY,
-    JSON.stringify({
-      fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : previous.fbc,
-      ttclid: ttclid ?? previous.ttclid,
-    }),
-  );
+  const previous: SavedClickIds = saved ? JSON.parse(saved) : {};
+  const next: SavedClickIds = {
+    fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : previous.fbc,
+    ttclid: ttclid ?? previous.ttclid,
+  };
+  // A new campaign visit replaces the whole UTM set; a visit carrying only a click id keeps the earlier one.
+  for (const key of UTM_KEYS) next[key] = utm.length ? (params.get(key) ?? undefined) : previous[key];
+  writeStorage(CLICK_IDS_KEY, JSON.stringify(next));
 }
 
 /** `GA1.1.123.456` -> `123.456`, the client id GA4 expects. */
@@ -87,13 +96,14 @@ export function readTrackingContext(): TrackingContext {
   if (typeof window === "undefined") return {};
   captureClickIds();
   const saved = readStorage(CLICK_IDS_KEY);
-  const clickIds = saved ? (JSON.parse(saved) as { fbc?: string; ttclid?: string }) : {};
+  const clickIds: SavedClickIds = saved ? JSON.parse(saved) : {};
   const context: TrackingContext = {
     fbp: cookie("_fbp"),
     fbc: cookie("_fbc") || clickIds.fbc,
     ga_client_id: gaClientId(cookie("_ga")),
     ttp: cookie("_ttp"),
     ttclid: clickIds.ttclid,
+    ...Object.fromEntries(UTM_KEYS.map((key) => [key, clickIds[key]])),
     source_url: window.location.href,
   };
   return Object.fromEntries(Object.entries(context).filter(([, value]) => value)) as TrackingContext;

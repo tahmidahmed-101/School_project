@@ -145,6 +145,9 @@ def test_guest_checkout_stores_the_browsers_tracking_context(api_client):
             "fbp": "fb.1.1700000000.123",
             "ga_client_id": "GA1.1.111.222",
             "ttclid": "tt-click-1",
+            "utm_source": "facebook",
+            "utm_medium": "cpc",
+            "utm_campaign": "eid-sale",
             "source_url": "https://shop.example/checkout",
         },
     }
@@ -162,6 +165,12 @@ def test_guest_checkout_stores_the_browsers_tracking_context(api_client):
     assert context.fbp == "fb.1.1700000000.123"
     assert context.ga_client_id == "GA1.1.111.222"
     assert context.ttclid == "tt-click-1"
+    assert (context.utm_source, context.utm_medium, context.utm_campaign) == (
+        "facebook",
+        "cpc",
+        "eid-sale",
+    )
+    assert context.utm_term == context.utm_content == ""
     assert context.source_url == "https://shop.example/checkout"
     assert context.user_agent == "TestBrowser/1.0"
     assert context.ip_address == "203.0.113.7"

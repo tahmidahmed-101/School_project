@@ -9,7 +9,19 @@ from apps.marketing.models import OrderTrackingContext
 
 logger = logging.getLogger("apps")
 
-_TEXT_FIELDS = ("fbp", "fbc", "ga_client_id", "ttp", "ttclid", "source_url")
+_TEXT_FIELDS = (
+    "fbp",
+    "fbc",
+    "ga_client_id",
+    "ttp",
+    "ttclid",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "source_url",
+)
 
 
 def _valid_ip(value: str) -> str | None:

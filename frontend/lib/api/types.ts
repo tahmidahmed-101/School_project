@@ -361,6 +361,11 @@ export interface ApiCheckoutRequest {
     ga_client_id?: string;
     ttp?: string;
     ttclid?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_term?: string;
+    utm_content?: string;
     source_url?: string;
   };
   /** Sent only when the shopper ticked the box; it never withdraws an earlier opt-in. */
