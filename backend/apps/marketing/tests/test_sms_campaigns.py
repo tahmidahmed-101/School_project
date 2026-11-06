@@ -101,6 +101,29 @@ def test_send_sms_still_returns_true_when_the_provider_accepts(settings):
         assert send_sms(to="+8801711000001", body="code 123456") is True
 
 
+def test_send_sms_retries_a_dropped_connection_once_then_succeeds():
+    client = MagicMock()
+    client.messages.create.side_effect = [OSError("reset"), MagicMock(sid="SM2")]
+
+    with patch.object(sms, "TwilioClient", return_value=client):
+        assert send_sms(to="+8801711000001", body="code 123456") is True
+    assert client.messages.create.call_count == 2
+
+
+def test_send_sms_gives_up_after_two_failures_and_never_retries_a_refused_number():
+    down = MagicMock()
+    down.messages.create.side_effect = OSError("down")
+    with patch.object(sms, "TwilioClient", return_value=down):
+        assert send_sms(to="+8801711000001", body="hi") is False
+    assert down.messages.create.call_count == sms.OTP_ATTEMPTS
+
+    refused = MagicMock()
+    refused.messages.create.side_effect = TwilioRestException(400, "uri", code=21211)
+    with patch.object(sms, "TwilioClient", return_value=refused):
+        assert send_sms(to="+8801711000001", body="hi") is False
+    assert refused.messages.create.call_count == 1
+
+
 def test_every_spelling_of_a_mobile_is_one_e164_number():
     assert {e164_bd_mobile(raw) for raw in ("01711223344", "8801711223344", "+8801711223344")} == {
         "+8801711223344"

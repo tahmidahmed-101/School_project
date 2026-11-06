@@ -64,10 +64,23 @@ def deliver_sms(*, to: str, body: str) -> None:
         raise SmsDeliveryError(PROVIDER_ERROR)
 
 
+_TRANSIENT = {PROVIDER_ERROR, NETWORK_ERROR}
+OTP_ATTEMPTS = 2
+
+
 def send_sms(*, to: str, body: str) -> bool:
-    """The OTP path: it only needs to know whether the message went."""
-    try:
-        deliver_sms(to=to, body=body)
-    except SmsDeliveryError:
-        return False
-    return True
+    """The OTP path: it only needs to know whether the message went.
+
+    A dropped connection or provider 5xx is retried once; a refused number or a
+    missing account is not, since a second try cannot change the answer.
+    """
+    for attempt in range(1, OTP_ATTEMPTS + 1):
+        try:
+            deliver_sms(to=to, body=body)
+        except SmsDeliveryError as exc:
+            if exc.reason not in _TRANSIENT or attempt == OTP_ATTEMPTS:
+                logger.warning("OTP SMS not sent: %s after %d attempt(s)", exc.reason, attempt)
+                return False
+        else:
+            return True
+    return False

@@ -28,7 +28,7 @@ reason. `manage.py send_campaigns` sends both channels.
 - **Failure reasons** (`CampaignDelivery.failure_reason`): `not_configured`,
   `no_recipient`, `recipient_refused` (permanent, no retry), `provider_error`,
   `network_error`. Temporary failures retry up to 3 attempts. `send_sms`
-  (OTP) keeps its boolean result; `deliver_sms` raises `SmsDeliveryError` with
+  (OTP) keeps its boolean result and retries a temporary failure once; `deliver_sms` raises `SmsDeliveryError` with
   the reason.
 - **Provider**: Twilio only (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
   `TWILIO_PHONE_NUMBER`). Scheduling is refused with `sms_not_configured` or

@@ -1,15 +1,27 @@
 """The one place rounding happens. ROUND_HALF_UP, applied once."""
 
+import re
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 
 
+MONEY_TEXT = re.compile(r"-?(?:\d+(?:\.\d*)?|\.\d+)", re.ASCII)
+
+
 def _exact(value: Decimal | int | str) -> Decimal:
     if isinstance(value, float):
         raise TypeError("Money is never a float; pass a Decimal or a decimal string.")
-    return Decimal(str(value))
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            raise ValueError(f"not an amount: {value!r}")
+        return value
+    text = str(value).strip()
+    if not MONEY_TEXT.fullmatch(text):
+        raise ValueError(f"not an amount: {value!r}")
+    return Decimal(text)
 
 
 def quantize(value: Decimal | int | str) -> Decimal:

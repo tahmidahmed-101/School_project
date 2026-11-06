@@ -7,10 +7,10 @@ from django.db.models import Sum
 
 from apps.accounting.selectors.journal_entries import unreversed_entries_for_reference
 from apps.accounting.services.journal import reverse_journal_entry
-from apps.accounting.services.money import quantize_money
 from apps.accounting.services.postings import post_vendor_bill, post_vendor_payment
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
+from apps.common.utils.money import quantize
 from apps.procurement.models import PurchaseOrder, VendorBill, VendorPayment
 from apps.procurement.selectors.kind import purchase_order_kind
 
@@ -148,7 +148,7 @@ def record_vendor_payment(
 
     already_paid = vendor_bill.payments.aggregate(total=Sum("amount"))["total"] or Decimal("0")
     outstanding = vendor_bill.amount - already_paid
-    amount = quantize_money(Decimal(amount))
+    amount = quantize(Decimal(amount))
     if amount <= 0:
         raise BusinessRuleViolationError("Payment amount must be positive.", code="invalid_amount")
     if amount > outstanding:

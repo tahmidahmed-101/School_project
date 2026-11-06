@@ -9,9 +9,9 @@ from apps.accounting.models import Account, JournalEntry
 from apps.accounting.selectors.accounts import get_account_by_code
 from apps.accounting.selectors.kind import order_kind, purchase_kind, variant_kind
 from apps.accounting.services.journal import post_journal_entry, reverse_journal_entry
-from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.bundles import expand_variant
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.utils.money import quantize
 from apps.inventory.constants import MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.inventory.selectors.stock import get_stock_item
@@ -35,7 +35,7 @@ def post_goods_received(grn_line) -> JournalEntry:
     po_line = grn_line.purchase_order_line
     # unit_cost is stored at 4dp; the journal columns are 2dp. Round here so
     # both sides of the entry carry the identical stored value.
-    amount = quantize_money(po_line.unit_cost * grn_line.quantity_received)
+    amount = quantize(po_line.unit_cost * grn_line.quantity_received)
     return post_journal_entry(
         entry_date=grn_line.goods_receipt.received_date,
         reference_type="goods_receipt_line",
@@ -172,13 +172,13 @@ def post_sales_shipment(shipment) -> list[JournalEntry]:
         order_line = line.order_line
         line_revenue = order_line.unit_price * line.quantity
         line_revenue -= line_revenue * discount_ratio
-        revenue_total += quantize_money(line_revenue)
+        revenue_total += quantize(line_revenue)
         if order_line.quantity:
             # Quantize the shipped share of line tax before summing: the AR
             # debit below is revenue + tax, and it has to equal the two credits
             # exactly once every figure is stored at 2dp.
-            tax_total += quantize_money(order_line.tax_amount * line.quantity / order_line.quantity)
-    cogs_total = quantize_money(_shipment_cogs(shipment, expansions))
+            tax_total += quantize(order_line.tax_amount * line.quantity / order_line.quantity)
+    cogs_total = quantize(_shipment_cogs(shipment, expansions))
 
     entry_date = shipment.shipped_at.date() if shipment.shipped_at else timezone.now().date()
 
@@ -306,9 +306,9 @@ def post_sales_return(rma) -> list[JournalEntry]:
         order_line = line.order_line
         line_revenue = order_line.unit_price * line.quantity
         line_revenue -= line_revenue * discount_ratio
-        revenue_total += quantize_money(line_revenue)
+        revenue_total += quantize(line_revenue)
         if order_line.quantity:
-            tax_total += quantize_money(order_line.tax_amount * line.quantity / order_line.quantity)
+            tax_total += quantize(order_line.tax_amount * line.quantity / order_line.quantity)
 
     # Cost is split by grade, so expand bundles the same way the shipment did.
     expansions = [
@@ -331,8 +331,8 @@ def post_sales_return(rma) -> list[JournalEntry]:
     returned = _returned_stock_value(rma)
     if returned is not None:
         restocked_cost = returned
-    restocked_cost = quantize_money(restocked_cost)
-    scrapped_cost = quantize_money(scrapped_cost)
+    restocked_cost = quantize(restocked_cost)
+    scrapped_cost = quantize(scrapped_cost)
 
     entry_date = timezone.now().date()
     entries = []
@@ -426,7 +426,7 @@ def post_customer_refund(payment, *, amount: Decimal | None = None) -> JournalEn
     """
     # TODO(ask): bookkeeper — nothing ever credits Refund Payable (a return credits Accounts
     # Receivable), so this debit never clears. Which account should a refund reduce?
-    amount = quantize_money(payment.amount if amount is None else amount)
+    amount = quantize(payment.amount if amount is None else amount)
     return post_journal_entry(
         entry_date=timezone.now().date(),
         reference_type="customer_refund",
@@ -459,7 +459,7 @@ def post_stock_adjustment(ledger_entry, *, unit_cost: Decimal | None = None) -> 
     # current weighted average rather than any caller-supplied cost.
     if unit_cost is None or not is_increase:
         unit_cost = stock_item.avg_cost if stock_item else Decimal("0")
-    amount = quantize_money(unit_cost * ledger_entry.quantity)
+    amount = quantize(unit_cost * ledger_entry.quantity)
 
     inventory = _account("inventory_asset")
     shrinkage = _account("inventory_shrinkage")
@@ -486,7 +486,7 @@ def post_stock_writeoff(ledger_entry) -> JournalEntry:
     the value at write-off time)."""
     stock_item = get_stock_item(variant=ledger_entry.variant, warehouse=ledger_entry.warehouse)
     unit_cost = stock_item.avg_cost if stock_item else Decimal("0")
-    amount = quantize_money(unit_cost * ledger_entry.quantity)
+    amount = quantize(unit_cost * ledger_entry.quantity)
     return post_journal_entry(
         entry_date=ledger_entry.created_at.date(),
         reference_type="stock_writeoff",

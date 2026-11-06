@@ -5,9 +5,9 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from api.v1.admin.catalog.fields import VariantTitleField
-from apps.accounting.services.money import quantize_money
 from apps.catalog.selectors.images import variant_image_url
 from apps.common.params import KINDS
+from apps.common.utils.money import quantize
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, VendorBill
 from apps.procurement.selectors.kind import purchase_order_kind
 
@@ -58,7 +58,7 @@ class PurchaseOrderLineSerializer(serializers.Serializer):
         return variant_image_url(obj.variant)
 
     def get_line_total(self, obj) -> str:
-        return str(quantize_money(obj.unit_cost * obj.quantity_ordered))
+        return str(quantize(obj.unit_cost * obj.quantity_ordered))
 
 
 class PurchaseOrderLineInputSerializer(serializers.Serializer):
@@ -86,11 +86,11 @@ class PurchaseOrderSerializer(serializers.Serializer):
     # dashboard never has to multiply money itself.
     def get_ordered_total(self, obj) -> str:
         total = sum((line.unit_cost * line.quantity_ordered for line in obj.lines.all()), ZERO)
-        return str(quantize_money(total))
+        return str(quantize(total))
 
     def get_received_total(self, obj) -> str:
         total = sum((line.unit_cost * line.quantity_received for line in obj.lines.all()), ZERO)
-        return str(quantize_money(total))
+        return str(quantize(total))
 
     kind = serializers.SerializerMethodField()
 

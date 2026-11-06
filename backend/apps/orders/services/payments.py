@@ -7,10 +7,10 @@ from django.db import IntegrityError, transaction
 from django.db.models import F, Sum
 from django.utils import timezone
 
-from apps.accounting.services.money import quantize_money
 from apps.accounting.services.postings import post_customer_payment, post_customer_refund
 from apps.audit.services.audit import log_action
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.utils.money import quantize
 from apps.orders.constants import PAYMENT_METHODS_BY_KEY, PaymentMethodKey
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
@@ -311,7 +311,7 @@ def refund_payment(*, payment: Payment, amount: Decimal | None = None, actor=Non
     outstanding = payment.amount - payment.refunded_amount
     if amount is None:
         amount = outstanding
-    amount = quantize_money(Decimal(amount))
+    amount = quantize(Decimal(amount))
     if amount <= 0:
         raise BusinessRuleViolationError("Refund amount must be positive.", code="invalid_amount")
     if amount > outstanding:

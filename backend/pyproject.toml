@@ -90,6 +90,8 @@ per-file-ignores = { "**/tests/*.py" = [
     "ARG002",
 ], "apps/**/management/commands/*.py" = [
     "ARG002",
+], "apps/common/utils/money.py" = [
+    "I001",
 ], "apps/common/generics.py" = [
     "ARG002",
 ], "apps/common/permissions.py" = [
