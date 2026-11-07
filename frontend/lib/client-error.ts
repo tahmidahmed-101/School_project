@@ -1,9 +1,13 @@
 // Browser errors reach the server log as one line, where `pmo logs` groups them with the container errors. No package, no dependency.
-const ENDPOINT = "/api/client-error";
+let endpoint = "/api/client-error";
 const PER_PAGE_LIMIT = 5;
 
 let sent = 0;
 const seen = new Set<string>();
+
+export function setClientErrorEndpoint(url: string): void {
+  endpoint = url;
+}
 
 export function reportClientError(error: unknown, where?: string): void {
   try {
@@ -19,9 +23,10 @@ export function reportClientError(error: unknown, where?: string): void {
       where,
       path: location.pathname,
     });
-    const blob = new Blob([body], { type: "application/json" });
-    if (!navigator.sendBeacon?.(ENDPOINT, blob)) {
-      fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(
+    // text/plain: a cross-origin post stays a simple request, so no preflight.
+    const blob = new Blob([body], { type: "text/plain" });
+    if (!navigator.sendBeacon?.(endpoint, blob)) {
+      fetch(endpoint, { method: "POST", headers: { "content-type": "text/plain" }, body, keepalive: true }).catch(
         () => {},
       );
     }
