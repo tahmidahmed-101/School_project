@@ -4,8 +4,8 @@ import { PromoLinesCard } from "./PromoLinesCard"
 export function StorefrontContentPanel({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-6">
-      <HeroSlidesCard canManage={canManage} placement="home" />
-      <PromoLinesCard canManage={canManage} placement="home" />
+      <HeroSlidesCard canManage={canManage} />
+      <PromoLinesCard canManage={canManage} />
     </div>
   )
 }

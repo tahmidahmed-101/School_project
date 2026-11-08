@@ -1,5 +1,5 @@
 export const REF_PARAM = "ref";
-export const REF_STORAGE_KEY = "kullmart:ref";
+export const REF_STORAGE_KEY = "schoolproject:ref";
 export const REF_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const CODE_PATTERN = /^[A-Za-z0-9]{4,32}$/;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { humanizeStatus, orderStatusKey, orderStatusTone, preorderStageTone } from "../orders";
+import { humanizeStatus, orderStatusKey, orderStatusTone } from "../orders";
 
 describe("orderStatusKey", () => {
   it("maps the statuses a customer sees to their copy", () => {
@@ -26,13 +26,5 @@ describe("orderStatusTone", () => {
     expect(orderStatusTone("closed")).toBe("done");
     expect(orderStatusTone("cancelled")).toBe("bad");
     expect(orderStatusTone("shipped")).toBe("progress");
-  });
-});
-
-describe("preorderStageTone", () => {
-  it("colours a pre-order by its own stage, not by a stock status", () => {
-    expect(preorderStageTone("completed")).toBe("done");
-    expect(preorderStageTone("cancelled")).toBe("bad");
-    expect(preorderStageTone("received_in_bd_airport")).toBe("progress");
   });
 });

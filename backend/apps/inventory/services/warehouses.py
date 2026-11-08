@@ -9,7 +9,7 @@ from apps.inventory.services.stock import materialize_stock_items
 
 
 def _refuse_default_change(warehouse: Warehouse | None, data: dict) -> None:
-    """Each shop always keeps one active default warehouse: every stock path
+    """The shop always keeps one active default warehouse: every stock path
     falls back to it. It stops being the default only by another warehouse
     becoming the default, and it can never be switched off."""
     was_default = bool(warehouse and warehouse.is_default)
@@ -40,21 +40,6 @@ def create_warehouse(*, data: dict, actor=None) -> Warehouse:
 @transaction.atomic
 def update_warehouse(*, warehouse: Warehouse, data: dict, actor=None) -> Warehouse:
     _refuse_default_change(warehouse, data)
-    kind = data.get("kind", warehouse.kind)
-    if kind != warehouse.kind and (
-        warehouse.stock_items.exists() or warehouse.ledger_entries.exists()
-    ):
-        raise BusinessRuleViolationError(
-            f"{warehouse.name} already holds {warehouse.get_kind_display().lower()} items, "
-            "so it cannot be changed to the other kind. Add a new warehouse instead.",
-            code="warehouse_kind_in_use",
-        )
-    if kind != warehouse.kind and warehouse.is_default:
-        raise BusinessRuleViolationError(
-            f"{warehouse.name} is the default warehouse of its shop, so its kind cannot "
-            "change. Make another warehouse the default first.",
-            code="default_warehouse_required",
-        )
     for field, value in data.items():
         setattr(warehouse, field, value)
     warehouse.updated_by = actor

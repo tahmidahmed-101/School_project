@@ -40,7 +40,6 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
   const canEditLine = (line: OrderLine) => linesEditable && line.shipped_quantity === 0
   const canRemoveLine = (line: OrderLine) => canEditLine(line) && order.lines.length > 1
   const showActions = order.lines.some(canEditLine)
-  const isPreorder = order.order_type === "preorder"
 
   const openEdit = (line: OrderLine) => {
     setEditing(line)
@@ -122,22 +121,6 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
       meta: { align: "center" },
       cell: ({ row }) => <span className="font-semibold">{row.original.quantity}</span>,
     },
-    ...(isPreorder
-      ? [
-          {
-            id: "waiting",
-            header: "Not arrived",
-            meta: { align: "center" },
-            cell: ({ row }) => row.original.awaiting_stock_quantity,
-          } satisfies ColumnDef<OrderLine>,
-          {
-            id: "ready",
-            header: "Ready to ship",
-            meta: { align: "center" },
-            cell: ({ row }) => row.original.shippable_quantity,
-          } satisfies ColumnDef<OrderLine>,
-        ]
-      : []),
     { id: "shipped", header: "Shipped", meta: { align: "center" }, cell: ({ row }) => row.original.shipped_quantity },
     {
       id: "delivered",
@@ -152,16 +135,12 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
       meta: { align: "right" },
       cell: ({ row }) => formatCurrency(row.original.unit_price),
     },
-    ...(isPreorder
-      ? []
-      : [
-          {
-            id: "discount",
-            header: "Discount",
-            meta: { align: "right" },
-            cell: ({ row }) => formatCurrency(row.original.discount_amount),
-          } satisfies ColumnDef<OrderLine>,
-        ]),
+    {
+      id: "discount",
+      header: "Discount",
+      meta: { align: "right" },
+      cell: ({ row }) => formatCurrency(row.original.discount_amount),
+    },
     { id: "tax", header: "Tax", meta: { align: "right" }, cell: ({ row }) => formatCurrency(row.original.tax_amount) },
     ...(showActions
       ? [
@@ -186,7 +165,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
       <CardHeader className="border-b bg-muted/30">
         <CardTitle className="text-base flex items-center gap-2">
           <Package className="h-4 w-4 text-primary" />
-          {isPreorder ? "Pre-order items" : "Order lines"} ({order.lines.length})
+          Order lines ({order.lines.length})
         </CardTitle>
         {linesEditable && (
           <CardAction>
@@ -203,16 +182,15 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
           showPagination={false}
           columns={columns}
           data={order.lines}
-          minWidth={isPreorder ? "1020px" : "910px"}
+          minWidth="910px"
           columnWidths={[
             "auto",
             "70px",
-            ...(isPreorder ? ["110px", "120px"] : []),
             "90px",
             "90px",
             "90px",
             "120px",
-            ...(isPreorder ? [] : ["110px"]),
+            "110px",
             "100px",
             ...(showActions ? ["80px"] : []),
           ]}
@@ -259,7 +237,7 @@ export function OrderLinesCard({ order, canManage }: OrderLinesCardProps) {
                 id="new-line-variant"
                 value={newVariant}
                 onChange={setNewVariant}
-                filters={{ is_active: true, category_type: order.order_type }}
+                filters={{ is_active: true, category_type: "stock" }}
                 excludeIds={order.lines.map((line) => line.variant_id)}
               />
             </FieldContent>

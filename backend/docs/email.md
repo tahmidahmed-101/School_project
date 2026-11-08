@@ -9,7 +9,7 @@ Only two flows, both in `apps/accounts/services/authentication.py`:
 | Email verification code | `503 email_unavailable`; the code just issued stays valid |
 | Password reset code | Logged, then swallowed: the response is the same generic "If the email exists…" whether or not the address has an account |
 
-Order updates are in-app notifications and Telegram staff alerts, not email.
+Order updates are in-app notifications, not email.
 Nothing on the checkout or order path sends mail. Newsletter campaigns use the
 same server but are marketing mail, with their own rules: see
 `email-campaigns.md`.

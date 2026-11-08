@@ -306,7 +306,7 @@ function SmtpServerCard({
             />
             <TextField
               label="Sender name"
-              placeholder="Kull Mart"
+              placeholder="School Project"
               disabled={!canManage}
               error={errors.from_name}
               {...register("from_name")}

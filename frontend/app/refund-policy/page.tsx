@@ -5,10 +5,10 @@ import { pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Refund Policy",
-  description: "Kull Mart's refund policy: how refunds are processed and how long they take.",
+  description: "School Project's refund policy: how refunds are processed and how long they take.",
   path: "/refund-policy",
 });
 
-export default async function KullMartRefundPolicyPage() {
+export default async function SchoolProjectRefundPolicyPage() {
   return <PolicyView policy={await getPolicyContent("refund", REFUND_POLICY)} path="/refund-policy" />;
 }

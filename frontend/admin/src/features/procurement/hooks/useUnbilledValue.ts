@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react"
 import { useAllPages } from "@/hooks/use-all-pages"
-import type { Kind } from "@/hooks/use-kind"
 import { fromPaisa, toPaisa } from "@/lib/money"
 import type { PurchaseOrder, VendorBill } from "../types"
 import { poReceivedTotal } from "../utils"
@@ -10,10 +9,10 @@ import { poReceivedTotal } from "../utils"
  * Mirrors the backend's 3-way match (vendor_bills._billed_elsewhere), which counts every bill
  * that is neither deleted nor void, so the same delivery is never billed twice.
  */
-export function useUnbilledValue(kind: Kind, { enabled = true }: { enabled?: boolean } = {}) {
+export function useUnbilledValue({ enabled = true }: { enabled?: boolean } = {}) {
   const { items: bills, isLoading, reload } = useAllPages<VendorBill>(
     "/admin/procurement/vendor-bills/",
-    { kind },
+    { kind: "stock" },
     { enabled }
   )
 

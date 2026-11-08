@@ -93,100 +93,6 @@ def test_public_product_list_hides_inactive_products(api_client):
     assert inactive_product.name not in names
 
 
-def test_public_product_list_preorder_only_filter(api_client):
-    from datetime import timedelta
-    from decimal import Decimal
-
-    from django.utils import timezone
-
-    now = timezone.now()
-
-    preorder_product = ProductFactory(is_active=True, category__category_type="preorder")
-    ProductVariantFactory(
-        product=preorder_product,
-        is_preorder_enabled=True,
-        preorder_price=Decimal("9.99"),
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-    )
-    regular_product = ProductFactory(is_active=True)
-    ProductVariantFactory(product=regular_product)
-
-    response = api_client.get("/api/v1/public/catalog/products/?preorder_only=true")
-
-    assert response.status_code == 200
-    names = [item["name"] for item in response.data["data"]["results"]]
-    assert preorder_product.name in names
-    assert regular_product.name not in names
-
-
-def test_public_product_detail_exposes_preorder_capacity(api_client):
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from apps.orders.factories import SalesOrderLineFactory
-
-    now = timezone.now()
-    product = ProductFactory(is_active=True)
-    variant = ProductVariantFactory(
-        product=product,
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-        preorder_stock_limit=10,
-    )
-    SalesOrderLineFactory(variant=variant, quantity=4, is_preorder=True, order__status="confirmed")
-
-    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
-
-    assert response.status_code == 200
-    payload = response.data["data"]["variants"][0]
-    assert payload["preorder_stock_limit"] == 10
-    assert payload["preordered_quantity"] == 4
-    assert payload["preorder_remaining"] == 6
-
-
-def test_public_product_detail_preorder_remaining_is_null_when_unlimited(api_client):
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from apps.orders.factories import SalesOrderLineFactory
-
-    now = timezone.now()
-    product = ProductFactory(is_active=True)
-    variant = ProductVariantFactory(
-        product=product,
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-        preorder_stock_limit=None,
-    )
-    SalesOrderLineFactory(variant=variant, quantity=3, is_preorder=True, order__status="confirmed")
-
-    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
-
-    assert response.status_code == 200
-    payload = response.data["data"]["variants"][0]
-    assert payload["preorder_stock_limit"] is None
-    assert payload["preordered_quantity"] == 3
-    assert payload["preorder_remaining"] is None
-
-
-def test_public_product_detail_regular_variant_reports_no_preorder_capacity(api_client):
-    product = ProductFactory(is_active=True)
-    ProductVariantFactory(product=product)
-
-    response = api_client.get(f"/api/v1/public/catalog/products/{product.slug}/")
-
-    assert response.status_code == 200
-    payload = response.data["data"]["variants"][0]
-    assert payload["preorder_stock_limit"] is None
-    assert payload["preordered_quantity"] == 0
-    assert payload["preorder_remaining"] is None
-
-
 def test_public_product_detail_by_slug(api_client):
     product = ProductFactory()
     ProductVariantFactory(product=product, sku="DETAIL-1")
@@ -347,74 +253,6 @@ def test_admin_product_list_filters_by_category(api_client):
     names = [item["name"] for item in response.data["data"]["results"]]
     assert target_product.name in names
     assert other_product.name not in names
-
-
-def test_admin_product_list_preorder_only_filter(api_client):
-    from datetime import timedelta
-    from decimal import Decimal
-
-    from django.utils import timezone
-
-    admin = create_user(email="catalog-preorder-filter-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    now = timezone.now()
-
-    preorder_product = ProductFactory(
-        name="Preorder Filter Product", is_active=True, category__category_type="preorder"
-    )
-    ProductVariantFactory(
-        product=preorder_product,
-        is_preorder_enabled=True,
-        preorder_price=Decimal("19.99"),
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=7),
-    )
-    regular_product = ProductFactory(name="Regular Filter Product", is_active=True)
-    ProductVariantFactory(product=regular_product)
-
-    response = api_client.get("/api/v1/admin/catalog/products/?preorder_only=true")
-
-    assert response.status_code == 200
-    names = [item["name"] for item in response.data["data"]["results"]]
-    assert names == [preorder_product.name]
-
-
-def test_admin_product_list_filters_inactive_preorder_products(api_client):
-    from datetime import timedelta
-    from decimal import Decimal
-
-    from django.utils import timezone
-
-    admin = create_user(
-        email="catalog-inactive-preorder-filter-admin@example.com", role=UserRole.ADMIN
-    )
-    api_client.force_authenticate(user=admin)
-    now = timezone.now()
-
-    inactive_preorder_product = ProductFactory(
-        name="Inactive Preorder Filter Product",
-        is_active=True,
-        category__category_type="preorder",
-    )
-    ProductVariantFactory(
-        product=inactive_preorder_product,
-        is_preorder_enabled=True,
-        preorder_price=Decimal("29.99"),
-        preorder_start_date=now + timedelta(days=1),
-        preorder_end_date=now + timedelta(days=14),
-    )
-    inactive_regular_product = ProductFactory(
-        name="Inactive Regular Filter Product", is_active=True
-    )
-    ProductVariantFactory(product=inactive_regular_product)
-
-    response = api_client.get(
-        "/api/v1/admin/catalog/products/?preorder_only=true&preorder_status=inactive"
-    )
-
-    assert response.status_code == 200
-    names = [item["name"] for item in response.data["data"]["results"]]
-    assert names == [inactive_preorder_product.name]
 
 
 def test_catalog_view_permission_cannot_write(api_client):
@@ -815,165 +653,56 @@ def test_admin_category_defaults_to_stock_type(api_client):
     assert response.data["data"]["category_type"] == "stock"
 
 
-def test_admin_can_create_root_preorder_category(api_client):
-    admin = create_user(email="catalog-preorder-category-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-
-    response = api_client.post(
-        "/api/v1/admin/catalog/categories/",
-        {"name": "Upcoming Releases", "category_type": "preorder"},
-    )
-
-    assert response.status_code == 201
-    assert response.data["data"]["category_type"] == "preorder"
-
-
-def test_subcategory_inherits_parent_category_type(api_client):
-    admin = create_user(email="catalog-subcat-inherit-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    parent = CategoryFactory(name="Pre-order Root", category_type="preorder")
-
-    response = api_client.post(
-        "/api/v1/admin/catalog/categories/",
-        {"name": "Pre-order Phones", "parent_id": str(parent.id)},
-    )
-
-    assert response.status_code == 201
-    assert response.data["data"]["category_type"] == "preorder"
-
-
-def test_subcategory_create_rejects_type_mismatch_with_parent(api_client):
-    admin = create_user(email="catalog-subcat-mismatch-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    parent = CategoryFactory(name="Stock Root", category_type="stock")
-
-    response = api_client.post(
-        "/api/v1/admin/catalog/categories/",
-        {
-            "name": "Mismatched Subcategory",
-            "parent_id": str(parent.id),
-            "category_type": "preorder",
-        },
-    )
-
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "category_type_mismatch"
-
-
-def test_admin_cannot_change_subcategory_type_directly(api_client):
-    admin = create_user(email="catalog-subcat-locked-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    parent = CategoryFactory(name="Stock Parent", category_type="stock")
-    child = CategoryFactory(name="Stock Child", parent=parent, category_type="stock")
-
-    response = api_client.patch(
-        f"/api/v1/admin/catalog/categories/{child.id}/", {"category_type": "preorder"}
-    )
-
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "category_type_locked_to_parent"
-    child.refresh_from_db()
-    assert child.category_type == "stock"
-
-
-def test_root_category_type_change_cascades_to_descendants(api_client):
-    admin = create_user(email="catalog-cascade-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    root = CategoryFactory(name="Cascade Root", category_type="stock")
-    child = CategoryFactory(name="Cascade Child", parent=root, category_type="stock")
-    grandchild = CategoryFactory(name="Cascade Grandchild", parent=child, category_type="stock")
-
-    response = api_client.patch(
-        f"/api/v1/admin/catalog/categories/{root.id}/", {"category_type": "preorder"}
-    )
-
-    assert response.status_code == 200
-    child.refresh_from_db()
-    grandchild.refresh_from_db()
-    assert child.category_type == "preorder"
-    assert grandchild.category_type == "preorder"
-
-
-def test_reparenting_category_adopts_new_parent_type_and_cascades(api_client):
-    admin = create_user(email="catalog-reparent-admin@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    stock_root = CategoryFactory(name="Stock Root Reparent", category_type="stock")
-    preorder_root = CategoryFactory(name="Preorder Root Reparent", category_type="preorder")
-    moved = CategoryFactory(name="Moved Category", parent=stock_root, category_type="stock")
-    moved_child = CategoryFactory(name="Moved Child", parent=moved, category_type="stock")
-
-    response = api_client.patch(
-        f"/api/v1/admin/catalog/categories/{moved.id}/", {"parent_id": str(preorder_root.id)}
-    )
-
-    assert response.status_code == 200
-    assert response.data["data"]["category_type"] == "preorder"
-    moved_child.refresh_from_db()
-    assert moved_child.category_type == "preorder"
-
-
 def test_admin_category_list_filters_by_category_type(api_client):
     admin = create_user(email="catalog-type-filter-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
     stock_category = CategoryFactory(name="Stock Filter Category", category_type="stock")
-    preorder_category = CategoryFactory(name="Preorder Filter Category", category_type="preorder")
 
-    response = api_client.get("/api/v1/admin/catalog/categories/?category_type=preorder")
+    response = api_client.get("/api/v1/admin/catalog/categories/?category_type=stock")
 
     assert response.status_code == 200
     names = [item["name"] for item in response.data["data"]["results"]]
-    assert preorder_category.name in names
-    assert stock_category.name not in names
+    assert names == [stock_category.name]
 
 
 def test_admin_product_list_filters_by_category_type(api_client):
     admin = create_user(email="catalog-product-type-filter-admin@example.com", role=UserRole.ADMIN)
     api_client.force_authenticate(user=admin)
     stock_category = CategoryFactory(name="Stock Product Category", category_type="stock")
-    preorder_category = CategoryFactory(name="Preorder Product Category", category_type="preorder")
     stock_product = ProductFactory(name="Stock Category Product", category=stock_category)
-    preorder_product = ProductFactory(name="Preorder Category Product", category=preorder_category)
 
-    response = api_client.get("/api/v1/admin/catalog/products/?category_type=preorder")
+    response = api_client.get("/api/v1/admin/catalog/products/?category_type=stock")
 
     assert response.status_code == 200
     names = [item["name"] for item in response.data["data"]["results"]]
-    assert preorder_product.name in names
-    assert stock_product.name not in names
+    assert names == [stock_product.name]
 
 
-def test_public_category_list_filters_by_category_type(api_client):
+def test_category_type_preorder_is_refused(api_client):
+    admin = create_user(email="catalog-type-refused-admin@example.com", role=UserRole.ADMIN)
+    api_client.force_authenticate(user=admin)
+
+    for url in (
+        "/api/v1/admin/catalog/categories/?category_type=preorder",
+        "/api/v1/admin/catalog/products/?category_type=preorder",
+        "/api/v1/public/catalog/categories/?category_type=preorder",
+        "/api/v1/public/catalog/products/?category_type=preorder",
+    ):
+        assert api_client.get(url).status_code == 400, url
+
+
+def test_public_catalog_lists_stock_categories_and_products(api_client):
     stock_category = CategoryFactory(name="Public Stock Category", category_type="stock")
-    preorder_category = CategoryFactory(name="Public Preorder Category", category_type="preorder")
-
-    response = api_client.get("/api/v1/public/catalog/categories/?category_type=preorder")
-
-    assert response.status_code == 200
-    names = [item["name"] for item in response.data["data"]]
-    assert preorder_category.name in names
-    assert stock_category.name not in names
-
-
-def test_public_product_list_filters_by_category_type(api_client):
-    stock_category = CategoryFactory(name="Public Stock Product Category", category_type="stock")
-    preorder_category = CategoryFactory(
-        name="Public Preorder Product Category", category_type="preorder"
-    )
     stock_product = ProductFactory(
         name="Public Stock Category Product", category=stock_category, is_active=True
     )
     ProductVariantFactory(product=stock_product)
-    preorder_product = ProductFactory(
-        name="Public Preorder Category Product", category=preorder_category, is_active=True
-    )
-    ProductVariantFactory(product=preorder_product)
 
-    response = api_client.get("/api/v1/public/catalog/products/?category_type=preorder")
+    categories = api_client.get("/api/v1/public/catalog/categories/?category_type=stock")
+    products = api_client.get("/api/v1/public/catalog/products/?category_type=stock")
 
-    assert response.status_code == 200
-    names = [item["name"] for item in response.data["data"]["results"]]
-    assert preorder_product.name in names
-    assert stock_product.name not in names
+    assert [item["name"] for item in categories.data["data"]] == [stock_category.name]
+    assert [item["name"] for item in products.data["data"]["results"]] == [stock_product.name]
 
 
 def test_invalid_category_type_filter_is_rejected(api_client):

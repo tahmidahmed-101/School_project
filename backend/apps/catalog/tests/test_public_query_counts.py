@@ -42,22 +42,6 @@ def _catalog(products: int, variants_per_product: int) -> None:
             make_variant(product, [sizes[SIZES[index]]])
 
 
-def _preorder_catalog(products: int, variants_per_product: int) -> None:
-    now = timezone.now()
-    for _ in range(products):
-        product = ProductFactory(is_active=True)
-        sizes = make_options(product, {"Size": SIZES[:variants_per_product]})
-        for index in range(variants_per_product):
-            make_variant(
-                product,
-                [sizes[SIZES[index]]],
-                is_preorder_enabled=True,
-                preorder_start_date=now - timedelta(days=1),
-                preorder_end_date=now + timedelta(days=10),
-                preorder_stock_limit=5,
-            )
-
-
 def test_product_list_query_count_does_not_grow_with_the_catalog(api_client):
     _catalog(products=2, variants_per_product=2)
     with CaptureQueriesContext(connection) as small:
@@ -97,22 +81,6 @@ def test_product_list_prices_a_running_sale_without_a_query_per_variant(api_clie
     assert len(reload) - len(no_sale) <= 4
 
 
-def test_product_list_query_count_does_not_grow_with_preorder_variants(api_client):
-    """Pre-order capacity (preorder_stock_limit/preordered_quantity/
-    preorder_remaining) is resolved via the same batched
-    get_preordered_quantities() call as stock availability — one query for
-    the page, not one per pre-order variant."""
-    _preorder_catalog(products=2, variants_per_product=2)
-    with CaptureQueriesContext(connection) as small:
-        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
-
-    _preorder_catalog(products=6, variants_per_product=3)
-    with CaptureQueriesContext(connection) as large:
-        assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
-
-    assert len(large) == len(small)
-
-
 def test_product_detail_query_count_does_not_grow_with_variants(api_client):
     # Both have an option: a product without one skips the option-values query.
     one = ProductFactory(is_active=True)
@@ -143,35 +111,33 @@ def test_list_endpoint_counts_the_page_once(api_client):
 def test_category_list_query_count_is_unaffected_by_category_type_filter(api_client):
     for _ in range(5):
         CategoryFactory(category_type=Category.CategoryType.STOCK)
-    for _ in range(5):
-        CategoryFactory(category_type=Category.CategoryType.PREORDER)
 
     with CaptureQueriesContext(connection) as unfiltered:
         assert api_client.get("/api/v1/public/catalog/categories/").status_code == 200
     with CaptureQueriesContext(connection) as filtered:
-        response = api_client.get("/api/v1/public/catalog/categories/?category_type=preorder")
+        response = api_client.get("/api/v1/public/catalog/categories/?category_type=stock")
         assert response.status_code == 200
 
     assert len(filtered) == len(unfiltered)
+    refused = api_client.get("/api/v1/public/catalog/categories/?category_type=preorder")
+    assert refused.status_code == 400
 
 
 def test_product_list_query_count_is_unaffected_by_category_type_filter(api_client):
     stock_category = CategoryFactory(category_type=Category.CategoryType.STOCK)
-    preorder_category = CategoryFactory(category_type=Category.CategoryType.PREORDER)
     for _ in range(3):
         product = ProductFactory(is_active=True, category=stock_category)
-        ProductVariantFactory(product=product)
-    for _ in range(3):
-        product = ProductFactory(is_active=True, category=preorder_category)
         ProductVariantFactory(product=product)
 
     with CaptureQueriesContext(connection) as unfiltered:
         assert api_client.get("/api/v1/public/catalog/products/").status_code == 200
     with CaptureQueriesContext(connection) as filtered:
-        response = api_client.get("/api/v1/public/catalog/products/?category_type=preorder")
+        response = api_client.get("/api/v1/public/catalog/products/?category_type=stock")
         assert response.status_code == 200
 
     assert len(filtered) == len(unfiltered)
+    refused = api_client.get("/api/v1/public/catalog/products/?category_type=preorder")
+    assert refused.status_code == 400
 
 
 def test_category_list_carries_product_count_and_image_in_constant_queries(api_client):

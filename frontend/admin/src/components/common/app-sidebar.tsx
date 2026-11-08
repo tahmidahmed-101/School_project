@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Link, NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom"
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAppSelector } from "@/app/hooks"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -11,20 +11,15 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 
-import { CalendarClock, ChevronDown, Store } from "lucide-react"
+import { ChevronDown, Store } from "lucide-react"
 import { getNavGroups } from "@/app/modules"
 import { userDisplayName } from "@/lib/user-display"
 import { NAV_GROUP_LABELS, type NavItem } from "@/app/moduleTypes"
-import { useKind } from "@/hooks/use-kind"
 import { useOffModules } from "@/hooks/use-modules"
 import { findNavEntry } from "./navEntry"
 
 // A link is active for its own path and anything nested under it; a detail or form route
-// (/order_detail/:id) is not in the nav, so `ownUrl` names the list of the half its record belongs to.
-const HALVES = [
-  { kind: "stock", group: "STOCK", url: "/", icon: Store },
-  { kind: "preorder", group: "PREORDER", url: "/preorder_overview", icon: CalendarClock },
-] as const
+// (/order_detail/:id) is not in the nav, so `ownUrl` names the list its record belongs to.
 
 const isItemActive = (item: NavItem, pathname: string, ownUrl?: string) =>
   item.url === "/"
@@ -33,17 +28,12 @@ const isItemActive = (item: NavItem, pathname: string, ownUrl?: string) =>
 
 export function AppSidebar() {
   const location = useLocation()
-  const kind = useKind()
-  const ownUrl = findNavEntry(location.pathname, kind)?.item.url
+  const ownUrl = findNavEntry(location.pathname)?.item.url
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
   const user = useAppSelector((state) => state.auth.user)
   const permissions = user?.permissions
   const offModules = useOffModules()
-  const half = HALVES.find((h) => h.kind === kind) ?? HALVES[0]
-  const navGroups = useMemo(
-    () => getNavGroups(permissions, offModules).filter((g) => g.label === half.group || g.label === "BUSINESS"),
-    [permissions, offModules, half.group],
-  )
+  const navGroups = useMemo(() => getNavGroups(permissions, offModules), [permissions, offModules])
   const sidebarItems = useMemo(() => navGroups.flatMap((g) => g.sections), [navGroups])
 
   const isCollapsed = state === "collapsed"
@@ -116,7 +106,7 @@ export function AppSidebar() {
           </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
             <span className="block truncate text-sm font-semibold text-foreground">
-              Kull Mart
+              School Project
             </span>
             <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-400">
               Admin Workspace
@@ -124,29 +114,6 @@ export function AppSidebar() {
           </span>
         </NavLink>
       </SidebarHeader>
-
-      {/* HALF SWITCH — outside the scrolling content, so it stays put while the nav scrolls */}
-      <div className="shrink-0 px-3 pb-3 group-data-[collapsible=icon]:px-0">
-        <div className="flex gap-1 rounded-lg bg-muted p-[3px] dark:border dark:border-border group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:flex-col">
-          {HALVES.map((option) => (
-            <Link
-              key={option.kind}
-              to={option.url}
-              onClick={handleLinkClick}
-              title={NAV_GROUP_LABELS[option.group]}
-              aria-current={option.kind === kind ? "true" : undefined}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:px-0 ${
-                option.kind === kind
-                  ? "bg-background text-primary-500 shadow-sm dark:bg-primary-500/15"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <option.icon className="size-4 shrink-0" />
-              <span className="group-data-[collapsible=icon]:hidden">{NAV_GROUP_LABELS[option.group]}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* CONTENT */}
       <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">

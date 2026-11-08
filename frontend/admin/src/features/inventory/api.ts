@@ -2,10 +2,7 @@ import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope } from "@/lib/api/envelope"
 import { blobErrorToJson, saveBlob } from "@/lib/download"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
-import type { Kind } from "@/hooks/use-kind"
 import type {
-  PreorderAllocationResult,
-  PreorderReport,
   StockAdjustmentPayload,
   StockIntakePayload,
   StockLedgerEntry,
@@ -20,9 +17,9 @@ import type {
 
 const I = "/admin/inventory"
 
-export async function fetchStockStatus(kind?: Kind): Promise<StockStatusSummary> {
+export async function fetchStockStatus(): Promise<StockStatusSummary> {
   try {
-    const res = await api.get(`${I}/stock-status/`, { params: { kind } })
+    const res = await api.get(`${I}/stock-status/`, { params: { kind: "stock" } })
     return unwrapEnvelope<StockStatusSummary>(res.data)
   } catch (err) {
     throw extractApiError(err)
@@ -37,9 +34,9 @@ export const postIntake = (payload: StockIntakePayload) =>
 export const postAdjustment = (payload: StockAdjustmentPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/adjustments/`, payload))
 /** All-or-nothing batch: the server rolls the whole batch back if any line fails. */
-export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[], kind: Kind) =>
+export const postBulkAdjustments = (adjustments: StockAdjustmentPayload[]) =>
   apiCall<{ results: { index: number; entry: StockLedgerEntry }[]; count: number }>(() =>
-    api.post(`${I}/adjustments/bulk/`, { kind, adjustments })
+    api.post(`${I}/adjustments/bulk/`, { kind: "stock", adjustments })
   )
 export const postWriteOff = (payload: StockWriteOffPayload) =>
   apiCall<StockLedgerEntry>(() => api.post(`${I}/write-offs/`, payload))
@@ -62,16 +59,11 @@ export const updateWarehouse = (id: string, payload: WarehousePayload) =>
 export async function downloadLedgerExport(filters: Record<string, unknown>) {
   try {
     const res = await api.get(`${I}/ledger-entries/export/`, { params: filters, responseType: "blob" })
-    saveBlob(res.data as Blob, filters.kind === "preorder" ? "pre-order-goods-movements.csv" : "stock-ledger.csv")
+    saveBlob(res.data as Blob, "stock-ledger.csv")
   } catch (err) {
     throw extractApiError(await blobErrorToJson(err))
   }
 }
-
-// ---- pre-order arrivals (orders app) ----
-export const fetchPreorderReport = () => apiCall<PreorderReport>(() => api.get("/admin/orders/preorder-report/"))
-export const allocatePreorderStock = () =>
-  apiCall<PreorderAllocationResult>(() => api.post("/admin/orders/preorder-allocation/"))
 
 // ---- reservations (orders app) ----
 export const releaseReservation = (id: string) =>

@@ -63,8 +63,7 @@ def get_choice(params, name: str, choices: Iterable[str], default: str | None = 
 
 
 KIND_STOCK = "stock"
-KIND_PREORDER = "preorder"
-KINDS = (KIND_STOCK, KIND_PREORDER)
+KINDS = (KIND_STOCK,)
 
 
 def get_kind(params) -> str | None:

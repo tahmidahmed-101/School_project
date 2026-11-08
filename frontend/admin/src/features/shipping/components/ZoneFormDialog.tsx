@@ -9,7 +9,6 @@ import { TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { createZone, updateZone } from "@/features/shipping/slices/zoneSlice"
 import type { ShippingZone, ShippingZonePayload } from "@/features/shipping/types"
-import type { Kind } from "@/hooks/use-kind"
 import { reportFormError } from "@/lib/forms"
 
 const schema = z.object({
@@ -33,12 +32,10 @@ interface ZoneFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   zone: ShippingZone | null
-  /** The half of the dashboard the page belongs to; a new zone is created in it. */
-  kind: Kind
   onSaved: () => void
 }
 
-export function ZoneFormDialog({ open, onOpenChange, zone, kind, onSaved }: ZoneFormDialogProps) {
+export function ZoneFormDialog({ open, onOpenChange, zone, onSaved }: ZoneFormDialogProps) {
   const dispatch = useAppDispatch()
   const {
     control,
@@ -70,7 +67,7 @@ export function ZoneFormDialog({ open, onOpenChange, zone, kind, onSaved }: Zone
         await dispatch(updateZone({ id: zone.id, payload })).unwrap()
         toast.success(`${payload.name} updated`)
       } else {
-        await dispatch(createZone({ ...payload, kind })).unwrap()
+        await dispatch(createZone({ ...payload, kind: "stock" })).unwrap()
         toast.success(`${payload.name} created`)
       }
       onOpenChange(false)
@@ -90,11 +87,7 @@ export function ZoneFormDialog({ open, onOpenChange, zone, kind, onSaved }: Zone
       open={open}
       onOpenChange={onOpenChange}
       title={zone ? `Edit ${zone.name}` : "New delivery zone"}
-      description={
-        kind === "preorder"
-          ? "A pre-order lands in this zone when its ship-to address mentions one of the zone's areas."
-          : "An order lands in this zone when its ship-to address mentions one of the zone's areas."
-      }
+      description="An order lands in this zone when its ship-to address mentions one of the zone's areas."
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={zone ? "Save changes" : "Create zone"}

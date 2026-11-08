@@ -5,7 +5,6 @@ import { FileText, PencilIcon, ShieldAlert, Trash2 } from "lucide-react"
 
 import { useAppDispatch } from "@/app/hooks"
 import { deleteData } from "@/features/sales/slices/orderSlice"
-import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
 import type { Order } from "@/features/sales/types"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -17,12 +16,8 @@ import { formatDateTime } from "@/lib/format"
 import { OrderActions, type OrderMenuItem } from "./OrderActions"
 import { OrderEditDialog } from "./OrderEditDialog"
 
-const DELETE_WARNING = {
-  stock:
-    "This permanently removes the order together with its payments, shipments and returns, and releases any stock it holds. It can't be undone. To keep the record, cancel the order instead.",
-  preorder:
-    "This permanently removes the pre-order together with its payments, shipments and returns. It can't be undone. To keep the record, cancel the pre-order instead.",
-}
+const DELETE_WARNING =
+  "This permanently removes the order together with its payments, shipments and returns, and releases any stock it holds. It can't be undone. To keep the record, cancel the order instead."
 
 /** Title, back link and the order's buttons; invoice, risk check, edit and delete join its "More actions" menu. */
 export function OrderHeader({ order, refresh, badges }: { order: Order; refresh: () => void; badges?: ReactNode }) {
@@ -30,9 +25,6 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
   const navigate = useNavigate()
   const canManage = useCan("orders.manage")
   const canAssessRisk = useCan("risk.manage")
-
-  const kind = order.order_type
-  const noun = orderNoun(kind)
 
   const [checking, setChecking] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -42,10 +34,10 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
   const handleDelete = async () => {
     try {
       await dispatch(deleteData(order.id)).unwrap()
-      toast.success(`${kind === "preorder" ? "Pre-order" : "Order"} ${order.order_number} deleted`)
-      navigate(KIND_PATHS[kind].orders)
+      toast.success(`Order ${order.order_number} deleted`)
+      navigate("/orders")
     } catch (err) {
-      toast.error(getApiErrorMessage(err, `Failed to delete ${noun}`))
+      toast.error(getApiErrorMessage(err, "Failed to delete order"))
     }
   }
 
@@ -84,16 +76,13 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
       ? [{ label: checking ? "Checking risk…" : "Check risk", icon: ShieldAlert, onSelect: handleRiskCheck, disabled: checking }]
       : []),
     ...(canManage ? [{ label: "Edit details", icon: PencilIcon, onSelect: () => setEditing(true) }] : []),
-    ...(canManage ? [{ label: `Delete ${noun}`, icon: Trash2, onSelect: () => setDeleting(true), destructive: true }] : []),
+    ...(canManage ? [{ label: "Delete order", icon: Trash2, onSelect: () => setDeleting(true), destructive: true }] : []),
   ]
 
   return (
     <>
       <PageHeader
-        back={{
-          to: KIND_PATHS[kind].orders,
-          label: kind === "preorder" ? "Back to pre-orders" : "Back to orders",
-        }}
+        back={{ to: "/orders", label: "Back to orders" }}
         title={order.order_number}
         badges={
           <>
@@ -110,10 +99,10 @@ export function OrderHeader({ order, refresh, badges }: { order: Order; refresh:
         onOpenChange={setDeleting}
         destructive
         icon={<Trash2 />}
-        title={`Delete ${noun} ${order.order_number}?`}
-        description={DELETE_WARNING[kind]}
-        confirmLabel={`Delete ${noun}`}
-        cancelLabel={`Keep ${noun}`}
+        title={`Delete order ${order.order_number}?`}
+        description={DELETE_WARNING}
+        confirmLabel="Delete order"
+        cancelLabel="Keep order"
         onConfirm={handleDelete}
       />
 

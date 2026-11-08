@@ -1,4 +1,4 @@
-// Mirrors kull-mart api/v1/admin/orders/serializers.py → AdminPaymentSerializer.
+// Mirrors school-project api/v1/admin/orders/serializers.py → AdminPaymentSerializer.
 // apps/orders/models/payment.py (Payment.Status) and apps/orders/constants.py (PaymentMethodKey).
 
 export type PaymentStatus = "pending" | "captured" | "failed" | "refunded"
@@ -22,8 +22,6 @@ export interface Payment {
   method: PaymentMethod
   status: PaymentStatus
   gateway_reference: string
-  /** The order's kind; absent on older API answers, read as stock. */
-  order_type?: "stock" | "preorder"
 }
 
 export const PAYMENT_STATUS_OPTIONS: { label: string; value: PaymentStatus }[] = [

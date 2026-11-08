@@ -24,7 +24,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
 import { customerDetailPath } from "@/features/users/paths"
 import { useListPage } from "@/hooks/use-list-page"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -54,7 +53,6 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
   const cart = useLastValue(selected)
   // The customer page is admin-only (see users/module.ts).
   const canViewCustomer = useCan(ADMIN_ONLY)
-  const kind = useKind()
 
   return (
     <Dialog open={!!selected} onOpenChange={(open) => !open && onClose()}>
@@ -110,7 +108,7 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
           <DialogFooter>
             {canViewCustomer && cart.customer_id && (
               <Button variant="outline" asChild>
-                <Link to={customerDetailPath(kind, cart.customer_id)}>
+                <Link to={customerDetailPath(cart.customer_id)}>
                   <User className="size-4" /> View customer
                 </Link>
               </Button>
@@ -125,11 +123,9 @@ function CartDetailDialog({ cart: selected, onClose }: { cart: CustomerCart | nu
   )
 }
 
-const CartsList = () => {
+const Carts = () => {
   const dispatch = useAppDispatch()
-  const kind = useKind()
-  const title = kind === "preorder" ? "Pre-order carts" : "Carts"
-  useDocumentTitle(title)
+  useDocumentTitle("Carts")
   const cartsState = useAppSelector((state) => state.customerCarts)
 
   const [ordering, setOrdering] = useState<Option | null>(ORDERING_OPTIONS[0])
@@ -138,7 +134,7 @@ const CartsList = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: cartsState,
-    params: { kind, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
+    params: { kind: "stock", ordering: ordering?.value ?? ORDERING_OPTIONS[0].value },
   })
 
   const columns: ColumnDef<CustomerCart>[] = [
@@ -211,7 +207,7 @@ const CartsList = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title={title} />
+      <PageHeader title="Carts" />
 
       <FilterToolbar
         searchPlaceholder="Search customer name, email or phone..."
@@ -241,7 +237,5 @@ const CartsList = () => {
     </div>
   )
 }
-
-const Carts = () => <CartsList key={useKind()} />
 
 export default Carts

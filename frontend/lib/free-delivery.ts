@@ -1,5 +1,4 @@
 import { fromPaisa, toPaisa } from "@/lib/money";
-import { productKind } from "@/lib/product";
 import type { CartItem } from "@/lib/types";
 
 const ZERO = BigInt(0);
@@ -13,11 +12,10 @@ export function basketSubtotal(items: CartItem[]): string {
   );
 }
 
-/** Null when the offer is off or the basket is not a stock one (empty, pre-order or mixed). */
+/** Null when the offer is off or the basket is empty. */
 export function freeDeliveryStatus(minAmount: string | null | undefined, items: CartItem[]): FreeDeliveryStatus | null {
   const threshold = toPaisa(minAmount);
-  const allStock = items.length > 0 && items.every((item) => productKind(item.product) === "stock");
-  if (threshold <= ZERO || !allStock) return null;
+  if (threshold <= ZERO || items.length === 0) return null;
   const short = threshold - toPaisa(basketSubtotal(items));
   if (short <= ZERO) return { reached: true };
   // Amounts show in whole taka, so the gap rounds up: spending what the line says always reaches the threshold.

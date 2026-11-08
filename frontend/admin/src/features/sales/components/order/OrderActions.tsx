@@ -4,7 +4,6 @@ import { Ban, ChevronDown, CreditCard, ListChecks, MoreHorizontal, RotateCcw, Tr
 
 import { useAppDispatch } from "@/app/hooks"
 import { cancelOrder, updateOrderStatus } from "@/features/sales/slices/orderSlice"
-import { orderNoun } from "@/features/sales/shared/kindPaths"
 import {
   NON_RETURNABLE_STATUSES,
   ORDER_STATUS_OPTIONS,
@@ -31,25 +30,22 @@ import { CapturePaymentDialog } from "./CapturePaymentDialog"
 import { CreateReturnDialog } from "./CreateReturnDialog"
 import { CreateShipmentDialog } from "./CreateShipmentDialog"
 
-const CANCEL_DESCRIPTION = {
-  stock: "Stock holds are released. Cancelling never refunds money — refund captured payments separately.",
-  preorder: "Cancelling never refunds money — refund the deposit and any other captured payment separately.",
-}
+const CANCEL_DESCRIPTION =
+  "Stock holds are released. Cancelling never refunds money — refund captured payments separately."
 
 /**
  * What a manual status change does on the backend (services/orders.py set_order_status). Every
  * forward move runs the step it stands for, so stock and the books follow; no payment is recorded.
  */
 function statusEffect(order: Order, to: OrderStatus): string {
-  const noun = orderNoun(order.order_type)
   switch (to) {
     case "awaiting_payment":
-      return `Checks the ${noun} out and holds its stock until payment is captured.`
+      return "Checks the order out and holds its stock until payment is captured."
     case "confirmed":
       if (order.status === "shipped")
-        return `Moves the ${noun} back to confirmed because some units have not shipped yet, so they can be shipped.`
+        return "Moves the order back to confirmed because some units have not shipped yet, so they can be shipped."
       return order.status === "pending"
-        ? `Checks the ${noun} out (stock is held) and confirms it. No payment is recorded — capture it separately.`
+        ? "Checks the order out (stock is held) and confirms it. No payment is recorded — capture it separately."
         : "Confirms it without recording a payment — capture the money separately."
     case "shipped":
       return "Creates one shipment for every unit not yet shipped: the stock leaves the warehouse and the sale is posted to the books."
@@ -58,7 +54,7 @@ function statusEffect(order: Order, to: OrderStatus): string {
         ? "Marks the shipments on their way delivered. Refused unless delivered shipments cover every line."
         : "Refused unless delivered shipments already cover every line."
     case "closed":
-      return `Final: a closed ${noun} cannot be changed again. Nothing else changes, so record any payment still due first.`
+      return "Final: a closed order cannot be changed again. Nothing else changes, so record any payment still due first."
     default:
       return ""
   }
@@ -95,9 +91,6 @@ export function OrderActions({
   const [dialog, setDialog] = useState<"capture" | "ship" | "return" | "status" | "cancel" | null>(null)
   const [nextStatus, setNextStatus] = useState<OrderStatus | "">("")
 
-  const kind = order.order_type
-  const noun = orderNoun(kind)
-
   const canCancel = canManage && PRE_SHIPMENT_STATUSES.includes(order.status)
   // Cash on delivery is confirmed unpaid, so it stays capturable until the money is recorded.
   const canCapture =
@@ -129,7 +122,7 @@ export function OrderActions({
       setDialog(null)
       refresh()
     } catch (err) {
-      toast.error(getApiErrorMessage(err, `Failed to change the ${noun} status`))
+      toast.error(getApiErrorMessage(err, "Failed to change the order status"))
     } finally {
       setBusy(false)
     }
@@ -139,9 +132,9 @@ export function OrderActions({
     setBusy(true)
     try {
       await dispatch(cancelOrder({ id: order.id })).unwrap()
-      toast.success(`${kind === "preorder" ? "Pre-order" : "Order"} ${order.order_number} cancelled`)
+      toast.success(`Order ${order.order_number} cancelled`)
     } catch (err) {
-      toast.error(getApiErrorMessage(err, `Failed to cancel ${noun}`))
+      toast.error(getApiErrorMessage(err, "Failed to cancel order"))
     } finally {
       setBusy(false)
     }
@@ -154,7 +147,7 @@ export function OrderActions({
   const safeItems: OrderMenuItem[] = [...orderItems, ...menuItems.filter((item) => !item.destructive)]
   const destructiveItems: OrderMenuItem[] = [
     ...(canCancel
-      ? [{ label: `Cancel ${noun}`, icon: Ban, onSelect: () => setDialog("cancel"), destructive: true }]
+      ? [{ label: "Cancel order", icon: Ban, onSelect: () => setDialog("cancel"), destructive: true }]
       : []),
     ...menuItems.filter((item) => item.destructive),
   ]
@@ -204,10 +197,10 @@ export function OrderActions({
         open={dialog === "cancel"}
         onOpenChange={(o) => setDialog(o ? "cancel" : null)}
         destructive
-        title={`Cancel ${noun} ${order.order_number}?`}
-        description={CANCEL_DESCRIPTION[kind]}
-        confirmLabel={`Cancel ${noun}`}
-        cancelLabel={`Keep ${noun}`}
+        title={`Cancel order ${order.order_number}?`}
+        description={CANCEL_DESCRIPTION}
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
         onConfirm={handleCancel}
       />
 
@@ -237,7 +230,7 @@ export function OrderActions({
               {nextStatus && <FieldDescription>{statusEffect(order, nextStatus)}</FieldDescription>}
               {nextStatus === "closed" && paymentPending && (
                 <FieldDescription className="text-destructive">
-                  A payment on this {noun} is still pending (e.g. cash on delivery not collected yet).
+                  A payment on this order is still pending (e.g. cash on delivery not collected yet).
                 </FieldDescription>
               )}
             </FieldContent>

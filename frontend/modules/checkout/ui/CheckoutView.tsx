@@ -11,25 +11,21 @@ import { useBrand } from "@/modules/catalog";
 import { ApiError } from "@/lib/api/client";
 import { freeDeliveryStatus } from "@/lib/free-delivery";
 import { clearStoredRef } from "@/lib/referral";
-import { isBelowMinimum, productKind, shopHome } from "@/lib/product";
 import { placeOrder } from "../data/mutations";
 import { errorKey, isUnexpectedError } from "@/lib/api/errors";
 import { reportClientError } from "@/lib/client-error";
 import { toOrderResult } from "../data/adapters";
 import {
   ADVANCE_PAYMENT_REQUIRED_CODE,
-  COUPON_STOCK_ONLY_CODE,
   EMPTY_ORDER_FORM,
   NO_SHIPPING_CODES,
-  acceptsCoupon,
   buildCheckoutRequest,
   isBdMobile,
   mapApiFieldErrors,
-  paymentMethodsFor,
   validateOrderForm,
   type FormErrors,
-  type PaymentMethodsByKind,
 } from "../domain/checkout";
+import type { ApiPaymentMethod } from "@/lib/api/types";
 import { useCoupon, useShippingQuote } from "./useCheckoutPricing";
 import type { OrderForm, OrderResult } from "@/lib/types";
 import { OrderSuccess } from "./OrderSuccess";
@@ -40,10 +36,9 @@ import { PageHeader } from "@/design-system/ui/PageHeader";
 import { FormAlert } from "@/design-system/ui/FormField";
 import { CheckoutFields } from "./CheckoutFields";
 import { CheckoutSummary } from "./CheckoutSummary";
-import { PreorderConfirmModal } from "./PreorderConfirmModal";
 
-export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: PaymentMethodsByKind }) {
-  const { ui, t } = useLang();
+export function CheckoutView({ paymentMethods: offered }: { paymentMethods: ApiPaymentMethod[] }) {
+  const { ui } = useLang();
   const { items, subtotal, clearCart } = useCart();
   const { withAuth } = useAuth();
 
@@ -53,15 +48,13 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
   const [errorMsg, setErrorMsg] = useState("");
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [chosenPayment, setChosenPayment] = useState("cod");
-  const [confirmingPreorder, setConfirmingPreorder] = useState(false);
   const [smsOptIn, setSmsOptIn] = useState(false);
   // Set once the backend refuses cash on delivery for this phone ("advance payment only").
   const [codRefusedFor, setCodRefusedFor] = useState<string | null>(null);
-  const preorderItems = items.filter((item) => productKind(item.product) === "preorder");
 
   // COD stays hidden only while the refused number is still the one entered.
   const codRefused = codRefusedFor !== null && codRefusedFor === form.phone.trim();
-  const paymentMethods = paymentMethodsFor(items, paymentMethodsByKind).filter((m) => !(codRefused && m.key === "cod"));
+  const paymentMethods = offered.filter((m) => !(codRefused && m.key === "cod"));
   // Fall back to the first enabled method if the pick (default COD) is not offered by the store.
   const paymentMethod = paymentMethods.some((m) => m.key === chosenPayment) ? chosenPayment : paymentMethods[0]?.key;
   const shipping = useShippingQuote(items, form);
@@ -103,15 +96,9 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       ]),
     );
 
-  /** A pre-order basket is placed only after the shopper confirms it in a modal; `confirmed` is that answer. */
-  const handleSubmit = async (e?: FormEvent, { confirmed = false }: { confirmed?: boolean } = {}) => {
+  const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
     if (isSubmitting) return;
-    // The summary disables the button too; this also stops a submit by Enter in a field.
-    if (items.some(isBelowMinimum)) {
-      setErrorMsg(ui("cartBelowMinimum"));
-      return;
-    }
     if (!paymentMethod) {
       setErrorMsg(ui("checkoutNoPaymentMethod"));
       return;
@@ -124,12 +111,6 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       return;
     }
 
-    if (preorderItems.length > 0 && !confirmed) {
-      setErrorMsg("");
-      setConfirmingPreorder(true);
-      return;
-    }
-
     setIsSubmitting(true);
     setErrorMsg("");
     setFieldErrors({});
@@ -139,7 +120,7 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       const cartToken = await syncedGuestCartToken(items);
       const request = buildCheckoutRequest(form, items, {
         paymentMethod,
-        couponCode: acceptsCoupon(items) ? coupon.applied?.code : undefined,
+        couponCode: coupon.applied?.code,
         tracking: readTrackingContext(),
         smsOptIn,
       });
@@ -163,17 +144,13 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
         if (Object.keys(mapped).length > 0) {
           setFieldErrors(mapped);
           setErrorMsg(ui(errorKey(error)));
-        } else if (error.code === "mixed_basket") {
-          setErrorMsg(ui("cartMixedNotice"));
         } else if (error.code === ADVANCE_PAYMENT_REQUIRED_CODE) {
           setCodRefusedFor(form.phone.trim());
           setErrorMsg(ui("checkoutAdvancePaymentRequired"));
-        } else if (error.code === COUPON_STOCK_ONLY_CODE) {
-          setErrorMsg(ui("checkoutCouponStockOnly"));
         } else if (NO_SHIPPING_CODES.has(error.code)) {
           setErrorMsg(ui("errNoShipping"));
         } else if (error.status === 400 || error.status === 409) {
-          // Business-rule failures (out of stock, pre-order closed, ...) come with a message written for the shopper.
+          // Business-rule failures (out of stock, ...) come with a message written for the shopper.
           setErrorMsg(error.message || ui(errorKey(error)));
         } else {
           setErrorMsg(ui(errorKey(error)));
@@ -183,8 +160,6 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
       }
     } finally {
       setIsSubmitting(false);
-      // Closed either way: on success the order page replaces the form, on failure its alert says why.
-      setConfirmingPreorder(false);
     }
   };
 
@@ -204,11 +179,8 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
           <p className="text-base font-bold text-fg">{ui("cartEmptyTitle")}</p>
           <p className="text-xs text-fg-muted">{ui("cartEmptySubtitle")}</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href={shopHome("stock")} className={buttonClass()}>
+            <Link href="/shop" className={buttonClass()}>
               {ui("navReadyStock")}
-            </Link>
-            <Link href={shopHome("preorder")} className={buttonClass()}>
-              {ui("navPreOrder")}
             </Link>
           </div>
         </div>
@@ -251,14 +223,6 @@ export function CheckoutView({ paymentMethodsByKind }: { paymentMethodsByKind: P
             />
           </div>
         </form>
-        <PreorderConfirmModal
-          open={confirmingPreorder}
-          // The shopper's language, or the other one when staff wrote the terms in one language only.
-          terms={t(brand.preorderTerms) || brand.preorderTerms.bn}
-          submitting={isSubmitting}
-          onClose={() => setConfirmingPreorder(false)}
-          onConfirm={() => void handleSubmit(undefined, { confirmed: true })}
-        />
       </Container>
     </div>
   );

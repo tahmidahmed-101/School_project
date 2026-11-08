@@ -4,7 +4,7 @@ import { getDiscountPercent, getSaleOffer } from "@/lib/product";
 import { applyVariant } from "@/lib/variants";
 import { DEFAULT_FILTERS, filterAndSortProducts } from "../domain/shop-filters";
 
-vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.kullmart.com/api/v1/public" } }));
+vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.schoolproject.com/api/v1/public" } }));
 
 const { toProduct } = await import("../data/adapters");
 
@@ -21,17 +21,6 @@ const variant = (overrides: Partial<ApiVariant> = {}): ApiVariant => ({
   in_stock: true,
   components: [],
   is_bundle: false,
-  is_preorder_enabled: false,
-  preorder_price: null,
-  preorder_start_date: null,
-  preorder_end_date: null,
-  release_date: null,
-  is_preorder_active: false,
-  is_preorder_upcoming: false,
-  is_preorder_price_applied: false,
-  preorder_stock_limit: null,
-  preordered_quantity: 0,
-  preorder_remaining: null,
   ...overrides,
 });
 
@@ -96,21 +85,6 @@ describe("toProduct with a sale", () => {
 
     expect(getSaleOffer(result)?.name).toBe("Eid Sale");
     expect(getSaleOffer(other)).toBeNull();
-  });
-
-  it("never shows a sale on a pre-order", () => {
-    const preorder = variant({
-      effective_price: "800.00",
-      sale_price: "800.00",
-      is_preorder_enabled: true,
-      is_preorder_active: true,
-    });
-    const result = toProduct(product({ kind: "preorder", variants: [preorder], sale }), categories);
-    const closed = toProduct(product({ kind: "preorder", variants: [onSale], sale }), categories);
-
-    expect(result.salePrice).toBeUndefined();
-    expect(getSaleOffer(result)).toBeNull();
-    expect(getSaleOffer(closed)).toBeNull();
   });
 });
 

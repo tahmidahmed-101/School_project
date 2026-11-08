@@ -17,12 +17,11 @@ import { ProductPickerDialog } from "@/features/catalog/components/ProductPicker
 import { useCategoryOptions } from "@/features/catalog/lib/useCategoryOptions"
 import type { Sale } from "@/features/marketing/types"
 import { savePromotionPopup } from "@/features/system/slices/businessSettingsSlice"
-import type { PopupDestination, PopupShop, PromotionPopup } from "@/features/system/types"
+import type { PopupDestination, PromotionPopup } from "@/features/system/types"
 import { api, getApiFieldErrors } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
-import { SHOP_COPY } from "../lib/promotionPopups"
 
 const DESTINATION_OPTIONS: { value: PopupDestination; label: string }[] = [
   { value: "none", label: "No link" },
@@ -31,10 +30,6 @@ const DESTINATION_OPTIONS: { value: PopupDestination; label: string }[] = [
   { value: "campaign", label: "Campaign page (a sale's products)" },
   { value: "url", label: "Custom URL" },
 ]
-
-/** Sales are stock only, so a pre-order popup cannot lead to a campaign page. */
-const destinationOptions = (shop: PopupShop) =>
-  shop === "preorder" ? DESTINATION_OPTIONS.filter((option) => option.value !== "campaign") : DESTINATION_OPTIONS
 
 /** The rule validate_site_link in api/v1/admin/business/serializers.py enforces: a site path or an http(s) URL. */
 const isSiteLink = (value: string) => !value || /^https?:\/\/\S+$/i.test(value) || /^\/(?![/\\])/.test(value)
@@ -125,8 +120,8 @@ function useSaleOptions(enabled: boolean, own: PromotionPopup["sale"]) {
 }
 
 /** The shop's categories in tree order, with their depth so the picker indents subcategories. */
-function useCategorySelectOptions(shop: PopupShop, saved: PromotionPopup["category"]) {
-  const { options } = useCategoryOptions(shop)
+function useCategorySelectOptions(saved: PromotionPopup["category"]) {
+  const { options } = useCategoryOptions()
   return useMemo(() => {
     const rows = options.map((option) => ({ value: option.value, label: option.label, depth: option.depth }))
     // A saved category that is no longer listed (switched off) stays choosable.
@@ -146,20 +141,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * Add / edit a promotion popup of `shop`, in a dialog over the popup list. `popup` null adds one.
+ * Add / edit a promotion popup, in a dialog over the popup list. `popup` null adds one.
  * Without manage permission the form is read-only.
  */
 export function PromotionPopupFormDialog({
   open,
   onOpenChange,
   popup,
-  shop,
   readOnly,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   popup: PromotionPopup | null
-  shop: PopupShop
   readOnly: boolean
 }) {
   const dispatch = useAppDispatch()
@@ -176,7 +169,7 @@ export function PromotionPopupFormDialog({
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY })
   const destination = useWatch({ control, name: "destination_type" })
   const sales = useSaleOptions(open && destination === "campaign", popup?.sale ?? null)
-  const categoryOptions = useCategorySelectOptions(shop, popup?.category ?? null)
+  const categoryOptions = useCategorySelectOptions(popup?.category ?? null)
 
   // Filled when the dialog opens, in an effect: resetting while rendering updates the Controllers mid-render.
   useEffect(() => {
@@ -209,7 +202,7 @@ export function PromotionPopupFormDialog({
             starts_at: fromDatetimeLocal(values.starts_at),
             ends_at: fromDatetimeLocal(values.ends_at),
             // The shop is fixed once the popup exists.
-            ...(popup ? {} : { shop }),
+            ...(popup ? {} : { shop: "stock" }),
             destination_type: type,
             // Only the destination matching the type is kept; the others are cleared.
             product_id: type === "product" ? (values.product?.id ?? null) : null,
@@ -304,7 +297,7 @@ export function PromotionPopupFormDialog({
             name="destination_type"
             label="Destination type"
             disabled={readOnly}
-            options={destinationOptions(shop)}
+            options={DESTINATION_OPTIONS}
             description="Optional. Where shoppers go when they click the image; No link shows the image alone."
           />
           {destination === "product" && (
@@ -347,14 +340,13 @@ export function PromotionPopupFormDialog({
                       <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted">
                         <Package className="size-5" />
                       </span>
-                      Choose a {SHOP_COPY[shop].label} product
+                      Choose a product
                     </button>
                   )}
                   <ProductPickerDialog
                     open={pickingProduct}
                     onOpenChange={setPickingProduct}
-                    kind={shop}
-                    title={`Choose a ${SHOP_COPY[shop].label} product`}
+                    title="Choose a product"
                     onPick={(product) => {
                       // The picked product's photo shows in the tile before the popup is saved.
                       field.onChange({

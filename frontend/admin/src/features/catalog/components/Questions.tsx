@@ -18,7 +18,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import type { Option } from "@/lib/types"
@@ -49,8 +48,8 @@ const questionStatus = (q: ProductQuestion): ProductQuestionStatus =>
  * Questions customers ask on a product page. A question stays private until staff answer
  * it and publish it; only then does it show on the storefront.
  */
-const Questions = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order questions" : "Questions"
+const Questions = () => {
+  const title = "Questions"
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
@@ -59,7 +58,6 @@ const Questions = ({ kind }: { kind: Kind }) => {
   const [answering, setAnswering] = useState<ProductQuestion | null>(null)
 
   const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
-    kind,
     fetch: (p) => dispatch(fetchAll(p)),
     state: questionState,
     filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
@@ -90,7 +88,7 @@ const Questions = ({ kind }: { kind: Kind }) => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
+        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
           {row.original.product_name}
         </LinkCell>
       ),
@@ -283,9 +281,4 @@ function AnswerDialog({
   )
 }
 
-const QuestionsPage = () => {
-  const kind = useKind()
-  return <Questions key={kind} kind={kind} />
-}
-
-export default QuestionsPage
+export default Questions

@@ -5,7 +5,7 @@ import type { T } from "@/lib/types";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { containerClass } from "@/design-system/ui/Container";
 
-/** Continuously scrolling (right to left) promo strip shown right below the hero on the home and pre-order pages. */
+/** Continuously scrolling (right to left) promo strip shown right below the hero on the home page. */
 export function PromoMarquee({ lines }: { lines: T[] }) {
   const { lang } = useLang();
 

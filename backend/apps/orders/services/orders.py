@@ -15,13 +15,7 @@ from apps.orders.models import (
 )
 from apps.orders.selectors.shipments import order_shipments_complete
 from apps.orders.services.address_snapshot import SNAPSHOT_FIELDS, build_address_snapshot
-from apps.orders.services.carts import (
-    _check_preorder_stock_limit,
-    add_line,
-    compute_line_tax,
-    ensure_purchasable,
-    ensure_single_kind,
-)
+from apps.orders.services.carts import add_line, compute_line_tax
 from apps.orders.services.notifications import notify_order, order_label
 from apps.orders.services.referrals import reward_referral, void_referral
 from apps.orders.services.reservations import (
@@ -222,12 +216,6 @@ def _ship_remaining(order: SalesOrder) -> None:
     from apps.orders.services.shipments import create_shipment
 
     lines = list(SalesOrderLine.objects.filter(order=order))
-    if any(line.quantity - line.shipped_quantity > line.shippable_quantity for line in lines):
-        raise BusinessRuleViolationError(
-            "Some pre-order units have no arrived stock set aside yet. Allocate arrived "
-            "stock first.",
-            code="preorder_not_allocated",
-        )
     remaining = [
         {"order_line": line, "quantity": line.shippable_quantity}
         for line in lines
@@ -349,13 +337,6 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         had_reservations = True
         release_stock_reservation(reservation=reservation, actor=actor)
 
-    # A pre-order line goes back to the queue; allocation hands stock out again.
-    if line.is_preorder:
-        if line.allocated_quantity:
-            line.allocated_quantity = 0
-            line.save(update_fields=["allocated_quantity", "updated_at"])
-        return
-
     # A pending order has not reserved anything yet — checkout does that.
     if not had_reservations:
         return
@@ -364,23 +345,10 @@ def _rebuild_line_reservations(line: SalesOrderLine, *, actor=None) -> None:
         hold_line_stock(order_line=line, variant=component, quantity=component_qty)
 
 
-def ensure_variant_of_kind(variant, kind: str) -> None:
-    if variant.product.category.category_type != kind:
-        label = SalesOrder.OrderType(kind).label.lower()
-        raise BusinessRuleViolationError(
-            f"{variant.product.name} ({variant.sku}) cannot go on a {label} order.",
-            code="order_kind_mismatch",
-        )
-
-
 @transaction.atomic
-def add_staff_order_lines(
-    *, order: SalesOrder, lines: list[tuple], kind: str = SalesOrder.OrderType.STOCK
-) -> None:
-    """Lines of an order staff key in. Every line must be of the order's kind;
-    `add_line` then applies the shopper's own window, limit and price rules."""
-    for variant, _quantity in lines:
-        ensure_variant_of_kind(variant, kind)
+def add_staff_order_lines(*, order: SalesOrder, lines: list[tuple]) -> None:
+    """Lines of an order staff key in, through the shopper's own `add_line`
+    and its price rules."""
     for variant, quantity in lines:
         add_line(order=order, variant=variant, quantity=quantity)
 
@@ -391,7 +359,7 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
 
     A checked-out order holds stock per line, so the new line reserves its own
     here, as checkout would have. A pending order reserves nothing until it is
-    checked out, and a pre-order line never does.
+    checked out.
     """
     order = lock_order(order)
     if order.status not in LINE_EDITABLE_STATUSES:
@@ -401,20 +369,11 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         )
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
-    # A pending order has no kind yet; the mixed-basket check covers it.
-    if order.status != SalesOrder.Status.PENDING:
-        ensure_variant_of_kind(variant, order.order_type)
     if order.lines.filter(variant=variant).exists():
         raise BusinessRuleViolationError(
             "This item is already on the order. Change its quantity instead.",
             code="line_exists",
         )
-    ensure_purchasable(variant)
-    is_preorder = variant.is_preorder_kind
-    ensure_single_kind(order, is_preorder=is_preorder)
-    if is_preorder and variant.preorder_stock_limit is not None:
-        _check_preorder_stock_limit(variant, quantity)
-
     unit_price = variant.effective_price
     line = SalesOrderLine.objects.create(
         order=order,
@@ -425,9 +384,8 @@ def add_order_line(*, order: SalesOrder, variant, quantity: int, actor=None) -> 
         product_name=variant.product.name,
         variant_sku=variant.sku,
         variant_title=variant_title(variant),
-        is_preorder=is_preorder,
     )
-    if order.status != SalesOrder.Status.PENDING and not is_preorder:
+    if order.status != SalesOrder.Status.PENDING:
         for component, component_qty in expand_variant(variant, quantity):
             hold_line_stock(order_line=line, variant=component, quantity=component_qty)
     order.recalculate_totals()
@@ -449,11 +407,6 @@ def update_order_line(*, line: SalesOrderLine, quantity: int, actor=None) -> Sal
     _assert_line_editable(line)
     if quantity <= 0:
         raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
-
-    if line.is_preorder and quantity > line.quantity:
-        ensure_purchasable(line.variant)
-        held = 0 if line.order.status == SalesOrder.Status.PENDING else line.quantity
-        _check_preorder_stock_limit(line.variant, quantity, held)
 
     line.quantity = quantity
     line.tax_amount = compute_line_tax(unit_price=line.unit_price, quantity=quantity)

@@ -3,10 +3,10 @@ import { LoginView } from "@/modules/auth";
 
 export const metadata: Metadata = {
   title: "Log In",
-  description: "Log in to your Kull Mart account.",
+  description: "Log in to your School Project account.",
   robots: { index: false, follow: false },
 };
 
-export default function KullMartLoginPage() {
+export default function SchoolProjectLoginPage() {
   return <LoginView />;
 }

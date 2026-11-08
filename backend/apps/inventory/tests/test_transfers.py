@@ -19,7 +19,6 @@ from apps.inventory.services.warehouses import create_warehouse, update_warehous
 pytestmark = pytest.mark.django_db
 
 STOCK = Category.CategoryType.STOCK
-PREORDER = Category.CategoryType.PREORDER
 
 
 def _receive(variant, warehouse, quantity, unit_cost):
@@ -34,7 +33,7 @@ def _receive(variant, warehouse, quantity, unit_cost):
 
 @pytest.fixture
 def main():
-    return get_or_create_default_warehouse(STOCK)
+    return get_or_create_default_warehouse()
 
 
 @pytest.fixture
@@ -110,22 +109,16 @@ def test_repeated_lines_are_checked_together(main, branch):
     assert exc.value.code == "insufficient_stock"
 
 
-def test_stock_cannot_move_into_the_same_warehouse_or_another_kind(main):
+def test_stock_cannot_move_into_the_same_warehouse(main):
     variant = ProductVariantFactory()
     _receive(variant, main, 4, "4.00")
-    preorder = create_warehouse(data={"name": "Pre-order", "code": "PO-WH", "kind": PREORDER})
 
     with pytest.raises(BusinessRuleViolationError) as same:
         transfer_stock(
             from_warehouse=main, to_warehouse=main, lines=[{"variant": variant, "quantity": 1}]
         )
-    with pytest.raises(BusinessRuleViolationError) as other_kind:
-        transfer_stock(
-            from_warehouse=main, to_warehouse=preorder, lines=[{"variant": variant, "quantity": 1}]
-        )
 
     assert same.value.code == "same_warehouse"
-    assert other_kind.value.code == "warehouse_kind_mismatch"
 
 
 def test_transfer_api_creates_and_lists_transfers(api_client, main, branch):
@@ -204,7 +197,7 @@ def test_making_another_warehouse_the_default_frees_the_old_one(main, branch):
     main.refresh_from_db()
     assert not main.is_default
     update_warehouse(warehouse=main, data={"is_active": False})  # no longer the default
-    assert get_or_create_default_warehouse(STOCK) == branch
+    assert get_or_create_default_warehouse() == branch
 
 
 def test_a_default_switched_off_before_the_rule_gives_a_clear_error_not_a_crash(main):
@@ -218,4 +211,4 @@ def test_a_default_switched_off_before_the_rule_gives_a_clear_error_not_a_crash(
 def test_a_new_default_never_reuses_a_code_already_taken():
     # The seeded MAIN is no longer the default, but still holds its code.
     Warehouse.objects.filter(kind=STOCK).update(is_default=False)
-    assert get_or_create_default_warehouse(STOCK).code == "MAIN-2"
+    assert get_or_create_default_warehouse().code == "MAIN-2"

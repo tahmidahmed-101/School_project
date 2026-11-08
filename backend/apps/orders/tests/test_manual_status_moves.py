@@ -11,7 +11,6 @@ from apps.accounts.constants import UserRole
 from apps.accounts.tests.helpers import create_user
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.selectors.stock import get_stock_item
-from apps.orders.factories import SalesOrderFactory, SalesOrderLineFactory
 from apps.orders.models import Payment, SalesOrder, Shipment, StockReservation
 from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.orders import allowed_status_overrides, set_order_status
@@ -109,20 +108,6 @@ def test_shipped_then_delivered_by_hand_completes_the_order():
 
     assert _status(order) == SalesOrder.Status.DELIVERED
     assert Shipment.objects.get(order=order).status == Shipment.Status.DELIVERED
-
-
-def test_a_preorder_without_arrived_stock_cannot_be_marked_shipped():
-    order = SalesOrderFactory(
-        status=SalesOrder.Status.CONFIRMED, order_type=SalesOrder.OrderType.PREORDER
-    )
-    SalesOrderLineFactory(order=order, is_preorder=True, quantity=2)
-
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        set_order_status(order=order, new_status=SalesOrder.Status.SHIPPED)
-
-    assert exc.value.code == "preorder_not_allocated"
-    assert _status(order) == SalesOrder.Status.CONFIRMED
-    assert not Shipment.objects.filter(order=order).exists()
 
 
 def test_an_order_set_to_shipped_with_nothing_shipped_can_go_back_to_confirmed():

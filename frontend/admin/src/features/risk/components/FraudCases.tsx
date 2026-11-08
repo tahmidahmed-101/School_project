@@ -14,7 +14,6 @@ import { fetchAll } from "@/features/risk/slices/fraudCaseSlice"
 import { selectFraudCases } from "@/features/risk/selectors"
 import type { FraudCase } from "@/features/risk/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { humanize } from "@/lib/format"
 import type { Option } from "@/lib/types"
@@ -32,12 +31,8 @@ const ORDERING_OPTIONS: Option[] = [
   { value: "status", label: "By status" },
 ]
 
-const FraudCasesList = () => {
-  const kind = useKind()
-  const isPreorder = kind === "preorder"
-  const base = isPreorder ? "/preorder_fraud_cases" : "/fraud_cases"
-  const title = isPreorder ? "Pre-order fraud cases" : "Fraud Cases"
-  useDocumentTitle(title)
+const FraudCases = () => {
+  useDocumentTitle("Fraud Cases")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -50,7 +45,7 @@ const FraudCasesList = () => {
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: caseState,
-    params: { kind, ordering: ordering?.value ?? ORDERING_OPTIONS[0].value, status: statusFilter?.value },
+    params: { kind: "stock", ordering: ordering?.value ?? ORDERING_OPTIONS[0].value, status: statusFilter?.value },
   })
 
   const columns: ColumnDef<FraudCase>[] = [
@@ -85,7 +80,7 @@ const FraudCasesList = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title={title} />
+      <PageHeader title="Fraud Cases" />
 
       {/* ?search= matches case/order number, customer or order email, and phone. */}
       <FilterToolbar
@@ -111,7 +106,7 @@ const FraudCasesList = () => {
         columns={columns}
         data={cases}
         {...list.tableProps}
-        onRowClick={(c) => navigate(`${base}/${c.id}`)}
+        onRowClick={(c) => navigate(`/fraud_cases/${c.id}`)}
         emptyTitle="No fraud cases"
         emptyDescription={
           list.debouncedSearch || statusFilter
@@ -124,7 +119,5 @@ const FraudCasesList = () => {
     </div>
   )
 }
-
-const FraudCases = () => <FraudCasesList key={useKind()} />
 
 export default FraudCases

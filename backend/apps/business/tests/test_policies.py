@@ -80,7 +80,9 @@ def publish(client, kind=PolicyKind.SHIPPING, **extra):
 
 
 def test_migration_creates_one_empty_unpublished_row_per_kind():
-    policies = list(StorePolicy.objects.order_by("kind"))
+    # The row an old migration made for the removed pre-order terms stays in
+    # the table but is not one of the shop's policies.
+    policies = list(StorePolicy.objects.filter(kind__in=PolicyKind.values).order_by("kind"))
 
     assert sorted(policy.kind for policy in policies) == sorted(PolicyKind.values)
     for policy in policies:
@@ -145,7 +147,6 @@ def test_return_policy_includes_toggle_and_enforced_rules(admin_client):
         admin_client,
         kind=PolicyKind.RETURNS,
         return_window_days=5,
-        preorder_returns_allowed=False,
         non_returnable_category_ids=[str(category.id)],
     )
     set_module_config(key=ModuleKey.ORDERS, config={"returns": False})
@@ -155,7 +156,6 @@ def test_return_policy_includes_toggle_and_enforced_rules(admin_client):
     assert data["returns_enabled"] is False
     assert data["eligibility"] == {
         "return_window_days": 5,
-        "preorder_returns_allowed": False,
         "non_returnable_categories": [
             {"id": str(category.id), "name": "Test category", "slug": category.slug}
         ],

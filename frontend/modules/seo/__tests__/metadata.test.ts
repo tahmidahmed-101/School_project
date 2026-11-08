@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeProduct, makeSku } from "@/tests/fixtures";
+import { makeProduct } from "@/tests/fixtures";
 import { BRAND_INFO } from "@/lib/brand";
 import {
   breadcrumbJsonLd,
@@ -34,14 +34,14 @@ describe("pageMetadata", () => {
     const meta = pageMetadata({ title: "Shop", description: "Browse", path: "/shop" });
     expect(meta.alternates).toEqual({ canonical: "/shop" });
     expect(meta.title).toBe("Shop");
-    expect(meta.openGraph).toMatchObject({ url: "/shop", title: "Shop | Kull Mart", description: "Browse" });
+    expect(meta.openGraph).toMatchObject({ url: "/shop", title: "Shop | School Project", description: "Browse" });
     expect(meta.twitter).toMatchObject({ card: "summary_large_image", description: "Browse" });
   });
 
   it("uses an explicit canonical when the page is a filtered view of another URL", () => {
-    const meta = pageMetadata({ description: "d", path: "/shop?type=preorder", canonical: "/pre-order" });
-    expect(meta.alternates).toEqual({ canonical: "/pre-order" });
-    expect(meta.openGraph).toMatchObject({ url: "/shop?type=preorder" });
+    const meta = pageMetadata({ description: "d", path: "/shop?sort=featured", canonical: "/shop" });
+    expect(meta.alternates).toEqual({ canonical: "/shop" });
+    expect(meta.openGraph).toMatchObject({ url: "/shop?sort=featured" });
   });
 
   it("omits the title on the home page so the layout default applies", () => {
@@ -69,7 +69,7 @@ describe("productDescription", () => {
     const result = productDescription(
       makeProduct({ description: { en: "churi", bn: "" }, tagline: { en: "", bn: "" } }),
     );
-    expect(result).toBe("churi. Order online from Kull Mart with delivery all across Bangladesh.");
+    expect(result).toBe("churi. Order online from School Project with delivery all across Bangladesh.");
     expect(result.length).toBeGreaterThanOrEqual(50);
   });
 
@@ -114,7 +114,7 @@ describe("categoryDescription", () => {
 
 describe("ogCardImage", () => {
   it("points a page with a real photo at its own 1200x630 card", () => {
-    expect(ogCardImage("product", "a b", "https://api.kullmart.com/media/x.webp", "Alt")).toEqual({
+    expect(ogCardImage("product", "a b", "https://api.schoolproject.com/media/x.webp", "Alt")).toEqual({
       url: "/og/product/a%20b",
       alt: "Alt",
       width: 1200,
@@ -148,7 +148,7 @@ describe("organizationJsonLd", () => {
     const brand = {
       ...BRAND_INFO,
       social: {
-        instagram: "https://instagram.com/kullmartbd",
+        instagram: "https://instagram.com/schoolprojectbd",
         tiktok: "",
         youtube: "https://youtube.com/@km",
         linkedin: "",
@@ -156,15 +156,15 @@ describe("organizationJsonLd", () => {
     };
     expect(organizationJsonLd(brand).sameAs).toEqual([
       BRAND_INFO.facebook,
-      "https://instagram.com/kullmartbd",
+      "https://instagram.com/schoolprojectbd",
       "https://youtube.com/@km",
     ]);
     expect(organizationJsonLd().sameAs).toEqual([BRAND_INFO.facebook]);
   });
 
   it("names the organisation from the merged brand", () => {
-    const ld = organizationJsonLd({ ...BRAND_INFO, name: "Kull Mart BD", legalName: "Kull Mart Trading" });
-    expect(ld).toMatchObject({ name: "Kull Mart BD", legalName: "Kull Mart Trading" });
+    const ld = organizationJsonLd({ ...BRAND_INFO, name: "School Project BD", legalName: "School Project Trading" });
+    expect(ld).toMatchObject({ name: "School Project BD", legalName: "School Project Trading" });
   });
 });
 
@@ -187,15 +187,9 @@ describe("productJsonLd", () => {
     expect(offer(makeProduct({ price: 650 }))).toMatchObject({ price: 650, priceCurrency: "BDT" });
   });
 
-  it("reports availability for stock, out-of-stock and pre-order products", () => {
+  it("reports availability for in-stock and out-of-stock products", () => {
     expect(offer().availability).toBe("https://schema.org/InStock");
     expect(offer(makeProduct({ inStock: false, stockCount: 0 })).availability).toBe("https://schema.org/OutOfStock");
-    expect(offer(makeProduct({ isPreOrder: true, skuVariants: [makeSku({ isPreOrder: true })] })).availability).toBe(
-      "https://schema.org/PreOrder",
-    );
-    expect(offer(makeProduct({ isPreOrder: true, preorderStatus: "sold-out" })).availability).toBe(
-      "https://schema.org/OutOfStock",
-    );
   });
 
   it("only emits a rating when there are real reviews", () => {

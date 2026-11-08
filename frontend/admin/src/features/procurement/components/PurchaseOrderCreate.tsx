@@ -16,8 +16,6 @@ import { DateField, SelectField, TextareaField } from "@/components/common/form-
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
-import { useKind } from "@/hooks/use-kind"
-import { purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useAllPages } from "@/hooks/use-all-pages"
 
@@ -53,14 +51,11 @@ type FormValues = z.infer<typeof schema>
 const emptyLine: FormValues["lines"][number] = { variant: null, quantity_ordered: "1", unit_cost: "" }
 
 const PurchaseOrderCreate = () => {
-  const kind = useKind()
-  const base = purchasingBase(kind)
-  const title = kind === "preorder" ? "New pre-order purchase order" : "New Purchase Order"
-  useDocumentTitle(title)
+  useDocumentTitle("New Purchase Order")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCanManagePurchasing()
-  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind })
+  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind: "stock" })
   const activeSuppliers = useMemo(() => suppliers.filter((s) => s.is_active), [suppliers])
 
   const {
@@ -96,7 +91,7 @@ const PurchaseOrderCreate = () => {
         })
       ).unwrap()
       toast.success(`${po.po_number} created as a draft`)
-      navigate(`${base}/orders/${po.id}`)
+      navigate(`/purchasing/orders/${po.id}`)
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to create purchase order"))
     }
@@ -113,8 +108,8 @@ const PurchaseOrderCreate = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{ to: `${base}/orders`, label: "Back to purchase orders" }}
-        title={title}
+        back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
+        title="New Purchase Order"
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
@@ -163,7 +158,7 @@ const PurchaseOrderCreate = () => {
                       name={`lines.${index}.variant`}
                       render={({ field }) => (
                         <VariantPicker
-                          filters={{ category_type: kind }}
+                          filters={{ category_type: "stock" }}
                           value={field.value}
                           onChange={(v) => {
                             field.onChange(v)
@@ -229,7 +224,7 @@ const PurchaseOrderCreate = () => {
 
         <StickyFormBar>
           <Button type="button" variant="outline" asChild>
-            <Link to={`${base}/orders`}><X className="size-4" /> Cancel</Link>
+            <Link to="/purchasing/orders"><X className="size-4" /> Cancel</Link>
           </Button>
           <SubmitButton loading={isSubmitting} icon={CheckCircle2}>
             Create Draft

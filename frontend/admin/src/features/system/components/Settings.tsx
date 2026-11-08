@@ -46,7 +46,7 @@ const Settings = () => {
     const requests = [
       dispatch(fetchBusinessProfile()),
       dispatch(fetchModules()),
-      dispatch(fetchPaymentMethods("stock")),
+      dispatch(fetchPaymentMethods()),
       dispatch(fetchIntegrations()),
       dispatch(fetchHeroSlides()),
       dispatch(fetchPromoLines()),
@@ -85,7 +85,7 @@ const Settings = () => {
           <ModulesPanel canManage={canManage} />
         </TabsContent>
         <TabsContent value="payments" className="mt-4">
-          <PaymentMethodsPanel canManage={canManage} kind="stock" />
+          <PaymentMethodsPanel canManage={canManage} />
         </TabsContent>
         <TabsContent value="policies" className="mt-4">
           <PoliciesPanel />

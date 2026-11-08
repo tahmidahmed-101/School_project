@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { ContactButtons } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
-import { shopHome } from "@/lib/product";
 import type { OrderResult } from "@/lib/types";
 import { Container } from "@/design-system/ui/Container";
 import { PAGE_TITLE_CLASS } from "@/design-system/ui/PageHeader";
@@ -17,10 +16,8 @@ interface OrderSuccessProps {
 export function OrderSuccess({ orderResult }: OrderSuccessProps) {
   const { ui, money, n } = useLang();
 
-  const hasPreOrder = orderResult.lines.some((line) => line.isPreOrder);
-
   const whatsappText = encodeURIComponent(
-    `Hello Kull Mart, I just placed order #${orderResult.orderNumber} for ${orderResult.lines.length} items (Total: ৳${orderResult.total}). Name: ${orderResult.customerName}, Phone: ${orderResult.phone}`,
+    `Hello School Project, I just placed order #${orderResult.orderNumber} for ${orderResult.lines.length} items (Total: ৳${orderResult.total}). Name: ${orderResult.customerName}, Phone: ${orderResult.phone}`,
   );
 
   return (
@@ -33,16 +30,6 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
           <h1 className={PAGE_TITLE_CLASS}>{ui("orderSuccessTitle")}</h1>
           <p className="text-xs text-fg-muted sm:text-sm">{ui("orderSuccessSubtitle")}</p>
         </div>
-
-        {hasPreOrder && (
-          <div className="rounded-2xl border border-gold-300 bg-gold-50/90 p-4 text-left text-xs text-gold-950 shadow-2xs space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-gold-900">
-              <Sparkles className="h-4 w-4 text-gold-700" />
-              <span>{ui("checkoutPreOrderNotice")}</span>
-            </div>
-            <p className="text-2xs leading-relaxed text-gold-800">{ui("checkoutPreOrderShipping")}</p>
-          </div>
-        )}
 
         <div className={cardClass("surface", "shadow-xs space-y-3 p-5 text-left text-xs")}>
           <div className="flex justify-between border-b border-ink-200 pb-2">
@@ -88,12 +75,6 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
             <span className="text-fg-subtle">{ui("checkoutGrandTotal")}</span>
             <span className="font-bold text-fg">{money(orderResult.total)}</span>
           </div>
-          {orderResult.isPreOrderOrder && orderResult.depositDue > 0 && (
-            <div className="flex justify-between border-b border-ink-200 pb-2">
-              <span className="text-fg-subtle">{ui("checkoutDepositDue")}</span>
-              <span className="font-bold text-fg">{money(orderResult.depositDue)}</span>
-            </div>
-          )}
           {orderResult.payTo && (
             <div className="flex justify-between gap-3 border-b border-ink-200 pb-2">
               <span className="text-fg-subtle">{ui("checkoutPayTo")}</span>
@@ -112,10 +93,7 @@ export function OrderSuccess({ orderResult }: OrderSuccessProps) {
 
         <div className="space-y-3 pt-2">
           <ContactButtons whatsappText={whatsappText} />
-          <Link
-            href={orderResult.isPreOrderOrder ? shopHome("preorder") : "/"}
-            className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900"
-          >
+          <Link href="/" className="inline-block pt-2 text-xs font-bold text-gold-800 hover:text-gold-900">
             {ui("orderContinueShopping")}
           </Link>
         </div>

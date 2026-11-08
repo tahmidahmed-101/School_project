@@ -5,10 +5,8 @@ from django.db import transaction
 from apps.catalog.models import Brand, Category, Product, Sale
 from apps.catalog.selectors.sales import clear_live_sales_cache
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.params import KIND_STOCK
 from apps.common.services.soft_delete import soft_delete_instance
 
-SALE_STOCK_ONLY_MESSAGE = "A sale covers stock products only, not pre-order ones."
 TARGET_FIELDS: dict[str, str] = {
     Sale.AppliesTo.CATEGORIES: "categories",
     Sale.AppliesTo.BRANDS: "brands",
@@ -24,37 +22,33 @@ def _clear_cache() -> None:
     transaction.on_commit(clear_live_sales_cache)
 
 
-def _stock_rows(model, ids, *, kind_field: str, code: str, message: str) -> list:
-    """Live rows for `ids`, refusing unknown ids and rows of the pre-order half."""
+def _live_rows(model, ids) -> list:
+    """Live rows for `ids`, refusing unknown ids."""
     wanted = set(ids)
     rows = list(model.objects.filter(id__in=wanted, deleted_at__isnull=True))
     if len(rows) != len(wanted):
         raise BusinessRuleViolationError(
             "One or more of the chosen items no longer exist.", code="invalid_target"
         )
-    if model.objects.filter(id__in=wanted).exclude(**{kind_field: KIND_STOCK}).exists():
-        raise BusinessRuleViolationError(message, code=code)
     return rows
 
 
-def stock_categories(ids, *, code: str, message: str) -> list[Category]:
-    return _stock_rows(Category, ids, kind_field="category_type", code=code, message=message)
+def live_categories(ids) -> list[Category]:
+    return _live_rows(Category, ids)
 
 
-def stock_brands(ids, *, code: str, message: str) -> list[Brand]:
-    return _stock_rows(Brand, ids, kind_field="kind", code=code, message=message)
+def live_brands(ids) -> list[Brand]:
+    return _live_rows(Brand, ids)
 
 
-def stock_products(ids, *, code: str, message: str) -> list[Product]:
-    return _stock_rows(
-        Product, ids, kind_field="category__category_type", code=code, message=message
-    )
+def live_products(ids) -> list[Product]:
+    return _live_rows(Product, ids)
 
 
 TARGET_LOADERS = {
-    "categories": stock_categories,
-    "brands": stock_brands,
-    "products": stock_products,
+    "categories": live_categories,
+    "brands": live_brands,
+    "products": live_products,
 }
 
 
@@ -75,9 +69,7 @@ def _set_targets(sale: Sale, *, applies_to: str, ids_by_field: dict) -> None:
     if wanted is None:
         return
     if wanted in ids_by_field:
-        rows = TARGET_LOADERS[wanted](
-            ids_by_field[wanted], code="sale_stock_only", message=SALE_STOCK_ONLY_MESSAGE
-        )
+        rows = TARGET_LOADERS[wanted](ids_by_field[wanted])
         getattr(sale, wanted).set(rows)
     if not getattr(sale, wanted).exists():
         raise BusinessRuleViolationError(

@@ -65,7 +65,7 @@ const BundleForm = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.catalogBundles)
   const bundle = singleData as Bundle | null
-  const { options: categoryOptions } = useCategoryOptions("stock")
+  const { options: categoryOptions } = useCategoryOptions()
 
   useDocumentTitle(isEditing ? (bundle?.name ? `Edit ${bundle.name}` : "Edit Bundle") : "New Bundle")
 

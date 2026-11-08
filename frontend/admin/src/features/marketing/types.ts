@@ -1,4 +1,4 @@
-// Mirrors api/v1/admin/coupons/serializers.py and api/v1/admin/marketing/serializers.py (kull-mart).
+// Mirrors api/v1/admin/coupons/serializers.py and api/v1/admin/marketing/serializers.py (school-project).
 
 export type DiscountType = "percentage" | "fixed"
 

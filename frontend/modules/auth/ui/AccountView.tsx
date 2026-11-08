@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, LogOut, Mail, Phone, Store, Truck } from "lucide-react";
+import { LogOut, Mail, Phone, Store, Truck } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
 import { Button } from "@/design-system/ui/Button";
@@ -23,7 +23,6 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
   const shortcuts = [
     { href: "/shop", label: ui("navReadyStock"), icon: Store },
     { href: "/track-order", label: ui("navTrackOrder"), icon: Truck },
-    { href: "/pre-order", label: ui("navPreOrder"), icon: Clock },
   ];
 
   return (
@@ -66,7 +65,7 @@ export function AccountView({ user, onLogout }: { user: AuthUser; onLogout: () =
 
         {user.role !== "customer" && <FormAlert className="mt-4">{ui("accountStaffNote")}</FormAlert>}
 
-        <nav aria-label={ui("navProfile")} className="mt-4 grid grid-cols-3 gap-3">
+        <nav aria-label={ui("navProfile")} className="mt-4 grid grid-cols-2 gap-3">
           {shortcuts.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

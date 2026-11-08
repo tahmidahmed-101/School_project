@@ -1,4 +1,4 @@
-// Mirrors kull-mart api/v1/admin/orders/serializers.py → AdminSalesOrderSerializer and friends.
+// Mirrors school-project api/v1/admin/orders/serializers.py → AdminSalesOrderSerializer and friends.
 // apps/orders/models/sales_order.py (SalesOrder.Status). List and detail share one serializer.
 
 import type { Payment, PaymentMethod } from "@/features/payments/types"
@@ -33,44 +33,6 @@ export const ORDER_STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
   { label: "Closed", value: "closed" },
 ]
 
-/** Where a pre-order is on its way; set by hand, separate from the order status (backend `PreorderStage`). */
-export const PREORDER_STAGE_OPTIONS: { label: string; value: string }[] = [
-  { label: "Pending payment", value: "pending_payment" },
-  { label: "Partially paid", value: "partially_paid" },
-  { label: "Purchasing", value: "purchasing" },
-  { label: "Purchase completed", value: "purchase_completed" },
-  { label: "Shipped from supplier", value: "shipped_from_supplier" },
-  { label: "Received in China warehouse", value: "received_in_china_warehouse" },
-  { label: "On the way to China airport", value: "on_the_way_to_china_airport" },
-  { label: "Received in China airport", value: "received_in_china_airport" },
-  { label: "On the way to BD airport", value: "on_the_way_to_bd_airport" },
-  { label: "Received in BD airport", value: "received_in_bd_airport" },
-  { label: "On the way to China seaport", value: "on_the_way_to_china_seaport" },
-  { label: "Received in China seaport", value: "received_in_china_seaport" },
-  { label: "On the way to BD seaport", value: "on_the_way_to_bd_seaport" },
-  { label: "Received in BD seaport", value: "received_in_bd_seaport" },
-  { label: "Offload", value: "offload" },
-  { label: "Inspection", value: "inspection" },
-  { label: "On the way to BD warehouse", value: "on_the_way_to_bd_warehouse" },
-  { label: "Received in BD warehouse", value: "received_in_bd_warehouse" },
-  { label: "Waiting for receive due payment", value: "waiting_for_receive_due_payment" },
-  { label: "Processing for delivery", value: "processing_for_delivery" },
-  { label: "On the way to delivery", value: "on_the_way_to_delivery" },
-  { label: "Completed", value: "completed" },
-  { label: "Hold", value: "hold" },
-  { label: "Cancelled", value: "cancelled" },
-]
-
-export const preorderStageLabel = (stage: string) =>
-  PREORDER_STAGE_OPTIONS.find((o) => o.value === stage)?.label ?? stage
-
-export interface PreorderStageEvent {
-  stage: string
-  note: string
-  changed_by_name: string | null
-  created_at: string
-}
-
 /** services/orders.py — cancel_order and line edits only work before anything ships. */
 export const PRE_SHIPMENT_STATUSES: OrderStatus[] = ["pending", "awaiting_payment", "confirmed"]
 /** services/returns.py NON_RETURNABLE_ORDER_STATUSES. */
@@ -90,13 +52,10 @@ export interface OrderLine {
   delivered_quantity: number
   returned_quantity: number
   shippable_quantity: number
-  /** Pre-order units with no arrived stock set aside yet. */
-  awaiting_stock_quantity: number
   returnable_quantity: number
   unit_price: string
   discount_amount: string
   tax_amount: string
-  is_preorder: boolean
 }
 
 /** The order's ship-to snapshot (`line2` is exposed as `delivery_note`). */
@@ -125,10 +84,6 @@ export interface Order {
   contact_email: string
   contact_phone: string
   contact_name: string
-  order_type: "stock" | "preorder"
-  /** Blank until staff record the first stage. */
-  preorder_stage: string
-  preorder_stage_events: PreorderStageEvent[]
   subtotal: string
   tax_total: string
   shipping_total: string
@@ -137,7 +92,6 @@ export interface Order {
   /** Money received and not refunded; uncollected cash on delivery is not in it. */
   paid_total: string
   balance_due: string
-  deposit_due: string | null
   /** Statuses the manual override accepts from here (services/orders.py STATUS_OVERRIDES). */
   allowed_statuses: OrderStatus[]
   coupon_code: string | null
@@ -172,18 +126,6 @@ export interface OrderCreatePayload {
   lines: { variant_id: string; quantity: number }[]
   capture_payment?: boolean
   payment_method?: PaymentMethod
-  /** Defaults to "stock". A pre-order is never paid at creation; it waits for its deposit. */
-  order_type?: "stock" | "preorder"
-}
-
-/** POST /admin/orders/quote/ — totals as decimal strings. */
-export interface OrderQuote {
-  order_type: "stock" | "preorder"
-  subtotal: string
-  tax_total: string
-  shipping_total: string
-  grand_total: string
-  deposit_due: string
 }
 
 /** AdminCartItemSerializer — a cart line's product name and SKU snapshots. */
@@ -194,7 +136,6 @@ export interface CustomerCartItem {
   sku: string
   quantity: number
   unit_price: string
-  is_preorder: boolean
 }
 
 /**
@@ -216,24 +157,4 @@ export interface CustomerCart {
   created_at: string
   /** The last cart change: every line edit saves the cart. */
   updated_at: string
-  /** The order's kind; absent on older API answers, read as stock. */
-  order_type?: "stock" | "preorder"
-}
-
-/** AdminPreorderReportView */
-export interface PreorderReport {
-  summary: { open_orders: number; order_value: string; deposits_held: string; balances_outstanding: string }
-  demand: {
-    variant_id: string
-    variant_sku: string
-    product_name: string
-    waiting: number
-    available: number
-    to_buy: number
-  }[]
-}
-
-/** AdminPreorderAllocationView */
-export interface PreorderAllocationResult {
-  allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
 }

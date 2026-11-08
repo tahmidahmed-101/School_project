@@ -1,14 +1,14 @@
-# Backend API on the shared edge VPS. Caddy reaches kull-mart-api by name over the external `edge`
-# network; the loopback port (pmo registry.json kull-mart:api) exists only for the deploy health check.
-name: kull-mart-api
+# Backend API on the shared edge VPS. Caddy reaches school-project-api by name over the external `edge`
+# network; the loopback port (pmo registry.json school-project:api) exists only for the deploy health check.
+name: school-project-api
 
 x-api: &api
   build: ./backend
-  image: kull-mart-api:${IMAGE_TAG:-latest}
+  image: school-project-api:${IMAGE_TAG:-latest}
   restart: unless-stopped
   env_file: .env
   environment:
-    DATABASE_URL: postgres://kullmart:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@kull-mart-db:5432/kullmart
+    DATABASE_URL: postgres://schoolproject:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@school-project-db:5432/schoolproject
     MEDIA_ROOT: /app/media
   volumes:
     - media:/app/media
@@ -28,16 +28,16 @@ services:
         max-file: "3"
     init: true
     image: postgres:16-alpine
-    container_name: kull-mart-db
+    container_name: school-project-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: kullmart
-      POSTGRES_USER: kullmart
+      POSTGRES_DB: schoolproject
+      POSTGRES_USER: schoolproject
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kullmart -d kullmart"]
+      test: ["CMD-SHELL", "pg_isready -U schoolproject -d schoolproject"]
       interval: 30s
       start_period: 30s
       start_interval: 2s
@@ -48,7 +48,7 @@ services:
   api:
     init: true
     <<: *api
-    container_name: kull-mart-api
+    container_name: school-project-api
     ports:
       - "127.0.0.1:4361:4361"
     networks: [internal, edge]
@@ -57,7 +57,7 @@ services:
   sweeper:
     init: true
     <<: *api
-    container_name: kull-mart-sweeper
+    container_name: school-project-sweeper
     profiles: [sweeper]
     command: ["./scripts/reservation_sweeper.sh"]
     networks: [internal]

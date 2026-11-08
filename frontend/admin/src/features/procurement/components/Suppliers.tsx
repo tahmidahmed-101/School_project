@@ -18,13 +18,11 @@ import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { reportFormError } from "@/lib/forms"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
 import { useSoftDeleteList } from "@/hooks/use-soft-delete-list"
 
 import { deleteData, fetchAll, patchData, postData, restoreSupplier } from "../slices/supplierSlice"
 import type { Supplier, SupplierPayload } from "../types"
 import { useCanManagePurchasing, useProcurementSelector } from "../hooks/useProcurement"
-import { purchasingTitle } from "../lib/kind"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -39,13 +37,10 @@ function SupplierFormDialog({
   open,
   onOpenChange,
   supplier,
-  kind,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   supplier: Supplier | null
-  /** The half of the dashboard the page belongs to; a new supplier is created in it. */
-  kind: Kind
 }) {
   const dispatch = useAppDispatch()
   const {
@@ -75,7 +70,7 @@ function SupplierFormDialog({
       contact_email: values.contact_email.trim(),
       phone: values.phone.trim(),
       payment_terms: values.payment_terms.trim(),
-      ...(supplier ? { is_active: values.is_active } : { kind }),
+      ...(supplier ? { is_active: values.is_active } : { kind: "stock" }),
     }
     try {
       if (supplier) {
@@ -96,11 +91,7 @@ function SupplierFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={supplier ? "Edit Supplier" : "Add Supplier"}
-      description={
-        kind === "preorder"
-          ? "Vendors you raise pre-order purchase orders against."
-          : "Vendors you raise purchase orders against."
-      }
+      description="Vendors you raise purchase orders against."
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={supplier ? "Save Changes" : "Add Supplier"}
@@ -135,10 +126,8 @@ const IMPORT_FIELDS: ImportField[] = [
   { key: "payment_terms", label: "Payment terms", aliases: ["Terms"], example: "Net 30" },
 ]
 
-const SuppliersList = () => {
-  const kind = useKind()
-  const title = purchasingTitle(kind, "Suppliers")
-  useDocumentTitle(title)
+const Suppliers = () => {
+  useDocumentTitle("Suppliers")
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.suppliers)
   const canManage = useCanManagePurchasing()
@@ -154,7 +143,7 @@ const SuppliersList = () => {
   const { list, statusColumn, actionsColumn, bulk } = useSoftDeleteList<Supplier>({
     fetch: (p) => dispatch(fetchAll(p)),
     state,
-    params: { kind },
+    params: { kind: "stock" },
     noun: "supplier",
     canUpdate: canManage,
     remove: (id) => dispatch(deleteData(id)).unwrap(),
@@ -203,14 +192,14 @@ const SuppliersList = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Suppliers"
         actions={
           canManage && (
             <>
               <RestoreDeletedButton<Supplier>
                 noun="suppliers"
                 endpoint="/admin/procurement/suppliers/"
-                params={{ kind }}
+                params={{ kind: "stock" }}
                 restore={(item) => dispatch(restoreSupplier(item.id)).unwrap()}
                 label={(item) => item.name}
                 onRestored={list.reload}
@@ -219,7 +208,7 @@ const SuppliersList = () => {
                 entityName="suppliers"
                 fields={IMPORT_FIELDS}
                 createRow={(payload) =>
-                  dispatch(postData({ payload: { ...(payload as Partial<Supplier>), kind } })).unwrap()
+                  dispatch(postData({ payload: { ...(payload as SupplierPayload), kind: "stock" } as Partial<Supplier> })).unwrap()
                 }
                 onComplete={list.reload}
               />
@@ -251,11 +240,9 @@ const SuppliersList = () => {
         columnWidths={["220px", "230px", "150px", "120px", "100px", "80px"]}
       />
 
-      <SupplierFormDialog open={formOpen} onOpenChange={setFormOpen} supplier={editing} kind={kind} />
+      <SupplierFormDialog open={formOpen} onOpenChange={setFormOpen} supplier={editing} />
     </div>
   )
 }
-
-const Suppliers = () => <SuppliersList key={useKind()} />
 
 export default Suppliers

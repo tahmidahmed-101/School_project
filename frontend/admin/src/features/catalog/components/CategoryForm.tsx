@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +17,6 @@ import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useKindHint, useRecordKind, type Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
 import { reportFormError } from "@/lib/forms"
@@ -46,17 +45,11 @@ const CategoryForm = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.categories)
   const existing = singleData as Category | null
-  // A saved category keeps its kind; a new one takes the kind of the list it was opened from.
-  const listKind: Kind = useSearchParams()[0].get("kind") === "preorder" ? "preorder" : "stock"
-  const kind: Kind = isEditing && existing && existing.id === id ? existing.category_type : listKind
-  const hint = useKindHint()
-  useRecordKind(isEditing && existing?.id !== id ? undefined : kind)
-  const { categories, options } = useCategoryOptions(kind)
+  const { categories, options } = useCategoryOptions()
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const noun = kind === "preorder" ? "pre-order category" : "category"
-  const listPath = kind === "preorder" ? "/preorder_categories" : "/categories"
+  const listPath = "/categories"
 
-  const title = isEditing ? `Edit ${noun}` : `Add ${noun}`
+  const title = isEditing ? "Edit category" : "Add category"
   useDocumentTitle(isEditing && existing?.name ? `Edit ${existing.name}` : title)
 
   const {
@@ -115,8 +108,8 @@ const CategoryForm = () => {
       <DetailPageState
         state={pageState}
         entity="Category"
-        backTo={hint && listPath}
-        backLabel={hint === "preorder" ? "Back to pre-order categories" : "Back to categories"}
+        backTo={listPath}
+        backLabel="Back to categories"
         error={singleError}
         onRetry={() => id && dispatch(fetchSingle(id))}
       />
@@ -130,8 +123,8 @@ const CategoryForm = () => {
       description: values.description,
       is_active: values.is_active,
     }
-    // A subcategory takes its parent's kind on the server; only a new root category is told it.
-    if (!isEditing && payload.parent_id === null) payload.category_type = kind
+    // A subcategory takes its parent's type on the server; only a new root category is told it.
+    if (!isEditing && payload.parent_id === null) payload.category_type = "stock"
     try {
       let saved: Category
       if (isEditing && id) {

@@ -9,7 +9,6 @@ const category = (id: string, parentId?: string): CategoryInfo => ({
   description: { en: "", bn: "" },
   image: "",
   itemCount: 0,
-  type: "stock",
   ...(parentId && { parentId }),
 });
 

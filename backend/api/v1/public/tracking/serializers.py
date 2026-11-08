@@ -36,8 +36,6 @@ class PublicTrackOrderSerializer(serializers.Serializer):
     shipments = serializers.SerializerMethodField()
     delivery_info = serializers.SerializerMethodField()
     tracking_timeline = serializers.SerializerMethodField()
-    preorder_stage = serializers.CharField(read_only=True)
-    preorder_timeline = serializers.SerializerMethodField()
     order_type = serializers.CharField(read_only=True)
     paid_total = serializers.SerializerMethodField()
     balance_due = serializers.SerializerMethodField()
@@ -72,12 +70,6 @@ class PublicTrackOrderSerializer(serializers.Serializer):
         if obj.status == SalesOrder.Status.CLOSED:
             return "Delivered"
         return obj.status
-
-    def get_preorder_timeline(self, obj) -> list[dict]:
-        return [
-            {"stage": event.stage, "at": event.created_at}
-            for event in obj.preorder_stage_events.all()
-        ]
 
     def get_items(self, obj) -> list[dict]:
         return PublicTrackOrderItemSerializer(obj.lines.all(), many=True).data

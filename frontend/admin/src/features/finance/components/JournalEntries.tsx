@@ -23,8 +23,7 @@ import { fetchAll } from "../slices/journalEntrySlice"
 import type { JournalEntry } from "../types"
 import { useAccounts } from "../hooks/useFinanceHelpers"
 import { JournalEntryFormDialog } from "./JournalEntryFormDialog"
-import { BelongsToSwitch } from "./BelongsToSwitch"
-import { entryTotal, type BelongsTo } from "../utils"
+import { entryTotal } from "../utils"
 
 const ORDERING_OPTIONS: Option[] = [
   { label: "Newest first", value: "-entry_date" },
@@ -32,7 +31,7 @@ const ORDERING_OPTIONS: Option[] = [
 ]
 
 // reference_type values written by the backend's posting services.
-const KIND_REFERENCE_TYPES = [
+const REFERENCE_TYPES = [
   "customer_payment",
   "customer_refund",
   "shipment_revenue",
@@ -44,13 +43,8 @@ const KIND_REFERENCE_TYPES = [
   "vendor_payment",
   "stock_adjustment",
   "stock_writeoff",
+  "expense",
 ]
-
-const REFERENCE_TYPES: Record<BelongsTo, string[]> = {
-  stock: [...KIND_REFERENCE_TYPES, "expense"],
-  preorder: [...KIND_REFERENCE_TYPES, "expense"],
-  company: ["expense"],
-}
 
 const JournalEntries = () => {
   useDocumentTitle("Journal entries")
@@ -60,7 +54,6 @@ const JournalEntries = () => {
   const canPost = useCan("accounting.post")
   const { accounts } = useAccounts()
 
-  const [view, setView] = useState<BelongsTo>("stock")
   const [referenceType, setReferenceType] = useState<Option | null>(null)
   const [ordering, setOrdering] = useState<Option | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -68,7 +61,7 @@ const JournalEntries = () => {
   const list = useListPage({
     fetch: (params) => dispatch(fetchAll(params)),
     state: listState,
-    params: { kind: view, reference_type: referenceType?.value, ordering: ordering?.value },
+    params: { reference_type: referenceType?.value, ordering: ordering?.value },
   })
 
   const columns: ColumnDef<JournalEntry>[] = [
@@ -135,20 +128,6 @@ const JournalEntries = () => {
         }
       />
 
-      <BelongsToSwitch
-        label="Show entries for"
-        value={view}
-        onChange={(next) => {
-          setView(next)
-          setReferenceType(null)
-        }}
-      />
-      <p className="text-sm text-muted-foreground">
-        {view === "company"
-          ? "Entries for the whole business: rent, salaries, owner money and anything not marked stock or pre-order."
-          : `Entries posted for ${view === "preorder" ? "pre-order" : "stock"} orders, purchases, goods and expenses.`}
-      </p>
-
       <FilterToolbar
         searchPlaceholder="Search description..."
         searchValue={list.search}
@@ -157,7 +136,7 @@ const JournalEntries = () => {
           {
             component: (
               <Combobox
-                options={REFERENCE_TYPES[view].map((t) => ({ label: humanize(t), value: t }))}
+                options={REFERENCE_TYPES.map((t) => ({ label: humanize(t), value: t }))}
                 placeholder="Source"
                 value={referenceType}
                 onValueChange={setReferenceType}
@@ -179,7 +158,7 @@ const JournalEntries = () => {
         columnWidths={["110px", "320px", "150px", "70px", "130px", "110px", "80px"]}
       />
 
-      <JournalEntryFormDialog open={formOpen} onOpenChange={setFormOpen} accounts={accounts} defaultBelongsTo={view} />
+      <JournalEntryFormDialog open={formOpen} onOpenChange={setFormOpen} accounts={accounts} />
     </div>
   )
 }

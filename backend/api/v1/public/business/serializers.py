@@ -21,13 +21,8 @@ class PublicBusinessProfileSerializer(serializers.Serializer):
     free_delivery_min_amount = serializers.DecimalField(
         max_digits=14, decimal_places=2, allow_null=True
     )
-    # Accepted before placing a pre-order; both blank when there are none.
-    preorder_terms = serializers.SerializerMethodField()
     social = serializers.SerializerMethodField()
     about = serializers.SerializerMethodField()
-
-    def get_preorder_terms(self, obj) -> dict[str, str]:
-        return {"en": obj.preorder_terms_en, "bn": obj.preorder_terms_bn}
 
     def get_about(self, obj) -> dict[str, str]:
         return {"en": obj.about_en, "bn": obj.about_bn}
@@ -82,7 +77,6 @@ class PublicReturnEligibilitySerializer(serializers.Serializer):
     page and the API cannot disagree about who may return what."""
 
     return_window_days = serializers.IntegerField(read_only=True, allow_null=True)
-    preorder_returns_allowed = serializers.BooleanField(read_only=True)
     non_returnable_categories = PublicPolicyCategorySerializer(many=True, read_only=True)
 
 
@@ -97,7 +91,6 @@ class PublicReturnPolicySerializer(PublicStorePolicySerializer):
         return PublicReturnEligibilitySerializer(
             {
                 "return_window_days": obj.return_window_days,
-                "preorder_returns_allowed": obj.preorder_returns_allowed,
                 "non_returnable_categories": obj.non_returnable_categories.all(),
             }
         ).data

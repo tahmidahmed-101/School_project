@@ -167,9 +167,7 @@ def _check_popup(popup: PromotionPopup) -> None:
 
 
 def _check_destination_shop(popup: PromotionPopup) -> None:
-    """A popup leads into its own shop: a product or category of that shop,
-    and a campaign (catalog sale) only from the stock shop, since sales never
-    apply to pre-orders."""
+    """A popup leads into its own shop: a product or category of that shop."""
     kind = popup.destination_type
     product, category = popup.product, popup.category
     if kind == Destination.PRODUCT and product and product.category.category_type != popup.shop:
@@ -183,12 +181,6 @@ def _check_destination_shop(popup: PromotionPopup) -> None:
             "category_id",
             "Choose a category from this shop.",
             code="promotion_destination_other_shop",
-        )
-    if kind == Destination.CAMPAIGN and popup.shop != PromotionPopup.Shop.STOCK:
-        raise PromotionPopupFieldError(
-            "destination_type",
-            "Sales never apply to pre-orders; choose another destination.",
-            code="promotion_campaign_stock_only",
         )
 
 

@@ -15,28 +15,14 @@ from apps.orders.selectors.shipments import with_delivered_quantity
 
 
 def _placed_orders() -> QuerySet[SalesOrder]:
-    """Checked-out orders. A pending order is a cart, which has no kind yet."""
+    """Checked-out orders. A pending order is a cart."""
     return SalesOrder.objects.filter(deleted_at__isnull=True).exclude(
         status=SalesOrder.Status.PENDING
     )
 
 
-def customers_of_kind(users: QuerySet, kind: str) -> QuerySet:
-    """One half's view of the customer list. A customer is one person, so the
-    same account is in both halves once they have ordered from both. Someone
-    who has not ordered yet is listed on the stock half only."""
-    placed = _placed_orders().filter(customer=OuterRef("pk"))
-    has_preorder = Exists(placed.filter(order_type=SalesOrder.OrderType.PREORDER))
-    if kind == SalesOrder.OrderType.PREORDER:
-        return users.filter(has_preorder)
-    return users.filter(
-        Exists(placed.filter(order_type=SalesOrder.OrderType.STOCK)) | ~has_preorder
-    )
-
-
 def customer_order_summary(customer, *, kind: str | None = None) -> dict:
-    """With `kind`, the figures of that half only; `total_spent` is then the
-    customer's lifetime value on that half."""
+    """With `kind`, the figures of placed orders of that kind only."""
     orders = (
         _placed_orders().filter(order_type=kind)
         if kind
@@ -88,34 +74,6 @@ def orders_for_customer(customer, *, status: str | None = None) -> QuerySet[Sale
     return queryset.order_by("-created_at")
 
 
-def _holds_preorder() -> Exists:
-    return Exists(
-        SalesOrderLine.objects.filter(
-            order=OuterRef("pk"),
-            variant__product__category__category_type=SalesOrder.OrderType.PREORDER,
-        )
-    )
-
-
-def _of_kind(kind: str) -> Q:
-    """An open cart has no order_type until checkout, so its lines decide; a
-    placed order is what checkout made it."""
-    pending = Q(status=SalesOrder.Status.PENDING)
-    holds_preorder = _holds_preorder()
-    if kind == SalesOrder.OrderType.PREORDER:
-        return (pending & Q(holds_preorder)) | (~pending & Q(order_type=kind))
-    return (pending & ~Q(holds_preorder)) | (~pending & Q(order_type=kind))
-
-
-def order_kind(order: SalesOrder) -> str:
-    """Python twin of `_of_kind`, for one loaded order."""
-    if order.status != SalesOrder.Status.PENDING:
-        return order.order_type
-    if any(line.variant.is_preorder_kind for line in order.lines.all()):
-        return SalesOrder.OrderType.PREORDER
-    return SalesOrder.OrderType.STOCK
-
-
 def _orders_with_related() -> QuerySet[SalesOrder]:
     return SalesOrder.objects.select_related(
         "customer", "shipping_address", "coupon"
@@ -131,7 +89,6 @@ def _orders_with_related() -> QuerySet[SalesOrder]:
         "shipments__carrier",
         "shipments__lines",
         "rmas__lines",
-        "preorder_stage_events__changed_by",
     )
 
 
@@ -139,7 +96,6 @@ def orders_list(
     *,
     customer=None,
     status: str | None = None,
-    preorder_stage: str | None = None,
     order_type: str | None = None,
     search: str | None = None,
     start: date | None = None,
@@ -150,10 +106,8 @@ def orders_list(
         queryset = queryset.filter(customer=customer)
     if status:
         queryset = queryset.filter(status=status)
-    if preorder_stage:
-        queryset = queryset.filter(preorder_stage=preorder_stage)
     if order_type:
-        queryset = queryset.filter(_of_kind(order_type))
+        queryset = queryset.filter(order_type=order_type)
     if search:
         queryset = queryset.filter(order_number__icontains=search)
     if start is not None:
@@ -210,10 +164,7 @@ def customer_carts_list(*, kind: str | None = None) -> QuerySet[SalesOrder]:
         )
     )
     if kind:
-        holds_preorder = _holds_preorder()
-        carts = carts.filter(
-            holds_preorder if kind == SalesOrder.OrderType.PREORDER else ~holds_preorder
-        )
+        carts = carts.filter(order_type=kind)
     return carts
 
 

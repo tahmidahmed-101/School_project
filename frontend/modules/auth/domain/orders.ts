@@ -26,9 +26,3 @@ export function orderStatusTone(status: string): "done" | "bad" | "progress" {
   if (status === "cancelled") return "bad";
   return "progress";
 }
-
-export function preorderStageTone(stage: string): "done" | "bad" | "progress" {
-  if (stage === "completed") return "done";
-  if (stage === "cancelled") return "bad";
-  return "progress";
-}

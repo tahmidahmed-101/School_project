@@ -84,11 +84,6 @@ def _enforce_return_policy(versions: list[ReturnRules], order_lines: list[SalesO
         rules = governing_return_rules(versions, policy_date(delivered_at or now))
         if rules is None:
             continue
-        if not rules.preorder_returns_allowed and order_line.is_preorder:
-            raise BusinessRuleViolationError(
-                f"Line {order_line.id} was a pre-order, which the return policy excludes.",
-                code="preorder_not_returnable",
-            )
         if rules.non_returnable_category_ids:
             if category_by_line is None:
                 category_by_line = {

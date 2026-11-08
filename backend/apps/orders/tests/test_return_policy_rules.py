@@ -116,13 +116,12 @@ def frozen_now(monkeypatch):
 @pytest.fixture
 def two_versions():
     """v1 (from V1_DATE): 30-day window, everything returnable.
-    v2 (from V2_DATE): 7-day window, pre-orders and one category excluded."""
+    v2 (from V2_DATE): 7-day window, one category excluded."""
     excluded = CategoryFactory()
     _publish_returns(effective_date=V1_DATE, return_window_days=30)
     _publish_returns(
         effective_date=V2_DATE,
         return_window_days=7,
-        preorder_returns_allowed=False,
         non_returnable_category_ids=[excluded.id],
     )
     return excluded
@@ -142,7 +141,7 @@ def test_draft_rules_are_not_enforced():
     update_store_policy(
         policy=policy,
         actor=None,
-        data={"return_window_days": 1, "preorder_returns_allowed": False},
+        data={"return_window_days": 1},
     )
     order = _delivered_order(delivered_at=timezone.now() - timedelta(days=30))
 
@@ -198,16 +197,6 @@ def test_newer_version_does_not_change_eligibility_under_an_earlier_one(two_vers
     assert exc.value.code == "category_not_returnable"
 
 
-def test_preorder_exclusion_applies_only_from_its_version(two_versions):
-    governed_by_v1 = _delivered_order(delivered_at=_start_of(V2_DATE) - timedelta(days=1))
-    governed_by_v2 = _delivered_order(delivered_at=timezone.now())
-    for order in (governed_by_v1, governed_by_v2):
-        order.lines.update(is_preorder=True)
-
-    _return_one(governed_by_v1)
-    assert _refused(governed_by_v2) == "preorder_not_returnable"
-
-
 def test_same_day_correction_supersedes_the_version_it_corrects(frozen_now):
     _publish_returns(effective_date=V1_DATE, return_window_days=1)
     _publish_returns(effective_date=V1_DATE, return_window_days=90)
@@ -245,16 +234,20 @@ def test_window_runs_from_delivery_not_order_creation(frozen_now):
 
 
 def test_undelivered_units_fall_under_todays_version_with_no_window_started(frozen_now):
-    _publish_returns(return_window_days=3, preorder_returns_allowed=False)
-    order = _order(quantity=2)
-    shipment = _ship(order, 2)
-    Shipment.objects.filter(pk=shipment.pk).update(shipped_at=frozen_now - timedelta(days=30))
-    order.refresh_from_db()
+    excluded = CategoryFactory()
+    _publish_returns(
+        effective_date=TODAY, return_window_days=3, non_returnable_category_ids=[excluded.id]
+    )
+    orders = []
+    for category in (None, excluded):
+        order = _order(quantity=2, category=category)
+        shipment = _ship(order, 2)
+        Shipment.objects.filter(pk=shipment.pk).update(shipped_at=frozen_now - timedelta(days=30))
+        order.refresh_from_db()
+        orders.append(order)
 
-    order.lines.update(is_preorder=False)
-    _return_one(order)
-    order.lines.update(is_preorder=True)
-    assert _refused(order) == "preorder_not_returnable"
+    _return_one(orders[0])
+    assert _refused(orders[1]) == "category_not_returnable"
 
 
 # --- Split shipments: the latest delivery governs (existing window semantics) ---

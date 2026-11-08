@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kull-mart-web",
+  "name": "school-project-web",
   "main": "worker.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -8,10 +8,10 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "kullmart.com", "custom_domain": true },
-    { "pattern": "www.kullmart.com", "custom_domain": true },
+    { "pattern": "schoolproject.com", "custom_domain": true },
+    { "pattern": "www.schoolproject.com", "custom_domain": true },
   ],
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "kull-mart-web" }],
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "school-project-web" }],
   // Unused without a page cache; kept so the deployed DOQueueHandler class needs no delete migration.
   "durable_objects": { "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],

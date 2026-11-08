@@ -3,10 +3,9 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown, ChevronRight, CornerDownRight, Layers } from "lucide-react";
-import { categoryGroups, useCatalog, WithPageKind } from "@/modules/catalog";
-import { useCart } from "@/modules/cart";
+import { categoryGroups, useCatalog } from "@/modules/catalog";
 import { useLang } from "@/lib/i18n";
-import { shopListing, type ProductKind } from "@/lib/product";
+import { shopListing } from "@/lib/product";
 import { useClickOutside } from "@/lib/useClickOutside";
 import { WithActiveCategory } from "@/modules/catalog";
 import { Collapse } from "@/design-system/patterns/Collapse";
@@ -20,18 +19,12 @@ function revealGroup(toggle: HTMLElement) {
   setTimeout(() => group?.scrollIntoView({ block: "nearest", behavior: "smooth" }), OPEN_MS);
 }
 
-/** "Shop by Categories" pill in the desktop nav bar: the categories of the shop the visitor is in. */
+/** "Shop by Categories" pill in the desktop nav bar. */
 export function NavCategoriesMenu() {
-  const { kind: basket } = useCart();
-  return <WithPageKind basket={basket}>{(kind) => <ShopCategoriesMenu kind={kind} />}</WithPageKind>;
-}
-
-function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
   const { t, ui } = useLang();
-  const { categories: allCategories } = useCatalog();
-  // Each shop lists only its own categories: stock pages the stock tree, pre-order pages the pre-order tree.
-  const groups = categoryGroups(allCategories.filter((category) => category.type === kind));
-  const categoryHref = (slug: string) => shopListing(kind, { category: slug });
+  const { categories } = useCatalog();
+  const groups = categoryGroups(categories);
+  const categoryHref = (slug: string) => shopListing({ category: slug });
   // Groups the visitor opened or closed by hand; the group of the category being viewed starts open.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [isOpen, setIsOpen] = useState(false);
@@ -139,7 +132,7 @@ function ShopCategoriesMenu({ kind }: { kind: ProductKind }) {
         </div>
         <div className="mt-2 border-t border-ink-100 px-5 pt-2">
           <Link
-            href={shopListing(kind)}
+            href="/shop"
             onClick={close}
             className="flex cursor-pointer items-center justify-between text-xs font-bold text-gold-800 hover:text-gold-900"
           >

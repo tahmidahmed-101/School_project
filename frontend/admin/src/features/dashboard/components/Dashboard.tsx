@@ -5,7 +5,6 @@ import { getNavGroups } from "@/app/modules"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan, usePermissions } from "@/hooks/use-can"
-import { kindOfPath } from "@/hooks/use-kind"
 import { isForbidden, isModuleDisabled } from "@/lib/api/client"
 import { useModulesKnown, useOffModules } from "@/hooks/use-modules"
 import { ModuleSwitchedOff } from "@/components/common/ModuleSwitchedOff"
@@ -30,7 +29,7 @@ const Dashboard = () => {
   const canView = useCan(...REPORT_PERMISSIONS)
   const permissions = usePermissions()
   const { preset, range, setPreset, setCustom } = useDateRange()
-  const report = useDashboardReport(range, "stock", canView && reportingOn)
+  const report = useDashboardReport(range, canView && reportingOn)
   const switchedOff = reportingOff || isModuleDisabled(report.error)
   const blocked = switchedOff || !canView || isForbidden(report.error)
 
@@ -39,7 +38,7 @@ const Dashboard = () => {
     () =>
       getNavGroups(permissions, offModules)
         .flatMap((g) => g.sections.flatMap((s) => s.items))
-        .filter((item) => kindOfPath(item.url) === "stock" && item.url !== "/" && item.url !== "/analytics")
+        .filter((item) => item.url !== "/" && item.url !== "/analytics")
         .slice(0, 4)
         .map((item) => ({ to: item.url, label: item.title })),
     [permissions, offModules]
@@ -78,7 +77,7 @@ const Dashboard = () => {
           <RevenueComparisonChart points={d?.revenue} {...state} />
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <TopProductsTable kind="stock" products={d?.top_products} {...state} className="xl:col-span-2" />
+            <TopProductsTable products={d?.top_products} {...state} className="xl:col-span-2" />
             {/* Top products sets the row's height. Low stock is taken out of the flow on wide
                 screens so it matches that height and scrolls its list, instead of stretching
                 the row to fit every low-stock variant. */}
@@ -93,7 +92,7 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <RecentOrders kind="stock" orders={d?.orders} {...state} className="xl:col-span-2" />
+            <RecentOrders orders={d?.orders} {...state} className="xl:col-span-2" />
             <FulfillmentStatus metrics={d?.fulfillment} {...state} />
           </div>
 

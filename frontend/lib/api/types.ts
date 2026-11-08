@@ -31,7 +31,7 @@ export interface ApiCategory {
   slug: string;
   parent_id: string | null;
   /** A subcategory always shares its root ancestor's type. */
-  category_type: "stock" | "preorder";
+  category_type: "stock";
   /** Listed products in this category. */
   product_count: number;
   /** Picture of the first listed product that has one. */
@@ -74,23 +74,6 @@ export interface ApiVariant {
   option_value_ids?: string[];
   components: ApiBundleComponent[];
   is_bundle: boolean;
-  is_preorder_enabled: boolean;
-  preorder_price: string | null;
-  preorder_start_date: string | null;
-  preorder_end_date: string | null;
-  release_date: string | null;
-  is_preorder_active: boolean;
-  /** Switched to pre-order but its window has not opened. */
-  is_preorder_upcoming: boolean;
-  is_preorder_price_applied: boolean;
-  /** Pre-order cap; null when the pre-order has no limit. */
-  preorder_stock_limit: number | null;
-  /** Fewest units one pre-order of this variant may place; null on a stock variant. Optional: absent on an older API. */
-  preorder_min_quantity?: number | null;
-  /** Quantity already committed on non-cancelled orders. */
-  preordered_quantity: number;
-  /** `max(limit - preordered_quantity, 0)`; null when there is no limit. */
-  preorder_remaining: number | null;
 }
 
 /** Why a stock product is cheaper right now, and until when. */
@@ -104,7 +87,7 @@ export interface ApiProduct {
   id: string;
   category_id: string;
   /** The category's shop. */
-  kind: "stock" | "preorder";
+  kind: "stock";
   name: string;
   slug: string;
   product_type: string;
@@ -196,7 +179,6 @@ export interface ApiStorePolicy {
   returns_enabled?: boolean;
   eligibility?: {
     return_window_days: number | null;
-    preorder_returns_allowed: boolean;
     non_returnable_categories: { id: string; name: string; slug: string }[];
   } | null;
 }
@@ -210,13 +192,6 @@ export interface ApiCustomerOrder {
   /** Decimal string. */
   grand_total: string;
   created_at: string;
-  order_type: "stock" | "preorder";
-  /** Blank on stock orders and until staff record the first pre-order stage. */
-  preorder_stage: string;
-  /** Decimal strings. `deposit_due` is the advance a pre-order needs before it is confirmed. */
-  deposit_due: string;
-  paid_total: string;
-  balance_due: string;
   lines: {
     id: string;
     quantity: number;
@@ -243,7 +218,6 @@ export interface ProductListParams {
   search?: string;
   ordering?: "name" | "-name" | "created_at" | "-created_at";
   category_id?: string;
-  preorder_only?: boolean;
   featured?: boolean;
   trending?: boolean;
   new_arrival?: boolean;
@@ -269,8 +243,6 @@ export interface ApiBusinessProfile {
   about?: ApiBilingual;
   /** Stock-order subtotal that earns free delivery; null or "0" means the offer is off. */
   free_delivery_min_amount?: string | null;
-  /** Accepted before placing a pre-order; both "" for none. Absent on backends that predate it. */
-  preorder_terms?: ApiBilingual;
 }
 
 type ApiLocalizedText = { en: string; bn: string };
@@ -283,13 +255,13 @@ export interface ApiHeroSlide {
   tag: ApiLocalizedText;
   title: ApiLocalizedText;
   link_url: string;
-  placement: "home" | "preorder" | "both";
+  placement: "home" | "both";
 }
 
 export interface ApiPromoLine {
   id: string;
   text: ApiLocalizedText;
-  placement: "home" | "preorder" | "both";
+  placement: "home" | "both";
 }
 
 /** A popup campaign the backend says may show now, highest priority first. `href` is already resolved. */
@@ -299,8 +271,8 @@ export interface ApiPromotionPopup {
   image: string;
   /** Where clicking the image goes; null when the popup has no destination. */
   href: string | null;
-  /** The shop whose pages show it: stock (home, stock listing and products) or pre-order. */
-  shop: "stock" | "preorder";
+  /** The shop whose pages show it: stock (home, stock listing and products). */
+  shop: "stock";
   starts_at: string | null;
   ends_at: string | null;
   /** The sale a campaign-page popup promotes; null for other destinations. */
@@ -316,7 +288,6 @@ export interface ApiStorefrontContent {
 
 export interface ApiPaymentMethod {
   key: string;
-  kind: "stock" | "preorder";
   label: string;
   description: string;
   pay_to: string;
@@ -430,7 +401,6 @@ interface ApiOrderLine {
   unit_price: string;
   tax_amount: string;
   total: string;
-  is_preorder: boolean;
 }
 
 interface ApiShipment {
@@ -453,8 +423,6 @@ export interface ApiOrder {
   shipping_total: string;
   discount_total: string;
   grand_total: string;
-  order_type: "stock" | "preorder";
-  deposit_due: string;
   coupon_code: string | null;
   lines: ApiOrderLine[];
   shipments: ApiShipment[];
@@ -487,13 +455,6 @@ export interface ApiTrackOrder {
     country: string;
   } | null;
   tracking_timeline: { status: string; timestamp: string; description: string; tracking_number?: string }[];
-  /** Blank on stock orders and until staff record the first pre-order stage. */
-  preorder_stage: string;
-  preorder_timeline: { stage: string; at: string }[];
-  order_type: "stock" | "preorder";
-  /** Decimal strings: money received and not refunded, and what is still owed. */
-  paid_total: string;
-  balance_due: string;
 }
 
 /** GET /customer/referral/: the signed-in customer's share code and earned reward coupons (decimal strings). */

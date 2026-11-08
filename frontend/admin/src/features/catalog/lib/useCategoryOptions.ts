@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useAllPages } from "@/hooks/use-all-pages"
-import type { Kind } from "@/hooks/use-kind"
-import { CATEGORIES_ENDPOINT, categoryListParams } from "../api"
+import { CATEGORIES_ENDPOINT, CATEGORY_LIST_PARAMS } from "../api"
 import type { Category } from "../types"
 
 export interface CategoryOption {
@@ -35,12 +34,9 @@ export function buildCategoryTree(categories: Category[]): CategoryOption[] {
   return out
 }
 
-/** The categories of one kind (of both when no kind is given) as tree-ordered options, for pickers and filters. */
-export function useCategoryOptions(kind?: Kind) {
-  const { items: categories, isLoading, error, reload } = useAllPages<Category>(
-    CATEGORIES_ENDPOINT,
-    categoryListParams(kind)
-  )
+/** The stock categories as tree-ordered options, for pickers and filters. */
+export function useCategoryOptions() {
+  const { items: categories, isLoading, error, reload } = useAllPages<Category>(CATEGORIES_ENDPOINT, CATEGORY_LIST_PARAMS)
 
   const options = useMemo(() => buildCategoryTree(categories), [categories])
   const nameById = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories])

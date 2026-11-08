@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // Proxies API calls to the kull-mart backend so the browser sees same-origin requests:
+      // Proxies API calls to the school-project backend so the browser sees same-origin requests:
       // the HttpOnly refresh cookie (path /api/v1/customer/auth/) then just works.
       proxy: {
         "/api": {

@@ -1,6 +1,6 @@
-import type { HeroSlidePlacement, ShopPlacement } from "@/features/system/types"
+import type { HeroSlidePlacement } from "@/features/system/types"
 
-/** A row saved before the split may still be `both`; the storefront shows it on each shop, so each page lists it. */
-export function onShop<T extends { placement: HeroSlidePlacement }>(rows: T[], placement: ShopPlacement): T[] {
-  return rows.filter((row) => row.placement === placement || row.placement === "both")
+/** The storefront rows; one saved before the split may still be `both`, which the storefront also shows. */
+export function onShop<T extends { placement: HeroSlidePlacement }>(rows: T[]): T[] {
+  return rows.filter((row) => row.placement === "home" || row.placement === "both")
 }

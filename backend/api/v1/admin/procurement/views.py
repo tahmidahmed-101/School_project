@@ -137,7 +137,10 @@ class AdminSupplierListCreateView(
     def post(self, request) -> Response:
         serializer = SupplierCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        supplier = create_supplier(**serializer.validated_data)
+        # `kind` is still accepted but only as "stock", which every new supplier is.
+        data = dict(serializer.validated_data)
+        data.pop("kind", None)
+        supplier = create_supplier(**data)
         return Response(
             {"data": SupplierSerializer(supplier).data, "message": "Success"},
             status=status.HTTP_201_CREATED,

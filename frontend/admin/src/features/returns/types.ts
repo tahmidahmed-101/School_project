@@ -1,4 +1,4 @@
-// Mirrors kull-mart api/v1/admin/orders/serializers.py → AdminRMASerializer / AdminRMALineSerializer.
+// Mirrors school-project api/v1/admin/orders/serializers.py → AdminRMASerializer / AdminRMALineSerializer.
 // apps/orders/models/return_rma.py (ReturnRMA.Status, ReturnRMALine.Condition).
 
 export type RmaStatus = "requested" | "approved" | "rejected" | "received" | "closed"
@@ -20,8 +20,6 @@ export interface Rma {
   status: RmaStatus
   reason: string
   lines: RmaLine[]
-  /** The order's kind; absent on older API answers, read as stock. */
-  order_type?: "stock" | "preorder"
 }
 
 export const RMA_STATUS_OPTIONS: { label: string; value: RmaStatus }[] = [

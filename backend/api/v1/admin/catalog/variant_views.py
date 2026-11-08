@@ -44,7 +44,6 @@ from apps.inventory.selectors.stock import (
     reorder_points_for_variants,
 )
 from apps.inventory.selectors.warehouse import get_warehouse_by_id
-from apps.orders.services.carts import get_preordered_quantities
 
 from .permissions import (
     VARIANT_SEARCH_FIELDS,
@@ -66,7 +65,6 @@ def _variant_rows(variants: list) -> list[dict]:
     context = {
         "stock_by_variant": available_quantities_for_variants(variant_ids),
         "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
-        "preordered_by_variant": get_preordered_quantities(variants),
     }
     return ProductVariantSerializer(variants, many=True, context=context).data
 
@@ -88,14 +86,12 @@ class AdminProductVariantListCreateView(CatalogPermissionMixin, APIView):
         variant_ids = [v.id for v in items]
         stock_by_variant = available_quantities_for_variants(variant_ids)
         reorder_point_by_variant = reorder_points_for_variants(variant_ids)
-        preordered_by_variant = get_preordered_quantities(items)
         serializer = ProductVariantSerializer(
             items,
             many=True,
             context={
                 "stock_by_variant": stock_by_variant,
                 "reorder_point_by_variant": reorder_point_by_variant,
-                "preordered_by_variant": preordered_by_variant,
             },
         )
         return Response(
@@ -143,8 +139,6 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
         category_type = get_choice(params, "category_type", Category.CategoryType.values)
         is_active = get_bool(params, "is_active")
-        preorder_only = bool(get_bool(params, "preorder_only", default=False))
-        preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
         # ?warehouse_id= lists what that warehouse can give (e.g. a transfer's
         # source), with its own available count instead of the selling total.
         self.warehouse = get_related(
@@ -155,8 +149,6 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
             category=category,
             category_type=category_type,
             is_active=is_active,
-            preorder_only=preorder_only,
-            preorder_status=preorder_status,
         )
         if self.warehouse is not None:
             queryset = queryset.filter(
@@ -194,14 +186,12 @@ class AdminProductVariantGlobalListView(CatalogPermissionMixin, GenericListAPIVi
         variant_ids = [v.id for v in items]
         stock_by_variant = available_quantities_for_variants(variant_ids, self.warehouse)
         reorder_point_by_variant = reorder_points_for_variants(variant_ids, self.warehouse)
-        preordered_by_variant = get_preordered_quantities(items)
         serializer = self.serializer_class(
             items,
             many=True,
             context={
                 "stock_by_variant": stock_by_variant,
                 "reorder_point_by_variant": reorder_point_by_variant,
-                "preordered_by_variant": preordered_by_variant,
             },
         )
         return Response(
@@ -289,7 +279,6 @@ class AdminVariantExportView(APIView):
                 product_code_field="product__product_code",
             ),
             fmt=fmt,
-            kind=category_type,
         )
         content_type = (
             "text/csv"

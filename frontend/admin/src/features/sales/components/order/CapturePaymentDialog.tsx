@@ -21,7 +21,7 @@ interface CapturePaymentDialogProps {
 
 /**
  * Records a manually-attested payment: any amount up to the balance due, with a reference for
- * gateway-less methods. A pre-order is confirmed once its deposit has been received.
+ * gateway-less methods.
  */
 export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePaymentDialogProps) {
   const dispatch = useAppDispatch()
@@ -86,16 +86,7 @@ export function CapturePaymentDialog({ order, open, onOpenChange }: CapturePayme
         min="0"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        description={
-          order.order_type === "preorder" && order.status === "awaiting_payment" ? (
-            <>
-              Balance due {formatCurrency(order.balance_due)}. The order is confirmed once{" "}
-              {formatCurrency(order.deposit_due)} has been received.
-            </>
-          ) : (
-            <>Up to the balance due of {formatCurrency(order.balance_due)}.</>
-          )
-        }
+        description={<>Up to the balance due of {formatCurrency(order.balance_due)}.</>}
       />
       <Field>
         <FieldLabel htmlFor="capture-method">Method</FieldLabel>

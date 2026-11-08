@@ -49,7 +49,7 @@ from apps.business.services.storefront_content import (
 from apps.common.exception_handler import status_for_code
 from apps.common.exceptions import DomainError
 from apps.common.generics import GenericListAPIView
-from apps.common.params import KIND_STOCK, get_kind
+from apps.common.params import get_kind
 from apps.common.permissions import (
     IsStaffMember,
     require_any_staff_permission,
@@ -204,12 +204,10 @@ class AdminPaymentMethodListView(APIView):
     permission_classes: ClassVar[list] = [SettingsViewPermission]
 
     def get(self, request) -> Response:
-        kind = get_kind(request.query_params) or KIND_STOCK
+        get_kind(request.query_params)  # `kind=stock` is still accepted; any other is a 400.
         return Response(
             {
-                "data": AdminPaymentMethodSerializer(
-                    payment_methods_list(kind=kind), many=True
-                ).data,
+                "data": AdminPaymentMethodSerializer(payment_methods_list(), many=True).data,
                 "message": "Success",
             }
         )
@@ -221,20 +219,18 @@ class AdminPaymentMethodDetailView(APIView):
     permission_classes: ClassVar[list] = [SettingsManagePermission]
 
     def patch(self, request, key: str) -> Response:
-        kind = get_kind(request.query_params) or KIND_STOCK
-        if get_payment_method_state(key, kind=kind) is None:
+        get_kind(request.query_params)  # `kind=stock` is still accepted; any other is a 400.
+        if get_payment_method_state(key) is None:
             return not_found("payment_method_not_found", "Payment method not found.")
         serializer = AdminPaymentMethodUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
             data = serializer.validated_data
-            state = get_payment_method_state(key, kind=kind)
+            state = get_payment_method_state(key)
             if "is_enabled" in data:
-                state = set_payment_method_enabled(
-                    key=key, is_enabled=data["is_enabled"], kind=kind
-                )
+                state = set_payment_method_enabled(key=key, is_enabled=data["is_enabled"])
             if "pay_to" in data:
-                state = set_payment_method_pay_to(key=key, pay_to=data["pay_to"], kind=kind)
+                state = set_payment_method_pay_to(key=key, pay_to=data["pay_to"])
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response({"data": AdminPaymentMethodSerializer(state).data, "message": "Success"})
@@ -242,8 +238,7 @@ class AdminPaymentMethodDetailView(APIView):
 
 @extend_schema(tags=["Business Settings"])
 class AdminStorePolicyListView(APIView):
-    """Every store policy (shipping, returns, refund, pre-order checkout
-    terms), drafts included."""
+    """Every store policy (shipping, returns, refund), drafts included."""
 
     serializer_class = AdminStorePolicySerializer
     permission_classes: ClassVar[list] = [SettingsViewPermission]

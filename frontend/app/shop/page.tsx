@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ShopCatalog, ShopSkeleton } from "@/modules/catalog";
 import { JsonLd } from "@/modules/seo";
-import { ProductsProvider, forListing, shopKindFor } from "@/modules/catalog";
+import { ProductsProvider, forListing } from "@/modules/catalog";
 import { getCatalog } from "@/modules/catalog/server";
 import { breadcrumbJsonLd, categoryDescription, ogCardImage, pageMetadata } from "@/modules/seo";
 import { photo } from "@/lib/photo";
@@ -21,70 +21,43 @@ async function categoryFrom(searchParams: ShopSearchParams) {
 
 export async function generateMetadata({ searchParams }: { searchParams: ShopSearchParams }): Promise<Metadata> {
   const category = await categoryFrom(searchParams);
-  const { type } = await searchParams;
-  if (!category && type === "preorder") {
-    return pageMetadata({
-      title: "Pre-order Products",
-      description:
-        "Reserve upcoming Kull Mart arrivals with pre-order — fashion, bags, jewellery, kids' items and gadgets, delivered across Bangladesh.",
-      path: "/shop?type=preorder",
-      canonical: "/pre-order",
-    });
-  }
   if (category) {
-    // A pre-order category only has products under `?type=preorder`; the plain URL shows none.
-    const path =
-      category.type === "preorder"
-        ? `/shop?category=${category.slug}&type=preorder`
-        : `/shop?category=${category.slug}`;
     return pageMetadata({
       title: `Shop ${category.name.en}`,
       description: categoryDescription(category),
-      path,
+      path: `/shop?category=${category.slug}`,
       image: ogCardImage("category", category.slug, photo(category.image), category.name.en),
     });
   }
   return pageMetadata({
     title: "Shop In-Stock Products",
     description:
-      "Browse the Kull Mart in-stock collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery across Bangladesh.",
+      "Browse the School Project in-stock collection — women's fashion, bags, jewellery, kids' items and gadgets. Filter by category and price; delivery across Bangladesh.",
     path: "/shop",
   });
 }
 
-export default async function KullMartShopPage({ searchParams }: { searchParams: ShopSearchParams }) {
-  const [category, { products }, { type }, content] = await Promise.all([
+export default async function SchoolProjectShopPage({ searchParams }: { searchParams: ShopSearchParams }) {
+  const [category, { products }, content] = await Promise.all([
     categoryFrom(searchParams),
     getCatalog(),
-    searchParams,
     getStorefrontContent(),
   ]);
-  const kind = shopKindFor(type, category);
   const trail = [
     { name: "Home", path: "/" },
-    kind === "preorder" ? { name: "Pre-order Collection", path: "/pre-order" } : { name: "Shop", path: "/shop" },
-    ...(category
-      ? [
-          {
-            name: category.name.en,
-            path:
-              category.type === "preorder"
-                ? `/shop?category=${category.slug}&type=preorder`
-                : `/shop?category=${category.slug}`,
-          },
-        ]
-      : []),
+    { name: "Shop", path: "/shop" },
+    ...(category ? [{ name: category.name.en, path: `/shop?category=${category.slug}` }] : []),
   ];
 
   return (
     <>
       <JsonLd data={breadcrumbJsonLd(trail)} />
       <Suspense fallback={<ShopSkeleton />}>
-        <ProductsProvider products={products.filter((p) => p.kind === kind).map(forListing)}>
+        <ProductsProvider products={products.map(forListing)}>
           <ShopCatalog />
         </ProductsProvider>
       </Suspense>
-      <PromotionPopup popups={content?.promotionPopups ?? []} shop={kind} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} />
     </>
   );
 }

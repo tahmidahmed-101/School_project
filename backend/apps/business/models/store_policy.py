@@ -12,9 +12,6 @@ class PolicyKind(models.TextChoices):
     SHIPPING = "shipping", "Shipping policy"
     RETURNS = "returns", "Return policy"
     REFUND = "refund", "Refund policy"
-    # Shown before a shopper places a pre-order. Prose only: it sets no
-    # checkout rule, and pre-order return eligibility stays on `returns`.
-    PREORDER_CHECKOUT = "preorder_checkout", "Pre-order checkout terms"
 
 
 class StorePolicy(TimeStampedModel):
@@ -38,7 +35,6 @@ class StorePolicy(TimeStampedModel):
     # one. Defaults impose nothing, so an unconfigured store keeps today's
     # behaviour.
     return_window_days = models.PositiveSmallIntegerField(null=True, blank=True)
-    preorder_returns_allowed = models.BooleanField(default=True)
     non_returnable_categories = models.ManyToManyField(
         "catalog.Category", blank=True, related_name="+"
     )

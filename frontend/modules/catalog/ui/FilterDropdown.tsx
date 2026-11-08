@@ -14,7 +14,7 @@ interface FilterDropdownProps {
 const FILTER_TRIGGER_CLASS =
   "shadow-xs flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-ink-200 bg-surface px-3.5 py-2.5 text-xs font-bold text-fg transition-colors hover:border-gold-500 focus:border-gold-500 focus:bg-canvas";
 
-/** The compact sort/filter dropdown used on the shop and pre-order pages. */
+/** The compact sort/filter dropdown used on the shop page. */
 export function FilterDropdown({ value, onChange, options, className, menuAlign = "right" }: FilterDropdownProps) {
   return (
     <Dropdown

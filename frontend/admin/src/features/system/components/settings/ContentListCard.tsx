@@ -30,8 +30,7 @@ export interface ContentFormProps<T> {
 /**
  * The frame shared by the storefront content cards (hero slides, promo lines): title, an Add
  * button, the list with its order, a show/hide switch, edit and delete. The content column,
- * the form and the data are the caller's, so each kind of content and each shop (stock or
- * pre-order) keeps its own.
+ * the form and the data are the caller's, so each kind of content keeps its own.
  */
 export function ContentListCard<T extends ContentItem>({
   title,

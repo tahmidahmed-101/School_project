@@ -1,4 +1,4 @@
-// Mirrors api/v1/admin/audit/serializers.py (kull-mart).
+// Mirrors api/v1/admin/audit/serializers.py (school-project).
 
 /** AuditLogSerializer — `actor` is the acting user's email (null for system actions). */
 export interface AuditLog {

@@ -11,9 +11,9 @@ from .sales_order import SalesOrder
 
 
 class PaymentMethodSetting(TimeStampedModel):
-    """Whether one half of the shop (stock or pre-order) offers one payment
-    method. The registry in `apps.orders.constants` stays the source of truth
-    for what a method is; this table records only the operator's choice."""
+    """Whether the shop offers one payment method. The registry in
+    `apps.orders.constants` stays the source of truth for what a method is;
+    this table records only the operator's choice."""
 
     key = models.CharField(max_length=32, choices=PaymentMethodKey.choices)
     kind = models.CharField(

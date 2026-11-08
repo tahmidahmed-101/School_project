@@ -16,7 +16,7 @@ from apps.business.selectors.storefront_content import (
     live_promotion_popups,
     promo_lines_list,
 )
-from apps.common.params import KIND_STOCK, get_kind
+from apps.common.params import get_kind
 from apps.common.responses import not_found
 from apps.common.throttling import PublicReadRateThrottle
 from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
@@ -51,10 +51,10 @@ class PublicPaymentMethodListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
-        kind = get_kind(request.query_params) or KIND_STOCK
+        get_kind(request.query_params)  # `kind=stock` is still accepted; any other is a 400.
         offered = [
             row
-            for row in payment_methods_list(kind=kind)
+            for row in payment_methods_list()
             if row["is_enabled"] and row["key"] in STOREFRONT_PAYMENT_METHODS
         ]
         return Response(
@@ -79,13 +79,12 @@ class PublicPaymentMethodListView(APIView):
     responses=PublicStorePolicySerializer,
 )
 class PublicStorePolicyView(APIView):
-    """`kind` is shipping, returns, refund or preorder_checkout. Answers 404
+    """`kind` is shipping, returns or refund. Answers 404
     `policy_unavailable` until staff publish a complete, dated version — there
     is no default text.
 
     Policy prose only: rates live on `/public/checkout/shipping-options/`,
-    raising a return on `/customer/orders/<id>/returns/`. `preorder_checkout`
-    is the text shown before placing a pre-order; it sets no checkout rule.
+    raising a return on `/customer/orders/<id>/returns/`.
     """
 
     serializer_class = PublicStorePolicySerializer

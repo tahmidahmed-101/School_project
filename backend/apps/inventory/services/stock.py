@@ -9,15 +9,12 @@ from apps.accounting.services.postings import post_stock_adjustment, post_stock_
 from apps.audit.services.audit import log_action
 from apps.catalog.models import Category, ProductVariant
 from apps.catalog.selectors.products import get_variants_by_ids
-from apps.catalog.services.kind_rules import check_stock_levels_kind, is_preorder_category
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.inventory.constants import IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry, Warehouse
 from apps.inventory.selectors.warehouse import (
     active_warehouses,
     all_warehouses,
-    default_warehouse,
     get_or_create_default_warehouse,
     get_warehouse_by_id,
 )
@@ -44,51 +41,29 @@ def _resolve_warehouse(warehouse) -> Warehouse:
     return found
 
 
-def default_warehouse_for(kind: str) -> Warehouse:
-    """The stock half always has a warehouse; the pre-order half must be given
-    one, so its goods never land in the shop's stock warehouse by accident."""
-    if kind != KIND_PREORDER:
-        return get_or_create_default_warehouse(KIND_STOCK)
-    warehouse = default_warehouse(KIND_PREORDER)
-    if warehouse is None:
-        raise BusinessRuleViolationError(
-            "There is no default pre-order warehouse. Add a pre-order warehouse and mark it "
-            "as default first.",
-            code="preorder_warehouse_missing",
-        )
-    return warehouse
-
-
 def ensure_warehouse_kind(variant, warehouse: Warehouse) -> None:
     kind = variant.product.category.category_type
     if warehouse.kind == kind:
         return
     raise BusinessRuleViolationError(
-        f"{variant.product.name} ({variant.sku}) is a {Category.CategoryType(kind).label.lower()} "
-        f"item and {warehouse.name} is a {warehouse.get_kind_display().lower()} warehouse.",
+        f"{variant.product.name} ({variant.sku}) cannot go into {warehouse.name}: "
+        "the item and the warehouse are of different kinds.",
         code="warehouse_kind_mismatch",
     )
 
 
 def warehouse_for_variant(variant, warehouse=None) -> Warehouse:
     if not warehouse:
-        return default_warehouse_for(variant.product.category.category_type)
+        return get_or_create_default_warehouse()
     warehouse = _resolve_warehouse(warehouse)
     ensure_warehouse_kind(variant, warehouse)
     return warehouse
 
 
-NO_STOCK_LEVELS = {"reorder_point": 0, "target_stock_level": 0}
-
-
 def _locked_stock_item(variant, warehouse) -> StockItem:
-    stock_item, created = StockItem.objects.select_for_update().get_or_create(
+    stock_item, _ = StockItem.objects.select_for_update().get_or_create(
         variant=variant, warehouse=warehouse
     )
-    if created and is_preorder_category(variant.product.category):
-        for field, value in NO_STOCK_LEVELS.items():
-            setattr(stock_item, field, value)
-        stock_item.save(update_fields=[*NO_STOCK_LEVELS, "updated_at"])
     return stock_item
 
 
@@ -96,10 +71,6 @@ def _locked_stock_item(variant, warehouse) -> StockItem:
 def set_stock_levels(
     *, stock_item: StockItem, reorder_point: int, target_stock_level: int
 ) -> StockItem:
-    check_stock_levels_kind(
-        category=stock_item.variant.product.category,
-        values={"reorder_point": reorder_point, "target_stock_level": target_stock_level},
-    )
     stock_item.reorder_point = reorder_point
     stock_item.target_stock_level = target_stock_level
     stock_item.save(update_fields=["reorder_point", "target_stock_level", "updated_at"])
@@ -111,15 +82,11 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
     doesn't have one yet, so a freshly-created product (no movement history)
     still shows up in the Stock Levels list and can be intaken/adjusted.
     A warehouse only gets rows for variants of its own kind; with no warehouse
-    given, the default warehouse of each kind is filled. Returns how many rows
-    were created."""
+    given, the default warehouse is filled. Returns how many rows were created."""
     if warehouse:
         warehouses = [_resolve_warehouse(warehouse)]
     else:
-        preorder_default = default_warehouse(KIND_PREORDER)
-        warehouses = [get_or_create_default_warehouse(KIND_STOCK)]
-        if preorder_default is not None:
-            warehouses.append(preorder_default)
+        warehouses = [get_or_create_default_warehouse()]
 
     rows = []
     for target in warehouses:
@@ -131,8 +98,7 @@ def materialize_stock_items(*, variant=None, warehouse=None) -> int:
         variants = variants.exclude(
             id__in=StockItem.objects.filter(warehouse=target).values_list("variant_id", flat=True)
         )
-        levels = NO_STOCK_LEVELS if target.kind == KIND_PREORDER else {}
-        rows += [StockItem(variant=v, warehouse=target, **levels) for v in variants]
+        rows += [StockItem(variant=v, warehouse=target) for v in variants]
     if rows:
         StockItem.objects.bulk_create(rows)
     return len(rows)
@@ -178,11 +144,7 @@ def lock_variant_stock(
     if missing and create_missing:
         StockItem.objects.bulk_create(
             [
-                StockItem(
-                    variant_id=variant_id,
-                    warehouse_id=warehouse_id,
-                    **(NO_STOCK_LEVELS if kind_by_variant[variant_id] == KIND_PREORDER else {}),
-                )
+                StockItem(variant_id=variant_id, warehouse_id=warehouse_id)
                 for variant_id, warehouse_id in missing
             ],
             ignore_conflicts=True,

@@ -3,7 +3,6 @@ import { Link } from "react-router-dom"
 import { CreditCard, Eye, ListOrdered, Mail, MapPin, MessageSquare, Phone, RotateCcw, ShieldAlert, StickyNote, Truck, User } from "lucide-react"
 
 import { paymentMethodLabel } from "@/features/payments/types"
-import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
 import type { Order } from "@/features/sales/types"
 import { ReturnOutcome } from "@/features/shipping/components/ReturnOutcome"
 import { ShipmentActions } from "@/features/shipping/components/ShipmentActions"
@@ -20,7 +19,6 @@ const digits = (value: string) => value.replace(/\D/g, "")
 
 /** Who ordered and where it goes, in one block; a name or phone already shown is not repeated. */
 function OrderCustomerSection({ order }: { order: Order }) {
-  const kind = order.order_type
   const address = order.shipping_address
   const name = order.customer_name
   const phone = order.customer_phone
@@ -28,7 +26,7 @@ function OrderCustomerSection({ order }: { order: Order }) {
   const recipientPhone = address?.phone && digits(address.phone) !== digits(phone || "") ? address.phone : ""
   const place = address ? [address.line1, [address.postal_code, address.country].filter(Boolean).join(", ")].filter(Boolean) : []
   const canViewRisk = useCan("risk.view")
-  const ordersLabel = kind === "preorder" ? "All pre-orders from this customer" : "All orders from this customer"
+  const ordersLabel = "All orders from this customer"
 
   return (
     <section className="min-w-0 space-y-2.5">
@@ -40,7 +38,7 @@ function OrderCustomerSection({ order }: { order: Order }) {
         {/* A guest cart has no customer to list orders for. */}
         {order.customer_id && (
           <Button variant="ghost" size="icon" className="-my-1 size-8" asChild>
-            <Link to={`${KIND_PATHS[kind].orders}?customer_id=${order.customer_id}`} title={ordersLabel} aria-label={ordersLabel}>
+            <Link to={`/orders?customer_id=${order.customer_id}`} title={ordersLabel} aria-label={ordersLabel}>
               <ListOrdered className="size-4" />
             </Link>
           </Button>
@@ -66,7 +64,7 @@ function OrderCustomerSection({ order }: { order: Order }) {
             ))}
           </>
         ) : (
-          <span className="text-muted-foreground">No shipping address on this {orderNoun(kind)}.</span>
+          <span className="text-muted-foreground">No shipping address on this order.</span>
         )}
       </IconLine>
       {order.risk && canViewRisk && (

@@ -22,44 +22,12 @@ import { DatePicker } from "@/components/common/DatePicker"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
-import { formatCurrency, toISODate } from "@/lib/format"
-import { usePreorderReport } from "@/features/sales/hooks/usePreorderReport"
+import { toISODate } from "@/lib/format"
 import type { Option } from "@/lib/types"
 
-/** Money received and still owed across open pre-orders; a payment row carries neither. */
-function PreorderMoney() {
-  const { report } = usePreorderReport()
-  if (!report) return null
-  const { summary } = report
-  return (
-    <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div className="rounded-xl border border-border bg-card p-4">
-        <span className="block text-xs text-muted-foreground">Open pre-orders</span>
-        <span className="mt-1 block text-lg font-semibold text-foreground">
-          {summary.open_orders} worth {formatCurrency(summary.order_value)}
-        </span>
-      </div>
-      <div className="rounded-xl border border-border bg-card p-4">
-        <span className="block text-xs text-muted-foreground">Received so far</span>
-        <span className="mt-1 block text-lg font-semibold text-foreground">{formatCurrency(summary.deposits_held)}</span>
-      </div>
-      <div className="rounded-xl border border-border bg-card p-4">
-        <span className="block text-xs text-muted-foreground">Still owed by customers</span>
-        <span className="mt-1 block text-lg font-semibold text-foreground">
-          {formatCurrency(summary.balances_outstanding)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-const PaymentsList = () => {
-  const kind = useKind()
-  const isPreorder = kind === "preorder"
-  const title = isPreorder ? "Pre-order payments" : "Payments"
-  useDocumentTitle(title)
+const Payments = () => {
+  useDocumentTitle("Payments")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -80,7 +48,7 @@ const PaymentsList = () => {
     fetch: (p) => dispatch(fetchAllPayments(p)),
     state: paymentsState,
     params: {
-      kind,
+      kind: "stock",
       order_id: orderId,
       status: statusFilter?.value,
       method: methodFilter?.value,
@@ -98,9 +66,9 @@ const PaymentsList = () => {
   const columns: ColumnDef<Payment>[] = [
     {
       accessorKey: "order_number",
-      header: isPreorder ? "PRE-ORDER" : "ORDER",
+      header: "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)} className="font-medium">
+        <LinkCell to={`/order_detail/${row.original.order_id}`} className="font-medium">
           {row.original.order_number}
         </LinkCell>
       ),
@@ -142,8 +110,8 @@ const PaymentsList = () => {
       header: "ACTIONS",
       cell: ({ row }) => (
         <TableActions
-          itemName={`Payment for ${isPreorder ? "pre-order" : "order"} ${row.original.order_number}`}
-          viewUrl={withKind(`/payment_detail/${row.original.id}`, kind)}
+          itemName={`Payment for order ${row.original.order_number}`}
+          viewUrl={`/payment_detail/${row.original.id}`}
         />
       ),
     },
@@ -151,9 +119,7 @@ const PaymentsList = () => {
 
   return (
     <div className="section-container">
-      <PageHeader title={title} />
-
-      {isPreorder && <PreorderMoney />}
+      <PageHeader title="Payments" />
 
       {/* No text search on this endpoint — only status / method / date filters. */}
       <FilterToolbar
@@ -188,7 +154,7 @@ const PaymentsList = () => {
       {orderId && (
         <div className="mt-3">
           <Badge variant="secondary" className="gap-1.5">
-            {isPreorder ? "Filtered to one pre-order" : "Filtered to one order"}
+            Filtered to one order
             <button type="button" onClick={clearOrder} aria-label="Clear order filter">
               <XIcon className="size-3" />
             </button>
@@ -200,7 +166,7 @@ const PaymentsList = () => {
         columns={columns}
         data={paymentsState.data}
         {...list.tableProps}
-        onRowClick={(payment) => navigate(withKind(`/payment_detail/${payment.id}`, kind))}
+        onRowClick={(payment) => navigate(`/payment_detail/${payment.id}`)}
         emptyTitle="No payments found"
         emptyDescription="Try adjusting the filters."
         minWidth="950px"
@@ -210,7 +176,4 @@ const PaymentsList = () => {
   )
 }
 
-// Both halves render this component on different routes; the key gives each half its own filters and page.
-const PaymentsPage = () => <PaymentsList key={useKind()} />
-
-export default PaymentsPage
+export default Payments

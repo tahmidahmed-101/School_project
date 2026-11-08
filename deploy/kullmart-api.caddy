@@ -1,3 +1,0 @@
-api.kullmart.com {
-	reverse_proxy kull-mart-api:4361
-}

@@ -13,7 +13,6 @@ import { getDefaultCurrency, todayLocalISODate } from "@/lib/format"
 import { patchData, postData } from "../slices/expenseSlice"
 import type { Account, Expense, ExpenseCategory, ExpenseCreatePayload, ExpenseUpdatePayload } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-import { BELONGS_TO_OPTIONS, belongsToFromKind, kindFromBelongsTo, type BelongsTo } from "../utils"
 
 const NONE = "none"
 
@@ -28,13 +27,12 @@ const schema = z.object({
   category_id: z.string(),
   expense_account_id: z.string(),
   payment_account_id: z.string().min(1, "Pick the account the money was paid from"),
-  belongs_to: z.enum(["company", "stock", "preorder"]),
   reference_number: z.string(),
 })
 
 type FormValues = z.infer<typeof schema>
 
-function valuesFor(expense: Expense | null, defaultBelongsTo: BelongsTo): FormValues {
+function valuesFor(expense: Expense | null): FormValues {
   if (expense) {
     return {
       expense_date: expense.expense_date,
@@ -44,7 +42,6 @@ function valuesFor(expense: Expense | null, defaultBelongsTo: BelongsTo): FormVa
       category_id: expense.category_id ?? NONE,
       expense_account_id: expense.expense_account_id,
       payment_account_id: expense.payment_account_id,
-      belongs_to: belongsToFromKind(expense.kind),
       reference_number: expense.reference_number,
     }
   }
@@ -56,7 +53,6 @@ function valuesFor(expense: Expense | null, defaultBelongsTo: BelongsTo): FormVa
     category_id: NONE,
     expense_account_id: NONE,
     payment_account_id: "",
-    belongs_to: defaultBelongsTo,
     reference_number: "",
   }
 }
@@ -68,17 +64,9 @@ interface Props {
   expense: Expense | null
   accounts: Account[]
   categories: ExpenseCategory[]
-  defaultBelongsTo?: BelongsTo
 }
 
-export function ExpenseFormDialog({
-  open,
-  onOpenChange,
-  expense,
-  accounts,
-  categories,
-  defaultBelongsTo = "company",
-}: Props) {
+export function ExpenseFormDialog({ open, onOpenChange, expense, accounts, categories }: Props) {
   const dispatch = useAppDispatch()
   const isEdit = !!expense
 
@@ -91,12 +79,12 @@ export function ExpenseFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: valuesFor(expense, defaultBelongsTo),
+    defaultValues: valuesFor(expense),
   })
 
   useEffect(() => {
-    if (open) reset(valuesFor(expense, defaultBelongsTo))
-  }, [open, expense, defaultBelongsTo, reset])
+    if (open) reset(valuesFor(expense))
+  }, [open, expense, reset])
 
   const expenseAccounts = useMemo(() => accounts.filter((a) => a.type === "expense" && a.is_active), [accounts])
   // Money leaves an asset (bank/cash) — or, for accrued spend, lands on a liability.
@@ -109,12 +97,11 @@ export function ExpenseFormDialog({
   const onSubmit = async (values: FormValues) => {
     try {
       if (expense) {
-        // Once posted, only payee / description / reference change in place; a new "Belongs to" re-posts the entry.
+        // Once posted, only payee / description / reference change in place.
         const payload: ExpenseUpdatePayload = {
           payee: values.payee.trim(),
           description: values.description,
           reference_number: values.reference_number.trim(),
-          kind: kindFromBelongsTo(values.belongs_to),
         }
         await dispatch(patchData({ id: expense.id, payload: payload as Partial<Expense> })).unwrap()
         toast.success("Expense updated")
@@ -126,7 +113,6 @@ export function ExpenseFormDialog({
           amount: values.amount,
           payment_account_id: values.payment_account_id,
           reference_number: values.reference_number.trim(),
-          kind: kindFromBelongsTo(values.belongs_to),
           ...(values.category_id !== NONE ? { category_id: values.category_id } : {}),
           ...(values.expense_account_id !== NONE ? { expense_account_id: values.expense_account_id } : {}),
         }
@@ -228,18 +214,6 @@ export function ExpenseFormDialog({
           placeholder="Select payment account"
           disabled={isEdit}
           options={paymentAccounts.map((a) => ({ label: accountLabel(a), value: a.id }))}
-        />
-        <SelectField
-          control={control}
-          name="belongs_to"
-          label="Belongs to"
-          id="exp-belongs-to"
-          options={BELONGS_TO_OPTIONS}
-          description={
-            isEdit
-              ? "Changing this reverses the old journal entry and posts a new one."
-              : "Pick stock or pre-order only when the cost is for that half alone. Rent and salaries stay with the whole business."
-          }
         />
       </div>
 

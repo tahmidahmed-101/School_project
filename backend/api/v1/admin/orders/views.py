@@ -33,18 +33,15 @@ from apps.logistics.selectors.rates import get_carrier_by_id
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.models import (
     Payment,
-    PreorderStage,
     ReturnRMA,
     ReturnRMALine,
     SalesOrder,
     StockReservation,
 )
 from apps.orders.selectors.payments import (
-    deposit_percent_context,
     get_payment_by_id,
     payments_list,
 )
-from apps.orders.selectors.preorder_demand import preorder_book_summary, preorder_demand
 from apps.orders.selectors.reservations import get_reservation_by_id, reservations_list
 from apps.orders.selectors.returns import get_rma_by_id, rmas_list
 from apps.orders.selectors.sales_orders import (
@@ -78,8 +75,6 @@ from apps.orders.services.payments import (
     capture_payment,
     refund_payment,
 )
-from apps.orders.services.preorder import set_preorder_stage
-from apps.orders.services.preorder_allocation import allocate_preorder_stock
 from apps.orders.services.reservations import release_reservation_by_staff
 from apps.orders.services.returns import (
     approve_rma,
@@ -107,7 +102,6 @@ from .serializers import (
     AdminOrderStatusSerializer,
     AdminOrderUpdateSerializer,
     AdminPaymentSerializer,
-    AdminPreorderStageSerializer,
     AdminRMASerializer,
     AdminSalesOrderSerializer,
     CreateRMASerializer,
@@ -160,7 +154,6 @@ class OrderQuerysetMixin:
         return orders_list(
             customer=customer,
             status=get_choice(params, "status", SalesOrder.Status.values),
-            preorder_stage=get_choice(params, "preorder_stage", PreorderStage.values),
             order_type=get_choice(params, "order_type", SalesOrder.OrderType.values),
             start=start,
             end=end,
@@ -207,9 +200,6 @@ def _staff_order_inputs(data: dict) -> tuple:
 class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListAPIView):
     serializer_class = AdminSalesOrderSerializer
 
-    def get_serializer_context(self, items: list) -> dict:
-        return deposit_percent_context(items)
-
     def get(self, request) -> Response:
         return self.list_response(request)
 
@@ -233,7 +223,6 @@ class AdminOrderListView(OrdersPermissionMixin, OrderQuerysetMixin, GenericListA
             order = place_staff_order(
                 customer=customer,
                 lines=lines,
-                kind=data["order_type"],
                 shipping_address=shipping_address,
                 carrier=carrier,
                 payment_method=data.get("payment_method") or PaymentMethodKey.MANUAL,
@@ -267,10 +256,7 @@ class AdminOrderQuoteView(APIView):
         try:
             _customer, shipping_address, carrier, lines = _staff_order_inputs(data)
             quote = quote_staff_order(
-                lines=lines,
-                kind=data["order_type"],
-                shipping_address=shipping_address,
-                carrier=carrier,
+                lines=lines, shipping_address=shipping_address, carrier=carrier
             )
         except DomainError as exc:
             return error_from_exception(exc)
@@ -376,68 +362,6 @@ class AdminOrderStatusView(APIView):
         except DomainError as exc:
             return error_from_exception(exc)
         return Response({"data": AdminSalesOrderSerializer(order).data, "message": "Success"})
-
-
-@extend_schema(tags=["Orders"])
-class AdminPreorderReportView(APIView):
-    """What open pre-orders still need from the supplier, and the money held
-    and owed on them."""
-
-    permission_classes: ClassVar[list] = [OrdersViewPermission]
-
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    def get(self, request) -> Response:
-        return Response(
-            {
-                "data": {"summary": preorder_book_summary(), "demand": preorder_demand()},
-                "message": "Success",
-            }
-        )
-
-
-@extend_schema(tags=["Orders"])
-class AdminPreorderAllocationView(APIView):
-    """Hand arrived stock to waiting pre-orders, oldest order first."""
-
-    permission_classes: ClassVar[list] = [OrdersManagePermission]
-
-    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
-    def post(self, request) -> Response:
-        allocated = allocate_preorder_stock(actor=request.user)
-        return Response({"data": {"allocated": allocated}, "message": "Success"})
-
-
-@extend_schema(tags=["Orders"])
-class AdminOrderPreorderStageView(APIView):
-    """Staff record where a pre-order is on its way. Tracking only: the order
-    status, stock and payments are not touched."""
-
-    serializer_class = AdminPreorderStageSerializer
-    permission_classes: ClassVar[list] = [OrdersManagePermission]
-
-    @extend_schema(request=AdminPreorderStageSerializer, responses=OpenApiTypes.OBJECT)
-    def post(self, request, order_id) -> Response:
-        order = get_order_by_id(order_id)
-        if order is None:
-            return not_found("order_not_found", "Order not found.")
-        serializer = AdminPreorderStageSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            set_preorder_stage(
-                order=order,
-                stage=serializer.validated_data["stage"],
-                note=serializer.validated_data.get("note", ""),
-                actor=request.user,
-            )
-        except DomainError as exc:
-            return error_from_exception(exc)
-        # Re-read: the prefetched stage history predates the new event.
-        return Response(
-            {
-                "data": AdminSalesOrderSerializer(get_order_by_id(order_id)).data,
-                "message": "Success",
-            }
-        )
 
 
 @extend_schema(tags=["Orders"])

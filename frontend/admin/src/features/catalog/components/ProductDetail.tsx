@@ -4,12 +4,8 @@ import { toast } from "sonner"
 import {
   Banknote,
   Boxes,
-  CalendarCheck,
-  CalendarClock,
-  CalendarX,
   Coins,
   Edit,
-  Hash,
   ListChecks,
   Package,
   RotateCcw,
@@ -26,16 +22,14 @@ import { ActiveStatusBadge } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
+import { formatCurrency, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { fetchSingle } from "../slices/productSlice"
 import { fetchBrand, restoreProduct } from "../api"
 import type { Product } from "../types"
-import { productKind, productListPath } from "../lib/productKind"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
 import { savedOptionsOf } from "../lib/productKind"
 import { ProductVariantsSection } from "./ProductVariantsSection"
@@ -63,7 +57,7 @@ function ProductPhoto({ src, name }: { src: string | null; name: string }) {
   )
 }
 
-/** One labelled figure (price, cost, stock, pre-order window...); the price tile is set off in the brand colour. */
+/** One labelled figure (price, cost, stock); the price tile is set off in the brand colour. */
 function Stat({
   label,
   icon: Icon,
@@ -98,11 +92,6 @@ function Stat({
   )
 }
 
-/** A date that fits a tile; the time is there on hover. */
-function TileDate({ value }: { value: string }) {
-  return <span title={formatDateTime(value)}>{formatDate(value)}</span>
-}
-
 /** One labelled fact in the details row (category, brand, slug). */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -120,7 +109,7 @@ const ProductDetail = () => {
   const canManage = useCan("catalog.manage")
   const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
   const product = singleData as Product | null
-  const { nameById, categories, isLoading: categoriesLoading } = useCategoryOptions()
+  const { nameById, isLoading: categoriesLoading } = useCategoryOptions()
 
   useDocumentTitle(product?.name ? `${product.name} — Product` : "Product Details")
 
@@ -150,11 +139,7 @@ const ProductDetail = () => {
   }, [brandId])
   const brandName = brandId && brand?.id === brandId ? brand.name : null
 
-  const hint = useKindHint()
-  const loadedKind = product && product.id === id && !categoriesLoading ? productKind(product, categories) : undefined
-  useRecordKind(loadedKind)
-
-  // The page is laid out by the product's kind, which needs the categories as well as the product.
+  // The category is shown by name, which needs the categories as well as the product.
   const pageState =
     resolveDetailState(singleStatus, singleError, product?.id === id) ?? (categoriesLoading ? "loading" : null)
   if (pageState || !product || product.id !== id) {
@@ -162,20 +147,17 @@ const ProductDetail = () => {
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Product"
-        backTo={hint && productListPath(hint)}
-        backLabel={hint === "preorder" ? "Back to pre-order products" : "Back to products"}
+        backTo="/products"
+        backLabel="Back to products"
         error={singleError}
         onRetry={refresh}
       />
     )
   }
 
-  const kind = productKind(product, categories)
-  const isStock = kind === "stock"
   const isBundle = product.product_type === "bundle"
   const options = savedOptionsOf(product)
-  const settings = product.variants.find((v) => v.is_preorder_enabled)
-  const price = isStock ? (product.price === null ? null : (product.discount_price ?? product.price)) : product.price
+  const price = product.price === null ? null : (product.discount_price ?? product.price)
   const bundleVariantId = isBundle ? product.variants[0]?.id : undefined
   const hasAbout = Boolean(product.description) || product.highlights.length > 0
 
@@ -194,8 +176,7 @@ const ProductDetail = () => {
       <PageHeader
         title={product.name}
         description={`Code #${product.product_code}`}
-        badges={!isStock && <Badge variant="secondary">Pre-order</Badge>}
-        back={{ to: productListPath(kind), label: isStock ? "Back to products" : "Back to pre-order products" }}
+        back={{ to: "/products", label: "Back to products" }}
         actions={
           canManage &&
           (product.deleted_at ? (
@@ -223,12 +204,12 @@ const ProductDetail = () => {
           <ProductPhoto src={product.primary_image} name={product.name} />
 
           <div className="min-w-0 space-y-5">
-            {/* Three tiles to a row (a stock product has exactly three; a pre-order one wraps). */}
+            {/* Three tiles to a row. */}
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {price !== null && (
                 <Stat label="Price" icon={Banknote} accent>
                   {formatCurrency(price)}
-                  {isStock && product.discount_price && (
+                  {product.discount_price && (
                     <span className="ml-2 text-sm font-normal text-muted-foreground line-through">
                       {formatCurrency(product.price)}
                     </span>
@@ -240,38 +221,9 @@ const ProductDetail = () => {
                   {formatCurrency(product.cost_price)}
                 </Stat>
               )}
-              {isStock && (
-                <Stat label="Available stock" icon={Boxes}>
-                  {product.total_stock}
-                </Stat>
-              )}
-              {/* Pre-order: price, cost and limit make the first row (the limit tile always
-                  shows, so the dates below never move up into it), then the dates. */}
-              {!isStock && (
-                <Stat label="Pre-order limit" icon={Hash}>
-                  {settings?.preorder_stock_limit ?? <span className="font-normal text-muted-foreground">No limit</span>}
-                </Stat>
-              )}
-              {!isStock && settings?.preorder_start_date && (
-                <Stat label="Pre-orders open" icon={CalendarClock}>
-                  <TileDate value={settings.preorder_start_date} />
-                </Stat>
-              )}
-              {!isStock && settings?.preorder_end_date && (
-                <Stat label="Pre-orders close" icon={CalendarX}>
-                  <TileDate value={settings.preorder_end_date} />
-                </Stat>
-              )}
-              {!isStock && settings?.release_date && (
-                <Stat label="Release date" icon={CalendarCheck}>
-                  <TileDate value={settings.release_date} />
-                </Stat>
-              )}
-              {!isStock && (settings?.preorder_min_quantity ?? 1) > 1 && (
-                <Stat label="Minimum per order" icon={Package}>
-                  {settings?.preorder_min_quantity}
-                </Stat>
-              )}
+              <Stat label="Available stock" icon={Boxes}>
+                {product.total_stock}
+              </Stat>
             </dl>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl border border-dashed border-border px-4 py-3 lg:grid-cols-4">
@@ -351,7 +303,6 @@ const ProductDetail = () => {
             <ProductVariantsSection
               key={options.map((o) => o.id).join()}
               product={product}
-              kind={kind}
               canManage={canManage}
               onChanged={refresh}
             />

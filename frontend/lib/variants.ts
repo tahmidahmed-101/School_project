@@ -1,4 +1,3 @@
-import { isPreOrderSoldOut } from "@/lib/product";
 import type { Product, ProductOption, SkuVariant } from "@/lib/types";
 
 /**
@@ -10,9 +9,9 @@ export const ORDER_QUANTITY_CAP = 99;
 /** option id -> picked value id */
 export type OptionSelection = Record<string, string>;
 
-/** Can be ordered right now: in stock, or an open pre-order that still has room. */
+/** Can be ordered right now. */
 export function isSellable(variant: SkuVariant): boolean {
-  return variant.inStock && !isPreOrderSoldOut(variant);
+  return variant.inStock;
 }
 
 export function variantById(product: Product, variantId: string): SkuVariant | undefined {
@@ -93,7 +92,7 @@ export function galleryFor(product: Product, selection: OptionSelection): string
   return [...new Set([...own, ...product.gallery])];
 }
 
-/** The product as it looks with one SKU chosen: that SKU's price, availability and pre-order state. */
+/** The product as it looks with one SKU chosen: that SKU's price and availability. */
 export function applyVariant(product: Product, variant: SkuVariant | undefined): Product {
   if (!variant) return product;
   return {
@@ -104,13 +103,5 @@ export function applyVariant(product: Product, variant: SkuVariant | undefined):
     salePrice: variant.salePrice,
     inStock: variant.inStock,
     stockCount: variant.inStock ? ORDER_QUANTITY_CAP : 0,
-    isPreOrder: variant.isPreOrder,
-    preorderEndDate: variant.preorderEndDate,
-    expectedDelivery: variant.expectedDelivery,
-    preorderCloses: variant.preorderCloses,
-    maxPreorderQuantity: variant.maxPreorderQuantity,
-    currentPreorderQuantity: variant.currentPreorderQuantity,
-    minPreorderQuantity: variant.minPreorderQuantity,
-    preorderStatus: variant.preorderStatus,
   };
 }

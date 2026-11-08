@@ -37,7 +37,6 @@ from apps.inventory.selectors.stock import (
     reorder_points_for_variants,
 )
 from apps.orders.selectors.sales_orders import units_sold_by_product
-from apps.orders.services.carts import get_preordered_quantities
 
 from .permissions import (
     CatalogManagePermission,
@@ -61,7 +60,6 @@ def _product_serializer_context(request, products) -> dict:
         "request": request,
         "stock_by_variant": available_quantities_for_variants(variant_ids),
         "reorder_point_by_variant": reorder_points_for_variants(variant_ids),
-        "preordered_by_variant": get_preordered_quantities(variants),
         "sold_by_product": units_sold_by_product(product_ids),
         "rating_by_product": rating_summaries_for_products(product_ids),
     }
@@ -92,8 +90,6 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
         is_active = get_bool(params, "is_active")
         product_type = params.get("product_type", "").strip().lower() or None
         include_bundles = get_bool(params, "include_bundles", default=True)
-        preorder_only = bool(get_bool(params, "preorder_only", default=False))
-        preorder_status = get_choice(params, "preorder_status", ("active", "inactive"))
         return products_list(
             category=category,
             category_type=category_type,
@@ -101,9 +97,6 @@ class AdminProductListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Ge
             include_deleted=self.include_deleted(),
             include_bundles=include_bundles,
             product_type=product_type,
-            preorder_only=preorder_only,
-            preorder_active_only=False,
-            preorder_status=preorder_status,
         )
 
     def get(self, request) -> Response:

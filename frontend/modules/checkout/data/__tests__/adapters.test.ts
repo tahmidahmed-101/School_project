@@ -40,7 +40,6 @@ const order: ApiOrder = {
       quantity: 2,
       unit_price: "999.00",
       total: "1998.00",
-      is_preorder: false,
     },
   ],
   shipments: [],
@@ -68,7 +67,6 @@ describe("toOrderResult", () => {
           quantity: 2,
           unitPrice: 999,
           total: 1998,
-          isPreOrder: false,
         },
       ],
     });

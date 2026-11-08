@@ -10,7 +10,7 @@ import { SectionHeading } from "@/design-system/ui/SectionHeading";
 import { useLang } from "@/lib/i18n";
 
 interface TrendingSectionProps {
-  /** Defaults to every non-pre-order product. */
+  /** Defaults to the first products of the catalogue. */
   products?: Product[];
   title?: string;
   /** Hide the top-right "View all" link (e.g. when this section already shows the full catalogue). */
@@ -21,10 +21,10 @@ interface TrendingSectionProps {
 
 export function TrendingSection({ products, title, showViewAllLink = true, filters }: TrendingSectionProps) {
   const { ui } = useLang();
-  const { stockProducts } = useProducts();
+  const { products: catalogue } = useProducts();
 
   // Default teaser: a handful of picks, not the full catalogue (that's what "View all" is for)
-  const sourceProducts = products ?? stockProducts.slice(0, 10);
+  const sourceProducts = products ?? catalogue.slice(0, 10);
 
   return (
     <section className="border-b border-ink-200 bg-canvas py-8 sm:py-14">

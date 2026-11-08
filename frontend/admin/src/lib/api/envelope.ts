@@ -34,7 +34,7 @@ export function unwrapList<T>(
 ): NormalizedList<T> {
   const body = raw as Record<string, unknown> | null | undefined
 
-  // Kull-mart shape: { data: { results, count, next, previous }, message } — the DRF page
+  // School Project shape: { data: { results, count, next, previous }, message } — the DRF page
   // nested inside the standard envelope. Unwrap one level and treat it as shape 2.
   if (
     body &&

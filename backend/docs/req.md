@@ -21,13 +21,11 @@
 - Stock Quantities: Only an in_stock boolean is provided, preventing display of remaining inventory counts.
 - Category Metadata: Public payload lacks category image, description, and product counts.
 - Product Listing Description: Product list endpoint omits descriptions required for feeds and search cards.
-- Pre-order Metrics: Reservation counts and stock limits (preorder_stock_limit) are hidden from frontend.
 - Localization / Translations: No support for Bengali localization; content defaults entirely to English.
 - Product Identification: Missing dedicated fields for product code and brand; product_type is an internal enum.
 
 ## 4. Data Requirements
 
-- Pre-order Dates: Set accurate pre-order window dates to replace temporary placeholders.
 - Pricing & Inventory: Update placeholder prices and default stock count (50 units/variant) with real inventory data.
 - Media & CDN Storage: Migrate product image assets from local storefront paths to backend media storage or a CDN.
 - Variant Weights: Configure weight attributes across all variants to support weight-calculated shipping rates.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the Django API (api.kullmart.com) to the shared edge VPS.
+# Deploy the Django API (api.schoolproject.com) to the shared edge VPS.
 #
 # Usage:
 #   deploy/deploy-api.sh              # build the image here, ship it, start, vhost, smoke test
@@ -9,10 +9,10 @@ set -euo pipefail
 SSH_HOST="${SSH_HOST:-arif@169.58.218.225}"
 SSH_PORT="${SSH_PORT:-41383}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/ordernest_deploy_ed25519}"
-REMOTE_DIR="${REMOTE_DIR:-/home/arif/website/kull-mart-api}"
+REMOTE_DIR="${REMOTE_DIR:-/home/arif/website/school-project-api}"
 EDGE_REPO="${EDGE_REPO:-$HOME/projects/edge}"
 HEALTH_PORT=4361
-SITE_HOST="${SITE_HOST:-api.kullmart.com}"
+SITE_HOST="${SITE_HOST:-api.schoolproject.com}"
 SKIP_VHOST="${SKIP_VHOST:-0}"
 
 source "$(dirname "$0")/deploy-ship.sh"
@@ -30,7 +30,7 @@ step "Deploy pre-flight (DNS, certificate, running API, build fetch targets)"
 source "$LOCAL_ROOT/deploy/deploy-preflight.sh"
 pf_args=(--target "${SSH_HOST##*@}" --domain "$SITE_HOST"
     --fetch https://registry-1.docker.io/v2/ --fetch https://ghcr.io/v2/ --fetch https://pypi.org/simple/ --fetch https://deb.debian.org/)
-if ssh_run "docker inspect kull-mart-api >/dev/null 2>&1"; then
+if ssh_run "docker inspect school-project-api >/dev/null 2>&1"; then
     pf_args+=(--upstream "curl -sf -H 'Host: $SITE_HOST' -H 'X-Forwarded-Proto: https' http://127.0.0.1:$HEALTH_PORT/health/")
 fi
 PREFLIGHT_EXEC=ssh_run PREFLIGHT_FETCH_EXEC=preflight_local deploy_preflight "${pf_args[@]}" || die "preflight failed; nothing was deployed"
@@ -52,10 +52,10 @@ rsync -az -e "ssh ${SSH_OPTS[*]}" "$LOCAL_ROOT/docker-compose.prod.yml" "$SSH_HO
 
 step "Build image locally"
 TAG="$(deploy_tag)"
-DOCKER_BUILDKIT=1 docker build -t "kull-mart-api:$TAG" "$LOCAL_ROOT/backend"
+DOCKER_BUILDKIT=1 docker build -t "school-project-api:$TAG" "$LOCAL_ROOT/backend"
 step "Ship $TAG + start"
-PREV="$(running_tag kull-mart-api "$SSH_HOST")"
-ship_image "kull-mart-api:$TAG" "$SSH_HOST"
+PREV="$(running_tag school-project-api "$SSH_HOST")"
+ship_image "school-project-api:$TAG" "$SSH_HOST"
 ssh_run "cd '$REMOTE_DIR' && sed -i '/^IMAGE_TAG=/d' .env && echo IMAGE_TAG=$TAG >> .env && IMAGE_TAG=$TAG docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans db api"
 # SECURE_SSL_REDIRECT is on, so the health probe presents itself as Caddy would.
 ssh_run "
@@ -72,10 +72,10 @@ fi
 
 if [[ "$SKIP_VHOST" != "1" ]]; then
     step "Push Caddy vhost + reload (locked against concurrent edge deploys)"
-    scp -P "$SSH_PORT" -i "$SSH_KEY" "$LOCAL_ROOT/deploy/kullmart-api.caddy" "$SSH_HOST:/tmp/kullmart-api.caddy"
+    scp -P "$SSH_PORT" -i "$SSH_KEY" "$LOCAL_ROOT/deploy/schoolproject-api.caddy" "$SSH_HOST:/tmp/schoolproject-api.caddy"
     "$EDGE_REPO/scripts/with-edge-lock.sh" "$SSH_HOST" "${SSH_OPTS[@]}" -- bash -s <<'REMOTE'
 set -euo pipefail
-cp /tmp/kullmart-api.caddy /home/arif/website/edge/sites/kullmart-api.caddy
+cp /tmp/schoolproject-api.caddy /home/arif/website/edge/sites/schoolproject-api.caddy
 docker run --rm -v /home/arif/website/edge/Caddyfile:/etc/caddy/Caddyfile:ro \
     -v /home/arif/website/edge/sites:/etc/caddy/sites:ro \
     caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -88,8 +88,8 @@ fi
 source "$LOCAL_ROOT/deploy/release-tag.sh"
 record_release prod || true
 
-prune_old_tags kull-mart-api "$TAG" "$PREV" "$SSH_HOST"
-prune_old_tags kull-mart-api "$TAG" "$PREV"
+prune_old_tags school-project-api "$TAG" "$PREV" "$SSH_HOST"
+prune_old_tags school-project-api "$TAG" "$PREV"
 
 step "Smoke test"
 for i in 1 2 3 4 5 6; do

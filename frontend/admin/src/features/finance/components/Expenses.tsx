@@ -32,14 +32,7 @@ import { accountLabel, useAccounts, useExpenseCategories } from "../hooks/useFin
 import { findAccount, findExpenseCategory, useFinanceImportLookups } from "../hooks/useImportLookups"
 import { ExpenseFormDialog } from "./ExpenseFormDialog"
 import { ExpenseDetailDialog } from "./ExpenseDetailDialog"
-import { BelongsToSwitch } from "./BelongsToSwitch"
-import { belongsToLabel, EXPENSE_DELETE_DESCRIPTION, kindFromImportCell, type BelongsTo } from "../utils"
-
-const VIEW_HINTS: Record<BelongsTo, string> = {
-  stock: "Costs recorded for stock only.",
-  preorder: "Costs recorded for pre-order only.",
-  company: "Costs of the whole business, such as rent and salaries. They are not split between stock and pre-order.",
-}
+import { EXPENSE_DELETE_DESCRIPTION } from "../utils"
 
 const ORDERING_OPTIONS: Option[] = [
   { label: "Newest first", value: "-expense_date" },
@@ -58,7 +51,6 @@ const Expenses = () => {
   const { accounts, accountsById } = useAccounts()
   const { categories, categoriesById } = useExpenseCategories()
 
-  const [view, setView] = useState<BelongsTo>("company")
   const [category, setCategory] = useState<Option | null>(null)
   const [account, setAccount] = useState<Option | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
@@ -74,7 +66,6 @@ const Expenses = () => {
     fetch: (params) => dispatch(fetchAll(params)),
     state: listState,
     params: {
-      kind: view,
       category_id: category?.value,
       account_id: account?.value,
       start: from ? toISODate(from) : undefined,
@@ -122,7 +113,6 @@ const Expenses = () => {
       },
       { key: "description", label: "Description", aliases: ["Notes", "Memo"], example: "September electricity bill (DESCO)" },
       { key: "reference_number", label: "Reference", aliases: ["Reference number", "Ref"], example: "DESCO-2026-09" },
-      { key: "kind", label: "Belongs to", aliases: ["Kind"], resolve: kindFromImportCell },
     ],
     [accountLookup, categoryLookup]
   )
@@ -164,11 +154,6 @@ const Expenses = () => {
           {row.original.category_id ? categoriesById.get(row.original.category_id)?.name ?? "—" : "Uncategorised"}
         </span>
       ),
-    },
-    {
-      id: "kind",
-      header: "BELONGS TO",
-      cell: ({ row }) => <span className="text-sm text-foreground">{belongsToLabel(row.original.kind)}</span>,
     },
     {
       id: "expense_account",
@@ -271,9 +256,6 @@ const Expenses = () => {
         }
       />
 
-      <BelongsToSwitch label="Show expenses for" value={view} onChange={setView} />
-      <p className="text-sm text-muted-foreground">{VIEW_HINTS[view]}</p>
-
       <FilterToolbar
         searchPlaceholder="Search payee, description, reference..."
         searchValue={list.search}
@@ -317,8 +299,8 @@ const Expenses = () => {
         emptyIcon={Receipt}
         emptyTitle="No expenses found"
         emptyDescription="No expenses match these filters."
-        minWidth="1330px"
-        columnWidths={["110px", "240px", "150px", "130px", "190px", "160px", "120px", "130px", "80px"]}
+        minWidth="1200px"
+        columnWidths={["110px", "240px", "150px", "190px", "160px", "120px", "130px", "80px"]}
       />
 
       <ExpenseFormDialog
@@ -327,7 +309,6 @@ const Expenses = () => {
         expense={editing}
         accounts={accounts}
         categories={categories}
-        defaultBelongsTo={view}
       />
 
       <ExpenseDetailDialog

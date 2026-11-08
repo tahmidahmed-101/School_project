@@ -5,10 +5,11 @@ from django.db.models import F
 
 from apps.accounting.services.postings import post_goods_received
 from apps.common.exceptions import BusinessRuleViolationError
+from apps.common.params import KIND_STOCK
 from apps.inventory.constants import MovementType
-from apps.inventory.services.stock import default_warehouse_for, record_movement
+from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
+from apps.inventory.services.stock import record_movement
 from apps.procurement.models import GoodsReceiptNote, GRNLine, PurchaseOrder, PurchaseOrderLine
-from apps.procurement.selectors.kind import purchase_order_kind
 
 
 @transaction.atomic
@@ -21,8 +22,8 @@ def create_goods_receipt(
     warehouse=None,
 ) -> GoodsReceiptNote:
     """Book goods in against a purchase order. Accepted lines go into
-    `warehouse`, or the default warehouse of the order's kind when none is
-    given; it must be an active warehouse of that kind."""
+    `warehouse`, or the default warehouse when none is given; it must be an
+    active stock warehouse."""
     if purchase_order.status not in {
         PurchaseOrder.Status.SUBMITTED,
         PurchaseOrder.Status.RECEIVED,
@@ -35,13 +36,14 @@ def create_goods_receipt(
             "A goods receipt needs at least one line.", code="no_lines"
         )
 
-    kind = purchase_order_kind(purchase_order)
     if warehouse is None:
-        warehouse = default_warehouse_for(kind)
-    elif warehouse.kind != kind or not warehouse.is_active or warehouse.deleted_at is not None:
+        warehouse = get_or_create_default_warehouse()
+    elif (
+        warehouse.kind != KIND_STOCK or not warehouse.is_active or warehouse.deleted_at is not None
+    ):
         raise BusinessRuleViolationError(
             f"{warehouse.name} cannot receive this order's goods: choose an active "
-            f"{'pre-order' if kind == 'preorder' else 'stock'} warehouse.",
+            "stock warehouse.",
             code="warehouse_kind_mismatch",
         )
 

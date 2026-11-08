@@ -4,21 +4,15 @@ import type { Product, T } from "@/lib/types";
 import { getDiscountPercent } from "@/lib/product";
 import type { HeroSlide } from "./hero-content";
 
-export type HeroPage = "home" | "preorder";
-
 export interface ManagedHeroSlide extends HeroSlide {
   placement: ApiHeroSlide["placement"];
 }
-
-/** The shop a popup belongs to; it shows on that shop's pages. */
-export type PopupShop = ApiPromotionPopup["shop"];
 
 /** A dashboard popup campaign: one image, where clicking it goes (null: nowhere), and when it may show. */
 export interface PromotionPopup {
   id: string;
   image: string;
   href: string | null;
-  shop: PopupShop;
   /** Epoch ms; null means open-ended. */
   startsAt: number | null;
   endsAt: number | null;
@@ -51,17 +45,17 @@ function toTime(value: string | null | undefined): number | null {
 }
 
 /**
- * The popup, or null without an image or with an unsafe link, so it can never become a script link.
- * A popup with no destination (null href) is kept: it shows the image without a link.
+ * The popup, or null without an image, with an unsafe link (so it can never become a script link) or when it is
+ * not for the stock shop, the only one the storefront has. A popup with no destination (null href) is kept: it
+ * shows the image without a link.
  */
 export function toPromotionPopup(api: ApiPromotionPopup): PromotionPopup | null {
   const href = api.href ? safeLink(api.href) : null;
-  if (!api.image || href === undefined) return null;
+  if (!api.image || href === undefined || api.shop !== "stock") return null;
   return {
     id: api.id,
     image: api.image,
     href,
-    shop: api.shop === "preorder" ? "preorder" : "stock",
     startsAt: toTime(api.starts_at),
     endsAt: toTime(api.ends_at),
     ...(api.sale ? { sale: { name: api.sale.name, percentOff: toNumber(api.sale.percent_off) } } : {}),
@@ -69,15 +63,12 @@ export function toPromotionPopup(api: ApiPromotionPopup): PromotionPopup | null 
 }
 
 /**
- * The popup to show on a page of `shop`: the first (highest priority) one of that shop that is inside its schedule at `now`. The API already filters by schedule, but its answer is cached, so the times are checked again here.
+ * The popup to show: the first (highest priority) one that is inside its schedule at `now`. The API already filters by schedule, but its answer is cached, so the times are checked again here.
  */
-export function pickPromotionPopup(popups: PromotionPopup[], shop: PopupShop, now: number): PromotionPopup | null {
+export function pickPromotionPopup(popups: PromotionPopup[], now: number): PromotionPopup | null {
   return (
     popups.find(
-      (popup) =>
-        popup.shop === shop &&
-        (popup.startsAt === null || popup.startsAt <= now) &&
-        (popup.endsAt === null || now < popup.endsAt),
+      (popup) => (popup.startsAt === null || popup.startsAt <= now) && (popup.endsAt === null || now < popup.endsAt),
     ) ?? null
   );
 }
@@ -104,14 +95,14 @@ export function toStorefrontContent(api: ApiStorefrontContent): StorefrontConten
   };
 }
 
-/** The dashboard's slides for a page; none when it has none or the API could not be read. */
-export function heroSlidesFor(page: HeroPage, content: StorefrontContent | null): HeroSlide[] {
-  return (content?.heroSlides ?? []).filter((slide) => slide.placement === page || slide.placement === "both");
+/** The dashboard's slides for the home page; none when it has none or the API could not be read. */
+export function heroSlidesFor(content: StorefrontContent | null): HeroSlide[] {
+  return (content?.heroSlides ?? []).filter((slide) => slide.placement === "home" || slide.placement === "both");
 }
 
-export function promoLinesFor(page: HeroPage, content: StorefrontContent | null): T[] {
+export function promoLinesFor(content: StorefrontContent | null): T[] {
   return (content?.promoLines ?? [])
-    .filter((line) => line.placement === page || line.placement === "both")
+    .filter((line) => line.placement === "home" || line.placement === "both")
     .map((line) => line.text);
 }
 

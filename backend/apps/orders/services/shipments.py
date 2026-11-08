@@ -80,12 +80,6 @@ def create_shipment(
     }
     for line_id, quantity in requested.items():
         order_line = locked_lines[line_id]
-        if order_line.is_preorder and quantity > order_line.shippable_quantity:
-            raise BusinessRuleViolationError(
-                f"Only {order_line.shippable_quantity} unit(s) of {order_line.variant.sku} have "
-                "arrived stock set aside for this order. Allocate arrived stock first.",
-                code="preorder_not_allocated",
-            )
         if quantity > order_line.shippable_quantity:
             raise BusinessRuleViolationError(
                 f"Cannot ship {quantity} units of line {order_line.id}: only "
@@ -372,9 +366,7 @@ def receive_back_shipment(*, shipment: Shipment, dispositions: dict, actor=None)
         sellable, damaged = splits[shipment_line.id]
         # Only sellable units become shippable again; damaged ones stay shipped.
         order_line.shipped_quantity -= sellable
-        if not shipment_line.stock_posted:
-            order_line.allocated_quantity -= sellable
-        order_line.save(update_fields=["shipped_quantity", "allocated_quantity", "updated_at"])
+        order_line.save(update_fields=["shipped_quantity", "updated_at"])
         shipment_line.damaged_quantity = damaged
         shipment_line.save(update_fields=["damaged_quantity", "updated_at"])
         if shipment_line.stock_posted:
@@ -471,9 +463,7 @@ def replace_damaged_units(*, shipment: Shipment, actor=None) -> Shipment:
                         code="insufficient_stock",
                     ) from exc
         order_line.shipped_quantity -= quantity
-        if not shipment_line.stock_posted:
-            order_line.allocated_quantity -= quantity
-        order_line.save(update_fields=["shipped_quantity", "allocated_quantity", "updated_at"])
+        order_line.save(update_fields=["shipped_quantity", "updated_at"])
         shipment_line.replaced_quantity += quantity
         shipment_line.save(update_fields=["replaced_quantity", "updated_at"])
         replaced += quantity
@@ -578,12 +568,11 @@ def _auto_select_carrier(shipment: Shipment):
     from apps.logistics.services.couriers.recipient import total_weight
 
     address = shipment.order.shipping_address
-    kind = shipment.order.order_type
-    zone = find_zone_by_address_text(address_zone_text(address), kind=kind) if address else None
+    zone = find_zone_by_address_text(address_zone_text(address)) if address else None
     if zone is None:
         raise BusinessRuleViolationError(
             "Cannot auto-select a carrier: no shipping zone for this order's address.",
             code="no_shipping_zone",
         )
-    selection = select_courier(zone=zone, weight=total_weight(shipment), kind=kind)
+    selection = select_courier(zone=zone, weight=total_weight(shipment))
     return selection.carrier

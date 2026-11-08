@@ -51,28 +51,6 @@ def validate_discount_below_price(attrs: dict) -> dict:
     return attrs
 
 
-# What a row of one kind carries in the other kind's fields: nothing.
-PREORDER_FIELD_BLANKS = {
-    "is_preorder_enabled": False,
-    "preorder_price": None,
-    "preorder_start_date": None,
-    "preorder_end_date": None,
-    "release_date": None,
-    "preorder_stock_limit": None,
-    "preorder_min_quantity": None,
-    "is_preorder_active": False,
-    "can_preorder": False,
-    "is_preorder_price_applied": False,
-}
-STOCK_FIELD_BLANKS = {
-    "barcode": "",
-    "discount_price": None,
-    "wholesale_price": None,
-    "show_wholesale_price": False,
-    "is_low_stock": False,
-}
-
-
 class ProductVariantSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     product_id = serializers.UUIDField(read_only=True)
@@ -97,29 +75,11 @@ class ProductVariantSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, allow_null=True, required=False
     )
     show_wholesale_price = serializers.BooleanField()
-    # Pre-order fields
-    is_preorder_enabled = serializers.BooleanField()
-    preorder_price = serializers.DecimalField(
-        max_digits=12, decimal_places=2, allow_null=True, required=False
-    )
-    preorder_start_date = serializers.DateTimeField(allow_null=True, required=False)
-    preorder_end_date = serializers.DateTimeField(allow_null=True, required=False)
-    release_date = serializers.DateTimeField(allow_null=True, required=False)
-    preorder_stock_limit = serializers.IntegerField(allow_null=True, required=False, min_value=0)
-    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
-    is_preorder_active = serializers.SerializerMethodField()
-    can_preorder = serializers.SerializerMethodField()
     effective_price = serializers.SerializerMethodField()
-    is_preorder_price_applied = serializers.SerializerMethodField()
     stock = serializers.SerializerMethodField()
     is_low_stock = serializers.SerializerMethodField()
     primary_image = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
-
-    def to_representation(self, instance) -> dict:
-        data = super().to_representation(instance)
-        data.update(STOCK_FIELD_BLANKS if instance.is_preorder_kind else PREORDER_FIELD_BLANKS)
-        return data
 
     def get_title(self, obj) -> str:
         return variant_title(obj)
@@ -136,27 +96,8 @@ class ProductVariantSerializer(serializers.Serializer):
     def get_size(self, obj) -> str:
         return variant_legacy_field(obj, SIZE_NAMES)
 
-    def get_is_preorder_active(self, obj) -> bool:
-        return obj.is_preorder_active
-
-    def get_can_preorder(self, obj) -> bool:
-        if not obj.is_preorder_active:
-            return False
-        if obj.preorder_stock_limit is None:
-            return True
-        # Use pre-fetched preordered quantities from context to avoid N+1 queries
-        preordered_by_variant = self.context.get("preordered_by_variant")
-        if preordered_by_variant is not None:
-            preordered = preordered_by_variant.get(obj.id, 0)
-        else:
-            preordered = obj._get_preordered_quantity()
-        return preordered < obj.preorder_stock_limit
-
     def get_effective_price(self, obj) -> str:
         return str(obj.effective_price)
-
-    def get_is_preorder_price_applied(self, obj) -> bool:
-        return obj.is_preorder_price_applied
 
     def get_product_name(self, obj) -> str:
         return obj.product.name
@@ -174,8 +115,6 @@ class ProductVariantSerializer(serializers.Serializer):
         return available_quantities_for_variants([obj.id]).get(obj.id, 0)
 
     def get_is_low_stock(self, obj) -> bool:
-        if obj.is_preorder_kind:
-            return False
         reorder_point_by_variant = self.context.get("reorder_point_by_variant")
         if reorder_point_by_variant is not None:
             reorder_point = reorder_point_by_variant.get(obj.id, 0)
@@ -211,48 +150,10 @@ class ProductVariantCreateSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, required=False, allow_null=True
     )
     show_wholesale_price = serializers.BooleanField(required=False, default=False)
-    # Pre-order fields
-    is_preorder_enabled = serializers.BooleanField(required=False, default=False)
-    preorder_price = serializers.DecimalField(
-        max_digits=12, decimal_places=2, required=False, allow_null=True
-    )
-    preorder_start_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_end_date = serializers.DateTimeField(required=False, allow_null=True)
-    release_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_stock_limit = serializers.IntegerField(required=False, allow_null=True, min_value=0)
-    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
         refuse_colour_size(self)
-        attrs = validate_discount_below_price(attrs)
-        self._validate_preorder_fields(attrs)
-        return attrs
-
-    def _validate_preorder_fields(self, attrs: dict) -> None:
-        is_preorder_enabled = attrs.get("is_preorder_enabled", False)
-        if not is_preorder_enabled:
-            return
-
-        price = attrs.get("price")
-        preorder_price = attrs.get("preorder_price")
-        preorder_start_date = attrs.get("preorder_start_date")
-        preorder_end_date = attrs.get("preorder_end_date")
-        release_date = attrs.get("release_date")
-
-        if preorder_price is not None and price is not None and preorder_price >= price:
-            raise serializers.ValidationError(
-                {"preorder_price": ["Pre-order price must be lower than the normal price."]}
-            )
-
-        if preorder_start_date and preorder_end_date and preorder_start_date >= preorder_end_date:
-            raise serializers.ValidationError(
-                {"preorder_end_date": ["Pre-order end date must be after start date."]}
-            )
-
-        if preorder_end_date and release_date and preorder_end_date > release_date:
-            raise serializers.ValidationError(
-                {"release_date": ["Release date must be on or after pre-order end date."]}
-            )
+        return validate_discount_below_price(attrs)
 
 
 class ProductVariantUpdateSerializer(serializers.Serializer):
@@ -275,48 +176,10 @@ class ProductVariantUpdateSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, required=False, allow_null=True
     )
     show_wholesale_price = serializers.BooleanField(required=False)
-    # Pre-order fields
-    is_preorder_enabled = serializers.BooleanField(required=False)
-    preorder_price = serializers.DecimalField(
-        max_digits=12, decimal_places=2, required=False, allow_null=True
-    )
-    preorder_start_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_end_date = serializers.DateTimeField(required=False, allow_null=True)
-    release_date = serializers.DateTimeField(required=False, allow_null=True)
-    preorder_stock_limit = serializers.IntegerField(required=False, allow_null=True, min_value=0)
-    preorder_min_quantity = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
         refuse_colour_size(self)
-        attrs = validate_discount_below_price(attrs)
-        self._validate_preorder_fields(attrs)
-        return attrs
-
-    def _validate_preorder_fields(self, attrs: dict) -> None:
-        is_preorder_enabled = attrs.get("is_preorder_enabled", False)
-        if not is_preorder_enabled:
-            return
-
-        price = attrs.get("price")
-        preorder_price = attrs.get("preorder_price")
-        preorder_start_date = attrs.get("preorder_start_date")
-        preorder_end_date = attrs.get("preorder_end_date")
-        release_date = attrs.get("release_date")
-
-        if preorder_price is not None and price is not None and preorder_price >= price:
-            raise serializers.ValidationError(
-                {"preorder_price": ["Pre-order price must be lower than the normal price."]}
-            )
-
-        if preorder_start_date and preorder_end_date and preorder_start_date >= preorder_end_date:
-            raise serializers.ValidationError(
-                {"preorder_end_date": ["Pre-order end date must be after start date."]}
-            )
-
-        if preorder_end_date and release_date and preorder_end_date > release_date:
-            raise serializers.ValidationError(
-                {"release_date": ["Release date must be on or after pre-order end date."]}
-            )
+        return validate_discount_below_price(attrs)
 
 
 class VariantGenerateSerializer(serializers.Serializer):
@@ -441,8 +304,7 @@ class CategoryCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     parent_id = serializers.UUIDField(required=False, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
-    # Omitted for a subcategory (inherits its parent's type); required in effect
-    # only for a root category, where it defaults to Stock if left out.
+    # Accepted for the dashboard's sake; every category is a stock category.
     category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
     # Off creates the category hidden from the storefront.
     is_active = _DefaultOnBooleanField(required=False, default=True)
@@ -452,8 +314,7 @@ class CategoryUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     parent_id = serializers.UUIDField(required=False, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
-    # Only settable on a root category — a subcategory's type is locked to its
-    # parent's and is rejected by the service layer if sent directly.
+    # Accepted for the dashboard's sake; a category's type does not change.
     category_type = serializers.ChoiceField(choices=Category.CategoryType.choices, required=False)
     is_active = serializers.BooleanField(required=False)
     image = serializers.ImageField(required=False)
@@ -537,8 +398,6 @@ class ProductSerializer(serializers.Serializer):
         variant = self._representative_variant(obj)
         if variant is None or variant.discount_price is None:
             return None
-        if obj.category.category_type == Category.CategoryType.PREORDER:
-            return None
         return str(variant.discount_price)
 
     def get_images(self, obj) -> list[dict]:
@@ -557,8 +416,6 @@ class ProductSerializer(serializers.Serializer):
         return image.url if image else None
 
     def get_total_stock(self, obj) -> int | None:
-        if obj.category.category_type == Category.CategoryType.PREORDER:
-            return None
         stock_by_variant = self.context.get("stock_by_variant")
         variant_ids = [v.id for v in obj.active_variants]
         if stock_by_variant is not None:

@@ -31,7 +31,7 @@ export function LangProvider({ initialLang, children }: { initialLang: Lang | nu
   // Visitors who chose a language before the cookie existed still have it in localStorage: carry it over once.
   useEffect(() => {
     if (initialLang) return;
-    const saved = toLang(window.localStorage.getItem("kullmart:lang"));
+    const saved = toLang(window.localStorage.getItem("schoolproject:lang"));
     if (!saved) return;
     setLangState(saved);
     writeLangCookie(saved);
@@ -49,7 +49,7 @@ export function LangProvider({ initialLang, children }: { initialLang: Lang | nu
     (l: Lang) => {
       setLangState(l);
       writeLangCookie(l);
-      window.localStorage.setItem("kullmart:lang", l);
+      window.localStorage.setItem("schoolproject:lang", l);
       router.refresh();
     },
     [router],

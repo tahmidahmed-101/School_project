@@ -35,7 +35,7 @@ export async function Footer() {
                 className="h-8 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
               <span className="text-base font-extrabold tracking-[0.12em] text-white transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
-                {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
+                {lang === "bn" ? "কুল মার্ট" : "SCHOOL PROJECT"}
               </span>
             </Link>
             <p className="max-w-sm leading-relaxed text-white/75">{about}</p>

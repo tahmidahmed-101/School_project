@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
-import { Camera, KeyRound, Loader2, Lock, Mail, Save, Send, Shield, Trash2, User } from "lucide-react"
+import { Camera, KeyRound, Loader2, Lock, Mail, Save, Shield, Trash2, User } from "lucide-react"
 import { toast } from "sonner"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { changePassword, updateProfile } from "@/features/authentication/slices/authSlice"
@@ -16,8 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SubmitButton } from "@/components/common/FormActions"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { isFullAccess, useCan } from "@/hooks/use-can"
-import { TelegramLinkCard } from "./TelegramLinkCard"
+import { isFullAccess } from "@/hooks/use-can"
 
 const Profile = () => {
   useDocumentTitle("Profile")
@@ -25,8 +24,6 @@ const Profile = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  // The bot only serves order staff, and the backend refuses to link anyone else.
-  const canUseTelegram = useCan("orders.view", "orders.manage")
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "")
   const [lastName, setLastName] = useState(user?.last_name ?? "")
@@ -185,11 +182,6 @@ const Profile = () => {
           <TabsTrigger value="access" className="min-w-max gap-2">
             <Shield className="h-4 w-4" /> Access
           </TabsTrigger>
-          {canUseTelegram && (
-            <TabsTrigger value="telegram" className="min-w-max gap-2">
-              <Send className="h-4 w-4" /> Telegram
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="general">
@@ -304,12 +296,6 @@ const Profile = () => {
             )}
           </Card>
         </TabsContent>
-
-        {canUseTelegram && (
-          <TabsContent value="telegram">
-            <TelegramLinkCard />
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   )

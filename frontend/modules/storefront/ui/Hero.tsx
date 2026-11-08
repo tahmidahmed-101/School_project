@@ -15,26 +15,23 @@ import { containerClass } from "@/design-system/ui/Container";
 
 const AUTOPLAY_MS = 5000;
 
-/** `shopLink` is where Shop Now goes (home: normal stock, pre-order page: pre-order stock). */
+const SHOP_LINK = "/shop";
+const BADGE = { en: "Stock", bn: "স্টক" };
+
 export function Hero({
   heading,
   slides,
   hasOffers,
-  shopLink = "/shop?type=normal",
-  preorder = false,
 }: {
   /** The page's H1; slide titles rotate every few seconds, so they can't be it. */
   heading: string;
   /** Empty until staff add a slide for this page; the banner then shows only its shop button. */
   slides: HeroSlide[];
   hasOffers: boolean;
-  shopLink?: string;
-  preorder?: boolean;
 }) {
   const { lang, ui, n } = useLang();
   const { categories } = useCatalog();
-  const hasRail = categories.some((category) => category.type === (preorder ? "preorder" : "stock"));
-  const badge = preorder ? { en: "Pre-order", bn: "প্রি-অর্ডার" } : { en: "Stock", bn: "স্টক" };
+  const hasRail = categories.length > 0;
   const [index, setIndex] = useState(0);
   // Slides mount one step ahead of the viewer so hidden banners don't compete with the LCP image on load.
   const [mounted, setMounted] = useState(1);
@@ -76,7 +73,7 @@ export function Hero({
           {hasRail && (
             <ScrollReveal y={24} duration={0.85} className="relative hidden lg:order-1 lg:col-span-3 lg:block">
               <div className="absolute inset-0">
-                <HeroCategoryRail preorder={preorder} />
+                <HeroCategoryRail />
               </div>
             </ScrollReveal>
           )}
@@ -112,7 +109,7 @@ export function Hero({
               <div className="relative z-20 max-w-[75%] p-5 sm:max-w-[55%] sm:p-7 lg:max-w-[420px] lg:p-9">
                 <div key={index} className={rotated ? "animate-[hero-caption_0.4s_ease-out]" : undefined}>
                   <span className="mb-2 inline-block rounded-full bg-gold-400 px-2.5 py-0.5 text-2xs font-extrabold uppercase tracking-wider text-ink-950 sm:text-xs">
-                    {badge[lang]}
+                    {BADGE[lang]}
                   </span>
                   {tag && (
                     <div className="flex items-start gap-1.5 text-2xs font-bold uppercase leading-snug tracking-wider text-white/90 sm:items-center sm:text-xs">
@@ -132,7 +129,7 @@ export function Hero({
                 </div>
 
                 <Link
-                  href={slide?.linkUrl || shopLink}
+                  href={slide?.linkUrl || SHOP_LINK}
                   className="group mt-4 inline-flex items-center gap-1.5 rounded-full bg-canvas px-4 py-2 text-xs font-bold text-ink-950 shadow-md transition-all duration-200 hover:scale-[1.03] hover:bg-accent-hover hover:text-ink-950 active:scale-[0.98] sm:mt-6 sm:px-7 sm:py-3 sm:text-sm"
                 >
                   <span>{HERO_CTA_TEXT[lang]}</span>
@@ -179,7 +176,7 @@ export function Hero({
 
           {/* Right: welcome card + quick links (desktop only; mobile shows just the banner) */}
           <ScrollReveal y={24} duration={0.85} delay={0.1} className="hidden lg:order-3 lg:col-span-3 lg:block">
-            <HeroWelcomePanel hasOffers={hasOffers} kind={preorder ? "preorder" : "stock"} />
+            <HeroWelcomePanel hasOffers={hasOffers} />
           </ScrollReveal>
         </div>
       </div>

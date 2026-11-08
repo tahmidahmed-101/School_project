@@ -1,13 +1,11 @@
 import { Shapes } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Kind } from "@/hooks/use-kind"
 import { formatCurrency } from "@/lib/format"
 import { sumMoney } from "@/lib/money"
 import type { CategoryShare } from "../types"
 import { ReportWidget } from "./ReportWidget"
 
 interface Props {
-  kind: Kind
   categories: CategoryShare[] | undefined
   isLoading: boolean
   error: unknown
@@ -17,7 +15,7 @@ interface Props {
   className?: string
 }
 
-export function CategoryBreakdown({ kind, categories, isLoading, error, onRetry, limit = 6, className }: Props) {
+export function CategoryBreakdown({ categories, isLoading, error, onRetry, limit = 6, className }: Props) {
   const rows = categories ?? []
   const shown = rows.slice(0, limit)
   const rest = rows.slice(limit)
@@ -32,22 +30,16 @@ export function CategoryBreakdown({ kind, categories, isLoading, error, onRetry,
 
   return (
     <ReportWidget
-      title={kind === "preorder" ? "Pre-order value by category" : "Stock revenue by category"}
-      description={
-        kind === "preorder" ? "Share of pre-order line value in this period" : "Share of line revenue in this period"
-      }
-      link={{ to: kind === "preorder" ? "/preorder_categories" : "/categories", label: "Categories" }}
+      title="Stock revenue by category"
+      description="Share of line revenue in this period"
+      link={{ to: "/categories", label: "Categories" }}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
       isEmpty={rows.length === 0}
       emptyIcon={Shapes}
-      emptyTitle={kind === "preorder" ? "No pre-orders by category yet" : "No category sales yet"}
-      emptyDescription={
-        kind === "preorder"
-          ? "Category figures appear once pre-orders come in for this period."
-          : "Category revenue appears once orders are paid in this period."
-      }
+      emptyTitle="No category sales yet"
+      emptyDescription="Category revenue appears once orders are paid in this period."
       skeleton={
         <div className="flex flex-col gap-4">
           {Array.from({ length: 5 }, (_, i) => (

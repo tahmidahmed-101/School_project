@@ -1,4 +1,4 @@
-// Mirrors api/v1/admin/users/serializers.py and api/v1/admin/staff/serializers.py (kull-mart).
+// Mirrors api/v1/admin/users/serializers.py and api/v1/admin/staff/serializers.py (school-project).
 
 export type UserRole = "admin" | "staff" | "customer"
 
@@ -21,7 +21,7 @@ export interface AdminUser {
   last_login: string | null
   permissions: string[]
   deleted_at: string | null
-  /** Only on GET /admin/users/{id}/ (customer_order_summary); with ?kind= it covers that half only. */
+  /** Only on GET /admin/users/{id}/ (customer_order_summary); with ?kind=stock it covers stock orders only. */
   order_summary?: OrderSummary
 }
 

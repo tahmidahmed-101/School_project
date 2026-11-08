@@ -26,13 +26,12 @@ function MobileBottomBarInner({ wishlistCount }: { wishlistCount: number }) {
   const { user } = useAuth();
   const brand = useBrand();
 
-  // Active tab index (-1 = none: the shop, product and pre-order pages have no tab of their own):
+  // Active tab index (-1 = none: the shop and product pages have no tab of their own):
   // 0 = Home, 1 = Track Order, 2 = Facebook (a link out, never active), 3 = Wishlist, 4 = Profile
   const activeIndex = useMemo(() => {
     if (isWishlistOpen) return 3;
     if (pathname.startsWith("/login")) return 4;
     if (pathname.startsWith("/track-order")) return 1;
-    if (pathname.startsWith("/pre-order")) return -1;
     if (pathname.startsWith("/shop") || pathname.startsWith("/product")) return -1;
     return 0; // Default to Home
   }, [pathname, isWishlistOpen]);

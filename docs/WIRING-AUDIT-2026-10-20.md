@@ -7,7 +7,6 @@ Clean: all 72 models used, every view routed, one migration leaf per app (`makem
 routes/nav/URLs/permission keys match the backend, no Celery or signals to wire, storefront env vars and metadata fine.
 
 ## High: customer-facing
-- `checkout-response-missing-preorder-fields` (checked): `GuestOrderSerializer` (backend/api/v1/public/checkout/serializers.py:49) lacks `order_type` and `deposit_due`; OrderSuccess shows NaN and the wrong continue link for pre-orders.
 - `account-area-missing`: no frontend for customer addresses, profile, order cancel, returns, wishlist API, notifications, sessions, email/phone verification.
 - `checkout-not-prefilled-for-customers`: CheckoutView never fills from the logged-in user.
 - `no-purchase-or-funnel-events`: only PageView fires; no ViewContent/AddToCart/InitiateCheckout/Purchase, no `event_id`, no CAPI.
@@ -26,7 +25,6 @@ routes/nav/URLs/permission keys match the backend, no Celery or signals to wire,
 - `staff-line-edit-skips-money`: line edits skip coupon, shipping and pending payment recalculation.
 - `po-status-bypass`: PATCH status=received sets a PO received with no GRN; cancelled can reopen.
 - `multi-bill-per-po`: two bills pass the 3-way match for one PO; accrual dated by due_date.
-- `preorder-ships-unpaid-balance`: no balance-due gate at shipment; stage tracking decoupled from payment.
 - `rma-admin-actions-bypass`: Django admin actions bulk-update RMA status, skipping `returned_quantity` give-back.
 - `order-status-override-no-ui`: admin cannot close or confirm an order.
 - `variant-import-export-no-ui`, `stock-lookup-quick-products-no-consumer`, `option-suggestions-no-ui`, `return-detail-no-refund-link`.
@@ -36,7 +34,6 @@ routes/nav/URLs/permission keys match the backend, no Celery or signals to wire,
 - `revalidate-endpoint-dead`: route, secret and fetch tags inert; edge cache cannot be purged. `cf-incremental-cache-none`: unbounded `?x=` page-cache keys (worker.ts:15).
 - `cf-deploy-untraced`: storefront/admin `cf:deploy` lack `record_release`.
 - `email-unconfigurable`: no SMTP settings. `env-example-gaps`: BUSINESS_*, CURRENCY_SYMBOL, MEDIA_ROOT, NUM_PROXIES, REDIS_URL, STOCK_RESERVATION_TTL_HOURS, DATABASE_URL, SECURE_HSTS_SECONDS, SECURE_SSL_REDIRECT missing from examples.
-- `preorder-terms-acceptance-not-sent`: acceptance not stored on the order.
 
 ## Low
 - Unreachable statuses: RMA closed, shipment pending, fraud case under review, vendor bill overdue, journal draft.
@@ -48,5 +45,5 @@ routes/nav/URLs/permission keys match the backend, no Celery or signals to wire,
 - Branch `feature/guest-checkout-payment-shipping-coupon` has one stale commit reverting the PO-notes fix; not merged on purpose.
 
 ## Open decisions
-Payment gateway vs manual capture; Cloudflare R2; seed values (USD→BDT 120, cost 70%, pre-order 95%, 30/45 day windows);
+Payment gateway vs manual capture; Cloudflare R2; seed values (USD→BDT 120, cost 70%, 30/45 day windows);
 check prod for leftover `@simpleadmin.demo` users; rotate the Cloudflare token.

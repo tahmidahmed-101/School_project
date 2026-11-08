@@ -2,7 +2,6 @@ import { Fragment, type ReactNode } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { ChevronRight, Home } from "lucide-react"
 
-import { useKind } from "@/hooks/use-kind"
 import { findNavEntry } from "./navEntry"
 
 interface Crumb {
@@ -16,16 +15,14 @@ interface Crumb {
  */
 export function Breadcrumbs({ title, backTo }: { title: ReactNode; backTo?: string }) {
   const { pathname } = useLocation()
-  const kind = useKind()
   if (pathname === "/") return null
 
-  const entry = findNavEntry(pathname, kind, backTo)
+  const entry = findNavEntry(pathname, backTo)
   const current = typeof title === "string" ? title : undefined
   const onListPage = entry?.item.url === pathname
 
   const crumbs: Crumb[] = []
   if (entry) {
-    if (entry.section.group === "PREORDER") crumbs.push({ label: "Pre-order", to: "/preorder_overview" })
     // The dashboard's own section ("Home") would only repeat the first crumb.
     if (!entry.section.items.some((item) => item.url === "/")) crumbs.push({ label: entry.section.label })
     crumbs.push(onListPage ? { label: entry.item.title } : { label: entry.item.title, to: entry.item.url })

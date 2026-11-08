@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { BRAND_INFO, type BrandInfo } from "@/lib/brand";
-import { isPreOrderShopProduct, type ProductKind } from "@/lib/product";
 import type { CategoryInfo, Product } from "@/lib/types";
 
 /**
@@ -21,10 +20,6 @@ interface CatalogContextType {
 
 const CatalogContext = createContext<CatalogContextType | null>(null);
 
-// The header sits outside every page, so a product page reports its product's shop here for it to read.
-const PageProductKindContext = createContext<ProductKind | null>(null);
-const SetPageProductKindContext = createContext<((kind: ProductKind | null) => void) | null>(null);
-
 interface CatalogProviderProps {
   categories: CategoryInfo[];
   failed: boolean;
@@ -37,27 +32,7 @@ export function CatalogProvider({ categories, failed, brand, children }: Catalog
     () => ({ categories, catalogFailed: failed, brand }),
     [categories, failed, brand],
   );
-  const [pageProductKind, setPageProductKind] = useState<ProductKind | null>(null);
-  return (
-    <CatalogContext.Provider value={value}>
-      <SetPageProductKindContext.Provider value={setPageProductKind}>
-        <PageProductKindContext.Provider value={pageProductKind}>{children}</PageProductKindContext.Provider>
-      </SetPageProductKindContext.Provider>
-    </CatalogContext.Provider>
-  );
-}
-
-export function usePageProductKind(): ProductKind | null {
-  return useContext(PageProductKindContext);
-}
-
-export function useReportPageProductKind(kind: ProductKind): void {
-  const report = useContext(SetPageProductKindContext);
-  useEffect(() => {
-    if (!report) return;
-    report(kind);
-    return () => report(null);
-  }, [report, kind]);
+  return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }
 
 export function useCatalog(): CatalogContextType {
@@ -74,23 +49,13 @@ export function useBrand(): BrandInfo {
 
 interface ProductsContextType {
   products: Product[];
-  /** Regular in-stock catalogue: everything except pre-order items. */
-  stockProducts: Product[];
-  preorderProducts: Product[];
 }
 
 const ProductsContext = createContext<ProductsContextType | null>(null);
 
 /** Wrap the content of a page that lists products; the page (a server component) supplies `products`. */
 export function ProductsProvider({ products, children }: { products: Product[]; children: React.ReactNode }) {
-  const value = useMemo<ProductsContextType>(
-    () => ({
-      products,
-      stockProducts: products.filter((p) => !isPreOrderShopProduct(p)),
-      preorderProducts: products.filter(isPreOrderShopProduct),
-    }),
-    [products],
-  );
+  const value = useMemo<ProductsContextType>(() => ({ products }), [products]);
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 }
 

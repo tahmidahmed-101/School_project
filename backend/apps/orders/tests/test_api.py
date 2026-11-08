@@ -1289,19 +1289,9 @@ def test_admin_status_cancel_releases_reservations(api_client):
 def test_generate_order_number_stock_uses_so_prefix_and_digits_only():
     from apps.common.utils.codes import generate_order_number
 
-    number = generate_order_number(kind="stock")
+    number = generate_order_number()
     assert number.startswith("SO-")
     suffix = number[len("SO-") :]
-    assert len(suffix) == 9
-    assert suffix.isdigit()
-
-
-def test_generate_order_number_preorder_uses_pre_prefix_and_digits_only():
-    from apps.common.utils.codes import generate_order_number
-
-    number = generate_order_number(kind="preorder")
-    assert number.startswith("PRE-")
-    suffix = number[len("PRE-") :]
     assert len(suffix) == 9
     assert suffix.isdigit()
 
@@ -1311,19 +1301,9 @@ def test_create_order_stock_uses_so_prefix():
     from apps.orders.services.carts import create_order
 
     customer = CustomerUserFactory()
-    order = create_order(customer=customer, kind="stock")
+    order = create_order(customer=customer)
     assert order.order_number.startswith("SO-")
     assert order.order_number[len("SO-") :].isdigit()
-
-
-def test_create_order_preorder_uses_pre_prefix():
-    from apps.accounts.factories import CustomerUserFactory
-    from apps.orders.services.carts import create_order
-
-    customer = CustomerUserFactory()
-    order = create_order(customer=customer, kind="preorder")
-    assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-") :].isdigit()
 
 
 def test_create_order_numbers_are_unique():
@@ -1333,83 +1313,9 @@ def test_create_order_numbers_are_unique():
     customer = CustomerUserFactory()
     numbers = set()
     for _ in range(50):
-        order = create_order(customer=customer, kind="stock")
+        order = create_order(customer=customer)
         assert order.order_number not in numbers
         numbers.add(order.order_number)
-
-
-def test_checkout_changes_prefix_to_pre_for_preorder(api_client):
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from apps.common.params import KIND_PREORDER
-    from apps.inventory.constants import MovementType
-    from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
-    from apps.inventory.services.stock import record_movement
-    from apps.orders.services.carts import add_line, get_or_create_cart
-    from apps.orders.services.checkout import checkout
-
-    admin = create_user(email="order-prefix-checkout@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    customer = create_user(email="order-prefix-cust@example.com")
-
-    get_or_create_default_warehouse(KIND_PREORDER)
-
-    now = timezone.now()
-    variant = ProductVariantFactory(
-        product__category__category_type="preorder",
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-    )
-    record_movement(
-        variant=variant,
-        movement_type=MovementType.PURCHASE_IN,
-        quantity=10,
-        unit_cost=Decimal("5.00"),
-    )
-
-    cart = get_or_create_cart(customer)
-    # Cart starts with SO- number
-    assert cart.order_number.startswith("SO-")
-    add_line(order=cart, variant=variant, quantity=1)
-    order = checkout(order=cart)
-    # After checkout, pre-order gets PRE- prefix
-    assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-") :].isdigit()
-
-
-def test_place_staff_order_uses_pre_prefix_for_preorder(api_client):
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from apps.accounts.factories import CustomerUserFactory
-    from apps.orders.constants import PaymentMethodKey
-    from apps.orders.services.staff_orders import place_staff_order
-
-    admin = create_user(email="order-staff-pre@example.com", role=UserRole.ADMIN)
-    api_client.force_authenticate(user=admin)
-    customer = CustomerUserFactory()
-    now = timezone.now()
-    variant = ProductVariantFactory(
-        product__category__category_type="preorder",
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=10),
-    )
-
-    order = place_staff_order(
-        customer=customer,
-        lines=[(variant, 1)],
-        kind="preorder",
-        payment_method=PaymentMethodKey.MANUAL,
-        capture=False,
-        actor=admin,
-    )
-    assert order.order_number.startswith("PRE-")
-    assert order.order_number[len("PRE-") :].isdigit()
 
 
 def test_place_staff_order_uses_so_prefix_for_stock(api_client):
@@ -1425,7 +1331,6 @@ def test_place_staff_order_uses_so_prefix_for_stock(api_client):
     order = place_staff_order(
         customer=customer,
         lines=[(variant, 1)],
-        kind="stock",
         payment_method=PaymentMethodKey.MANUAL,
         capture=True,
         actor=admin,

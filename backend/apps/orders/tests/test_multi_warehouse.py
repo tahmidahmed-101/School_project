@@ -53,7 +53,7 @@ STOCK = Category.CategoryType.STOCK
 
 @pytest.fixture
 def main():
-    return get_or_create_default_warehouse(STOCK)
+    return get_or_create_default_warehouse()
 
 
 @pytest.fixture

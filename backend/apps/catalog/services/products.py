@@ -11,12 +11,11 @@ from django.utils import timezone
 from apps.audit.services.audit import log_action
 from apps.business.constants import ModuleKey
 from apps.business.selectors.modules import is_feature_enabled
-from apps.catalog.models import Category, Product, ProductImage, ProductVariant
+from apps.catalog.models import Product, ProductImage, ProductVariant
 from apps.catalog.selectors.options import label_key, normalise_label
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.text import unique_product_code_for, unique_sku_for, unique_slug_for
 
-from .kind_rules import check_variant_kind, is_preorder_category
 from .options import (
     build_title,
     ensure_combination_free,
@@ -76,14 +75,6 @@ def _combination_ids(product: Product, combinations: list | None) -> list[list]:
     return resolved
 
 
-def _check_brand_kind(brand, category: Category) -> None:
-    if brand is not None and brand.kind != category.category_type:
-        raise BusinessRuleViolationError(
-            "Pick a brand from the same side as the product: stock or pre-order.",
-            code="brand_kind_mismatch",
-        )
-
-
 @transaction.atomic
 def create_product(
     *,
@@ -114,7 +105,6 @@ def create_product(
         raise BusinessRuleViolationError(
             "A product with options needs a base price for its variants.", code="price_required"
         )
-    _check_brand_kind(brand, category)
     product = Product(
         category=category,
         brand=brand,
@@ -164,35 +154,6 @@ def create_product(
     return product
 
 
-PREORDER_RULE_FIELDS = frozenset(
-    {"is_preorder_enabled", "preorder_start_date", "preorder_end_date"}
-)
-
-
-def _check_preorder_rules(*, product: Product, enabled: bool, start_date, end_date) -> None:
-    """A pre-order variant needs its window and lives only in a pre-order
-    category, so the two shops never share a product."""
-    if not enabled:
-        return
-    if start_date is None or end_date is None:
-        raise BusinessRuleViolationError(
-            "A pre-order needs both a start and an end date.", code="preorder_dates_required"
-        )
-    if product.category.category_type != Category.CategoryType.PREORDER:
-        raise BusinessRuleViolationError(
-            "Pre-order can only be switched on for a product in a pre-order category.",
-            code="preorder_category_required",
-        )
-
-
-def _check_category_keeps_kind(product: Product, category: Category) -> None:
-    if category.category_type != product.category.category_type:
-        raise BusinessRuleViolationError(
-            "A product cannot move between a stock category and a pre-order category.",
-            code="category_kind_mismatch",
-        )
-
-
 @transaction.atomic
 def update_product(*, product: Product, data: dict) -> Product:
     allowed_fields = {
@@ -211,12 +172,6 @@ def update_product(*, product: Product, data: dict) -> Product:
     }
     if "specs" in data:
         data = {**data, "specs": _clean_specs(data["specs"])}
-    if data.get("category") is not None:
-        _check_category_keeps_kind(product, data["category"])
-    brand = data.get("brand", product.brand)
-    category = data.get("category") or product.category
-    if brand != product.brand or category != product.category:
-        _check_brand_kind(brand, category)
     for field, value in data.items():
         if field in allowed_fields:
             setattr(product, field, value)
@@ -231,7 +186,6 @@ def update_product(*, product: Product, data: dict) -> Product:
     # belongs to each variant, so a product-level price is not applied.
     price_updates = {f: data[f] for f in ("price", "cost_price", "discount_price") if f in data}
     if price_updates and not product.options.exists():
-        check_variant_kind(category=product.category, values=price_updates)
         variants = product.variants.filter(deleted_at__isnull=True)
         if variants.exists():
             for variant in variants:
@@ -285,12 +239,6 @@ def _ensure_no_stock(product: Product, *, variant: ProductVariant | None = None)
     shown = "; ".join(blockers[:MAX_STOCK_BLOCKERS_SHOWN])
     if len(blockers) > MAX_STOCK_BLOCKERS_SHOWN:
         shown += f"; and {len(blockers) - MAX_STOCK_BLOCKERS_SHOWN} more"
-    if is_preorder_category(product.category):
-        raise BusinessRuleViolationError(
-            f"{subject} still has received goods ({shown}). Clear them and resolve the "
-            f"pre-orders holding them before deleting the {noun}.",
-            code="product_stock_in_use",
-        )
     raise BusinessRuleViolationError(
         f"{subject} still has stock ({shown}). Write the stock off under Inventory and "
         f"resolve the orders holding it before deleting the {noun}.",
@@ -336,23 +284,10 @@ def representative_variant(product: Product) -> ProductVariant | None:
     return product.variants.filter(deleted_at__isnull=True).order_by("created_at").first()
 
 
-# Model validation errors on these fields, in this order, get their own code.
-VARIANT_CLEAN_ERROR_CODES = {
-    "preorder_price": "preorder_price_must_be_lower",
-    "preorder_end_date": "preorder_end_date_before_start",
-    "release_date": "release_date_before_preorder_end",
-    "preorder_min_quantity": "invalid_preorder_min_quantity",
-}
-
-
 def _full_clean_variant(variant: ProductVariant) -> None:
     try:
         variant.full_clean()
     except ValidationError as e:
-        error_dict = getattr(e, "message_dict", {})
-        for field, code in VARIANT_CLEAN_ERROR_CODES.items():
-            if field in error_dict:
-                raise BusinessRuleViolationError(error_dict[field][0], code=code) from None
         raise BusinessRuleViolationError(str(e), code="validation_error") from None
 
 
@@ -370,37 +305,9 @@ def create_variant(
     # Wholesale fields
     wholesale_price: Decimal | None = None,
     show_wholesale_price: bool = False,
-    # Pre-order fields
-    is_preorder_enabled: bool = False,
-    preorder_price: Decimal | None = None,
-    preorder_start_date=None,
-    preorder_end_date=None,
-    release_date=None,
-    preorder_stock_limit: int | None = None,
-    preorder_min_quantity: int = 1,
     actor=None,
 ) -> ProductVariant:
     product = lock_product(product)
-    _check_preorder_rules(
-        product=product,
-        enabled=is_preorder_enabled,
-        start_date=preorder_start_date,
-        end_date=preorder_end_date,
-    )
-    check_variant_kind(
-        category=product.category,
-        values={
-            "discount_price": discount_price,
-            "wholesale_price": wholesale_price,
-            "is_preorder_enabled": is_preorder_enabled,
-            "preorder_price": preorder_price,
-            "preorder_start_date": preorder_start_date,
-            "preorder_end_date": preorder_end_date,
-            "release_date": release_date,
-            "preorder_stock_limit": preorder_stock_limit,
-            "preorder_min_quantity": preorder_min_quantity,
-        },
-    )
     # A new variation inherits the product's shared pricing instead of re-entering it.
     if price is None:
         sibling = representative_variant(product)
@@ -441,14 +348,6 @@ def create_variant(
         # Wholesale fields
         wholesale_price=wholesale_price,
         show_wholesale_price=show_wholesale_price,
-        # Pre-order fields
-        is_preorder_enabled=is_preorder_enabled,
-        preorder_price=preorder_price,
-        preorder_start_date=preorder_start_date,
-        preorder_end_date=preorder_end_date,
-        release_date=release_date,
-        preorder_stock_limit=preorder_stock_limit,
-        preorder_min_quantity=preorder_min_quantity,
     )
     _full_clean_variant(variant)
     variant.save()
@@ -484,14 +383,6 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
         # Wholesale fields
         "wholesale_price",
         "show_wholesale_price",
-        # Pre-order fields
-        "is_preorder_enabled",
-        "preorder_price",
-        "preorder_start_date",
-        "preorder_end_date",
-        "release_date",
-        "preorder_stock_limit",
-        "preorder_min_quantity",
     }
     price_fields = {"price", "cost_price", "discount_price", "wholesale_price"}
     changed_fields = [field for field in data if field in allowed_fields]
@@ -512,18 +403,6 @@ def update_variant(*, variant: ProductVariant, data: dict, actor=None) -> Produc
     if new_values is not None:
         variant.title = build_title(new_values)
         changed_fields.append("title")
-    if PREORDER_RULE_FIELDS.intersection(changed_fields):
-        _check_preorder_rules(
-            product=variant.product,
-            enabled=variant.is_preorder_enabled,
-            start_date=variant.preorder_start_date,
-            end_date=variant.preorder_end_date,
-        )
-    # Only what this save sets, so a legacy mixed row can still be cleaned up.
-    check_variant_kind(
-        category=variant.product.category,
-        values={field: data[field] for field in changed_fields if field in data},
-    )
     if changed_fields:
         _full_clean_variant(variant)
         variant.save(update_fields=changed_fields)
@@ -626,13 +505,7 @@ def create_quick_product(
     actor=None,
 ) -> ProductVariant:
     """Create a product plus its first variant in one atomic call — the Stock
-    App's "not found, create it" flow. Stock only: a pre-order product needs
-    its ordering window, which this flow does not take."""
-    if is_preorder_category(category):
-        raise BusinessRuleViolationError(
-            "A pre-order product is created under Pre-orders, not from stock intake.",
-            code="stock_kind_mismatch",
-        )
+    App's "not found, create it" flow."""
     product = create_product(category=category, name=name, description=description)
     return create_variant(
         product=product,

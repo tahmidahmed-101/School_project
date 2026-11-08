@@ -14,8 +14,6 @@ from apps.common.utils.money import quantize
 from apps.orders.constants import PAYMENT_METHODS_BY_KEY, PaymentMethodKey
 from apps.orders.models import Payment, SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
-from apps.orders.selectors.payments import order_deposit_due
-from apps.orders.services.notifications import alert_order_placed
 from apps.orders.services.orders import lock_order
 
 logger = logging.getLogger(__name__)
@@ -31,13 +29,13 @@ COD_COLLECTABLE_STATUSES = frozenset(
 )
 
 
-def _require_enabled_method(method: str, *, kind: str):
+def _require_enabled_method(method: str):
     spec = PAYMENT_METHODS_BY_KEY.get(method)
     if spec is None:
         raise BusinessRuleViolationError(
             f"{method} is not a payment method.", code="unknown_payment_method"
         )
-    if not is_payment_method_enabled(method, kind=kind):
+    if not is_payment_method_enabled(method):
         raise BusinessRuleViolationError(
             f"{spec.label} is switched off.", code="payment_method_disabled"
         )
@@ -88,7 +86,7 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
         )
     if not order.lines.exists():
         raise BusinessRuleViolationError("Cannot place an empty order.", code="empty_order")
-    _require_enabled_method(method, kind=order.order_type)
+    _require_enabled_method(method)
     if method == PaymentMethodKey.COD:
         _refuse_cod_for_advance_only_phone(order)
 
@@ -98,16 +96,10 @@ def record_payment_due(*, order: SalesOrder, method: str) -> Payment:
         method=method,
         status=Payment.Status.PENDING,
     )
-    # A pre-order waits for its deposit whatever the method; the balance is then
-    # collected against this same row.
-    needs_deposit = (
-        order.order_type == SalesOrder.OrderType.PREORDER and order_deposit_due(order) > 0
-    )
-    if method == PaymentMethodKey.COD and not needs_deposit:
+    if method == PaymentMethodKey.COD:
         order.status = SalesOrder.Status.CONFIRMED
         order.save(update_fields=["status"])
         _order_confirmed(order)
-    alert_order_placed(order, method=method)
     return payment
 
 
@@ -174,7 +166,7 @@ def capture_payment(
             f"Enter an amount up to the balance due ({balance}).", code="amount_mismatch"
         )
     method = method or PaymentMethodKey.MANUAL
-    spec = _require_enabled_method(method, kind=order.order_type)
+    spec = _require_enabled_method(method)
     if spec.requires_reference and not reference:
         raise BusinessRuleViolationError(
             f"{spec.label} has no live gateway integration — a payment reference "
@@ -214,7 +206,7 @@ def capture_payment(
         ) from None
     # A pending row dates from the order; the money arrived today.
     post_customer_payment(payment, entry_date=timezone.localdate() if owed else None)
-    if awaiting and order.grand_total - balance + amount >= order_deposit_due(order):
+    if awaiting and order.grand_total - balance + amount >= order.grand_total:
         from apps.orders.services.reservations import reinstate_lapsed_holds
 
         reinstate_lapsed_holds(order)

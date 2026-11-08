@@ -42,27 +42,10 @@ function formatDate(iso: string | null): T | undefined {
   return { en: format("en-GB"), bn: format("bn-BD") };
 }
 
-const CLOSING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
-
-function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
-  const isPreOrder = v.is_preorder_enabled && v.is_preorder_active;
-  const isUpcoming = v.is_preorder_upcoming;
-  // A pre-order product is only ever sold as a pre-order: outside its window it cannot be ordered at all.
-  const inStock = isPreOrder || (kind !== "preorder" && !isUpcoming && v.in_stock);
+function toSkuVariant(v: ApiVariant): SkuVariant {
   const price = toNumber(v.effective_price);
   const list = toNumber(v.price);
   const compareAt = v.compare_at_price ? toNumber(v.compare_at_price) : list > price ? list : undefined;
-
-  let preorderStatus: SkuVariant["preorderStatus"];
-  if (isPreOrder) {
-    const end = v.preorder_end_date ? new Date(v.preorder_end_date).getTime() : NaN;
-    if (v.preorder_remaining === 0) preorderStatus = "sold-out";
-    else preorderStatus = Number.isFinite(end) && end - Date.now() <= CLOSING_SOON_MS ? "closing-soon" : "available";
-  } else if (isUpcoming) {
-    preorderStatus = "upcoming";
-  } else if (kind === "preorder" || (v.is_preorder_enabled && !inStock)) {
-    preorderStatus = "closed";
-  }
 
   return {
     id: v.id,
@@ -71,16 +54,8 @@ function toSkuVariant(v: ApiVariant, kind: Product["kind"]): SkuVariant {
     title: v.title ?? "",
     price,
     compareAtPrice: compareAt && compareAt > price ? compareAt : undefined,
-    salePrice: kind === "stock" && !isPreOrder && v.sale_price ? toNumber(v.sale_price) : undefined,
-    inStock,
-    isPreOrder,
-    preorderEndDate: isPreOrder ? (v.preorder_end_date ?? undefined) : undefined,
-    expectedDelivery: isPreOrder ? formatDate(v.release_date) : undefined,
-    preorderCloses: isPreOrder ? formatDate(v.preorder_end_date) : undefined,
-    maxPreorderQuantity: isPreOrder ? (v.preorder_stock_limit ?? undefined) : undefined,
-    currentPreorderQuantity: isPreOrder ? v.preordered_quantity : undefined,
-    minPreorderQuantity: isPreOrder ? (v.preorder_min_quantity ?? undefined) : undefined,
-    preorderStatus,
+    salePrice: v.sale_price ? toNumber(v.sale_price) : undefined,
+    inStock: v.in_stock,
   };
 }
 
@@ -134,12 +109,11 @@ export function toCategoryInfo(category: ApiCategory, all: ApiCategory[] = []): 
     description: plain(""),
     image: category.image ? normalizeImageUrl(category.image) : CATEGORY_PLACEHOLDER_IMAGE,
     itemCount: category.product_count,
-    type: category.category_type,
   };
 }
 
 export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
-  const skus = (api.variants ?? []).map((v) => toSkuVariant(v, api.kind));
+  const skus = (api.variants ?? []).map(toSkuVariant);
   const preferred = skus.find((v) => v.inStock) ?? skus[0];
   const category = categories.find((c) => c.id === api.category_id);
 
@@ -166,7 +140,6 @@ export function toProduct(api: ApiProduct, categories: ApiCategory[]): Product {
     price: preferred?.price ?? 0,
     compareAtPrice: preferred?.compareAtPrice,
     category: category?.slug ?? "",
-    kind: api.kind,
     categoryName: plain(category?.name ?? ""),
     image: gallery[0]!,
     gallery,

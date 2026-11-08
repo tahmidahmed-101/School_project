@@ -92,8 +92,11 @@ def test_an_old_both_row_can_be_edited_but_never_set_back_to_both(admin_client):
         assert refused.status_code == 400
         assert "placement" in refused.data["error"]["fields"]
 
-    moved = admin_client.patch(f"{SLIDES}{slide.id}/", {"placement": "preorder"}, format="json")
-    assert moved.data["data"]["placement"] == "preorder"
+    moved = admin_client.patch(f"{SLIDES}{slide.id}/", {"placement": "home"}, format="json")
+    assert moved.data["data"]["placement"] == "home"
+    # The pre-order placement is gone and refused like any unknown one.
+    refused = admin_client.patch(f"{SLIDES}{slide.id}/", {"placement": "preorder"}, format="json")
+    assert refused.status_code == 400
 
 
 def test_hero_slide_needs_an_image_on_create(admin_client):
@@ -197,12 +200,12 @@ def test_promo_line_crud(admin_client):
 
     patched = admin_client.patch(
         f"{LINES}{line.id}/",
-        {"sort_order": 4, "is_active": False, "placement": "preorder"},
+        {"sort_order": 4, "is_active": False, "placement": "home"},
         format="json",
     )
     assert patched.status_code == 200
     assert patched.data["data"]["sort_order"] == 4
-    assert patched.data["data"]["placement"] == "preorder"
+    assert patched.data["data"]["placement"] == "home"
     assert patched.data["data"]["text_en"] == "Free delivery"
 
     listed = admin_client.get(LINES)
@@ -222,7 +225,7 @@ def test_promo_line_needs_english_text_but_not_bangla(admin_client):
     assert "placement" in no_shop.data["error"]["fields"]
 
     english_only = admin_client.post(
-        LINES, {"text_en": "English only", "placement": "preorder"}, format="json"
+        LINES, {"text_en": "English only", "placement": "home"}, format="json"
     )
     assert english_only.status_code == 201
     assert english_only.data["data"]["text_bn"] == ""

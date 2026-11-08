@@ -3,16 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, PackageCheck, ShoppingCart, Zap, Sparkles, Calendar } from "lucide-react";
+import { Heart, PackageCheck, ShoppingCart, Zap } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
-import { usePreOrderModal } from "@/modules/preorder";
 import { photo } from "@/lib/photo";
-import { getDiscountPercent, getMinOrderQuantity, isPreOrderSoldOut, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent } from "@/lib/product";
 import { soleVariant } from "@/lib/variants";
-import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 import { Button, buttonClass } from "@/design-system/ui/Button";
 
@@ -26,15 +24,12 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const router = useRouter();
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
-  const { openPreOrderModal } = usePreOrderModal();
 
   const isWishlisted = isInWishlist(product.id);
 
   const discountPercent = getDiscountPercent(product);
-  const isSoldOut = isPreOrderSoldOut(product);
-  const isOutOfStock = !product.isPreOrder && !product.inStock;
+  const isOutOfStock = !product.inStock;
   const needsChoice = !soleVariant(product);
-  const minQuantity = getMinOrderQuantity(product);
 
   const buyNow = () => {
     if (addItem(product, 1, undefined, { openDrawer: false })) router.push("/checkout");
@@ -56,13 +51,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           />
         </Link>
 
-        {/* Badges: Preorder Badge or Discount Badge */}
+        {/* Discount Badge */}
         <div className="pointer-events-none absolute left-1 top-1 z-10 flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-1">
-          {product.isPreOrder ? (
-            <PreOrderBadge status={product.preorderStatus} size="sm" />
-          ) : (
-            discountPercent && <DiscountBadge percent={discountPercent} />
-          )}
+          {discountPercent && <DiscountBadge percent={discountPercent} />}
         </div>
 
         {/* Wishlist Button (Top Right) */}
@@ -98,23 +89,6 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               {product.productType && ` (${t(product.productType)})`}
             </p>
           )}
-
-          {/* Pre-order Expected Delivery Info: short date only, wraps instead of overflowing */}
-          {product.isPreOrder && product.expectedDelivery && (
-            <div
-              className="mx-auto mt-0.5 flex w-full max-w-full items-start justify-center gap-1 text-xs font-medium leading-snug text-gold-800"
-              title={`${ui("expectedDelivery")}: ${t(product.expectedDelivery)}`}
-            >
-              <Calendar className="h-3 w-3 shrink-0 translate-y-px text-gold-700" />
-              <span className="max-w-full break-words text-center">{t(product.expectedDelivery)}</span>
-            </div>
-          )}
-
-          {minQuantity > 1 && (
-            <p className="mx-auto mt-1 w-fit rounded-full bg-gold-50 px-2 py-0.5 text-2xs font-semibold leading-snug text-gold-900 ring-1 ring-gold-200">
-              {ui("preOrderMinQuantity").replace("{count}", n(minQuantity))}
-            </p>
-          )}
         </div>
 
         {/* Price & Actions (centered, stacked) */}
@@ -128,9 +102,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
           {isOutOfStock ? (
             <Button variant="muted" size="xs" fullWidth disabled>
-              {ui(unavailableLabel(product))}
+              {ui("outOfStock")}
             </Button>
-          ) : needsChoice && !isSoldOut ? (
+          ) : needsChoice ? (
             <Link
               href={`/product/${product.slug}`}
               className={buttonClass({ size: "xs", fullWidth: true })}
@@ -139,22 +113,6 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               <PackageCheck className="h-3.5 w-3.5 shrink-0" />
               {ui("orderNow")}
             </Link>
-          ) : product.isPreOrder ? (
-            isSoldOut ? (
-              <Button variant="muted" size="xs" fullWidth disabled title={ui("preOrderCapacityReached")}>
-                {ui("preOrderUnavailable")}
-              </Button>
-            ) : (
-              <Button
-                size="xs"
-                fullWidth
-                onClick={() => openPreOrderModal(product, minQuantity)}
-                aria-label={`${ui("preOrderNow")} - ${t(product.name)}`}
-                leadingIcon={<Sparkles className="h-3.5 w-3.5 shrink-0" />}
-              >
-                {ui("preOrderNow")}
-              </Button>
-            )
           ) : (
             <div className="flex w-full items-center gap-1.5">
               <button

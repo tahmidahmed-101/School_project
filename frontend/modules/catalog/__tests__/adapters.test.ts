@@ -1,16 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.kullmart.com/api/v1/public" } }));
+vi.mock("@/lib/env", () => ({ publicEnv: { apiUrl: "https://api.schoolproject.com/api/v1/public" } }));
 
 const { normalizeImageUrl, toBundleItems, toCategoryInfo, toProduct } = await import("../data/adapters");
 
 describe("normalizeImageUrl", () => {
   it("puts media paths on the API origin", () => {
-    expect(normalizeImageUrl(" /media/uploads/a.jpg ")).toBe("https://api.kullmart.com/media/uploads/a.jpg");
+    expect(normalizeImageUrl(" /media/uploads/a.jpg ")).toBe("https://api.schoolproject.com/media/uploads/a.jpg");
   });
 
   it("keeps absolute URLs and static paths as they are", () => {
-    expect(normalizeImageUrl("https://api.kullmart.com/media/b.jpg")).toBe("https://api.kullmart.com/media/b.jpg");
+    expect(normalizeImageUrl("https://api.schoolproject.com/media/b.jpg")).toBe(
+      "https://api.schoolproject.com/media/b.jpg",
+    );
     expect(normalizeImageUrl("https://picsum.photos/seed/x/800")).toBe("https://picsum.photos/seed/x/800");
     expect(normalizeImageUrl("/catalog/c.jpg")).toBe("/catalog/c.jpg");
   });
@@ -27,7 +29,7 @@ describe("toCategoryInfo", () => {
     const info = toCategoryInfo({ ...category, product_count: 7, image: "/media/shirt.jpg" });
 
     expect(info.itemCount).toBe(7);
-    expect(info.image).toBe("https://api.kullmart.com/media/shirt.jpg");
+    expect(info.image).toBe("https://api.schoolproject.com/media/shirt.jpg");
   });
 
   it("shows the placeholder for a counted category without a picture", () => {
@@ -46,7 +48,7 @@ describe("toCategoryInfo", () => {
   });
 });
 
-describe("toProduct pre-order state", () => {
+describe("toProduct stock state", () => {
   const variant = (fields: Record<string, unknown>) => ({
     id: "v1",
     sku: "SKU-1",
@@ -56,20 +58,11 @@ describe("toProduct pre-order state", () => {
     in_stock: false,
     color: "Black",
     size: "M",
-    is_preorder_enabled: true,
-    is_preorder_active: false,
-    is_preorder_upcoming: false,
-    preorder_start_date: null,
-    preorder_end_date: null,
-    release_date: null,
-    preorder_stock_limit: null,
-    preordered_quantity: 0,
-    preorder_remaining: null,
     ...fields,
   });
-  const product = (fields: Record<string, unknown>, kind?: string) =>
+  const product = (fields: Record<string, unknown>) =>
     toProduct(
-      { id: "p1", category_id: "c1", kind, name: "Boot", slug: "boot", variants: [variant(fields)] } as never,
+      { id: "p1", category_id: "c1", kind: "stock", name: "Boot", slug: "boot", variants: [variant(fields)] } as never,
       [],
     );
 
@@ -78,29 +71,9 @@ describe("toProduct pre-order state", () => {
     expect(product({ in_stock: true }).skuVariants?.[0]).toMatchObject({ optionValueIds: [], title: "" });
   });
 
-  it("marks a pre-order that has not opened as upcoming and not buyable", () => {
-    const shown = product({ is_preorder_upcoming: true, in_stock: true }, "preorder");
-    expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "upcoming" });
-  });
-
-  it("sells an ended pre-order from stock, and calls it closed when there is none", () => {
-    expect(product({ in_stock: true })).toMatchObject({ isPreOrder: false, inStock: true });
-    expect(product({ in_stock: true }).preorderStatus).toBeUndefined();
-    expect(product({ in_stock: false })).toMatchObject({ inStock: false, preorderStatus: "closed" });
-  });
-
-  it("never sells a pre-order product from stock once its window has ended", () => {
-    const shown = product({ in_stock: true }, "preorder");
-    expect(shown).toMatchObject({ kind: "preorder", isPreOrder: false, inStock: false, preorderStatus: "closed" });
-    expect(shown.stockCount).toBe(0);
-  });
-
-  it("carries an open pre-order's minimum quantity, and none for a closed one or an older API", () => {
-    const open = product({ is_preorder_active: true, preorder_min_quantity: 3 }, "preorder");
-    expect(open).toMatchObject({ isPreOrder: true, minPreorderQuantity: 3 });
-    expect(open.skuVariants?.[0]?.minPreorderQuantity).toBe(3);
-    expect(product({ preorder_min_quantity: 3 }, "preorder").minPreorderQuantity).toBeUndefined();
-    expect(product({ is_preorder_active: true }, "preorder").minPreorderQuantity).toBeUndefined();
+  it("is buyable while the API says the SKU is in stock", () => {
+    expect(product({ in_stock: true })).toMatchObject({ inStock: true });
+    expect(product({ in_stock: false })).toMatchObject({ inStock: false, stockCount: 0 });
   });
 });
 
@@ -168,10 +141,10 @@ describe("toProduct options", () => {
 
   it("groups photos by the option value they belong to", () => {
     expect(shown.gallery).toEqual([
-      "https://api.kullmart.com/media/front.jpg",
-      "https://api.kullmart.com/media/blue.jpg",
+      "https://api.schoolproject.com/media/front.jpg",
+      "https://api.schoolproject.com/media/blue.jpg",
     ]);
-    expect(shown.galleryByValue).toEqual({ "legacy:colour:blue": ["https://api.kullmart.com/media/blue.jpg"] });
+    expect(shown.galleryByValue).toEqual({ "legacy:colour:blue": ["https://api.schoolproject.com/media/blue.jpg"] });
   });
 
   it("carries the highlights, leaving blank ones out", () => {
@@ -205,7 +178,7 @@ describe("toBundleItems", () => {
     expect(shown).toEqual({
       slug: "churi",
       name: { en: "churi", bn: "" },
-      image: "https://api.kullmart.com/media/uploads/a.jpg",
+      image: "https://api.schoolproject.com/media/uploads/a.jpg",
       quantity: 2,
       unitPrice: 150,
     });

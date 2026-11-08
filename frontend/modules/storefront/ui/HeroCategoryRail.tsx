@@ -19,13 +19,12 @@ function revealGroup(toggle: HTMLElement) {
 }
 
 /** Vertical "Shop by Category" list shown on the left of the hero on desktop. */
-export function HeroCategoryRail({ preorder = false }: { preorder?: boolean }) {
+export function HeroCategoryRail() {
   const { t, ui } = useLang();
   const { categories } = useCatalog();
-  const type = preorder ? "preorder" : "stock";
-  const groups = categoryGroups(categories.filter((category) => category.type === type));
+  const groups = categoryGroups(categories);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const hrefOf = (slug: string) => (preorder ? `/shop?category=${slug}&type=preorder` : `/shop?category=${slug}`);
+  const hrefOf = (slug: string) => `/shop?category=${slug}`;
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-ink-100 bg-canvas p-2.5 shadow-sm sm:rounded-3xl sm:p-3">

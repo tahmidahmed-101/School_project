@@ -64,7 +64,6 @@ class AdminCategoryListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, G
                 name=data["name"],
                 parent=parent,
                 description=data.get("description", ""),
-                category_type=data.get("category_type"),
                 is_active=data.get("is_active", True),
             )
         except DomainError as exc:

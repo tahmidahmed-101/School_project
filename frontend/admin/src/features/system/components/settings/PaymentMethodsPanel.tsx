@@ -6,18 +6,16 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPaymentMethods, updatePaymentMethod } from "@/features/system/slices/businessSettingsSlice"
-import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { SectionState } from "./SectionState"
 
 // The methods the storefront checkout offers that are paid to a shop number.
 const PAY_TO_METHODS = new Set(["bkash", "nagad"])
 
-export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; kind: Kind }) {
+export function PaymentMethodsPanel({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
-  const { data: loaded, status, error } = useAppSelector((state) => state.businessSettings.paymentMethods)
+  const { data, status, error } = useAppSelector((state) => state.businessSettings.paymentMethods)
   const [saving, setSaving] = useState<string | null>(null)
-  const data = loaded.filter((method) => method.kind === kind)
 
   if (!data.length) {
     return (
@@ -25,7 +23,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
         status={status}
         error={error}
         hasData={false}
-        onRetry={() => dispatch(fetchPaymentMethods(kind))}
+        onRetry={() => dispatch(fetchPaymentMethods())}
         label="payment methods"
       />
     )
@@ -34,7 +32,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
   const toggle = async (key: string, label: string, is_enabled: boolean) => {
     setSaving(key)
     try {
-      await dispatch(updatePaymentMethod({ key, kind, is_enabled })).unwrap()
+      await dispatch(updatePaymentMethod({ key, is_enabled })).unwrap()
       toast.success(`${label} ${is_enabled ? "enabled" : "disabled"}`)
     } catch (err) {
       toast.error(getApiErrorMessage(err, `Couldn't update ${label}`))
@@ -45,7 +43,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
 
   const savePayTo = async (key: string, label: string, pay_to: string) => {
     try {
-      await dispatch(updatePaymentMethod({ key, kind, pay_to })).unwrap()
+      await dispatch(updatePaymentMethod({ key, pay_to })).unwrap()
       toast.success(`${label} number saved`)
     } catch (err) {
       toast.error(getApiErrorMessage(err, `Couldn't update ${label}`))
@@ -55,12 +53,8 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{kind === "preorder" ? "Pre-order payment methods" : "Payment methods"}</CardTitle>
-        <CardDescription>
-          {kind === "preorder"
-            ? "Methods switched off can't be chosen at a pre-order checkout or when recording a pre-order payment. Stock orders have their own list in Settings."
-            : "Methods switched off can't be chosen at checkout or when recording a payment. Pre-orders have their own list in Pre-order Settings."}
-        </CardDescription>
+        <CardTitle>Payment methods</CardTitle>
+        <CardDescription>Methods switched off can't be chosen at checkout or when recording a payment.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {data.map((method, index) => {
@@ -70,7 +64,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
               {index > 0 && <Separator />}
               <div className="flex items-start justify-between gap-4 px-6 py-4">
                 <div className="space-y-0.5">
-                  <label htmlFor={`pm-${kind}-${method.key}`} className="text-sm font-medium">
+                  <label htmlFor={`pm-${method.key}`} className="text-sm font-medium">
                     {method.label}
                   </label>
                   <p className="text-sm text-muted-foreground">{method.description}</p>
@@ -93,7 +87,7 @@ export function PaymentMethodsPanel({ canManage, kind }: { canManage: boolean; k
                   )}
                 </div>
                 <Switch
-                  id={`pm-${kind}-${method.key}`}
+                  id={`pm-${method.key}`}
                   checked={method.is_enabled}
                   disabled={!canManage || locked || saving === method.key}
                   onCheckedChange={(checked) => toggle(method.key, method.label, checked)}

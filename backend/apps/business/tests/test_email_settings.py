@@ -41,7 +41,7 @@ COMPLETE = {
     "security": "starttls",
     "username": "mailer@example.com",
     "password": PASSWORD,
-    "from_name": "Kull Mart",
+    "from_name": "School Project",
     "from_email": "orders@example.com",
 }
 
@@ -144,11 +144,11 @@ def test_other_fields_change_without_sending_the_password_again(admin_client):
     _save(admin_client)
     ciphertext = SmtpSetting.objects.get().password_ciphertext
 
-    response = admin_client.patch(URL, {"from_name": "Kull Mart Orders"}, format="json")
+    response = admin_client.patch(URL, {"from_name": "School Project Orders"}, format="json")
 
     assert response.status_code == 200
     row = SmtpSetting.objects.get()
-    assert (row.from_name, row.password_ciphertext) == ("Kull Mart Orders", ciphertext)
+    assert (row.from_name, row.password_ciphertext) == ("School Project Orders", ciphertext)
 
 
 @pytest.mark.parametrize("field", ["host", "username"])
@@ -198,7 +198,7 @@ def test_a_relay_without_a_login_needs_no_password_or_key(admin_client, settings
     ("overrides", "code"),
     [
         ({"host": "localhost"}, "invalid_host"),
-        ({"host": "kull-mart-db"}, "invalid_host"),
+        ({"host": "school-project-db"}, "invalid_host"),
         ({"host": "https://smtp.example.com"}, "invalid_host"),
         ({"host": "10.0.0.5"}, "host_not_allowed"),
         ({"host": "127.0.0.1"}, "host_not_allowed"),

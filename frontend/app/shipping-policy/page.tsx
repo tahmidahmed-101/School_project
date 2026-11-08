@@ -5,11 +5,11 @@ import { pageMetadata } from "@/modules/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Shipping Policy",
-  description: "Kull Mart's shipping policy, as published by the store.",
+  description: "School Project's shipping policy, as published by the store.",
   path: "/shipping-policy",
 });
 
-export default async function KullMartShippingPolicyPage() {
+export default async function SchoolProjectShippingPolicyPage() {
   const policy = await getPublishedPolicy("shipping");
   if (!policy) notFound();
   return <PolicyView policy={policy} path="/shipping-policy" />;

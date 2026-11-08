@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FieldError } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
-import { DateField, SelectField, TextField } from "@/components/common/form-fields"
+import { DateField, TextField } from "@/components/common/form-fields"
 import { useAppDispatch } from "@/app/hooks"
 import { moneySchema, reportFormError } from "@/lib/forms"
 import { formatCurrency, todayLocalISODate } from "@/lib/format"
@@ -21,13 +21,11 @@ import { cn } from "@/lib/utils"
 import { createJournalEntry } from "../slices/journalEntrySlice"
 import type { Account } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-import { BELONGS_TO_OPTIONS, kindFromBelongsTo } from "../utils"
 
 const schema = z
   .object({
     entry_date: z.string().min(1, "Pick a date"),
     description: z.string(),
-    belongs_to: z.enum(["company", "stock", "preorder"]),
     lines: z
       .array(
         z.object({
@@ -60,12 +58,10 @@ export function JournalEntryFormDialog({
   open,
   onOpenChange,
   accounts,
-  defaultBelongsTo = "company",
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   accounts: Account[]
-  defaultBelongsTo?: FormValues["belongs_to"]
 }) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -81,7 +77,6 @@ export function JournalEntryFormDialog({
     defaultValues: {
       entry_date: todayLocalISODate(),
       description: "",
-      belongs_to: defaultBelongsTo,
       lines: [emptyLine, emptyLine],
     },
   })
@@ -93,11 +88,10 @@ export function JournalEntryFormDialog({
       reset({
         entry_date: todayLocalISODate(),
         description: "",
-        belongs_to: defaultBelongsTo,
         lines: [emptyLine, emptyLine],
       })
     }
-  }, [open, reset, defaultBelongsTo])
+  }, [open, reset])
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.is_active), [accounts])
   const totalDebit = sumTyped((lines ?? []).map((l) => l.debit))
@@ -111,7 +105,6 @@ export function JournalEntryFormDialog({
         createJournalEntry({
           entry_date: values.entry_date,
           description: values.description.trim(),
-          kind: kindFromBelongsTo(values.belongs_to),
           lines: values.lines.map((l) => ({
             account_id: l.account_id,
             debit: l.debit || "0",
@@ -125,7 +118,7 @@ export function JournalEntryFormDialog({
     } catch (err) {
       reportFormError(err, {
         setError,
-        fields: ["entry_date", "description", "belongs_to", "lines"],
+        fields: ["entry_date", "description", "lines"],
         fallback: "Failed to post journal entry",
       })
     }
@@ -158,14 +151,6 @@ export function JournalEntryFormDialog({
           id="je-desc"
           placeholder="e.g. Owner capital injection"
           {...register("description")}
-        />
-        <SelectField
-          control={control}
-          name="belongs_to"
-          label="Belongs to"
-          id="je-belongs-to"
-          options={BELONGS_TO_OPTIONS}
-          description="Pick stock or pre-order only when the entry is for that half alone."
         />
       </div>
 

@@ -1,6 +1,6 @@
 # E-Commerce Admin Dashboard
 
-Admin dashboard for the **kull-mart** backend (Django/DRF): sales, catalog, inventory,
+Admin dashboard for the **school-project** backend (Django/DRF): sales, catalog, inventory,
 purchasing, accounting, customers, marketing, risk and store settings.
 
 Built with React 19, TypeScript, Vite, Redux Toolkit, React Router, shadcn/ui, Tailwind CSS 4
@@ -18,7 +18,7 @@ and Recharts.
    For a local admin login and demo data:
 
    ```bash
-   python manage.py seed_demo            # everything: catalogue, orders, pre-orders, home content, logins
+   python manage.py seed_demo            # everything: catalogue, orders, home content, logins
    python manage.py seed_demo --fresh    # wipe the demo rows and rebuild
    # Logins, password Demo12345!: admin@simpleadmin.demo, staff@simpleadmin.demo,
    # and every seeded customer (the command prints one).
@@ -55,7 +55,7 @@ and Recharts.
 
   `src/app/modules.ts` and `src/app/store.ts` collect them; the router, sidebar and global
   search are generated from the registry, so adding a page never touches shared files.
-- **API layer** — `src/lib/api/client.ts` (axios with token refresh and kull-mart error
+- **API layer** — `src/lib/api/client.ts` (axios with token refresh and school-project error
   normalisation), `src/lib/api/envelope.ts` (response unwrapping),
   `src/lib/sliceFactory.ts` (CRUD slices with stale-response protection and per-request
   status).
@@ -71,5 +71,5 @@ and Recharts.
 
 `npm run cf:deploy` builds with `VITE_API_BASE_URL` set to the production API and runs
 `wrangler deploy`. `wrangler.jsonc` serves `dist/` as static assets with a single-page-app
-fallback on the `admin.kullmart.com` custom domain. The dashboard's origin must be in the
+fallback on the `admin.schoolproject.com` custom domain. The dashboard's origin must be in the
 backend's `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS`.

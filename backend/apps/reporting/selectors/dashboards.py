@@ -19,7 +19,6 @@ from apps.common.utils.dates import day_after, day_start
 from apps.inventory.models import StockItem
 from apps.inventory.selectors.stock import stock_items_list
 from apps.orders.models import Payment, SalesOrder, SalesOrderLine, Shipment
-from apps.orders.selectors.preorder_demand import preorder_book_summary
 
 # Pure read layer — every function here reuses selectors/models from the
 # phases already built rather than introducing new tables.
@@ -620,8 +619,7 @@ _DASHBOARD_CACHE_TTL_SECONDS = 30
 
 def dashboard_data(*, start: date, end: date, kind: str | None = None) -> dict:
     """The full admin dashboard payload for a window, for one kind or, with no
-    kind, for the whole shop. The open pre-order book rides along unless the
-    answer is for stock only.
+    kind, for the whole shop.
 
     Cached briefly per `(start, end)`: the section builders are re-runnable on
     every request otherwise (the previous window is recomputed for KPIs, the
@@ -649,7 +647,5 @@ def dashboard_data(*, start: date, end: date, kind: str | None = None) -> dict:
         "fulfillment": fulfillment_summary(start=start, end=end, kind=kind),
         "ticker": ticker_items(start=start, end=end, kind=kind, _memo=memo),
     }
-    if kind != SalesOrder.OrderType.STOCK:
-        payload["preorder"] = preorder_book_summary()
     cache.set(key, payload, _DASHBOARD_CACHE_TTL_SECONDS)
     return payload

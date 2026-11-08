@@ -10,35 +10,23 @@ import { FormField, TextField } from "@/components/common/form-fields"
 import { ImagePicker } from "@/components/common/ImagePicker"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteHeroSlide, fetchHeroSlides, saveHeroSlide } from "@/features/system/slices/businessSettingsSlice"
-import type { HeroSlide, ShopPlacement } from "@/features/system/types"
+import type { HeroSlide } from "@/features/system/types"
 import { getApiFieldErrors } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
 import { ContentListCard } from "./ContentListCard"
 import { onShop } from "./placement"
 
-const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
-  home: {
-    title: "Hero Slides",
-    description:
-      "The large banners at the top of the storefront. The storefront shows its built-in slides until at least one active slide exists.",
-  },
-  preorder: {
-    title: "Pre-order Hero Slides",
-    description: "The large banners at the top of the pre-order shop.",
-  },
-}
-
 const slideName = (slide: HeroSlide) => slide.title_en || slide.alt_text || "Untitled slide"
 
-export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; placement: ShopPlacement }) {
+export function HeroSlidesCard({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
   const { data: allSlides, status, error } = useAppSelector((state) => state.businessSettings.heroSlides)
-  const data = useMemo(() => onShop(allSlides, placement), [allSlides, placement])
+  const data = useMemo(() => onShop(allSlides), [allSlides])
 
   return (
     <ContentListCard<HeroSlide>
-      title={CARD_COPY[placement].title}
-      description={CARD_COPY[placement].description}
+      title="Hero Slides"
+      description="The large banners at the top of the storefront. The storefront shows its built-in slides until at least one active slide exists."
       addLabel="Add slide"
       canManage={canManage}
       items={data}
@@ -65,13 +53,12 @@ export function HeroSlidesCard({ canManage, placement }: { canManage: boolean; p
       deleteError="Failed to delete slide"
       emptyIcon={Images}
       emptyTitle="No hero slides"
-      emptyDescription={placement === "home" ? "The storefront is showing its built-in slides." : undefined}
+      emptyDescription="The storefront is showing its built-in slides."
       renderForm={(form) => (
         <HeroSlideFormDialog
           open={form.open}
           onOpenChange={form.onOpenChange}
           slide={form.editing}
-          placement={placement}
           nextSortOrder={form.nextSortOrder}
         />
       )}
@@ -95,13 +82,11 @@ function HeroSlideFormDialog({
   open,
   onOpenChange,
   slide,
-  placement,
   nextSortOrder,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   slide: HeroSlide | null
-  placement: ShopPlacement
   nextSortOrder: number
 }) {
   const dispatch = useAppDispatch()
@@ -159,7 +144,7 @@ function HeroSlideFormDialog({
       await dispatch(
         saveHeroSlide({
           id: slide?.id,
-          values: { ...values, ...(slide ? {} : { placement }), sort_order: Number(values.sort_order) },
+          values: { ...values, ...(slide ? {} : { placement: "home" }), sort_order: Number(values.sort_order) },
           image: imageFile,
         })
       ).unwrap()

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from apps.accounting.models import TaxRate
 from apps.accounts.factories import AddressFactory, CustomerUserFactory
@@ -12,7 +10,6 @@ from apps.catalog.factories import BundleItemFactory, ProductVariantFactory
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.inventory.constants import MovementType
 from apps.inventory.selectors.stock import get_stock_item
-from apps.inventory.selectors.warehouse import get_or_create_default_warehouse
 from apps.inventory.services.stock import record_movement
 from apps.logistics.factories import CarrierFactory, ShippingRateFactory, ShippingZoneFactory
 from apps.orders.factories import SalesOrderFactory
@@ -27,7 +24,6 @@ from apps.orders.services.orders import (
     update_order_line,
 )
 from apps.orders.services.payments import capture_payment
-from apps.orders.services.preorder_allocation import allocate_preorder_stock
 from apps.orders.services.returns import approve_rma, create_rma, grade_rma_line, receive_rma
 from apps.orders.services.shipments import create_shipment
 
@@ -70,51 +66,6 @@ def test_full_order_lifecycle_reserves_ships_and_updates_stock():
     cart.refresh_from_db()
     assert cart.status == SalesOrder.Status.SHIPPED
     assert shipment.lines.count() == 1
-
-
-def test_preorder_line_ships_only_after_arrived_stock_is_allocated():
-    """checkout() holds no stock for a pre-order line, so nothing can ship
-    until goods arrive and are set aside for the order; shipping then moves
-    stock exactly like a stock line."""
-    customer = CustomerUserFactory()
-    now = timezone.now()
-    variant = ProductVariantFactory(
-        product__category__category_type="preorder",
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=1),
-    )
-
-    cart = get_or_create_cart(customer)
-    add_line(order=cart, variant=variant, quantity=3)
-    assert cart.lines.first().is_preorder is True
-
-    order = checkout(order=cart)
-    assert order.status == SalesOrder.Status.AWAITING_PAYMENT
-
-    capture_payment(order=order, amount=order.grand_total)
-    order.refresh_from_db()
-
-    order_line = order.lines.get()
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        create_shipment(order=order, lines=[{"order_line": order_line, "quantity": 3}])
-    assert exc.value.code == "preorder_not_allocated"
-
-    get_or_create_default_warehouse("preorder")
-    record_movement(
-        variant=variant,
-        movement_type=MovementType.PURCHASE_IN,
-        quantity=3,
-        unit_cost=Decimal("5.00"),
-    )
-    allocate_preorder_stock()
-    shipment = create_shipment(order=order, lines=[{"order_line": order_line, "quantity": 3}])
-
-    order.refresh_from_db()
-    assert order.status == SalesOrder.Status.SHIPPED
-    assert shipment.lines.count() == 1
-    stock_item = get_stock_item(variant=variant)
-    assert (stock_item.quantity_on_hand, stock_item.quantity_reserved) == (0, 0)
 
 
 def test_checkout_rejects_empty_cart():

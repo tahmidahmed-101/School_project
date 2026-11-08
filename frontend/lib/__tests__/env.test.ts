@@ -26,8 +26,8 @@ describe("publicEnv", () => {
   });
 
   it("reduces the site URL to its origin", async () => {
-    const env = await load({ NEXT_PUBLIC_SITE_URL: "https://kullmart.com/some/path/" });
-    expect(env.siteUrl).toBe("https://kullmart.com");
+    const env = await load({ NEXT_PUBLIC_SITE_URL: "https://schoolproject.com/some/path/" });
+    expect(env.siteUrl).toBe("https://schoolproject.com");
   });
 
   it("strips trailing slashes from the API URL but keeps its path", async () => {

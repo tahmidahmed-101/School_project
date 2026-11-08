@@ -18,9 +18,7 @@ def test_manual_override_always_wins():
     ShippingRateFactory(zone=zone, carrier=cheap, base_charge=Decimal("50.00"))
     ShippingRateFactory(zone=zone, carrier=expensive, base_charge=Decimal("500.00"))
 
-    selection = select_courier(
-        kind="stock", zone=zone, weight=Decimal("1"), override_carrier=expensive
-    )
+    selection = select_courier(zone=zone, weight=Decimal("1"), override_carrier=expensive)
 
     assert selection.carrier == expensive
     assert selection.reason == "manual_override"
@@ -33,7 +31,7 @@ def test_picks_the_cheapest_carrier_with_a_live_quote():
     ShippingRateFactory(zone=zone, carrier=cheap, base_charge=Decimal("50.00"))
     ShippingRateFactory(zone=zone, carrier=expensive, base_charge=Decimal("500.00"))
 
-    selection = select_courier(kind="stock", zone=zone, weight=Decimal("0"))
+    selection = select_courier(zone=zone, weight=Decimal("0"))
 
     assert selection.carrier == cheap
     assert selection.reason == "lowest_cost"
@@ -47,7 +45,7 @@ def test_skips_inactive_carriers():
     ShippingRateFactory(zone=zone, carrier=cheap, base_charge=Decimal("10.00"))
     ShippingRateFactory(zone=zone, carrier=other, base_charge=Decimal("500.00"))
 
-    selection = select_courier(kind="stock", zone=zone, weight=Decimal("0"))
+    selection = select_courier(zone=zone, weight=Decimal("0"))
 
     assert selection.carrier == other
 
@@ -57,4 +55,4 @@ def test_raises_when_no_carrier_quotes_this_zone():
     CarrierFactory()
 
     with pytest.raises(BusinessRuleViolationError):
-        select_courier(kind="stock", zone=zone, weight=Decimal("1"))
+        select_courier(zone=zone, weight=Decimal("1"))

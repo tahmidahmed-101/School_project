@@ -21,11 +21,8 @@ def generate_document_number(prefix: str) -> str:
     return f"{prefix}-{secrets.randbelow(10**9):09d}"
 
 
-def generate_order_number(kind: str = "stock") -> str:
-    """Generate an order number with the correct prefix for the order kind.
-
-    Stock orders use SO-<9 digits>, pre-orders use PRE-<9 digits>. Not
-    guaranteed unique on its own — callers retry on collision.
+def generate_order_number() -> str:
+    """Generate an order number: SO-<9 digits>. Not guaranteed unique on its
+    own — callers retry on collision.
     """
-    prefix = "PRE" if kind == "preorder" else "SO"
-    return generate_document_number(prefix)
+    return generate_document_number("SO")

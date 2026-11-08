@@ -15,9 +15,6 @@ export interface ProductOption {
 }
 
 /** One purchasable SKU from the API (one value of every option). Checkout needs its `id`. */
-/** "upcoming" and "closed" are pre-orders that cannot be placed right now. */
-export type PreorderStatus = "available" | "closing-soon" | "sold-out" | "upcoming" | "closed";
-
 export interface SkuVariant {
   id: string;
   sku: string;
@@ -28,18 +25,8 @@ export interface SkuVariant {
   compareAtPrice?: number;
   /** Set when a running sale lowers this SKU's price. */
   salePrice?: number;
-  /** Purchasable right now: in stock, or inside an active pre-order window. */
+  /** Purchasable right now. */
   inStock: boolean;
-  isPreOrder: boolean;
-  preorderEndDate?: string;
-  expectedDelivery?: T;
-  preorderCloses?: T;
-  /** Pre-order cap; undefined when the pre-order has no limit. */
-  maxPreorderQuantity?: number;
-  currentPreorderQuantity?: number;
-  /** Fewest units one pre-order may place; undefined on a stock SKU. */
-  minPreorderQuantity?: number;
-  preorderStatus?: PreorderStatus;
 }
 
 export interface ProductSpec {
@@ -108,19 +95,6 @@ export interface Product {
   showPriceReport?: boolean;
   /** What a combo is made of (detail endpoint only); undefined for an ordinary product. */
   bundleItems?: BundleItem[];
-  /** Which shop the product belongs to, from its category. */
-  kind: "stock" | "preorder";
-  // Pre-order attributes
-  isPreOrder?: boolean;
-  preorderEndDate?: string;
-  expectedDeliveryStart?: string;
-  expectedDeliveryEnd?: string;
-  expectedDelivery?: T;
-  preorderCloses?: T;
-  maxPreorderQuantity?: number;
-  currentPreorderQuantity?: number;
-  minPreorderQuantity?: number;
-  preorderStatus?: PreorderStatus;
 }
 
 export interface CategoryInfo {
@@ -135,12 +109,10 @@ export interface CategoryInfo {
   description: T;
   image: string;
   itemCount: number;
-  /** Stock vs pre-order category tree; a subcategory shares its root ancestor's type. */
-  type: "stock" | "preorder";
 }
 
 export interface CartItem {
-  /** Snapshot of the product with the chosen SKU's price / stock / pre-order state applied. */
+  /** Snapshot of the product with the chosen SKU's price / stock state applied. */
   product: Product;
   quantity: number;
   variantTitle?: string;
@@ -176,15 +148,12 @@ export interface OrderResult {
     quantity: number;
     unitPrice: number;
     total: number;
-    isPreOrder: boolean;
   }[];
   subtotal: number;
   tax: number;
   shipping: number;
   discount: number;
   total: number;
-  isPreOrderOrder: boolean;
-  depositDue: number;
   payTo: string;
   couponCode: string | null;
   shipments: { id: string; carrier: string | null; trackingNumber: string; status: string }[];

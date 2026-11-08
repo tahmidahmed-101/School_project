@@ -16,7 +16,6 @@ class JournalEntry(FullAuditModel):
 
     class Kind(models.TextChoices):
         STOCK = "stock", "Stock"
-        PREORDER = "preorder", "Pre-order"
 
     entry_date = models.DateField()
     reference_type = models.CharField(max_length=50, blank=True)

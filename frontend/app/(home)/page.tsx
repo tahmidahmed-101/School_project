@@ -9,7 +9,7 @@ import { SITE_DESCRIPTION, pageMetadata } from "@/modules/seo";
 // No title: the layout's default title is used as-is on the home page.
 export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: "/" });
 
-export default async function KullMartHomePage() {
+export default async function SchoolProjectHomePage() {
   const [{ products }, vouchers, content] = await Promise.all([getCatalog(), getVouchers(), getStorefrontContent()]);
   return (
     <ProductsProvider products={homeProducts(products).map(forListing)}>

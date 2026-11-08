@@ -24,10 +24,9 @@ class CourierSelection:
 
 
 def select_courier(
-    *, zone, weight: Decimal, kind: str, override_carrier: Carrier | None = None
+    *, zone, weight: Decimal, override_carrier: Carrier | None = None
 ) -> CourierSelection:
-    """Pick a carrier for one shipment's destination zone and weight, from
-    the rates of the order's own kind.
+    """Pick a carrier for one shipment's destination zone and weight.
 
     A manual override always wins, whatever the quotes say -- a dispatcher who
     knows one carrier is having a bad week should not have to touch pricing to
@@ -38,7 +37,7 @@ def select_courier(
 
     best: tuple[Carrier, Decimal] | None = None
     for carrier in carriers_list().filter(is_active=True):
-        cost = try_quote_shipping(zone=zone, weight=weight, kind=kind, carrier=carrier)
+        cost = try_quote_shipping(zone=zone, weight=weight, carrier=carrier)
         if cost is None:
             continue
         if best is None or cost < best[1]:

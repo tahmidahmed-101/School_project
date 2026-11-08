@@ -6,7 +6,7 @@ import { moneySchema } from "@/lib/forms"
 import type { Product, ProductPayload } from "../types"
 import { OPTION_REFUSALS } from "./options"
 
-/** The fields the stock and the pre-order product form both have. */
+/** The basic fields of the product form. */
 export const baseShape = {
   name: z.string().trim().min(1, "Name is required"),
   category_id: z.string().min(1, "Choose a category"),

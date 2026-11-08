@@ -7,12 +7,12 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from apps.business.models import (
+    HeroPlacement,
     HeroSlide,
     PromoLine,
     PromotionPopup,
 )
 from apps.business.models.storefront_content import PROMOTION_POPUP_ORDER
-from apps.catalog.models import Category
 from apps.catalog.selectors.sales import LiveSale, running_sale_by_id
 
 # The storefront page that lists the products on sale.
@@ -20,8 +20,12 @@ CAMPAIGN_PAGE = "/shop?collection=sale"
 
 
 def hero_slides_list(*, active_only: bool = False) -> QuerySet[HeroSlide]:
+    """With `active_only` (the storefront): active slides of a placement the
+    storefront shows."""
     slides = HeroSlide.objects.all()
-    return slides.filter(is_active=True) if active_only else slides
+    if active_only:
+        return slides.filter(is_active=True, placement__in=HeroPlacement.values)
+    return slides
 
 
 def get_hero_slide(pk) -> HeroSlide | None:
@@ -29,8 +33,12 @@ def get_hero_slide(pk) -> HeroSlide | None:
 
 
 def promo_lines_list(*, active_only: bool = False) -> QuerySet[PromoLine]:
+    """With `active_only` (the storefront): active lines of a placement the
+    storefront shows."""
     lines = PromoLine.objects.all()
-    return lines.filter(is_active=True) if active_only else lines
+    if active_only:
+        return lines.filter(is_active=True, placement__in=HeroPlacement.values)
+    return lines
 
 
 def get_promo_line(pk) -> PromoLine | None:
@@ -83,10 +91,7 @@ def _popup_target(popup: PromotionPopup) -> tuple[str | None, LiveSale | None] |
         category = popup.category
         if category is None or category.deleted_at or not category.is_active:
             return None
-        query = urlencode({"category": category.slug})
-        if category.category_type == Category.CategoryType.PREORDER:
-            query += "&type=preorder"
-        return f"/shop?{query}", None
+        return f"/shop?{urlencode({'category': category.slug})}", None
     if kind == PromotionPopup.Destination.CAMPAIGN:
         sale = running_sale_by_id(popup.sale_id) if popup.sale_id else None
         return (CAMPAIGN_PAGE, sale) if sale is not None else None
@@ -95,12 +100,11 @@ def _popup_target(popup: PromotionPopup) -> tuple[str | None, LiveSale | None] |
 
 def live_promotion_popups(now=None) -> list[StorefrontPromotion]:
     """The popups the storefront may show now, highest priority first: active,
-    inside their schedule, with an image and a destination that still exists.
-    Each names its shop; the storefront picks the first one of the shop the
-    page belongs to."""
+    inside their schedule, of the stock shop, with an image and a destination
+    that still exists."""
     now = now or timezone.now()
     candidates = (
-        PromotionPopup.objects.filter(is_active=True)
+        PromotionPopup.objects.filter(is_active=True, shop=PromotionPopup.Shop.STOCK)
         .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
         .filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now))
         .exclude(image="")

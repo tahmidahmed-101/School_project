@@ -1,10 +1,10 @@
 import type { ApiBusinessProfile } from "@/lib/api/types";
 import { toPaisa } from "@/lib/money";
 
-/** Contact details and copy taken from the public Kull Mart Facebook page (facebook.com/kullmartbd). */
+/** Contact details and copy taken from the public School Project Facebook page (facebook.com/schoolprojectbd). */
 export const BRAND_INFO = {
-  name: "Kull Mart",
-  legalName: "Kull Mart",
+  name: "School Project",
+  legalName: "School Project",
   tagline: {
     en: "Women's fashion, innerwear, kids & gadgets",
     bn: "নারীদের ফ্যাশন, ইনারওয়্যার, কিডস ও গ্যাজেটস",
@@ -25,8 +25,8 @@ export const BRAND_INFO = {
   whatsapp: "8801603671030",
   /** For tel: links. */
   phoneTel: "+8801603671030",
-  email: "kullmart2026@gmail.com",
-  facebook: "https://www.facebook.com/kullmartbd",
+  email: "schoolproject2026@gmail.com",
+  facebook: "https://www.facebook.com/schoolprojectbd",
   /**
    * The floating contact button's links, taken only from the admin business profile (never the static values
    * above); an empty one hides that option, and with all three empty the button is not shown.
@@ -40,8 +40,6 @@ export const BRAND_INFO = {
   about: { en: "", bn: "" },
   /** Stock-order subtotal that earns free delivery, as the API's decimal string; null while the offer is off. */
   freeDeliveryMinAmount: null as string | null,
-  /** Terms the shopper accepts before placing a pre-order, as staff wrote them; both empty for none. */
-  preorderTerms: { en: "", bn: "" },
   logo: "brand/logo.png",
   logoMark: "brand/logo-mark.png",
   /** Gold cart cut out of the logo on a transparent background, for the green header. */
@@ -56,7 +54,7 @@ export type BrandInfo = typeof BRAND_INFO;
 
 const digitsOnly = (value: string) => value.replace(/\D/g, "");
 
-/** m.me link for a Facebook page URL (facebook.com/kullmartbd -> m.me/kullmartbd); "" when it is not one. */
+/** m.me link for a Facebook page URL (facebook.com/schoolprojectbd -> m.me/schoolprojectbd); "" when it is not one. */
 function messengerLink(facebook: string): string {
   const match = /^https?:\/\/(?:[\w-]+\.)?facebook\.com\/([^/?#]+)/i.exec(facebook);
   return match && match[1] !== "profile.php" ? `https://m.me/${match[1]}` : "";
@@ -121,6 +119,5 @@ export function mergeBrand(profile: ApiBusinessProfile | null | undefined): Bran
     openingHours: profile.opening_hours?.trim() ?? "",
     about: { en: profile.about?.en?.trim() ?? "", bn: profile.about?.bn?.trim() ?? "" },
     freeDeliveryMinAmount: toPaisa(freeDeliveryMin) > BigInt(0) ? freeDeliveryMin : null,
-    preorderTerms: { en: profile.preorder_terms?.en?.trim() ?? "", bn: profile.preorder_terms?.bn?.trim() ?? "" },
   };
 }

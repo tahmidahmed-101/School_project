@@ -1,6 +1,4 @@
-// Mirrors api/v1/admin/business/serializers.py (kull-mart), mounted at /admin/settings/.
-
-import type { Kind } from "@/hooks/use-kind"
+// Mirrors api/v1/admin/business/serializers.py (school-project), mounted at /admin/settings/.
 
 /** AdminBusinessProfileSerializer */
 export interface BusinessProfile {
@@ -29,10 +27,6 @@ export interface BusinessProfile {
   tiktok_url: string
   youtube_url: string
   linkedin_url: string
-  preorder_deposit_percent: string
-  /** Accepted before placing a pre-order; both "" = none. */
-  preorder_terms_en: string
-  preorder_terms_bn: string
   free_delivery_min_amount: string | null
   referral_friend_discount: string | null
   referral_reward_amount: string | null
@@ -76,7 +70,6 @@ export type ModuleUpdatePayload = { is_enabled: boolean } | { config: Record<str
 /** AdminPaymentMethodSerializer */
 export interface PaymentMethodState {
   key: string
-  kind: Kind
   label: string
   description: string
   is_enabled: boolean
@@ -97,10 +90,7 @@ export interface IntegrationStatus {
 // ---- storefront content (/admin/settings/hero-slides/, /admin/settings/promo-lines/) ----
 
 /** `both` is read-only: rows saved before the split keep it until `split_both_placements` has run. */
-export type HeroSlidePlacement = "home" | "preorder" | "both"
-
-/** The placement one settings page edits: `home` on stock Settings, `preorder` on Pre-order Settings. */
-export type ShopPlacement = Exclude<HeroSlidePlacement, "both">
+export type HeroSlidePlacement = "home" | "both"
 
 export interface HeroSlide {
   id: string
@@ -134,8 +124,8 @@ export type PromoLineInput = Omit<PromoLine, "id">
 
 /** As the storefront sees it: a switched-on popup is scheduled before its start and expired after its end. */
 export type PopupDisplayStatus = "inactive" | "scheduled" | "active" | "expired"
-/** The shop a popup belongs to: stock popups show on the stock storefront pages, pre-order ones on the pre-order pages. */
-export type PopupShop = "stock" | "preorder"
+/** The shop a popup belongs to: every popup shows on the stock storefront pages. */
+export type PopupShop = "stock"
 /** `none`: the image alone, with no link. */
 export type PopupDestination = "none" | "product" | "category" | "campaign" | "url"
 
@@ -159,7 +149,7 @@ export interface PromotionPopup {
   /** Only the one matching `destination_type` is set. */
   /** `image`: the product's main photo, or null. */
   product: { id: string; name: string; slug: string; image: string | null } | null
-  category: { id: string; name: string; slug: string; category_type: "stock" | "preorder" } | null
+  category: { id: string; name: string; slug: string; category_type: "stock" } | null
   sale: {
     id: string
     name: string
@@ -219,7 +209,6 @@ export interface StorePolicy {
   return_rules: {
     /** Days after delivery a return is accepted; null = no limit. */
     return_window_days: number | null
-    preorder_returns_allowed: boolean
     non_returnable_categories: { id: string; name: string }[]
   } | null
   updated_at: string
@@ -231,7 +220,6 @@ export interface StorePolicyUpdate {
   effective_date?: string | null
   is_published?: boolean
   return_window_days?: number | null
-  preorder_returns_allowed?: boolean
   non_returnable_category_ids?: string[]
 }
 
@@ -241,7 +229,6 @@ export interface StorePolicySnapshot {
   effective_date: string | null
   is_published: boolean
   return_window_days?: number | null
-  preorder_returns_allowed?: boolean
   non_returnable_category_ids?: string[]
 }
 

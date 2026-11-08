@@ -14,7 +14,6 @@ import { CsvImportButton, type ImportField } from "@/components/common/CsvImport
 import { RestoreDeletedButton } from "@/components/common/RestoreDeletedButton"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
-import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { createImportLookup } from "@/lib/importLookup"
 
@@ -22,18 +21,18 @@ import { createCategory, deleteCategory, fetchAllCategories, restoreCategory, up
 import type { Category, CategoryPayload } from "../types"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
 
-const Categories = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order categories" : "Categories"
+const Categories = () => {
+  const title = "Categories"
   useDocumentTitle(title)
   const navigate = useNavigate()
   const canManage = useCan("catalog.manage")
-  const { options, nameById, isLoading, error, reload } = useCategoryOptions(kind)
+  const { options, nameById, isLoading, error, reload } = useCategoryOptions()
   const [search, setSearch] = useState("")
 
-  // CSV import (stock page only). Parents are looked up by name/slug; categories created earlier
+  // CSV import. Parents are looked up by name/slug; categories created earlier
   // in the same file are added to the lookup, so a parent row can precede its children.
   const parentLookup = useMemo(
-    () => createImportLookup<Category>("Parent category", () => fetchAllCategories("stock"), (c) => [c.name, c.slug]),
+    () => createImportLookup<Category>("Parent category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
     []
   )
   const importFields = useMemo<ImportField[]>(
@@ -52,7 +51,7 @@ const Categories = ({ kind }: { kind: Kind }) => {
   )
   const importCategory = async (payload: Record<string, unknown>) => {
     const row = payload as CategoryPayload
-    // A subcategory takes its parent's kind on the server; only a root category is told it.
+    // A subcategory takes its parent's type on the server; only a root category is told it.
     const created = await createCategory(row.parent_id ? row : { ...row, category_type: "stock" })
     parentLookup.add(created)
     return created
@@ -124,7 +123,7 @@ const Categories = ({ kind }: { kind: Kind }) => {
         return (
           <TableActions
             itemName={o.label}
-            editUrl={withKind(`/category_form/${o.value}`, kind)}
+            editUrl={`/category_form/${o.value}`}
             onDelete={() => handleDelete(o)}
           />
         )
@@ -142,23 +141,21 @@ const Categories = ({ kind }: { kind: Kind }) => {
               <RestoreDeletedButton<Category>
                 noun="categories"
                 endpoint="/admin/catalog/categories/"
-                params={{ category_type: kind }}
+                params={{ category_type: "stock" }}
                 restore={(item) => restoreCategory(item.id)}
                 label={(item) => item.name}
                 onRestored={reload}
               />
-              {kind === "stock" && (
-                <CsvImportButton
-                  entityName="categories"
-                  fields={importFields}
-                  createRow={importCategory}
-                  onComplete={() => {
-                    parentLookup.reset()
-                    reload()
-                  }}
-                />
-              )}
-              <Button size="action" onClick={() => navigate(`/category_form/new?kind=${kind}`)}>
+              <CsvImportButton
+                entityName="categories"
+                fields={importFields}
+                createRow={importCategory}
+                onComplete={() => {
+                  parentLookup.reset()
+                  reload()
+                }}
+              />
+              <Button size="action" onClick={() => navigate("/category_form/new")}>
                 <PlusIcon className="size-5" /> Add Category
               </Button>
             </>
@@ -203,9 +200,4 @@ const Categories = ({ kind }: { kind: Kind }) => {
   )
 }
 
-const CategoriesPage = () => {
-  const kind = useKind()
-  return <Categories key={kind} kind={kind} />
-}
-
-export default CategoriesPage
+export default Categories

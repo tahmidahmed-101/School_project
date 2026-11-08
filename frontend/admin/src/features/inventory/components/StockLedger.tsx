@@ -13,7 +13,6 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { DateCell, MoneyCell, ProductCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
@@ -29,13 +28,11 @@ const ORDERING_OPTIONS: Option[] = [
   { label: "Oldest first", value: "created_at" },
 ]
 
-const StockLedgerList = () => {
-  const kind = useKind()
-  const title = kind === "preorder" ? "Goods movements" : "Stock movements"
-  useDocumentTitle(title)
+const StockLedger = () => {
+  useDocumentTitle("Stock movements")
   const dispatch = useAppDispatch()
   const ledgerState = useAppSelector((s) => s.inventoryLedger)
-  const { warehouses } = useWarehouses(kind)
+  const { warehouses } = useWarehouses()
   const [searchParams, setSearchParams] = useSearchParams()
   const variantId = searchParams.get("variant_id")
   const variantSku = searchParams.get("sku")
@@ -54,7 +51,7 @@ const StockLedgerList = () => {
     state: ledgerState,
     pageSize: PAGE_SIZE,
     params: {
-      kind,
+      kind: "stock",
       variant_id: variantId,
       warehouse_id: warehouse?.value,
       movement_type: movement?.value,
@@ -140,7 +137,7 @@ const StockLedgerList = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Stock movements"
         actions={<ExportButton onExport={() => downloadLedgerExport(list.query)} />}
       />
 
@@ -155,7 +152,7 @@ const StockLedgerList = () => {
                 value={variant}
                 onChange={setVariant}
                 placeholder="Filter by variant…"
-                filters={{ category_type: kind }}
+                filters={{ category_type: "stock" }}
               />
             ),
           },
@@ -199,7 +196,5 @@ const StockLedgerList = () => {
     </div>
   )
 }
-
-const StockLedger = () => <StockLedgerList key={useKind()} />
 
 export default StockLedger

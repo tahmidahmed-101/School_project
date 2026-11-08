@@ -29,7 +29,7 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat {
   return fmt
 }
 
-// Store currency; kull-mart prices are BDT. Overridden from the business profile
+// Store currency; school-project prices are BDT. Overridden from the business profile
 // (/admin/settings/business-profile/ currency_code) once settings load.
 let defaultCurrency = "BDT"
 

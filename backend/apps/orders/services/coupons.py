@@ -8,32 +8,23 @@ from django.utils import timezone
 
 from apps.audit.services.audit import log_action
 from apps.catalog.selectors.categories import category_ids_with_descendants
-from apps.catalog.services.sales import stock_brands, stock_categories
-from apps.common.exceptions import BusinessRuleViolationError, DomainError
-from apps.common.params import KIND_PREORDER
+from apps.catalog.services.sales import live_brands, live_categories
+from apps.common.exceptions import DomainError
 from apps.common.services.soft_delete import soft_delete_instance
 from apps.common.utils.money import percent_of, quantize
 from apps.common.utils.phone import local_bd_mobile
 from apps.orders.models import Coupon, SalesOrder
 from apps.orders.selectors.coupons import get_active_coupon_by_code
-from apps.orders.services.carts import _ensure_pending, lines_of_kind
+from apps.orders.services.carts import _ensure_pending
 from apps.orders.services.orders import lock_order
 from apps.orders.services.referrals import is_self_referral, referral_amounts
-
-COUPON_STOCK_ONLY_MESSAGE = "Coupons work on stock orders only, not on a pre-order."
 
 
 def _set_scope(coupon: Coupon, *, category_ids=None, brand_ids=None) -> None:
     if category_ids is not None:
-        coupon.categories.set(
-            stock_categories(
-                category_ids, code="coupon_stock_only", message=COUPON_STOCK_ONLY_MESSAGE
-            )
-        )
+        coupon.categories.set(live_categories(category_ids))
     if brand_ids is not None:
-        coupon.brands.set(
-            stock_brands(brand_ids, code="coupon_stock_only", message=COUPON_STOCK_ONLY_MESSAGE)
-        )
+        coupon.brands.set(live_brands(brand_ids))
 
 
 @transaction.atomic
@@ -220,7 +211,6 @@ def preview_coupon(
     *,
     code: str,
     subtotal: Decimal,
-    holds_preorder: bool = False,
     priced_lines: list[tuple] | None = None,
     customer=None,
     phone: str = "",
@@ -230,8 +220,6 @@ def preview_coupon(
     storefront to validate a code before it commits to an order. Does not
     lock the row or touch `times_used` — `apply_coupon` re-checks for real
     once there is an order to attach the coupon to."""
-    if holds_preorder:
-        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
     coupon = get_active_coupon_by_code(code)
     if coupon is None:
         raise DomainError("Coupon not found.", code="invalid_coupon")
@@ -261,8 +249,6 @@ def apply_coupon(*, order: SalesOrder, code: str, actor=None) -> SalesOrder:
     # ends up attached) and losing whichever change lost the race.
     lock_order(order)
     _ensure_pending(order)
-    if lines_of_kind(order.lines, KIND_PREORDER).exists():
-        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
     # Locks the row for the rest of the transaction so two concurrent applies
     # against a usage-limited coupon can't both read the same times_used and
     # both pass the limit check.
@@ -325,18 +311,6 @@ def remove_coupon(*, order: SalesOrder, actor=None) -> SalesOrder:
             metadata={"coupon_code": coupon_code},
         )
     return order
-
-
-def drop_coupon_from_preorder(order: SalesOrder) -> None:
-    """Coupons are for stock orders. One left on a basket that became a
-    pre-order is taken off and its use handed back, rather than failing the order."""
-    if order.coupon_id is None:
-        return
-    _release_coupon(order.coupon_id)
-    order.coupon = None
-    order.discount_total = Decimal("0")
-    order.save(update_fields=["coupon", "discount_total", "updated_at"])
-    order.recalculate_totals()
 
 
 def revalidate_applied_coupon(order: SalesOrder) -> None:

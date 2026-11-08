@@ -1,5 +1,5 @@
 import { SidebarTrigger } from "../ui/sidebar"
-import { SunIcon, MoonIcon, LogOutIcon, SettingsIcon, UserIcon, Plus, Package, ShoppingBasket, Ticket, UserPlus, SearchIcon, CalendarClock } from "lucide-react"
+import { SunIcon, MoonIcon, LogOutIcon, SettingsIcon, UserIcon, Plus, Package, Ticket, UserPlus, SearchIcon } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
 import { NotificationBell } from "./NotificationBell"
 import { userDisplayName } from "@/lib/user-display"
@@ -19,33 +19,15 @@ import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { logout } from "@/features/authentication/slices/authSlice"
 import { hasPermission } from "@/app/modules"
-import { useKind } from "@/hooks/use-kind"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
-// Each entry is shown only when the user holds `permission` (see hasPermission), and only on its own half.
-const quickCreateItems = {
-  stock: [
-    { label: "New Product", icon: Package, url: "/product_form/new?kind=stock", permission: "catalog.manage" },
-    { label: "New Coupon", icon: Ticket, url: "/coupon_form/new", permission: "orders.manage" },
-    { label: "New Staff Member", icon: UserPlus, url: "/staff_form/new", permission: "*" },
-  ],
-  preorder: [
-    { label: "New pre-order", icon: CalendarClock, url: "/preorders/new", permission: "orders.manage" },
-    {
-      label: "New pre-order product",
-      icon: Package,
-      url: "/product_form/new?kind=preorder",
-      permission: "catalog.manage",
-    },
-    {
-      label: "New pre-order purchase order",
-      icon: ShoppingBasket,
-      url: "/preorder_purchasing/orders/new",
-      permission: "purchasing.manage",
-    },
-  ],
-}
+// Each entry is shown only when the user holds `permission` (see hasPermission).
+const quickCreateItems = [
+  { label: "New Product", icon: Package, url: "/product_form/new", permission: "catalog.manage" },
+  { label: "New Coupon", icon: Ticket, url: "/coupon_form/new", permission: "orders.manage" },
+  { label: "New Staff Member", icon: UserPlus, url: "/staff_form/new", permission: "*" },
+]
 
 const Navbar = () => {
   // index.html applies the saved theme class before first paint; mirror it here.
@@ -58,8 +40,7 @@ const Navbar = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
-  const kind = useKind()
-  const visibleQuickCreate = quickCreateItems[kind].filter((item) => hasPermission(user?.permissions, item.permission))
+  const visibleQuickCreate = quickCreateItems.filter((item) => hasPermission(user?.permissions, item.permission))
 
   const handleLogout = async () => {
     await dispatch(logout())

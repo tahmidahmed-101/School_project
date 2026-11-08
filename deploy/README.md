@@ -2,23 +2,23 @@
 
 | Part | Host | Where |
 | --- | --- | --- |
-| Storefront (`frontend/`) | `kullmart.com`, `www.kullmart.com` | Cloudflare Worker `kull-mart-web` (OpenNext) |
-| Admin (`frontend/admin/`) | `admin.kullmart.com` | Cloudflare Worker `kull-mart-admin` (static SPA) |
-| API (`backend/`) | `api.kullmart.com` | Edge VPS `169.58.218.225`, containers `kull-mart-{db,api}` behind `edge-caddy` |
+| Storefront (`frontend/`) | `schoolproject.com`, `www.schoolproject.com` | Cloudflare Worker `school-project-web` (OpenNext) |
+| Admin (`frontend/admin/`) | `admin.schoolproject.com` | Cloudflare Worker `school-project-admin` (static SPA) |
+| API (`backend/`) | `api.schoolproject.com` | Edge VPS `169.58.218.225`, containers `school-project-{db,api}` behind `edge-caddy` |
 
 The storefront build fetches the live API, so deploy in this order: API, then storefront, then admin.
 
 ## One-time
 
-1. Registrar: point `kullmart.com` at the Cloudflare nameservers shown in the dashboard; wait for the zone to be **Active**.
+1. Registrar: point `schoolproject.com` at the Cloudflare nameservers shown in the dashboard; wait for the zone to be **Active**.
 2. Cloudflare DNS: `A api -> 169.58.218.225`, **DNS-only** (grey cloud). Caddy gets its certificate over HTTP-01.
 3. Cloudflare, from `frontend/` (there is no page cache: every request renders in the Worker):
    ```bash
    npx wrangler secret put REVALIDATE_SECRET   # 16+ chars
    ```
-4. VPS: copy `deploy/api.env.example` to `/home/arif/website/kull-mart-api/.env` and fill it in.
+4. VPS: copy `deploy/api.env.example` to `/home/arif/website/school-project-api/.env` and fill it in.
 5. After the first API deploy, fill in the business profile (phone, email, address) in the admin, and add
-   `kull-mart-api` to `~/projects/edge/REGISTRY.md`. Retire the old `kull-mart-web` row (kullmart.nestmartit.com).
+   `school-project-api` to `~/projects/edge/REGISTRY.md`. Retire the old `school-project-web` row (schoolproject.nestmartit.com).
 
 ## Every deploy
 
@@ -30,7 +30,7 @@ deploy/deploy-api.sh                      # API
 
 `deploy-api.sh` starts with `deploy/deploy-preflight.sh` (DNS, certificate, running API, registries the image build pulls); `PREFLIGHT_UPSTREAM=0` skips the running-API probe.
 
-Browser errors from the storefront (`/api/client-error`, proxied in `next.config.mjs`) and the admin post to the API, which logs one `[client-error]` line. After an API deploy: `curl -i -X POST -H 'content-type: application/json' -d '{"message":"probe","path":"/","where":"curl"}' https://kullmart.com/api/client-error` must answer 204 and `docker logs kull-mart-api` must show one line; no line means the Worker proxy dropped `content-length`.
+Browser errors from the storefront (`/api/client-error`, proxied in `next.config.mjs`) and the admin post to the API, which logs one `[client-error]` line. After an API deploy: `curl -i -X POST -H 'content-type: application/json' -d '{"message":"probe","path":"/","where":"curl"}' https://schoolproject.com/api/client-error` must answer 204 and `docker logs school-project-api` must show one line; no line means the Worker proxy dropped `content-length`.
 
 Wrangler needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment (or `npx wrangler login`).
 

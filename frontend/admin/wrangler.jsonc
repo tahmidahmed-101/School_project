@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kull-mart-admin",
+  "name": "school-project-admin",
   "compatibility_date": "2026-09-01",
   "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
-  "routes": [{ "pattern": "admin.kullmart.com", "custom_domain": true }]
+  "routes": [{ "pattern": "admin.schoolproject.com", "custom_domain": true }]
 }

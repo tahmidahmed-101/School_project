@@ -21,7 +21,7 @@ describe("avatarSrc", () => {
 
   it("serves uploaded media through the same-origin proxy", () => {
     expect(avatarSrc("/media/avatars/a.jpg")).toBe("/media/avatars/a.jpg");
-    expect(avatarSrc("https://api.kullmart.com/media/avatars/a.jpg")).toBe("/media/avatars/a.jpg");
+    expect(avatarSrc("https://api.schoolproject.com/media/avatars/a.jpg")).toBe("/media/avatars/a.jpg");
   });
 
   it("drops pictures the CSP would block", () => {

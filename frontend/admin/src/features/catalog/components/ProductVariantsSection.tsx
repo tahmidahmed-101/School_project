@@ -17,7 +17,6 @@ import { MoneyField } from "@/components/common/form-fields"
 import type { PickedVariant } from "@/components/common/VariantPicker"
 import { useCan } from "@/hooks/use-can"
 import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
-import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { AMOUNT_PATTERN, parseAmount } from "@/lib/moneyInput"
 import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
@@ -31,18 +30,16 @@ import {
   listCombinations,
   updateVariant,
 } from "../api"
-import type { Combination, Product, ProductVariant, ProductVariantPayload, VariantBulkUpdatePayload } from "../types"
-import { refusalMessage, settleInOrder } from "../lib/options"
+import type { Combination, Product, ProductVariant, VariantBulkUpdatePayload } from "../types"
+import { refusalMessage } from "../lib/options"
 import { savedOptionsOf } from "../lib/productKind"
-import { VariantOrderingCell, VariantStockCell } from "./VariantCells"
+import { VariantStockCell } from "./VariantCells"
 import { VariantFormDialog } from "./VariantFormDialog"
 import { GenerateVariantsDialog } from "./GenerateVariantsDialog"
 import { StockDeleteDialog } from "./StockDeleteDialog"
 
 interface Props {
   product: Product
-  /** The product's kind: a stock product shows stock and discount, a pre-order one its ordering window. */
-  kind: Kind
   canManage: boolean
   /** Called after any variant change so the parent can refresh product totals. */
   onChanged: () => void
@@ -58,17 +55,6 @@ interface Row {
   variant: ProductVariant | null
 }
 
-
-/** A new pre-order variant opens and closes for ordering together with its siblings. */
-const orderingWindowOf = (sibling: ProductVariant): ProductVariantPayload => ({
-  is_preorder_enabled: true,
-  preorder_price: sibling.preorder_price,
-  preorder_start_date: sibling.preorder_start_date,
-  preorder_end_date: sibling.preorder_end_date,
-  release_date: sibling.release_date,
-  preorder_stock_limit: sibling.preorder_stock_limit,
-  preorder_min_quantity: sibling.preorder_min_quantity ?? 1,
-})
 
 function buildRows(combinations: Combination[], variants: ProductVariant[], productName: string): Row[] {
   const byId = new Map(variants.map((v) => [v.id, v]))
@@ -90,8 +76,7 @@ function buildRows(combinations: Combination[], variants: ProductVariant[], prod
   return rows
 }
 
-export function ProductVariantsSection({ product, kind, canManage, onChanged }: Props) {
-  const isStock = kind === "stock"
+export function ProductVariantsSection({ product, canManage, onChanged }: Props) {
   const productId = product.id
   const hasOptions = savedOptionsOf(product).length > 0
   const [variants, setVariants] = useState<ProductVariant[]>([])
@@ -100,7 +85,7 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
   const [error, setError] = useState<unknown>(null)
   const [editing, setEditing] = useState<ProductVariant | null>(null)
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
-  const { warehouses } = useWarehouses(kind)
+  const { warehouses } = useWarehouses()
   const [adjusting, setAdjusting] = useState<PickedVariant | null>(null)
   const [deleting, setDeleting] = useState<ProductVariant | null>(null)
   // Kept mounted, still showing its variant, while the delete dialog animates shut.
@@ -170,13 +155,6 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
     setBusy(true)
     try {
       const res = await generateVariants(productId, { ...(valueIds ? { combinations: valueIds } : {}), ...pricing })
-      const sibling = variants.find((v) => v.is_preorder_enabled)
-      if (!isStock && sibling) {
-        const results = await settleInOrder(res.created, (v) => updateVariant(v.id, orderingWindowOf(sibling)))
-        if (results.some((r) => r.status === "rejected")) {
-          toast.warning("Created, but the ordering dates could not be copied to every new variant. Edit them to set the dates.")
-        }
-      }
       if (finish) await finish(res.created)
       const n = res.created.length
       toast.success(`${n} variant${n === 1 ? "" : "s"} created`)
@@ -271,16 +249,11 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
       header: "PRICE",
       cell: ({ row }) => forVariant(row.original, (v) => <MoneyCell value={v.price} emphasis />),
     },
-    ...(isStock
-      ? [
-          {
-            id: "discount_price",
-            header: "DISCOUNT PRICE",
-            cell: ({ row }: { row: { original: Row } }) =>
-              forVariant(row.original, (v) => <MoneyCell value={v.discount_price} />),
-          } as ColumnDef<Row>,
-        ]
-      : []),
+    {
+      id: "discount_price",
+      header: "DISCOUNT PRICE",
+      cell: ({ row }) => forVariant(row.original, (v) => <MoneyCell value={v.discount_price} />),
+    },
     {
       id: "cost",
       header: "COST",
@@ -289,11 +262,8 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
     },
     {
       id: "availability",
-      header: isStock ? "AVAILABLE" : "ORDERING",
-      cell: ({ row }) =>
-        forVariant(row.original, (v) =>
-          isStock ? <VariantStockCell variant={v} showLow /> : <VariantOrderingCell variant={v} />
-        ),
+      header: "AVAILABLE",
+      cell: ({ row }) => forVariant(row.original, (v) => <VariantStockCell variant={v} showLow />),
     },
     {
       id: "active",
@@ -322,9 +292,9 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
     ...(showTicks ? ["44px"] : []),
     "260px",
     "120px",
-    ...(isStock ? ["150px"] : []),
+    "150px",
     "120px",
-    isStock ? "150px" : "220px",
+    "150px",
     "90px",
     "80px",
   ]
@@ -346,7 +316,7 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
       columns={columns}
       data={rows}
       showPagination={false}
-      minWidth={isStock ? "900px" : "860px"}
+      minWidth="900px"
       columnWidths={columnWidths}
       unlabelledColumns={["tick", "actions"]}
       emptyTitle="No variants yet"
@@ -415,7 +385,6 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
           open={deleting !== null}
           name={deleteTarget.title ? `${product.name} — ${deleteTarget.title}` : deleteTarget.sku}
           scope={{ variant_id: deleteTarget.id }}
-          kind={kind}
           remove={() => deleteVariant(deleteTarget.id)}
           onDeleted={afterChange}
           onClose={() => setDeleting(null)}
@@ -427,17 +396,14 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
         onOpenChange={(open) => !open && setAdjusting(null)}
         warehouses={warehouses}
         variant={adjusting}
-        kind={kind}
         productId={productId}
         onDone={afterChange}
       />
       <VariantFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        kind={kind}
         productId={productId}
         variant={editing}
-        sibling={variants[0]}
         onSaved={afterChange}
       />
       <GenerateVariantsDialog
@@ -445,9 +411,8 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
         open={generateOpen}
         onOpenChange={setGenerateOpen}
         product={product}
-        kind={kind}
         variants={variants}
-        canSetStock={isStock && canAdjust}
+        canSetStock={canAdjust}
         generate={create}
         onSaved={afterChange}
       />
@@ -455,7 +420,6 @@ export function ProductVariantsSection({ product, kind, canManage, onChanged }: 
         open={priceOpen}
         onOpenChange={setPriceOpen}
         productId={productId}
-        isStock={isStock}
         count={variants.length}
         onDone={afterChange}
       />
@@ -467,14 +431,12 @@ function SetPriceDialog({
   open,
   onOpenChange,
   productId,
-  isStock,
   count,
   onDone,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   productId: string
-  isStock: boolean
   count: number
   onDone: () => void
 }) {
@@ -483,7 +445,7 @@ function SetPriceDialog({
   const [cost, setCost] = useState("")
   const [busy, setBusy] = useState(false)
 
-  const typed = { price: price.trim(), discount_price: isStock ? discount.trim() : "", cost_price: cost.trim() }
+  const typed = { price: price.trim(), discount_price: discount.trim(), cost_price: cost.trim() }
   const bad = (value: string) => (value !== "" && !AMOUNT_PATTERN.test(value) ? { message: "Enter a valid amount (max 2 decimals)" } : undefined)
   const typedPrice = parseAmount(typed.price)
   const typedDiscount = parseAmount(typed.discount_price)
@@ -536,16 +498,14 @@ function SetPriceDialog({
         placeholder="Leave as it is"
         error={bad(typed.price)}
       />
-      {isStock && (
-        <MoneyField
-          label="Discount price"
-          id="all-discount"
-          value={discount}
-          onChange={(e) => setDiscount(e.target.value)}
-          placeholder="Leave as it is"
-          error={bad(typed.discount_price) ?? (discountTooHigh ? { message: "Must be lower than the price" } : undefined)}
-        />
-      )}
+      <MoneyField
+        label="Discount price"
+        id="all-discount"
+        value={discount}
+        onChange={(e) => setDiscount(e.target.value)}
+        placeholder="Leave as it is"
+        error={bad(typed.discount_price) ?? (discountTooHigh ? { message: "Must be lower than the price" } : undefined)}
+      />
       <MoneyField
         label="Cost price"
         id="all-cost"

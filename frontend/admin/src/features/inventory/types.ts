@@ -1,5 +1,4 @@
-import type { Kind } from "@/hooks/use-kind"
-// Mirrors kull-mart api/v1/admin/inventory/serializers.py and the reservation serializer
+// Mirrors school-project api/v1/admin/inventory/serializers.py and the reservation serializer
 // in api/v1/admin/orders/serializers.py (StockReservationSerializer).
 
 export type MovementType =
@@ -30,7 +29,6 @@ export interface Warehouse {
   id: string
   name: string
   code: string
-  kind: Kind
   address: string
   is_active: boolean
   is_default: boolean
@@ -43,7 +41,7 @@ export interface Warehouse {
 export interface WarehousePayload {
   name?: string
   code?: string
-  kind?: Kind
+  kind?: "stock"
   address?: string
   is_active?: boolean
   is_default?: boolean
@@ -104,8 +102,7 @@ export interface StockStatusSummary {
 /** StockAdjustmentSerializer */
 export interface StockAdjustmentPayload {
   variant_id: string
-  /** The half the page belongs to; the server refuses a variant of the other half (stock_kind_mismatch). */
-  kind?: Kind
+  kind?: "stock"
   warehouse_id?: string | null
   quantity_delta: number
   unit_cost?: string | null
@@ -115,7 +112,7 @@ export interface StockAdjustmentPayload {
 /** StockWriteOffSerializer */
 export interface StockWriteOffPayload {
   variant_id: string
-  kind?: Kind
+  kind?: "stock"
   warehouse_id?: string | null
   quantity: number
   reason?: string
@@ -124,7 +121,7 @@ export interface StockWriteOffPayload {
 /** StockIntakeSerializer */
 export interface StockIntakePayload {
   variant_id: string
-  kind?: Kind
+  kind?: "stock"
   warehouse_id?: string | null
   quantity: number
   unit_cost?: string | null
@@ -154,27 +151,6 @@ export interface StockReservation {
   is_expired: boolean
 }
 
-/** One row of preorder_demand(): units open pre-orders still wait for, per variant. */
-export interface PreorderDemandRow {
-  variant_id: string
-  variant_sku: string
-  product_name: string
-  waiting: number
-  available: number
-  to_buy: number
-}
-
-/** AdminPreorderReportView (orders app) */
-export interface PreorderReport {
-  summary: { open_orders: number; order_value: string; deposits_held: string; balances_outstanding: string }
-  demand: PreorderDemandRow[]
-}
-
-/** AdminPreorderAllocationView (orders app) */
-export interface PreorderAllocationResult {
-  allocated: { order_id: string; order_number: string; variant_sku: string; quantity: number }[]
-}
-
 /** StockTransferLineSerializer */
 export interface StockTransferLine {
   id: string
@@ -188,7 +164,7 @@ export interface StockTransferLine {
   unit_cost: string
 }
 
-/** StockTransferSerializer — units moved between two warehouses of the same kind. */
+/** StockTransferSerializer — units moved between two warehouses. */
 export interface StockTransfer {
   id: string
   transfer_number: string

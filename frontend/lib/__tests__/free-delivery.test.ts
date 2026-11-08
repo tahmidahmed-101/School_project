@@ -4,8 +4,8 @@ import type { CartItem } from "@/lib/types";
 import { basketSubtotal, freeDeliveryStatus } from "../free-delivery";
 import { fromPaisa, sumMoney, toPaisa } from "../money";
 
-const line = (price: number, quantity: number, isPreOrder = false): CartItem => ({
-  product: makeProduct({ price, isPreOrder, kind: isPreOrder ? "preorder" : "stock" }),
+const line = (price: number, quantity: number): CartItem => ({
+  product: makeProduct({ price }),
   quantity,
   variantId: `v-${price}`,
 });
@@ -53,9 +53,7 @@ describe("freeDeliveryStatus", () => {
     }
   });
 
-  it("says nothing for an empty basket or one with a pre-order item", () => {
+  it("says nothing for an empty basket", () => {
     expect(freeDeliveryStatus("1500.00", [])).toBeNull();
-    expect(freeDeliveryStatus("1500.00", [line(5000, 1, true)])).toBeNull();
-    expect(freeDeliveryStatus("1500.00", [line(5000, 1), line(100, 1, true)])).toBeNull();
   });
 });

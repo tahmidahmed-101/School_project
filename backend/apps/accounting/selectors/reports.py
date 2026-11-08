@@ -125,7 +125,7 @@ def balance_sheet(*, as_of: date, kind: str | None = None) -> dict:
             "inventory_asset": balance("inventory_asset"),
             "accounts_receivable": receivable,
             "refund_payable": refund_payable,
-            # Minus means customers have paid ahead: deposits held, or a return not yet refunded.
+            # Minus means customers have paid ahead of shipment, or a return is not yet refunded.
             "customer_balance": receivable - refund_payable,
             "accounts_payable": -balance("accounts_payable"),
             "goods_received_not_billed": -balance("grni"),

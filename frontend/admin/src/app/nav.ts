@@ -23,7 +23,7 @@ const PURCHASING = ["purchasing.view", "purchasing.manage"] as const
 const BILLS = ["accounting.view", "accounting.post", "invoices.manage"] as const
 const ACCOUNTING = ["accounting.view", "accounting.post"] as const
 
-// The two halves carry the same sections in the same order; a page of the whole company goes under BUSINESS.
+// Shop pages go under STOCK; a page of the whole company goes under BUSINESS.
 export const navSections: NavSection[] = [
   {
     label: "Home",
@@ -121,96 +121,6 @@ export const navSections: NavSection[] = [
     icon: SlidersHorizontal,
     group: "STOCK",
     items: [{ title: "Shop settings", url: "/settings", permission: "settings.view" }],
-  },
-
-  {
-    label: "Home",
-    icon: LayoutDashboard,
-    group: "PREORDER",
-    items: [
-      { title: "Overview", url: "/preorder_overview" },
-      { title: "Analytics", url: "/preorder_analytics", permission: "reports.view", module: "reporting" },
-    ],
-  },
-  {
-    label: "Sales",
-    icon: ShoppingCart,
-    group: "PREORDER",
-    items: [
-      { title: "Orders", url: "/preorders", permission: ORDERS },
-      { title: "Carts", url: "/preorder_carts", permission: ORDERS },
-      { title: "Payments", url: "/preorder_payments", permission: ORDERS },
-      { title: "Returns", url: "/preorder_returns", permission: "returns.manage" },
-    ],
-  },
-  {
-    label: "Catalog",
-    icon: Boxes,
-    group: "PREORDER",
-    items: [
-      { title: "Products", url: "/preorder_products", permission: CATALOG },
-      { title: "Categories", url: "/preorder_categories", permission: CATALOG },
-      { title: "Brands", url: "/preorder_brands", permission: CATALOG },
-      { title: "Attributes", url: "/preorder_attributes", permission: CATALOG },
-    ],
-  },
-  {
-    label: "Customers",
-    icon: Users,
-    group: "PREORDER",
-    items: [
-      { title: "Customers", url: "/preorder_customers", permission: ADMIN_ONLY },
-      { title: "Reviews", url: "/preorder_reviews", permission: CATALOG },
-      { title: "Questions", url: "/preorder_questions", permission: CATALOG },
-      { title: "Price reports", url: "/preorder_price_reports", permission: CATALOG },
-      { title: "Fraud cases", url: "/preorder_fraud_cases", permission: "risk.view" },
-    ],
-  },
-  {
-    label: "Goods",
-    icon: Warehouse,
-    group: "PREORDER",
-    items: [
-      { title: "Arrivals", url: "/preorder_arrivals", permission: INVENTORY },
-      { title: "Goods movements", url: "/preorder_movements", permission: INVENTORY },
-      { title: "Transfers", url: "/preorder_transfers", permission: INVENTORY },
-      { title: "Warehouses", url: "/preorder_warehouses", permission: INVENTORY },
-    ],
-  },
-  {
-    label: "Delivery",
-    icon: Truck,
-    group: "PREORDER",
-    items: [
-      { title: "Shipments", url: "/preorder_shipments", permission: SHIPMENTS },
-      { title: "Delivery zones", url: "/preorder_shipping_zones", permission: SHIPMENTS, module: "logistics" },
-      { title: "Shipping rates", url: "/preorder_shipping_rates", permission: SHIPMENTS, module: "logistics" },
-    ],
-  },
-  {
-    label: "Purchasing",
-    icon: ShoppingBasket,
-    group: "PREORDER",
-    items: [
-      { title: "Suppliers", url: "/preorder_purchasing/suppliers", permission: PURCHASING, module: "procurement" },
-      { title: "Purchase orders", url: "/preorder_purchasing/orders", permission: PURCHASING, module: "procurement" },
-      { title: "Goods receipts", url: "/preorder_purchasing/receipts", permission: PURCHASING, module: "procurement" },
-      { title: "Supplier bills", url: "/preorder_purchasing/bills", permission: BILLS, module: "procurement" },
-      { title: "Supplier payments", url: "/preorder_purchasing/payments", permission: BILLS, module: "procurement" },
-    ],
-  },
-  {
-    label: "Marketing",
-    icon: Megaphone,
-    group: "PREORDER",
-    // Sales and coupons never apply to pre-orders, so only the popups are here.
-    items: [{ title: "Promotion popups", url: "/preorder_promotion_popups", permission: "settings.view" }],
-  },
-  {
-    label: "Settings",
-    icon: SlidersHorizontal,
-    group: "PREORDER",
-    items: [{ title: "Pre-order settings", url: "/preorder_settings", permission: "settings.view" }],
   },
 
   {

@@ -379,8 +379,8 @@ STOCK_RESERVATION_TTL_HOURS: int = config("STOCK_RESERVATION_TTL_HOURS", default
 
 # Mirrors the storefront's src/data/business.ts; blank values are dropped, not printed.
 BUSINESS_IDENTITY: dict[str, str] = {
-    "name": config("BUSINESS_NAME", default="Kull Mart"),
-    "legal_name": config("BUSINESS_LEGAL_NAME", default="Kull Mart"),
+    "name": config("BUSINESS_NAME", default="School Project"),
+    "legal_name": config("BUSINESS_LEGAL_NAME", default="School Project"),
     "address": config("BUSINESS_ADDRESS", default="123 Demo Street, Demo City"),
     "phone": config("BUSINESS_PHONE", default="+1 (555) 000-0000"),
     "email": config("BUSINESS_EMAIL", default="admin@example.com"),
@@ -438,12 +438,6 @@ CART_RECOVERY_DAILY_CAP: int = config("CART_RECOVERY_DAILY_CAP", default=50, cas
 TWILIO_ACCOUNT_SID: str = config("TWILIO_ACCOUNT_SID", default="")
 TWILIO_AUTH_TOKEN: str = config("TWILIO_AUTH_TOKEN", default="")
 TWILIO_PHONE_NUMBER: str = config("TWILIO_PHONE_NUMBER", default="")
-
-# Telegram staff bot (order alerts and commands). Off while the token is blank.
-TELEGRAM_BOT_TOKEN: str = config("TELEGRAM_BOT_TOKEN", default="")
-# Telegram sends this back in a header on every webhook call; a request
-# without it is refused. Any long random string.
-TELEGRAM_WEBHOOK_SECRET: str = config("TELEGRAM_WEBHOOK_SECRET", default="")
 
 # Encrypts credentials staff save through the dashboard (today: the conversion
 # tracking secrets below). One or more Fernet keys, comma-separated: the first

@@ -1,8 +1,8 @@
 import type { CartItem, Product } from "@/lib/types";
 
 const CURRENCY = "BDT";
-const CLICK_IDS_KEY = "kullmart:click-ids";
-const PURCHASE_SENT_KEY = "kullmart:purchase-sent";
+const CLICK_IDS_KEY = "schoolproject:click-ids";
+const PURCHASE_SENT_KEY = "schoolproject:purchase-sent";
 
 type Gtag = (command: "event", name: string, params: Record<string, unknown>) => void;
 type Fbq = (command: "track", name: string, params: Record<string, unknown>, options: { eventID: string }) => void;

@@ -74,8 +74,7 @@ export function BulkAdjustDialog({
           warehouse_id: l.warehouse_id === DEFAULT_WAREHOUSE ? null : l.warehouse_id,
           quantity_delta: l.quantity_delta,
           notes: values.notes,
-        })),
-        "stock"
+        }))
       )
       toast.success(`${res.count} adjustment${res.count === 1 ? "" : "s"} posted`)
       onDone()

@@ -115,12 +115,6 @@ class TickerItemSerializer(serializers.Serializer):
     dir = serializers.ChoiceField(choices=TREND_DIRECTIONS)
 
 
-class PreorderBookSerializer(serializers.Serializer):
-    open_orders = serializers.IntegerField()
-    deposits_held = serializers.DecimalField(max_digits=14, decimal_places=2)
-    balances_outstanding = serializers.DecimalField(max_digits=14, decimal_places=2)
-
-
 class DashboardSerializer(serializers.Serializer):
     kpis = DashboardKpiSerializer(many=True)
     revenue = RevenuePointSerializer(many=True)
@@ -132,4 +126,3 @@ class DashboardSerializer(serializers.Serializer):
     segments = CustomerSegmentSerializer(many=True)
     fulfillment = FulfillmentMetricSerializer(many=True)
     ticker = TickerItemSerializer(many=True)
-    preorder = PreorderBookSerializer(required=False)

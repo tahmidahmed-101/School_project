@@ -69,28 +69,3 @@ def _forget_live_sales():
     clear_live_sales_cache()
     yield
     clear_live_sales_cache()
-
-
-@pytest.fixture
-def telegram_outbox(settings):
-    """Switch the Telegram bot on with a fake token and capture every Bot API
-    call as `(method, payload)` instead of sending it."""
-    import json
-    from unittest.mock import MagicMock, patch
-
-    from django.core.cache import cache
-
-    settings.TELEGRAM_BOT_TOKEN = "test-token"  # noqa: S105 -- a fake value
-    cache.clear()
-    calls: list[tuple[str, dict]] = []
-
-    def fake_urlopen(request, timeout=None):  # noqa: ARG001
-        calls.append((request.full_url.rsplit("/", 1)[1], json.loads(request.data)))
-        response = MagicMock()
-        response.__enter__.return_value = response
-        response.read.return_value = b'{"ok": true, "result": {}}'
-        return response
-
-    with patch("apps.common.services.telegram.urllib.request.urlopen", fake_urlopen):
-        yield calls
-    cache.clear()

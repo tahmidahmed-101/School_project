@@ -7,10 +7,10 @@ import type { RouteObject } from "react-router-dom"
  * src/app/modules.ts collects them. The sidebar is one list in src/app/nav.ts.
  */
 
-/** Sidebar groups: the two halves (one shown at a time) and the pages of the whole company. */
-export const NAV_GROUPS = ["STOCK", "PREORDER", "BUSINESS"] as const
+/** Sidebar groups: the shop pages and the pages of the whole company. */
+export const NAV_GROUPS = ["STOCK", "BUSINESS"] as const
 export type NavGroup = (typeof NAV_GROUPS)[number]
-export const NAV_GROUP_LABELS: Record<NavGroup, string> = { STOCK: "Shop", PREORDER: "Pre-order", BUSINESS: "Business" }
+export const NAV_GROUP_LABELS: Record<NavGroup, string> = { STOCK: "Shop", BUSINESS: "Business" }
 
 export interface NavItem {
   title: string

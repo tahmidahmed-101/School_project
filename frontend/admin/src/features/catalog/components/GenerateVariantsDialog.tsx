@@ -30,7 +30,6 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SubmitButton } from "@/components/common/FormActions"
 import { MoneyField, TextField } from "@/components/common/form-fields"
-import type { Kind } from "@/hooks/use-kind"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { AMOUNT_PATTERN, parseAmount } from "@/lib/moneyInput"
@@ -233,7 +232,6 @@ export function GenerateVariantsDialog({
   open,
   onOpenChange,
   product,
-  kind,
   variants,
   canSetStock,
   generate,
@@ -242,10 +240,9 @@ export function GenerateVariantsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   product: Product
-  kind: Kind
   /** The variants the product has now. */
   variants: readonly ProductVariant[]
-  /** A stock product, and the user may adjust stock: the new variants can start with a quantity. */
+  /** The user may adjust stock: the new variants can start with a quantity. */
   canSetStock: boolean
   /**
    * Creates the variants of the given value-id combinations at one price, then hands them to `finish`
@@ -260,7 +257,6 @@ export function GenerateVariantsDialog({
   onSaved: () => void
 }) {
   const id = useId()
-  const isStock = kind === "stock"
   const isDesktop = useMediaQuery("(min-width: 640px)")
   const attributes = useAttributes()
   const saved = savedOptionsOf(product)
@@ -338,7 +334,7 @@ export function GenerateVariantsDialog({
     invalid: (key: string) => boolean
   }[] = [
     { field: "price", label: "Price", placeholder: price.trim() || "0.00", invalid: (key) => badAmount(overrideOf(key).price) },
-    ...(isStock ? [{ field: "discount_price" as const, label: "Discount price", invalid: badDiscount }] : []),
+    { field: "discount_price", label: "Discount price", invalid: badDiscount },
     { field: "cost_price", label: "Cost", invalid: (key) => badAmount(overrideOf(key).cost_price) },
     { field: "weight", label: "Weight (kg)", placeholder: weight.trim(), invalid: (key) => badWeight(overrideOf(key).weight) },
   ]
@@ -421,7 +417,6 @@ export function GenerateVariantsDialog({
           try {
             await postBulkAdjustments(
               created.map((variant) => ({ variant_id: variant.id, quantity_delta: quantity, notes: "Opening stock" })),
-              kind,
             )
           } catch (err) {
             toast.warning(`Created, but the stock was not added. ${getApiErrorMessage(err, "Adjust it in the table.")}`)

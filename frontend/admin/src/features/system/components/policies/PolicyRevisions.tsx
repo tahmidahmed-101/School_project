@@ -15,7 +15,7 @@ function describeChange({ previous, current }: StorePolicyRevision): string {
   if (previous.effective_date !== current.effective_date) {
     changes.push(current.effective_date ? `Effective date set to ${formatDate(current.effective_date)}` : "Effective date cleared")
   }
-  const rules = (["return_window_days", "preorder_returns_allowed", "non_returnable_category_ids"] as const).some(
+  const rules = (["return_window_days", "non_returnable_category_ids"] as const).some(
     (key) => JSON.stringify(previous[key]) !== JSON.stringify(current[key])
   )
   if (rules) changes.push("Return eligibility changed")

@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   });
 }
 
-export default async function KullMartProductPage({ params }: ProductPageProps) {
+export default async function SchoolProjectProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const [product, related, { products }, content] = await Promise.all([
     getProductBySlug(slug),
@@ -56,10 +56,6 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
 
   const relatedProducts = relatedForProduct(product, related, products, RELATED_COUNT);
   const moreProducts = moreForProduct(product, relatedProducts, products, MORE_COUNT).map(forListing);
-  const shop =
-    product.kind === "preorder"
-      ? { name: "Pre-order Collection", path: "/pre-order" }
-      : { name: "Shop", path: "/shop" };
 
   return (
     <>
@@ -67,7 +63,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
-          shop,
+          { name: "Shop", path: "/shop" },
           { name: product.name.en, path: `/product/${product.slug}` },
         ])}
       />
@@ -77,7 +73,7 @@ export default async function KullMartProductPage({ params }: ProductPageProps) 
         relatedProducts={relatedProducts}
         moreProducts={moreProducts}
       />
-      <PromotionPopup popups={content?.promotionPopups ?? []} shop={product.kind} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} />
     </>
   );
 }

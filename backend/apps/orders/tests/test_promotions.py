@@ -14,7 +14,6 @@ from apps.catalog.services.sales import create_sale
 from apps.common.exceptions import DomainError
 from apps.inventory.constants import MovementType
 from apps.inventory.services.stock import record_movement
-from apps.logistics.services.rates import is_free_delivery
 from apps.orders.factories import CouponFactory
 from apps.orders.models import SalesOrder
 from apps.orders.services.carts import add_line, get_or_create_cart
@@ -30,7 +29,6 @@ from .test_public_checkout_api import (
     _configured_delivery,
     _guest_payload,
 )
-from .test_unpaid_orders import _preorder_variant
 
 pytestmark = pytest.mark.django_db
 
@@ -359,33 +357,6 @@ def test_admin_coupon_api_reads_and_writes_the_new_fields(api_client, admin_user
     assert "brands" in listed
 
 
-def test_admin_coupon_api_refuses_preorder_targets(api_client, admin_user):
-    api_client.force_authenticate(user=admin_user)
-    preorder_category = CategoryFactory(category_type="preorder")
-    preorder_brand = Brand.objects.create(name="Import", slug="import", kind="preorder")
-    coupon = CouponFactory(code="KEEP")
-
-    created = api_client.post(
-        ADMIN_COUPONS_URL,
-        {
-            "code": "WRONG",
-            "discount_type": "fixed",
-            "value": "50.00",
-            "category_ids": [str(preorder_category.id)],
-        },
-        format="json",
-    )
-    edited = api_client.patch(
-        f"{ADMIN_COUPONS_URL}{coupon.id}/", {"brand_ids": [str(preorder_brand.id)]}, format="json"
-    )
-
-    assert created.status_code == 400
-    assert created.data["error"]["code"] == "coupon_stock_only"
-    assert edited.status_code == 400
-    assert edited.data["error"]["code"] == "coupon_stock_only"
-    assert not coupon.brands.exists()
-
-
 # ---- free delivery ---------------------------------------------------------
 
 
@@ -476,19 +447,3 @@ def test_a_staff_order_quote_gets_free_delivery_too():
 
     assert quote["shipping_total"] == Decimal("0.00")
     assert quote["free_delivery"] is True
-
-
-def test_a_preorder_never_gets_free_delivery(api_client):
-    variant = _preorder_variant(price=Decimal("5000.00"))
-    _configured_delivery(kind="preorder")
-    _free_delivery_from("1000.00")
-
-    quote = api_client.post(
-        SHIPPING_QUOTE_URL, {"items": _items(variant), "address_text": "Dhaka"}, format="json"
-    )
-
-    assert quote.status_code == 200, quote.data
-    assert quote.data["data"]["shipping_total"] == "60.00"
-    assert quote.data["data"]["free_delivery"] is False
-    assert is_free_delivery(kind="preorder", subtotal=Decimal("5000.00")) is False
-    assert is_free_delivery(kind="stock", subtotal=Decimal("5000.00")) is True

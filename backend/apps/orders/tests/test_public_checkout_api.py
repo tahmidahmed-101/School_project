@@ -45,15 +45,14 @@ def _stocked_variant(quantity: int = 10, price: Decimal = Decimal("100.00"), wei
     return variant
 
 
-def _configured_delivery(keyword="dhaka", rate=Decimal("60.00"), kind="stock"):
+def _configured_delivery(keyword="dhaka", rate=Decimal("60.00")):
     """The root conftest wipes migration-seeded zones for every test, so
     anything that reaches `checkout()` needs its own zone/carrier/rate."""
-    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [], kind=kind)
+    zone = ShippingZoneFactory(country_codes=[keyword] if keyword else [])
     carrier = CarrierFactory()
     ShippingRateFactory(
         zone=zone,
         carrier=carrier,
-        kind=kind,
         base_weight=Decimal("50"),
         base_charge=rate,
         increment_weight=Decimal("1"),
@@ -400,35 +399,6 @@ def test_guest_checkout_applies_a_valid_coupon(api_client):
     assert response.status_code == 201
     assert response.data["data"]["coupon_code"] == "GUEST10"
     assert Decimal(response.data["data"]["discount_total"]) == Decimal("10.00")
-
-
-def test_guest_checkout_combines_duplicate_variants_before_preorder_limit_check(api_client):
-    """Two line entries for the same pre-order variant must be validated
-    against their combined quantity, not checked independently — otherwise a
-    payload split into fragments could slip a total past the configured
-    preorder_stock_limit."""
-    now = timezone.now()
-    variant = ProductVariantFactory(
-        product__category__category_type="preorder",
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=1),
-        preorder_stock_limit=5,
-    )
-    _configured_delivery()
-
-    payload = _guest_payload(
-        variant,
-        items=[
-            {"variant_id": str(variant.id), "quantity": 3},
-            {"variant_id": str(variant.id), "quantity": 3},
-        ],
-    )
-    response = api_client.post(GUEST_CHECKOUT_URL, payload, format="json")
-
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "preorder_stock_exceeded"
-    assert variant._get_preordered_quantity() == 0
 
 
 def test_coupon_validate_returns_discount_for_a_valid_code(api_client):

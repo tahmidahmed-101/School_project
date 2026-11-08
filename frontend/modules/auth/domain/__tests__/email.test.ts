@@ -19,7 +19,7 @@ describe("suggestEmailCorrection", () => {
   it("leaves correct and unrelated addresses alone", () => {
     expect(suggestEmailCorrection("a@gmail.com")).toBeNull();
     expect(suggestEmailCorrection("a@Gmail.com")).toBeNull();
-    expect(suggestEmailCorrection("a@kullmart.com")).toBeNull();
+    expect(suggestEmailCorrection("a@schoolproject.com")).toBeNull();
     expect(suggestEmailCorrection("a@example.com")).toBeNull();
     expect(suggestEmailCorrection("staff@company.com.bd")).toBeNull();
   });

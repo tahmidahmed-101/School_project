@@ -11,7 +11,6 @@ import { DateCell } from "@/components/common/cells"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 
@@ -20,15 +19,14 @@ import { useWarehouses } from "../lib/useWarehouses"
 import type { StockTransfer } from "../types"
 import { StockTransferDialog } from "./StockTransferDialog"
 
-/** Stock moved between warehouses of one kind, newest first; staff with inventory.manage start new ones. */
-const StockTransfers = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order transfers" : "Stock transfers"
-  useDocumentTitle(title)
+/** Stock moved between warehouses, newest first; staff with inventory.manage start new ones. */
+const StockTransfers = () => {
+  useDocumentTitle("Stock transfers")
   const dispatch = useAppDispatch()
   // POST /admin/inventory/transfers/ needs inventory.manage; the list needs inventory.view.
   const canManage = useCan("inventory.manage")
   const transferState = useAppSelector((s) => s.inventoryTransfers)
-  const { warehouses } = useWarehouses(kind)
+  const { warehouses } = useWarehouses()
 
   const [warehouse, setWarehouse] = useState<Option | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -36,7 +34,7 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: transferState,
-    params: { kind, warehouse_id: warehouse?.value },
+    params: { kind: "stock", warehouse_id: warehouse?.value },
   })
 
   const activeWarehouses = warehouses.filter((w) => w.is_active && !w.deleted_at)
@@ -96,7 +94,7 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Stock transfers"
         actions={
           canManage && (
             <Button
@@ -152,7 +150,6 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
         <StockTransferDialog
           open={formOpen}
           onOpenChange={setFormOpen}
-          kind={kind}
           warehouses={warehouses}
           onDone={list.reload}
         />
@@ -161,9 +158,4 @@ const StockTransfers = ({ kind }: { kind: Kind }) => {
   )
 }
 
-const StockTransfersPage = () => {
-  const kind = useKind()
-  return <StockTransfers key={kind} kind={kind} />
-}
-
-export default StockTransfersPage
+export default StockTransfers

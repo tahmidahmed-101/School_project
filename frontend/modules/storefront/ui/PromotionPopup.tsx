@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { Modal } from "@/design-system/ui/Modal";
-import { pickPromotionPopup, type PopupShop, type PromotionPopup as Popup } from "../domain/storefront-content";
+import { pickPromotionPopup, type PromotionPopup as Popup } from "../domain/storefront-content";
 
 /** Long enough for the page to settle first, so the popup never covers a half-drawn screen. */
 const OPEN_DELAY_MS = 2000;
@@ -43,7 +43,7 @@ function preload({ src, srcSet, sizes }: ReturnType<typeof popupImageProps>): Pr
   return image.decode().catch(() => undefined);
 }
 
-const seenKey = (id: string) => `kullmart:promotion-popup-seen:${id}`;
+const seenKey = (id: string) => `schoolproject:promotion-popup-seen:${id}`;
 
 /** Whether this browser tab already showed the popup. Storage can be blocked; then it simply shows. */
 function wasSeen(id: string): boolean {
@@ -63,18 +63,18 @@ function markSeen(id: string): void {
 }
 
 /**
- * The dashboard popup campaign for this page: the highest-priority one of the page's shop that is inside its schedule,
+ * The dashboard popup campaign for this page: the highest-priority one that is inside its schedule,
  * opened shortly after the page loads, on desktop and mobile alike. One image that opens the destination when clicked,
  * or just the image when the popup has none. Opens once per browser session per popup.
  */
-export function PromotionPopup({ popups, shop }: { popups: Popup[]; shop: PopupShop }) {
+export function PromotionPopup({ popups }: { popups: Popup[] }) {
   const { ui } = useLang();
   const [popup, setPopup] = useState<Popup | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     // The time is only known in the browser, so the choice is made after mount.
-    const chosen = pickPromotionPopup(popups, shop, Date.now());
+    const chosen = pickPromotionPopup(popups, Date.now());
     if (!chosen || wasSeen(chosen.id)) return;
     let cancelled = false;
     // The image loads during the delay; the popup opens once both are done.
@@ -88,7 +88,7 @@ export function PromotionPopup({ popups, shop }: { popups: Popup[]; shop: PopupS
     return () => {
       cancelled = true;
     };
-  }, [popups, shop]);
+  }, [popups]);
 
   if (!popup) return null;
   const close = () => setOpen(false);

@@ -23,14 +23,13 @@ When an order becomes **confirmed** for the first time, through any of:
 
 | Path | Where |
 | --- | --- |
-| Cash on delivery accepted at checkout (no deposit due) | `payments.record_payment_due` |
-| Payment (or a pre-order's deposit) captured | `payments.capture_payment` |
+| Cash on delivery accepted at checkout | `payments.record_payment_due` |
+| Payment captured | `payments.capture_payment` |
 | Staff confirm the order by hand | `orders.set_order_status` |
 
 All three call `payments._order_confirmed`, the hook that also scores the order
 for fraud. Nothing is sent for a pending cart, an order awaiting payment, a
-pre-order still waiting for its deposit, a cancelled order, or a submitted
-checkout that never confirms. An order that goes back to confirmed later (a
+cancelled order, or a submitted checkout that never confirms. An order that goes back to confirmed later (a
 consignment received back) does not count again.
 
 ## How it is delivered

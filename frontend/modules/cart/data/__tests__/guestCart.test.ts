@@ -66,7 +66,7 @@ describe("syncGuestCart", () => {
   it("keeps syncing the other lines when the backend refuses one", async () => {
     apiRequest
       .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
-      .mockRejectedValueOnce(new ApiError({ status: 400, code: "preorder_not_active", message: "closed" }))
+      .mockRejectedValueOnce(new ApiError({ status: 400, code: "out_of_stock", message: "sold out" }))
       .mockResolvedValueOnce(cart([{ id: "l-2", variant_id: "v-2", quantity: 1 }]));
     const { syncGuestCart } = await load();
 
@@ -76,20 +76,6 @@ describe("syncGuestCart", () => {
     ]);
     expect(inSync).toBe(false);
     expect(calls()).toEqual(["POST /cart/", "POST /cart/lines/", "POST /cart/lines/"]);
-  });
-
-  it("says why the backend refused a line, and forgets it once a sync goes through", async () => {
-    apiRequest
-      .mockResolvedValueOnce({ token: "tok", cart: cart([]) })
-      .mockRejectedValueOnce(new ApiError({ status: 409, code: "mixed_basket", message: "separate" }))
-      .mockResolvedValueOnce(cart([{ id: "l-1", variant_id: "v-1", quantity: 1 }]));
-    const { MIXED_BASKET_CODE, cartRefusalCode, syncGuestCart } = await load();
-
-    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
-    expect(cartRefusalCode()).toBe(MIXED_BASKET_CODE);
-
-    await syncGuestCart([{ variantId: "v-1", quantity: 1 }]);
-    expect(cartRefusalCode()).toBeNull();
   });
 });
 

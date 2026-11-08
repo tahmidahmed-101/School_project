@@ -6,7 +6,6 @@ import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { photo } from "@/lib/photo";
 import { getDiscountPercent } from "@/lib/product";
-import { PreOrderBadge } from "@/design-system/patterns/PreOrderBadge";
 import { DiscountBadge } from "@/design-system/patterns/DiscountBadge";
 
 export function ProductGallery({ product, images }: { product: Product; images: string[] }) {
@@ -50,11 +49,9 @@ export function ProductGallery({ product, images }: { product: Product; images: 
           className="object-cover object-center"
         />
 
-        {(product.isPreOrder || product.badge || discountPercent) && (
+        {(product.badge || discountPercent) && (
           <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5 sm:left-4 sm:top-4">
-            {product.isPreOrder ? (
-              <PreOrderBadge status={product.preorderStatus || "available"} />
-            ) : product.badge ? (
+            {product.badge ? (
               <span className="shadow-2xs rounded bg-accent px-2 py-0.5 text-2xs font-bold tracking-wide text-ink-950 sm:text-xs">
                 {t(product.badge)}
               </span>

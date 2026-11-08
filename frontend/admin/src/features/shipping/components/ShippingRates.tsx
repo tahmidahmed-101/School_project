@@ -20,24 +20,20 @@ import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
 import type { Carrier, ShippingRate, ShippingZone } from "@/features/shipping/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import type { Option } from "@/lib/types"
-import { deliveryTitle } from "../lib/kind"
 import { RateFormDialog } from "./RateFormDialog"
 
-const ShippingRatesList = () => {
-  const kind = useKind()
-  const title = deliveryTitle(kind, "Shipping rates")
-  useDocumentTitle(title)
+const ShippingRates = () => {
+  useDocumentTitle("Shipping rates")
 
   const dispatch = useAppDispatch()
   const canUpdate = useCan("shipments.update")
   const canSeeSettings = useCan("settings.view")
   const canManageSettings = useCan("settings.manage")
-  const showFreeDelivery = kind === "stock" && canSeeSettings
+  const showFreeDelivery = canSeeSettings
   const rateState = useAppSelector((state) => state.shippingRates)
 
   // ?zone_id=… comes from the zones page's "N rate(s)" link.
@@ -51,7 +47,7 @@ const ShippingRatesList = () => {
   const [formOpen, setFormOpen] = useState(false)
 
   useEffect(() => {
-    const zoneReq = dispatch(fetchZoneOptions(kind))
+    const zoneReq = dispatch(fetchZoneOptions())
     const carrierReq = dispatch(fetchCarrierOptions())
     zoneReq.unwrap().then(setZones).catch(() => setZones([]))
     carrierReq.unwrap().then(setCarriers).catch(() => setCarriers([]))
@@ -59,7 +55,7 @@ const ShippingRatesList = () => {
       zoneReq.abort()
       carrierReq.abort()
     }
-  }, [dispatch, kind])
+  }, [dispatch])
 
   useEffect(() => {
     if (!showFreeDelivery) return
@@ -75,7 +71,7 @@ const ShippingRatesList = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchRates(p)),
     state: rateState,
-    params: { kind, zone_id: zoneId, carrier_id: carrierId },
+    params: { kind: "stock", zone_id: zoneId, carrier_id: carrierId },
   })
 
   const setFilter = (key: "zone_id" | "carrier_id", option: Option | null) => {
@@ -159,7 +155,7 @@ const ShippingRatesList = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Shipping rates"
         actions={
           canUpdate && (
             <Button size="action" onClick={() => openForm(null)} disabled={zones.length === 0 || carriers.length === 0}>
@@ -208,11 +204,7 @@ const ShippingRatesList = () => {
         data={rateState.data}
         {...list.tableProps}
         emptyTitle="No rates"
-        emptyDescription={
-          kind === "preorder"
-            ? "Add a carrier rate to a pre-order delivery zone. A pre-order cannot be placed to a zone with no rate."
-            : "Add a carrier rate to a delivery zone."
-        }
+        emptyDescription="Add a carrier rate to a delivery zone."
         minWidth="800px"
         columnWidths={canUpdate ? ["200px", "200px", "200px", "200px", "80px"] : ["220px", "220px", "220px", "220px"]}
       />
@@ -221,7 +213,6 @@ const ShippingRatesList = () => {
         open={formOpen}
         onOpenChange={setFormOpen}
         rate={editing}
-        kind={kind}
         zones={zones}
         carriers={carriers}
         defaultZoneId={zoneId || undefined}
@@ -230,7 +221,5 @@ const ShippingRatesList = () => {
     </div>
   )
 }
-
-const ShippingRates = () => <ShippingRatesList key={useKind()} />
 
 export default ShippingRates

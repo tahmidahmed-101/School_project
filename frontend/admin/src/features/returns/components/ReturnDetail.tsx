@@ -8,8 +8,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchReturn, gradeReturnLine, runReturnAction, type RmaAction } from "@/features/returns/slices/returnSlice"
 import type { Rma, RmaCondition, RmaLine } from "@/features/returns/types"
 import { fetchOrderById } from "@/features/sales/slices/orderSlice"
-import { KIND_PATHS, orderNoun } from "@/features/sales/shared/kindPaths"
-import { useKindHint, useRecordKind } from "@/hooks/use-kind"
 import type { Order, OrderLine } from "@/features/sales/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -59,25 +57,20 @@ const ReturnDetail = () => {
     return () => request.abort()
   }, [dispatch, orderId])
 
-  const hint = useKindHint()
-  const recordKind = rma?.order_type ?? order?.order_type
-  useRecordKind(rma ? recordKind : undefined)
-
   const pageState = resolveDetailState(singleStatus, singleError, !!rma)
   if (pageState || !rma) {
     return (
       <DetailPageState
         state={pageState ?? "loading"}
         entity="Return"
-        backTo={hint && KIND_PATHS[hint].returns}
-        backLabel={hint === "preorder" ? "Back to pre-order returns" : "Back to returns"}
+        backTo="/returns"
+        backLabel="Back to returns"
         error={singleError}
         onRetry={load}
       />
     )
   }
 
-  const kind = recordKind ?? "stock"
   const orderLines = new Map<string, OrderLine>((order?.lines ?? []).map((l) => [l.id, l]))
 
   const act = async (action: RmaAction) => {
@@ -159,23 +152,20 @@ const ReturnDetail = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{
-          to: KIND_PATHS[kind].returns,
-          label: kind === "preorder" ? "Back to pre-order returns" : "Back to returns",
-        }}
+        back={{ to: "/returns", label: "Back to returns" }}
         title={rma.rma_number}
         badges={<StatusBadge status={rma.status} />}
         description={
           order ? (
             <>
-              Return for {orderNoun(kind)}{" "}
+              Return for order{" "}
               <Link to={`/order_detail/${rma.order_id}`} className="text-primary hover:underline">
                 {order.order_number}
               </Link>
             </>
           ) : (
             <Link to={`/order_detail/${rma.order_id}`} className="text-primary hover:underline">
-              View {orderNoun(kind)}
+              View order
             </Link>
           )
         }
@@ -214,11 +204,7 @@ const ReturnDetail = () => {
               {isApproved && (
                 <ConfirmDialog
                   title="Book the return as received?"
-                  description={
-                    kind === "preorder"
-                      ? "Sellable units go back with the other arrived pre-order items; damaged units are scrapped. The ledger is reversed either way."
-                      : "Sellable units go back into stock; damaged units are scrapped. The ledger is reversed either way."
-                  }
+                  description="Sellable units go back into stock; damaged units are scrapped. The ledger is reversed either way."
                   confirmLabel="Receive"
                   onConfirm={() => act("receive")}
                   trigger={

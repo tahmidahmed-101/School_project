@@ -50,7 +50,7 @@ class IsCustomer(BasePermission):
 def user_has_any_staff_permission(user, codes) -> bool:
     """The one rule for "may this account do it": an admin always, a staff
     member only with one of `codes` enabled. Shared by the permission classes
-    below and by callers that have a user but no request (the Telegram bot)."""
+    below and by callers that have a user but no request."""
     if user.is_superuser or user.role == "admin":
         return True
     if user.role != "staff" or not codes:

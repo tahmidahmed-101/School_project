@@ -15,7 +15,6 @@ def _category_image_path(instance: Category, filename: str) -> str:
 class Category(FullAuditModel):
     class CategoryType(models.TextChoices):
         STOCK = "stock", "Stock"
-        PREORDER = "preorder", "Pre-order"
 
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=170, unique=True)

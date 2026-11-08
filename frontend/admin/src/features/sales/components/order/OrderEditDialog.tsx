@@ -189,9 +189,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               })}
             </div>
             <FieldDescription>
-              {order.order_type === "preorder"
-                ? "Units set aside for this pre-order and its total follow the new quantity."
-                : "Stock holds and the order total follow the new quantity."}
+              Stock holds and the order total follow the new quantity.
             </FieldDescription>
           </div>
         )}

@@ -1,18 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCatalog, useProducts } from "../context";
 import { useLang } from "@/lib/i18n";
-import { shopHome, shopListing } from "@/lib/product";
-import {
-  DEFAULT_FILTERS,
-  filterAndSortProducts,
-  type FilterChange,
-  shopKindFor,
-  type FilterState,
-  type StockType,
-} from "../domain/shop-filters";
+import { shopListing } from "@/lib/product";
+import { DEFAULT_FILTERS, filterAndSortProducts, type FilterChange, type FilterState } from "../domain/shop-filters";
 import { ShopFilterSidebar } from "./ShopFilterSidebar";
 import { ShopProductGrid } from "./ShopProductGrid";
 import { Breadcrumbs } from "@/design-system/patterns/Breadcrumbs";
@@ -25,24 +18,12 @@ export function ShopCatalog() {
   const { categories, catalogFailed } = useCatalog();
   const { products } = useProducts();
 
-  const stockTypeOf = useCallback(
-    (type: string | null, slug: string | null): StockType =>
-      shopKindFor(
-        type,
-        categories.find((c) => c.id === slug),
-      ) === "preorder"
-        ? "preorder"
-        : "normal",
-    [categories],
-  );
-
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...DEFAULT_FILTERS,
     category: searchParams.get("category") || DEFAULT_FILTERS.category,
     collection: searchParams.get("collection") || DEFAULT_FILTERS.collection,
     sort: searchParams.get("sort") || DEFAULT_FILTERS.sort,
     searchQuery: searchParams.get("q") || DEFAULT_FILTERS.searchQuery,
-    stockType: stockTypeOf(searchParams.get("type"), searchParams.get("category")),
   }));
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -52,21 +33,17 @@ export function ShopCatalog() {
     const collection = searchParams.get("collection");
     const sort = searchParams.get("sort");
     const searchQuery = searchParams.get("q");
-    const type = searchParams.get("type");
 
     setFilters((prev) => ({
       ...prev,
-      // Only follow the URL when it names a type, so the user's checkbox choice isn't overwritten.
-      ...((type || category) && { stockType: stockTypeOf(type, category) }),
       ...(category && { category }),
       ...(collection && { collection }),
       ...(sort && { sort }),
       ...(searchQuery && { searchQuery }),
     }));
-  }, [searchParams, stockTypeOf]);
+  }, [searchParams]);
 
-  // Reset clears the user's filters but stays on the same stock type (normal / pre-order).
-  const resetFilters = () => setFilters((prev) => ({ ...DEFAULT_FILTERS, stockType: prev.stockType }));
+  const resetFilters = () => setFilters(DEFAULT_FILTERS);
 
   const handleFilterChange: FilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -78,10 +55,9 @@ export function ShopCatalog() {
   );
 
   const activeCategory = categories.find((c) => c.id === filters.category);
-  const shopKind = filters.stockType === "preorder" ? "preorder" : "stock";
-  const shopLabel = ui(shopKind === "preorder" ? "navPreOrder" : "navShop");
+  const shopLabel = ui("navShop");
   const activeCategoryTitle = activeCategory ? t(activeCategory.name) : shopLabel;
-  const parentCategory = categories.find((c) => c.id === activeCategory?.parentId && c.type === activeCategory.type);
+  const parentCategory = categories.find((c) => c.id === activeCategory?.parentId);
 
   return (
     <div className="min-h-screen w-full bg-ink-50/60">
@@ -93,13 +69,13 @@ export function ShopCatalog() {
               items={
                 filters.category !== "all"
                   ? [
-                      { label: shopLabel, href: shopHome(shopKind) },
+                      { label: shopLabel, href: "/shop" },
                       // A subcategory shows the main category it sits under.
                       ...(parentCategory
                         ? [
                             {
                               label: t(parentCategory.name),
-                              href: shopListing(shopKind, { category: parentCategory.slug }),
+                              href: shopListing({ category: parentCategory.slug }),
                             },
                           ]
                         : []),

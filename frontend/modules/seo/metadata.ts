@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { BRAND_INFO, type BrandInfo } from "@/lib/brand";
 import { photo } from "@/lib/photo";
-import { isPreOrderSoldOut } from "@/lib/product";
 import { absoluteUrl } from "@/lib/site-url";
 import type { CategoryInfo, Product } from "@/lib/types";
 
 export const SITE_NAME = BRAND_INFO.name;
 export const SITE_TITLE = `${SITE_NAME} — Women's Fashion, Innerwear, Kids & Gadgets`;
 export const SITE_DESCRIPTION =
-  "Kull Mart, Dhaka — women's fashion, innerwear, kids' items and gadgets. Wholesale & retail with delivery all across Bangladesh.";
+  "School Project, Dhaka — women's fashion, innerwear, kids' items and gadgets. Wholesale & retail with delivery all across Bangladesh.";
 export const CURRENCY_CODE = "BDT";
 
 interface SocialImage {
@@ -191,9 +190,8 @@ export function breadcrumbJsonLd(trail: { name: string; path: string }[]): JsonL
 }
 
 function availabilityOf(product: Product): string {
-  const soldOut = product.isPreOrder ? isPreOrderSoldOut(product) : !product.inStock || product.stockCount <= 0;
-  if (soldOut) return "https://schema.org/OutOfStock";
-  return product.isPreOrder ? "https://schema.org/PreOrder" : "https://schema.org/InStock";
+  const soldOut = !product.inStock || product.stockCount <= 0;
+  return soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock";
 }
 
 export function productJsonLd(product: Product): JsonLdNode {

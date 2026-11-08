@@ -20,10 +20,9 @@ import {
 import type { PromotionPopup } from "@/features/system/types"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
-import { POPUP_STATUS_TONES, SHOP_COPY, destinationLabel, scheduleLabel } from "../lib/promotionPopups"
+import { POPUP_STATUS_TONES, destinationLabel, scheduleLabel } from "../lib/promotionPopups"
 import { PromotionPopupFormDialog } from "./PromotionPopupFormDialog"
 
 const STATUS_OPTIONS: Option[] = [
@@ -33,12 +32,11 @@ const STATUS_OPTIONS: Option[] = [
   { value: "inactive", label: "Inactive" },
 ]
 
-/** Marketing → Promotion popups, on both halves: the popups of the shop the dashboard is in. */
+/** Marketing → Promotion popups: the image popups of the stock storefront. */
 const PromotionPopups = () => {
   useDocumentTitle("Promotion popups")
 
   const dispatch = useAppDispatch()
-  const shop = useKind()
   // The popups live in the shop settings on the backend: settings.view reads them, settings.manage edits them.
   const canManage = useCan("settings.manage")
   const { data: allPopups, status: loadStatus, error } = useAppSelector((state) => state.businessSettings.promotionPopups)
@@ -55,8 +53,8 @@ const PromotionPopups = () => {
 
   const popups = useMemo(
     () =>
-      allPopups.filter((popup) => popup.shop === shop && (!status || popup.display_status === status.value)),
-    [allPopups, shop, status]
+      allPopups.filter((popup) => popup.shop === "stock" && (!status || popup.display_status === status.value)),
+    [allPopups, status]
   )
 
   useEffect(() => {
@@ -186,7 +184,7 @@ const PromotionPopups = () => {
         onRetry={() => dispatch(fetchPromotionPopups())}
         onRowClick={(popup) => openForm(popup)}
         emptyTitle="No promotion popups yet"
-        emptyDescription={`Add an image popup for ${SHOP_COPY[shop].pages}.`}
+        emptyDescription="Add an image popup for the storefront (home page, shop and product pages)."
         {...(canManage ? { emptyActionLabel: "Add Popup", onEmptyAction: () => openForm(null) } : {})}
         minWidth="960px"
         columnWidths={["280px", "70px", "90px", "250px", "110px", "80px"]}
@@ -196,7 +194,6 @@ const PromotionPopups = () => {
         open={formOpen}
         onOpenChange={setFormOpen}
         popup={editing}
-        shop={shop}
         readOnly={!canManage}
       />
     </div>

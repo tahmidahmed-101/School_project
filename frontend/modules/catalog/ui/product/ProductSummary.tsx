@@ -3,15 +3,14 @@
 import { Star } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { getDiscountPercent, getSaleOffer, unavailableLabel } from "@/lib/product";
+import { getDiscountPercent, getSaleOffer } from "@/lib/product";
 
 interface ProductSummaryProps {
   product: Product;
-  isSoldOut: boolean;
 }
 
 /** Category, title, price, rating and availability line at the top of the details column. */
-export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
+export function ProductSummary({ product }: ProductSummaryProps) {
   const { t, ui, money, n } = useLang();
   const discountPercent = getDiscountPercent(product);
   const sale = getSaleOffer(product);
@@ -31,7 +30,7 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
         )}
         <span className="h-5 w-px bg-surface-strong" aria-hidden="true" />
         <div className="text-xs">
-          <Availability product={product} isSoldOut={isSoldOut} />
+          <Availability product={product} />
         </div>
       </div>
 
@@ -58,40 +57,22 @@ export function ProductSummary({ product, isSoldOut }: ProductSummaryProps) {
   );
 }
 
-function Availability({ product, isSoldOut }: ProductSummaryProps) {
+function Availability({ product }: ProductSummaryProps) {
   const { ui } = useLang();
 
-  if (!product.isPreOrder && !product.inStock) {
+  if (!product.inStock) {
     return (
       <div className="flex items-center gap-1.5 font-semibold text-danger">
         <span className="h-2 w-2 rounded-full bg-danger" />
-        <span>{ui(unavailableLabel(product))}</span>
-      </div>
-    );
-  }
-
-  if (!product.isPreOrder) {
-    return (
-      <div className="flex items-center gap-1.5 font-semibold text-brand-700">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
-        <span>{ui("inStock")}</span>
+        <span>{ui("outOfStock")}</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 font-semibold">
-      {isSoldOut ? (
-        <span className="flex items-center gap-1.5 text-danger">
-          <span className="h-2 w-2 rounded-full bg-danger" />
-          {ui("preOrderSoldOut")}
-        </span>
-      ) : (
-        <span className="flex items-center gap-1.5 text-gold-800">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-          {ui(product.preorderStatus === "closing-soon" ? "preOrderClosingSoon" : "preOrderOpen")}
-        </span>
-      )}
+    <div className="flex items-center gap-1.5 font-semibold text-brand-700">
+      <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
+      <span>{ui("inStock")}</span>
     </div>
   );
 }

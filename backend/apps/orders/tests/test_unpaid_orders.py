@@ -2,29 +2,26 @@
 rules that follow from that: a storefront order records what is owed rather
 than a captured payment, cash on delivery is captured later, and neither
 cancelling nor the manual status override can stand in for a payment or
-skip a step. They also pin the pre-order limit and checkout re-pricing.
+skip a step. They also pin checkout re-pricing.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from apps.accounting.models import JournalEntry
 from apps.accounts.constants import UserRole
 from apps.accounts.tests.helpers import create_user
-from apps.catalog.factories import ProductVariantFactory
 from apps.common.exceptions import BusinessRuleViolationError
 from apps.orders.constants import PaymentMethodKey
 from apps.orders.factories import PaymentFactory, SalesOrderFactory, SalesOrderLineFactory
 from apps.orders.models import Payment, SalesOrder
-from apps.orders.services.carts import add_line, get_or_create_cart, update_line
+from apps.orders.services.carts import add_line, get_or_create_cart
 from apps.orders.services.checkout import checkout
 from apps.orders.services.invoice_document import build_invoice_context
-from apps.orders.services.orders import cancel_order, set_order_status, update_order_line
+from apps.orders.services.orders import cancel_order, set_order_status
 from apps.orders.services.payments import capture_payment, record_payment_due, refund_payment
 
 from .test_api import _reserved_order, _stocked_variant
@@ -44,18 +41,6 @@ def _cod_order(email: str = "cod-order@example.com"):
     record_payment_due(order=order, method=PaymentMethodKey.COD)
     order.refresh_from_db()
     return order, variant
-
-
-def _preorder_variant(limit: int | None = 5, **fields):
-    now = timezone.now()
-    return ProductVariantFactory(
-        product__category__category_type="preorder",
-        is_preorder_enabled=True,
-        preorder_start_date=now - timedelta(days=1),
-        preorder_end_date=now + timedelta(days=1),
-        preorder_stock_limit=limit,
-        **fields,
-    )
 
 
 def test_cod_checkout_confirms_the_order_without_recording_money(api_client):
@@ -174,45 +159,6 @@ def test_status_override_cannot_skip_a_step_or_reopen_a_cart(current, target):
     assert order.status == current
 
 
-def test_an_open_cart_does_not_hold_a_preorder_slot():
-    variant = _preorder_variant(limit=5)
-    first = get_or_create_cart(create_user(email="slot-first@example.com"))
-    second = get_or_create_cart(create_user(email="slot-second@example.com"))
-
-    add_line(order=first, variant=variant, quantity=5)
-    add_line(order=second, variant=variant, quantity=5)
-    checkout(order=first)
-
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        checkout(order=second)
-    assert exc.value.code == "preorder_stock_exceeded"
-
-
-def test_a_buyers_own_cart_is_not_counted_against_them():
-    variant = _preorder_variant(limit=5)
-    cart = get_or_create_cart(create_user(email="slot-own-cart@example.com"))
-
-    line = add_line(order=cart, variant=variant, quantity=3)
-    update_line(line=line, quantity=5)
-
-    line.refresh_from_db()
-    assert line.quantity == 5
-    with pytest.raises(BusinessRuleViolationError):
-        update_line(line=line, quantity=6)
-
-
-def test_staff_cannot_raise_a_placed_preorder_line_past_the_limit():
-    variant = _preorder_variant(limit=5)
-    cart = get_or_create_cart(create_user(email="slot-staff-edit@example.com"))
-    line = add_line(order=cart, variant=variant, quantity=4)
-    checkout(order=cart)
-
-    update_order_line(line=line, quantity=5)
-    with pytest.raises(BusinessRuleViolationError) as exc:
-        update_order_line(line=line, quantity=6)
-    assert exc.value.code == "preorder_stock_exceeded"
-
-
 def test_checkout_charges_todays_price_not_the_one_saved_in_the_cart():
     variant = _stocked_variant()
     cart = get_or_create_cart(create_user(email="repriced@example.com"))
@@ -254,15 +200,11 @@ def test_invoice_after_a_full_refund_shows_nothing_paid_rather_than_a_negative()
     assert context["refunded"] == order.grand_total
 
 
-def test_admin_order_shows_what_is_owed_and_which_lines_are_preorder(api_client):
+def test_admin_order_shows_what_is_owed(api_client):
     api_client.force_authenticate(
         user=create_user(email="unpaid-admin@example.com", role=UserRole.ADMIN)
     )
     order, _ = _cod_order("admin-view-cod@example.com")
-    preorder = SalesOrderFactory(
-        status=SalesOrder.Status.CONFIRMED, order_type=SalesOrder.OrderType.PREORDER
-    )
-    SalesOrderLineFactory(order=preorder, is_preorder=True)
 
     response = api_client.get(f"/api/v1/admin/orders/{order.id}/")
 
@@ -270,9 +212,6 @@ def test_admin_order_shows_what_is_owed_and_which_lines_are_preorder(api_client)
     assert data["paid_total"] == "0.00"
     assert data["balance_due"] == str(order.grand_total)
     assert data["allowed_statuses"] == ["shipped", "delivered", "cancelled", "closed"]
-    assert data["lines"][0]["is_preorder"] is False
 
-    response = api_client.get("/api/v1/admin/orders/", {"order_type": "preorder"})
-    assert [row["id"] for row in response.data["data"]["results"]] == [str(preorder.id)]
     response = api_client.get("/api/v1/admin/orders/", {"order_type": "stock"})
     assert [row["id"] for row in response.data["data"]["results"]] == [str(order.id)]

@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { photo } from "@/lib/photo";
-import { shopListing } from "@/lib/product";
 import { useLang } from "@/lib/i18n";
 import { ScrollReveal } from "@/design-system/patterns/Reveal";
 import { Container } from "@/design-system/ui/Container";
@@ -20,13 +19,12 @@ const SLIDE_SPEED = 40;
 const RESUME_DELAY_MS = 1500;
 
 interface CategoryTrackProps {
-  preorder: boolean;
   /** True when every category fits in the row at once, so there is nothing to slide or loop. */
   isStatic: boolean;
   onStaticChange: (isStatic: boolean) => void;
 }
 
-function CategoryTrack({ preorder, isStatic, onStaticChange }: CategoryTrackProps) {
+function CategoryTrack({ isStatic, onStaticChange }: CategoryTrackProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const { lang, n, ui } = useLang();
   const searchParams = useSearchParams();
@@ -64,11 +62,8 @@ function CategoryTrack({ preorder, isStatic, onStaticChange }: CategoryTrackProp
   };
 
   const { categories: allCategories } = useCatalog();
-  // Stock and pre-order are separate catalogues: the home page lists one, the pre-order page the other.
   // Main categories only, each counting its subcategories' products; the subcategories are in its shop page.
-  const categories = categoryGroups(
-    allCategories.filter((category) => category.type === (preorder ? "preorder" : "stock")),
-  );
+  const categories = categoryGroups(allCategories);
   const count = categories.length;
 
   // The list is rendered several times in a row and the scroll position wraps by one list width,
@@ -225,7 +220,7 @@ function CategoryTrack({ preorder, isStatic, onStaticChange }: CategoryTrackProp
               <Link
                 draggable={false}
                 tabIndex={isRepeat ? -1 : undefined}
-                href={preorder ? `/shop?category=${cat.slug}&type=preorder` : `/shop?category=${cat.slug}`}
+                href={`/shop?category=${cat.slug}`}
                 prefetch={false}
                 className={`py-4.5 group relative flex h-full w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition-all duration-300 sm:rounded-2xl sm:px-3.5 sm:py-5 ${
                   isActive
@@ -272,8 +267,8 @@ function CategoryTrack({ preorder, isStatic, onStaticChange }: CategoryTrackProp
   );
 }
 
-/** "Browse by category" row. Lists the regular stock categories, or the pre-order ones with `preorder`. */
-export function CategoryShowcase({ preorder = false }: { preorder?: boolean }) {
+/** "Browse by category" row. */
+export function CategoryShowcase() {
   const { ui } = useLang();
   const [isStatic, setIsStatic] = useState(false);
   return (
@@ -285,9 +280,8 @@ export function CategoryShowcase({ preorder = false }: { preorder?: boolean }) {
             title={ui("categoriesTitle")}
             action={
               <div className="flex items-center gap-2">
-                {/* Stays inside the shop the section is on: stock on the home page, pre-order on the pre-order page */}
                 <Link
-                  href={shopListing(preorder ? "preorder" : "stock")}
+                  href="/shop"
                   className="group mr-1 inline-flex items-center gap-1 whitespace-nowrap text-xs font-bold text-gold-800 transition-colors hover:text-gold-900 sm:text-sm"
                 >
                   <span>{ui("viewAllProducts")}</span>
@@ -301,7 +295,7 @@ export function CategoryShowcase({ preorder = false }: { preorder?: boolean }) {
         {/* Category track: slides on its own in a loop; swipe, drag or trackpad still move it */}
         <ScrollReveal>
           <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-2xl bg-surface-muted" />}>
-            <CategoryTrack preorder={preorder} isStatic={isStatic} onStaticChange={setIsStatic} />
+            <CategoryTrack isStatic={isStatic} onStaticChange={setIsStatic} />
           </Suspense>
         </ScrollReveal>
       </Container>

@@ -9,33 +9,20 @@ import { FormDialog, SwitchField } from "@/components/common/FormDialog"
 import { TextField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deletePromoLine, fetchPromoLines, savePromoLine } from "@/features/system/slices/businessSettingsSlice"
-import type { PromoLine, ShopPlacement } from "@/features/system/types"
+import type { PromoLine } from "@/features/system/types"
 import { reportFormError } from "@/lib/forms"
 import { ContentListCard } from "./ContentListCard"
 import { onShop } from "./placement"
 
-const CARD_COPY: Record<ShopPlacement, { title: string; description: string }> = {
-  home: {
-    title: "Promo Lines",
-    description:
-      "The short messages in the strip above the storefront header. The storefront shows its built-in lines until at least one active line exists.",
-  },
-  preorder: {
-    title: "Pre-order Promo Lines",
-    description:
-      "The short messages in the strip above the header of the pre-order shop. It shows its built-in lines until at least one active line exists.",
-  },
-}
-
-export function PromoLinesCard({ canManage, placement }: { canManage: boolean; placement: ShopPlacement }) {
+export function PromoLinesCard({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch()
   const { data: allLines, status, error } = useAppSelector((state) => state.businessSettings.promoLines)
-  const data = useMemo(() => onShop(allLines, placement), [allLines, placement])
+  const data = useMemo(() => onShop(allLines), [allLines])
 
   return (
     <ContentListCard<PromoLine>
-      title={CARD_COPY[placement].title}
-      description={CARD_COPY[placement].description}
+      title="Promo Lines"
+      description="The short messages in the strip above the storefront header. The storefront shows its built-in lines until at least one active line exists."
       addLabel="Add line"
       canManage={canManage}
       items={data}
@@ -65,7 +52,6 @@ export function PromoLinesCard({ canManage, placement }: { canManage: boolean; p
           open={form.open}
           onOpenChange={form.onOpenChange}
           line={form.editing}
-          placement={placement}
           nextSortOrder={form.nextSortOrder}
         />
       )}
@@ -85,13 +71,11 @@ function PromoLineFormDialog({
   open,
   onOpenChange,
   line,
-  placement,
   nextSortOrder,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   line: PromoLine | null
-  placement: ShopPlacement
   nextSortOrder: number
 }) {
   const dispatch = useAppDispatch()
@@ -122,7 +106,7 @@ function PromoLineFormDialog({
       await dispatch(
         savePromoLine({
           id: line?.id,
-          values: { ...values, ...(line ? {} : { placement }), sort_order: Number(values.sort_order) },
+          values: { ...values, ...(line ? {} : { placement: "home" }), sort_order: Number(values.sort_order) },
         })
       ).unwrap()
       toast.success(`Promo line ${line ? "updated" : "added"}`)

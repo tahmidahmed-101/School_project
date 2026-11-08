@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Clock, Gift, Sparkles, Store } from "lucide-react";
+import { ChevronRight, Gift, Sparkles, Store } from "lucide-react";
 import { useLang } from "@/lib/i18n";
-import { shopListing, type ProductKind } from "@/lib/product";
 import { firstName, useAuth } from "@/modules/auth";
 
 const QUICK_LINKS = [
   {
     id: "featured",
-    href: { stock: "/shop?sort=featured", preorder: shopListing("preorder", { sort: "featured" }) },
+    href: "/shop?sort=featured",
     icon: Sparkles,
     titleKey: "heroFeaturedTitle",
     subtitleKey: "heroFeaturedSubtitle",
@@ -17,17 +16,8 @@ const QUICK_LINKS = [
     iconTint: "bg-accent text-white",
   },
   {
-    id: "preorder",
-    href: { stock: null, preorder: shopListing("preorder") },
-    icon: Clock,
-    titleKey: "heroPreorderTitle",
-    subtitleKey: "heroPreorderSubtitle",
-    tint: "bg-brand-50",
-    iconTint: "bg-brand-600 text-white",
-  },
-  {
     id: "promotion",
-    href: { stock: "/shop?sort=discount", preorder: shopListing("preorder", { sort: "discount" }) },
+    href: "/shop?sort=discount",
     icon: Gift,
     titleKey: "heroPromotionTitle",
     subtitleKey: "heroPromotionSubtitle",
@@ -36,14 +26,11 @@ const QUICK_LINKS = [
   },
 ] as const;
 
-/** Welcome card + quick-link stack on the right of the hero on desktop; every tile stays in the page's own shop. */
-export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind: ProductKind }) {
+/** Welcome card + quick-link stack on the right of the hero on desktop. */
+export function HeroWelcomePanel({ hasOffers }: { hasOffers: boolean }) {
   const { ui } = useLang();
   const { status, user } = useAuth();
-  const links = QUICK_LINKS.flatMap((link) => {
-    const to = link.href[kind];
-    return to && (hasOffers || link.id !== "promotion") ? [{ ...link, to }] : [];
-  });
+  const links = QUICK_LINKS.filter((link) => hasOffers || link.id !== "promotion");
 
   return (
     <div className="flex h-full flex-col gap-2.5 sm:gap-3">
@@ -85,10 +72,10 @@ export function HeroWelcomePanel({ hasOffers, kind }: { hasOffers: boolean; kind
       </div>
 
       <div className="flex flex-1 flex-col gap-2">
-        {links.map(({ id, to, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
+        {links.map(({ id, href, icon: Icon, titleKey, subtitleKey, tint, iconTint }) => (
           <Link
             key={id}
-            href={to}
+            href={href}
             className={`group flex flex-1 items-center gap-2 rounded-xl ${tint} p-2.5 shadow-sm transition-all duration-200 hover:shadow-md sm:rounded-2xl sm:p-3`}
           >
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTint}`}>

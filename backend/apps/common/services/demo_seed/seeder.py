@@ -31,7 +31,6 @@ from apps.catalog.services.categories import create_category
 from apps.catalog.services.options import set_product_options
 from apps.catalog.services.products import create_product, create_product_image, create_variant
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.params import KIND_PREORDER, KIND_STOCK
 from apps.common.services.demo_seed.constants import (
     AUDIT_IPS,
     AUDIT_MARKER,
@@ -70,7 +69,7 @@ from apps.inventory.constants import MovementType
 from apps.inventory.models import StockItem, StockLedgerEntry
 from apps.inventory.services.stock import post_adjustment, write_off_stock
 from apps.logistics.models import Carrier, ShippingRate, ShippingZone
-from apps.logistics.services.rates import create_carrier, create_rate, create_zone
+from apps.logistics.services.rates import create_carrier, create_rate
 from apps.marketing.models import NewsletterSubscriber
 from apps.marketing.services.subscribers import subscribe, unsubscribe
 from apps.orders.constants import PaymentMethodKey
@@ -207,12 +206,6 @@ class DemoSeeder:
         # The zones themselves are fixed logistics fixtures, not demo data —
         # attach demo rates to every live zone so checkout can quote any
         # destination a seeded customer ships to.
-        for zone in ShippingZone.objects.filter(deleted_at__isnull=True, kind=KIND_STOCK):
-            if not ShippingZone.objects.filter(name=zone.name, kind=KIND_PREORDER).exists():
-                create_zone(
-                    name=zone.name, country_codes=list(zone.country_codes), kind=KIND_PREORDER
-                )
-                self._bump("shipping_zones")
         base_weight, base_charge, increment_weight, increment_charge = SHIPPING_RATE
         for zone in ShippingZone.objects.filter(deleted_at__isnull=True):
             for carrier in self.carriers:

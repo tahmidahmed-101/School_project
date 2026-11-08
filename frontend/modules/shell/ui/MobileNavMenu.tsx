@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, CornerDownRight, X, Store, Globe, Truck, Sparkles } from "lucide-react";
-import { categoryGroups, useCatalog, WithPageKind } from "@/modules/catalog";
-import { useCart } from "@/modules/cart";
-import { shopListing, type ProductKind } from "@/lib/product";
+import { ChevronDown, CornerDownRight, X, Store, Globe, Truck } from "lucide-react";
+import { categoryGroups, useCatalog } from "@/modules/catalog";
+import { shopListing } from "@/lib/product";
 import { useLang } from "@/lib/i18n";
 import { useOverlay } from "@/lib/useOverlay";
 import { WithActiveCategory } from "@/modules/catalog";
@@ -29,19 +28,13 @@ interface MobileNavMenuProps {
   hasShippingPolicy: boolean;
 }
 
-/** Left-hand slide-in menu with ready stock, pre-order, categories and the language toggle, mobile only. */
-export function MobileNavMenu(props: MobileNavMenuProps) {
-  const { kind: basket } = useCart();
-  return <WithPageKind basket={basket}>{(kind) => <ShopNavMenu {...props} kind={kind} />}</WithPageKind>;
-}
-
-function ShopNavMenu({ open, onClose, hasShippingPolicy, kind }: MobileNavMenuProps & { kind: ProductKind }) {
+/** Left-hand slide-in menu with ready stock, categories and the language toggle, mobile only. */
+export function MobileNavMenu({ open, onClose, hasShippingPolicy }: MobileNavMenuProps) {
   const pathname = usePathname();
   const { lang, setLang, t, ui } = useLang();
-  const { categories: allCategories } = useCatalog();
-  // Each shop lists only its own categories: stock pages the stock tree, pre-order pages the pre-order tree.
-  const groups = categoryGroups(allCategories.filter((category) => category.type === kind));
-  const categoryHref = (slug: string) => shopListing(kind, { category: slug });
+  const { categories } = useCatalog();
+  const groups = categoryGroups(categories);
+  const categoryHref = (slug: string) => shopListing({ category: slug });
   // Groups the visitor opened or closed by hand; the group of the category being viewed starts open.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
@@ -93,19 +86,6 @@ function ShopNavMenu({ open, onClose, hasShippingPolicy, kind }: MobileNavMenuPr
                       >
                         <Store className="h-4 w-4 shrink-0" />
                         <span>{ui("navReadyStock")}</span>
-                      </Link>
-
-                      <Link
-                        href="/pre-order"
-                        onClick={onClose}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                          pathname.startsWith("/pre-order")
-                            ? "bg-white/10 text-gold-300"
-                            : "text-white/80 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        <Sparkles className="h-4 w-4 shrink-0" />
-                        <span>{ui("navPreOrder")}</span>
                       </Link>
 
                       <Link

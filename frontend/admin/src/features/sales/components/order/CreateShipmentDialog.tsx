@@ -120,11 +120,7 @@ export function CreateShipmentDialog({ order, open, onOpenChange, onCreated }: C
       open={open}
       onOpenChange={onOpenChange}
       title="Create shipment"
-      description={
-        order.order_type === "preorder"
-          ? 'Ship the units already set aside for this pre-order. After goods arrive, use "Set aside for orders" on the pre-order Orders page.'
-          : "Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
-      }
+      description="Ship some or all remaining units. The order becomes shipped once every line is fully dispatched."
       onSubmit={handleSubmit}
       submitting={submitting}
       submitLabel="Create shipment"

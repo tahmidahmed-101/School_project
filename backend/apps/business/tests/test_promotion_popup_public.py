@@ -9,7 +9,6 @@ import pytest
 from django.utils import timezone
 
 from apps.catalog.factories import CategoryFactory, ProductFactory
-from apps.catalog.models import Category
 
 from .promotions import CONTENT, popup, sale
 
@@ -29,14 +28,14 @@ def _popups(api_client) -> list[dict]:
 
 def test_a_live_popup_carries_where_when_and_how_it_shows(api_client):
     ends = timezone.now() + timedelta(days=2)
-    row = popup(shop="preorder", ends_at=ends)
+    row = popup(ends_at=ends)
 
     [item] = _popups(api_client)
 
     assert item["id"] == str(row.id)
     assert item["image"] == f"http://testserver{row.image.url}"
     assert item["href"] == "/shop"
-    assert item["shop"] == "preorder"
+    assert item["shop"] == "stock"
     assert item["starts_at"] is None
     assert item["ends_at"] is not None
     assert item["sale"] is None
@@ -95,14 +94,9 @@ def test_product_destination_opens_the_product_while_it_is_published(api_client)
 
 def test_category_destination_opens_its_shop_listing(api_client):
     stock = CategoryFactory(slug="gadgets")
-    preorder = CategoryFactory(slug="eid", category_type=Category.CategoryType.PREORDER)
     popup(destination_type="category", category=stock, link_url="", priority=2)
-    popup(destination_type="category", category=preorder, link_url="", priority=1)
 
-    assert [item["href"] for item in _popups(api_client)] == [
-        "/shop?category=gadgets",
-        "/shop?category=eid&type=preorder",
-    ]
+    assert [item["href"] for item in _popups(api_client)] == ["/shop?category=gadgets"]
 
 
 def test_campaign_destination_shows_only_while_its_sale_runs(api_client):

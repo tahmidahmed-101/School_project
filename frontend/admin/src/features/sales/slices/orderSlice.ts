@@ -65,12 +65,6 @@ export const updateOrderStatus = orderAction(
   ({ id, status }: { id: string; status: OrderStatus }) => api.post(`${ENDPOINT}${id}/status/`, { status })
 )
 
-export const updatePreorderStage = orderAction(
-  "updatePreorderStage",
-  ({ id, stage, note }: { id: string; stage: string; note?: string }) =>
-    api.post(`${ENDPOINT}${id}/preorder-stage/`, { stage, note: note ?? "" })
-)
-
 export const cancelOrder = orderAction("cancelOrder", ({ id }: { id: string }) =>
   api.post(`${ENDPOINT}${id}/cancel/`)
 )
@@ -125,7 +119,7 @@ export const createReturn = createAsyncThunk(
   }
 )
 
-const orderReturningActions = [updateOrder, updateOrderStatus, updatePreorderStage, cancelOrder, capturePayment, addOrderLine, updateOrderLine, removeOrderLine]
+const orderReturningActions = [updateOrder, updateOrderStatus, cancelOrder, capturePayment, addOrderLine, updateOrderLine, removeOrderLine]
 
 export default withExtraCases(reducer, (builder) => {
   for (const action of orderReturningActions) {

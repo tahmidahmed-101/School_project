@@ -61,6 +61,8 @@ class AdminBrandListCreateView(IncludeDeletedMixin, CatalogPermissionMixin, Gene
         serializer = BrandCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
+        # Accepted for the dashboard's sake; every brand is a stock brand.
+        data.pop("kind", None)
         try:
             brand = create_brand(actor=request.user, **data)
         except DomainError as exc:

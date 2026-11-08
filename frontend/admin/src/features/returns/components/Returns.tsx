@@ -13,15 +13,11 @@ import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { RMA_STATUS_OPTIONS, type Rma } from "@/features/returns/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 
-const ReturnsList = () => {
-  const kind = useKind()
-  const isPreorder = kind === "preorder"
-  const title = isPreorder ? "Pre-order returns" : "Returns"
-  useDocumentTitle(title)
+const Returns = () => {
+  useDocumentTitle("Returns")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -32,7 +28,7 @@ const ReturnsList = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAllReturns(p)),
     state: returnsState,
-    params: { kind, status: statusFilter?.value },
+    params: { kind: "stock", status: statusFilter?.value },
   })
 
   const columns: ColumnDef<Rma>[] = [
@@ -43,9 +39,9 @@ const ReturnsList = () => {
     },
     {
       id: "order",
-      header: isPreorder ? "PRE-ORDER" : "ORDER",
+      header: "ORDER",
       cell: ({ row }) => (
-        <LinkCell to={withKind(`/order_detail/${row.original.order_id}`, kind)}>{isPreorder ? "View pre-order" : "View order"}</LinkCell>
+        <LinkCell to={`/order_detail/${row.original.order_id}`}>View order</LinkCell>
       ),
     },
     {
@@ -74,14 +70,14 @@ const ReturnsList = () => {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <TableActions itemName={`Return ${row.original.rma_number}`} viewUrl={withKind(`/return_detail/${row.original.id}`, kind)} />
+        <TableActions itemName={`Return ${row.original.rma_number}`} viewUrl={`/return_detail/${row.original.id}`} />
       ),
     },
   ]
 
   return (
     <div className="section-container">
-      <PageHeader title={title} />
+      <PageHeader title="Returns" />
 
       <FilterToolbar
         searchPlaceholder="Search RMA number..."
@@ -105,13 +101,9 @@ const ReturnsList = () => {
         columns={columns}
         data={returnsState.data}
         {...list.tableProps}
-        onRowClick={(rma) => navigate(withKind(`/return_detail/${rma.id}`, kind))}
+        onRowClick={(rma) => navigate(`/return_detail/${rma.id}`)}
         emptyTitle="No returns found"
-        emptyDescription={
-          isPreorder
-            ? "Returns are opened from a pre-order's page or by customers."
-            : "Returns are opened from an order's detail page or by customers."
-        }
+        emptyDescription="Returns are opened from an order's detail page or by customers."
         minWidth="900px"
         columnWidths={["150px", "120px", "150px", "280px", "120px", "80px"]}
       />
@@ -119,7 +111,4 @@ const ReturnsList = () => {
   )
 }
 
-// Both halves render this component on different routes; the key gives each half its own filters and page.
-const ReturnsPage = () => <ReturnsList key={useKind()} />
-
-export default ReturnsPage
+export default Returns

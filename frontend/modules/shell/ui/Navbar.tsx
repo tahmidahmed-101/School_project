@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, Heart, Globe, Phone, MapPin, Clock, Menu, Truck, User } from "lucide-react";
+import { ShoppingCart, Heart, Globe, Phone, MapPin, Menu, Truck, User } from "lucide-react";
 import { useBrand } from "@/modules/catalog";
 import { useLang, type UiKey } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
@@ -38,7 +38,6 @@ function buildNavLinks(pathname: string, activeCategory: string | null): NavLink
       href: READY_STOCK_PATH,
       isActive: pathname === READY_STOCK_PATH || (pathname === SHOP_PATH && !activeCategory),
     },
-    { label: "navPreOrder", href: "/pre-order", isActive: pathname.startsWith("/pre-order") },
   ];
 }
 
@@ -102,7 +101,7 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
                 className="h-6 w-auto shrink-0 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-10"
               />
               <span className="text-sm font-extrabold tracking-[0.12em] text-white max-[379px]:tracking-normal transition-colors group-hover:text-gold-300 sm:text-lg lg:text-xl">
-                {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
+                {lang === "bn" ? "কুল মার্ট" : "SCHOOL PROJECT"}
               </span>
             </Link>
           </div>
@@ -110,19 +109,6 @@ export function Navbar({ onOpenMenu }: NavbarProps) {
           <NavbarSearch />
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-            {/* Mobile only; on desktop Pre-order already lives in the Tier 2 nav links. Below 380px the header
-                row tightens its spacing so the label still fits beside the icon. */}
-            <Link
-              href="/pre-order"
-              aria-label={ui("navPreOrder")}
-              className={`relative flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 transition-colors max-[379px]:gap-1 max-[379px]:px-1.5 lg:hidden ${
-                pathname.startsWith("/pre-order") ? "text-gold-300" : "text-white hover:bg-white/10 hover:text-gold-300"
-              }`}
-            >
-              <Clock className="h-5 w-5 shrink-0" />
-              <span className="text-xs font-semibold whitespace-nowrap">{ui("navPreOrder")}</span>
-            </Link>
-
             {/* Desktop only; on mobile the language toggle lives in the hamburger menu */}
             <button
               type="button"

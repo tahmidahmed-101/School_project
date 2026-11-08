@@ -26,22 +26,16 @@ const content = (api: Partial<ApiStorefrontContent>) =>
 
 describe("heroSlidesFor", () => {
   const managed = content({
-    hero_slides: [
-      apiSlide({ id: "home", placement: "home" }),
-      apiSlide({ id: "pre", placement: "preorder" }),
-      apiSlide({ id: "both", placement: "both" }),
-    ],
+    hero_slides: [apiSlide({ id: "home", placement: "home" }), apiSlide({ id: "both", placement: "both" })],
   });
 
-  it("picks each page's slides in the order the API sent them", () => {
-    expect(heroSlidesFor("home", managed).map((s) => s.id)).toEqual(["home", "both"]);
-    expect(heroSlidesFor("preorder", managed).map((s) => s.id)).toEqual(["pre", "both"]);
+  it("picks the home page's slides in the order the API sent them", () => {
+    expect(heroSlidesFor(managed).map((s) => s.id)).toEqual(["home", "both"]);
   });
 
   it("has no slides when the page has none or the API failed", () => {
-    const homeOnly = content({ hero_slides: [apiSlide({ placement: "home" })] });
-    expect(heroSlidesFor("preorder", homeOnly)).toEqual([]);
-    expect(heroSlidesFor("home", null)).toEqual([]);
+    expect(heroSlidesFor(content({}))).toEqual([]);
+    expect(heroSlidesFor(null)).toEqual([]);
   });
 });
 
@@ -90,26 +84,25 @@ describe("promoLinesFor", () => {
         { id: "3", text: { en: "", bn: "" }, placement: "both" },
       ],
     });
-    expect(promoLinesFor("home", managed)).toEqual([
+    expect(promoLinesFor(managed)).toEqual([
       { en: "First", bn: "প্রথম" },
       { en: "Second", bn: "Second" },
     ]);
   });
 
   it("has no lines when there are none or the API failed", () => {
-    expect(promoLinesFor("home", content({}))).toEqual([]);
-    expect(promoLinesFor("preorder", null)).toEqual([]);
+    expect(promoLinesFor(content({}))).toEqual([]);
+    expect(promoLinesFor(null)).toEqual([]);
   });
 
-  it("keeps a line on the page it was placed on", () => {
+  it("keeps only the lines placed on the home page", () => {
     const managed = content({
       promo_lines: [
-        { id: "1", text: { en: "Stock only", bn: "" }, placement: "home" },
-        { id: "2", text: { en: "Everywhere", bn: "" }, placement: "both" },
+        { id: "1", text: { en: "Home only", bn: "" }, placement: "home" },
+        { id: "3", text: { en: "Everywhere", bn: "" }, placement: "both" },
       ],
     });
-    expect(promoLinesFor("preorder", managed).map((line) => line.en)).toEqual(["Everywhere"]);
-    expect(promoLinesFor("home", managed).map((line) => line.en)).toEqual(["Stock only", "Everywhere"]);
+    expect(promoLinesFor(managed).map((line) => line.en)).toEqual(["Home only", "Everywhere"]);
   });
 });
 
@@ -144,7 +137,6 @@ describe("toPromotionPopup", () => {
       id: "p1",
       image: "https://api.example.test/media/promotions/p1.png",
       href: "/product/panjabi",
-      shop: "stock",
       startsAt: Date.parse("2026-10-01T00:00:00Z"),
       endsAt: null,
       sale: { name: "Eid offer", percentOff: 25 },
@@ -159,7 +151,9 @@ describe("toPromotionPopup", () => {
     expect(toPromotionPopup(apiPopup({ image: "" }))).toBeNull();
     expect(toPromotionPopup(apiPopup({ href: "javascript:alert(1)" }))).toBeNull();
     expect(toPromotionPopup(apiPopup({ href: "//evil.example" }))).toBeNull();
-    expect(toPromotionPopup(apiPopup({ href: "https://kullmart.com/x" }))?.href).toBe("https://kullmart.com/x");
+    expect(toPromotionPopup(apiPopup({ href: "https://schoolproject.com/x" }))?.href).toBe(
+      "https://schoolproject.com/x",
+    );
   });
 
   it("keeps a popup with no destination, without a link", () => {
@@ -180,23 +174,16 @@ describe("pickPromotionPopup", () => {
     content({ promotion_popups: overrides.map((o) => apiPopup(o)) }).promotionPopups;
   const now = Date.parse("2026-10-19T12:00:00Z");
 
-  it("takes only a popup of the page's shop", () => {
-    const list = popups({ id: "stock", shop: "stock" }, { id: "pre", shop: "preorder" });
-    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("stock");
-    expect(pickPromotionPopup(list, "preorder", now)?.id).toBe("pre");
-    expect(pickPromotionPopup(popups({ id: "stock", shop: "stock" }), "preorder", now)).toBeNull();
-  });
-
   it("skips one that has not started or has ended, since the API answer may be cached", () => {
     const list = popups(
       { id: "later", starts_at: "2026-10-20T00:00:00Z" },
       { id: "over", starts_at: null, ends_at: "2026-10-19T11:59:00Z" },
       { id: "open", starts_at: null, ends_at: "2026-10-19T12:01:00Z" },
     );
-    expect(pickPromotionPopup(list, "stock", now)?.id).toBe("open");
+    expect(pickPromotionPopup(list, now)?.id).toBe("open");
   });
 
   it("prefers the first eligible one, which the API orders by priority", () => {
-    expect(pickPromotionPopup(popups({ id: "high" }, { id: "low" }), "stock", now)?.id).toBe("high");
+    expect(pickPromotionPopup(popups({ id: "high" }, { id: "low" }), now)?.id).toBe("high");
   });
 });

@@ -11,12 +11,17 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { toBundleItems, toCategoryInfo, toProduct, withReviewSummary } from "./adapters";
 import type { CategoryInfo, Product } from "@/lib/types";
+import type { ApiCategory, ApiProduct } from "@/lib/api/types";
 
 /**
  * Server-side data access for pages, layouts and SEO routes. Everything here reads the LaunchCart API through
  * the API layer and hands back storefront models. Import from server code only.
  * `cache()` de-duplicates within one render; the fetch cache (revalidate) shares results across requests.
  */
+
+/** The shop sells stock items only: products and categories of any other kind the API still lists are left out. */
+const isStockProduct = (product: ApiProduct) => product.kind === "stock";
+const isStockCategory = (category: ApiCategory) => category.category_type === "stock";
 
 export interface Catalog {
   products: Product[];
@@ -28,8 +33,8 @@ export interface Catalog {
 export const getCatalog = cache(async (): Promise<Catalog> => {
   try {
     const [apiCategories, apiProducts] = await Promise.all([listCategories(), listAllProducts()]);
-    const products = apiProducts.map((p) => toProduct(p, apiCategories));
-    const categories = apiCategories.map((c) => toCategoryInfo(c, apiCategories));
+    const products = apiProducts.filter(isStockProduct).map((p) => toProduct(p, apiCategories));
+    const categories = apiCategories.filter(isStockCategory).map((c) => toCategoryInfo(c, apiCategories));
     return { products, categories, failed: false };
   } catch (error) {
     console.error("[catalog] LaunchCart API unavailable:", error instanceof Error ? error.message : error);
@@ -49,11 +54,15 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
 export const getShellCatalog = cache(async (): Promise<Pick<Catalog, "categories" | "failed">> => {
   const apiCategories = await listCategories().catch(() => null);
   if (!apiCategories || apiCategories.some((category) => category.product_count === undefined)) return getCatalog();
-  return { categories: apiCategories.map((category) => toCategoryInfo(category, apiCategories)), failed: false };
+  return {
+    categories: apiCategories.filter(isStockCategory).map((category) => toCategoryInfo(category, apiCategories)),
+    failed: false,
+  };
 });
 
 /**
- * One product with its full description and review summary, or null when the slug does not exist (404).
+ * One product with its full description and review summary, or null when the slug does not exist (404) or is not
+ * a stock item.
  * Any other failure (network, 5xx) is thrown so the route's error boundary shows a retry instead of a false 404.
  */
 export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
@@ -65,6 +74,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<Product | nu
       // alongside the product rather than after it, so the page waits for one round trip instead of two.
       getProductReviews(slug, { page_size: 1 }).catch(() => null),
     ]);
+    if (!isStockProduct(product)) return null;
     const base = toProduct(product, categories);
     // Only a combo has items to list, so the extra request is made for combos alone. Like the review summary,
     // the list is optional: without it the page still sells the combo.
@@ -84,7 +94,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<Product | nu
 export const getRelatedProductsBySlug = cache(async (slug: string, limit: number): Promise<Product[] | null> => {
   try {
     const [related, categories] = await Promise.all([getRelatedProducts(slug, limit), listCategories()]);
-    return related.map((p) => toProduct(p, categories));
+    return related.filter(isStockProduct).map((p) => toProduct(p, categories));
   } catch {
     return null;
   }

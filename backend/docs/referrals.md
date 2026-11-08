@@ -24,7 +24,6 @@ The program is off while either is unset or 0. No default amounts exist.
 - Not for the referrer's own account, phone or email (`referral_own_code`). A self-referral that only shows after checkout is voided at delivery.
 - First order only: refused when the customer or phone/email already has a non-cancelled placed order (`referral_not_first_order`).
 - One coupon per order, so a referral code never stacks with another coupon.
-- Pre-order baskets refuse coupons already.
 - Referral share codes are hidden from the staff coupon list.
 
 ## Staff

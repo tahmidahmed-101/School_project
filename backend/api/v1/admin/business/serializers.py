@@ -49,9 +49,6 @@ class AdminBusinessProfileSerializer(serializers.Serializer):
     youtube_url = serializers.CharField(allow_blank=True)
     linkedin_url = serializers.CharField(allow_blank=True)
 
-    preorder_deposit_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
-    preorder_terms_en = serializers.CharField(allow_blank=True)
-    preorder_terms_bn = serializers.CharField(allow_blank=True)
     free_delivery_min_amount = serializers.DecimalField(
         max_digits=14, decimal_places=2, allow_null=True
     )
@@ -102,15 +99,6 @@ class AdminBusinessProfileUpdateSerializer(serializers.Serializer):
     youtube_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
     linkedin_url = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
-    preorder_deposit_percent = serializers.DecimalField(
-        required=False,
-        max_digits=5,
-        decimal_places=2,
-        min_value=Decimal("0"),
-        max_value=Decimal("100"),
-    )
-    preorder_terms_en = serializers.CharField(required=False, allow_blank=True, max_length=10000)
-    preorder_terms_bn = serializers.CharField(required=False, allow_blank=True, max_length=10000)
     free_delivery_min_amount = serializers.DecimalField(
         required=False, allow_null=True, max_digits=14, decimal_places=2, min_value=Decimal("0")
     )
@@ -241,7 +229,6 @@ class AdminStorePolicySerializer(serializers.Serializer):
             return None
         return {
             "return_window_days": obj.return_window_days,
-            "preorder_returns_allowed": obj.preorder_returns_allowed,
             "non_returnable_categories": AdminPolicyCategorySerializer(
                 obj.non_returnable_categories.all(), many=True
             ).data,
@@ -256,7 +243,6 @@ class AdminStorePolicyUpdateSerializer(serializers.Serializer):
     effective_date = serializers.DateField(required=False, allow_null=True)
     is_published = serializers.BooleanField(required=False)
     return_window_days = serializers.IntegerField(required=False, allow_null=True)
-    preorder_returns_allowed = serializers.BooleanField(required=False)
     non_returnable_category_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, max_length=200
     )

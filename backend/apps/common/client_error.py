@@ -18,7 +18,7 @@ MAX_BODY = 6000
 MAX_STACK_LINES = 6
 LIMIT_PER_MINUTE = 30
 GLOBAL_PER_MINUTE = 600
-# The admin SPA posts from admin.kullmart.com, which the browser labels same-site, not same-origin.
+# The admin SPA posts from admin.schoolproject.com, which the browser labels same-site, not same-origin.
 _TRUSTED_SITES = {"same-origin", "same-site"}
 _hits: dict[str, list[float]] = {}
 _global: list[float] = []

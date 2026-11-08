@@ -1,13 +1,12 @@
 import { navSections } from "@/app/nav"
-import type { Kind } from "@/hooks/use-kind"
 
 const navEntries = () =>
   navSections.flatMap((section) => section.items.map((item) => ({ section, item })))
 
 const isUnder = (path: string, url: string) => path === url || path.startsWith(`${url}/`)
 
-/** The sidebar entry a page belongs to; a detail or form page maps to the list of its own half by name. */
-export function findNavEntry(pathname: string, kind: Kind, backTo?: string) {
+/** The sidebar entry a page belongs to; a detail or form page maps to its list by name. */
+export function findNavEntry(pathname: string, backTo?: string) {
   const entries = navEntries()
   const byPrefix = (path: string) =>
     entries
@@ -20,10 +19,7 @@ export function findNavEntry(pathname: string, kind: Kind, backTo?: string) {
   const stem = pathname.split("/")[1]?.replace(/_(detail|form)$/, "")
   if (stem) {
     const plurals = [`${stem}s`, stem.replace(/y$/, "ies")]
-    const guesses =
-      kind === "preorder"
-        ? plurals.flatMap((plural) => [`/preorder_${plural}`, `/pre${plural}`])
-        : [...plurals.map((plural) => `/${plural}`), `/${stem}`]
+    const guesses = [...plurals.map((plural) => `/${plural}`), `/${stem}`]
     const guessed = entries.find(({ item }) => guesses.includes(item.url))
     if (guessed) return guessed
   }

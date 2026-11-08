@@ -18,12 +18,7 @@ from apps.logistics.selectors.rates import (
 )
 from apps.orders.constants import STOREFRONT_PAYMENT_METHODS
 from apps.orders.models import SalesOrder, SalesOrderLine
-from apps.orders.services.carts import (
-    _check_preorder_stock_limit,
-    compute_line_tax,
-    default_tax_percent,
-    ensure_purchasable,
-)
+from apps.orders.services.carts import compute_line_tax, default_tax_percent
 from apps.orders.services.orders import lock_order
 
 
@@ -45,14 +40,6 @@ def weight_for_items(items: list[dict]) -> Decimal:
         if variant.weight is not None:
             weight += variant.weight * item["quantity"]
     return weight
-
-
-def items_hold_preorder(items: list[dict]) -> bool:
-    ids = [item["variant_id"] for item in items]
-    return any(
-        variant.is_preorder_kind
-        for variant in get_variants_by_ids(ids).select_related("product__category")
-    )
 
 
 def priced_lines_for_items(items: list[dict]) -> list[tuple]:
@@ -260,10 +247,8 @@ def _order_from_items(
             order.delete()
             raise BusinessRuleViolationError("Quantity must be positive.", code="invalid_quantity")
 
-    # Combine repeated references to the same variant before validation —
-    # matching add_line's cart-side merge — so a duplicated variant can't
-    # validate each fragment against the pre-order limit separately and slip
-    # a combined quantity past it.
+    # Combine repeated references to the same variant — matching add_line's
+    # cart-side merge — so the order holds one line per variant.
     combined_items: dict[str, int] = {}
     for item in items:
         variant_id = str(item["variant_id"])
@@ -283,15 +268,6 @@ def _order_from_items(
             order.delete()
             raise BusinessRuleViolationError("Variant not found.", code="variant_not_found")
 
-        try:
-            ensure_purchasable(variant)
-        except BusinessRuleViolationError:
-            order.delete()
-            raise
-        is_preorder = variant.is_preorder_kind
-        if is_preorder and variant.preorder_stock_limit is not None:
-            _check_preorder_stock_limit(variant, quantity)
-
         unit_price = variant.effective_price
         tax_amount = compute_line_tax(
             unit_price=unit_price, quantity=quantity, tax_percent=tax_percent
@@ -306,7 +282,6 @@ def _order_from_items(
             product_name=variant.product.name,
             variant_sku=variant.sku,
             variant_title=variant_title(variant),
-            is_preorder=is_preorder,
         )
 
     order.recalculate_totals()

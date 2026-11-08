@@ -110,7 +110,7 @@ independent trees:
 - Registered modules (`ModuleKey`): catalog, inventory, orders, accounting, audit, procurement (depends on inventory+accounting), logistics (depends on orders), reporting, cms. `catalog`/`inventory`/`orders`/`accounting`/`audit` are `can_disable=False`.
 
 ### catalog
-- **Models**: `Product` (simple/variant type; `meta_keywords` — optional SEO field, admin create/update only) · `ProductVariant` · `Brand` · `Category` (stock/pre-order type) · `ProductImage` · `BundleItem` (kit component) · `ProductReview` · `ProductQuestion` (private until answered + published) · `PriceIssueReport` (staff-only) · `WishlistItem`
+- **Models**: `Product` (simple/variant type; `meta_keywords` — optional SEO field, admin create/update only) · `ProductVariant` · `Brand` · `Category` · `ProductImage` · `BundleItem` (kit component) · `ProductReview` · `ProductQuestion` (private until answered + published) · `PriceIssueReport` (staff-only) · `WishlistItem`
 - **Services**: `products.py`, `variants.py`, `brands.py`, `categories.py`, `bundles.py`, `reviews.py`, `questions.py`, `price_reports.py`, `wishlist.py` · `variant_import_export.py` (bulk CSV)
 
 ### common (shared, not a domain app)
@@ -131,7 +131,7 @@ independent trees:
 
 ### orders — commerce core
 - **Models**: `SalesOrder` + `SalesOrderLine` (pending → awaiting_payment → confirmed → shipped → delivered → cancelled/closed) · `Payment` · `PaymentMethodSetting` · `Coupon` · `StockReservation` · `ReturnRMA` + `ReturnRMALine` (requested → approved/rejected → received → closed, with per-line grading) · `Shipment` + `ShipmentLine`
-- **Services**: `checkout.py` (cart → order, weight calc, pre-order detection) · `carts.py`, `guest_checkout.py` · `payments.py` (`capture_payment`, `refund_payment`, triggers risk assessment) · `coupons.py` (create/apply/preview/revalidate) · `reservations.py` (expiry release, ties into inventory) · `returns.py` (RMA workflow) · `shipments.py` (`create_shipment`, `update_shipment_status`, `dispatch_to_courier`, `_auto_select_carrier`) · `orders.py` (CRUD/state transitions) · `payment_methods.py`, `address_snapshot.py`, `invoice_document.py` (PDF), `exports.py`
+- **Services**: `checkout.py` (cart → order, weight calc) · `carts.py`, `guest_checkout.py` · `payments.py` (`capture_payment`, `refund_payment`, triggers risk assessment) · `coupons.py` (create/apply/preview/revalidate) · `reservations.py` (expiry release, ties into inventory) · `returns.py` (RMA workflow) · `shipments.py` (`create_shipment`, `update_shipment_status`, `dispatch_to_courier`, `_auto_select_carrier`) · `orders.py` (CRUD/state transitions) · `payment_methods.py`, `address_snapshot.py`, `invoice_document.py` (PDF), `exports.py`
 
 ### procurement
 - **Models**: `Supplier` · `PurchaseOrder` + `PurchaseOrderLine` · `GoodsReceiptNote` + `GRNLine` (QC pass/reject per line) · `VendorBill` + `VendorPayment`
@@ -467,88 +467,6 @@ Verified: `ruff`, `mypy` (still zero errors — the one `api/v1/webhooks`
 error present project-wide predates all of this work and is unrelated),
 `manage.py check`, full test suite (1583 tests) all green.
 
-## 11. Recent changes (2026-09-30): pre-order flow bugfixes
-
-Four bugs in the pre-order path, all stemming from one root cause: `SalesOrderLine.is_preorder`
-was computed with `variant.is_preorder_active and variant.is_preorder_price_applied` in two
-places instead of the single correct rule already implemented on
-`ProductVariant.is_preorder_active` (`apps/catalog/models/variant.py` — enabled + within the
-date window, independent of `preorder_price`). No model or migration changes were needed;
-`is_preorder_active` was already correct.
-
-1. **`apps/orders/services/carts.py::add_line`** and
-   **`apps/orders/services/guest_checkout.py::guest_checkout`** both set
-   `is_preorder = variant.is_preorder_active` now, not
-   `... and variant.is_preorder_price_applied`. Previously, an active pre-order variant with no
-   discounted `preorder_price` (or one not below list price) got `is_preorder=False` on its order
-   line — invisible to `get_preordered_quantity()`'s capacity count and, worse, indistinguishable
-   from a real stocked line at shipment time.
-2. **`apps/orders/services/checkout.py::checkout`** now re-derives `is_preorder` from the live
-   variant at the exact point it decides whether to reserve stock, and persists it if it
-   disagrees with the cart-time value (`line.save(update_fields=["is_preorder"])`) — closing the
-   gap where preorder settings could change between cart-add and checkout.
-3. **`apps/orders/services/shipments.py::create_shipment`** — the reservation-release + SALES_OUT
-   stock-movement block is now skipped entirely for `order_line.is_preorder` lines. It used to run
-   unconditionally, and since a pre-order line never has a `StockReservation` (checkout skips
-   creating one), it raised `over_release`/`insufficient_stock` — shipping *any* pre-order line
-   was broken.
-4. **`apps/orders/services/guest_checkout.py::guest_checkout`** now merges `items` by
-   `variant_id` (summing quantity) before the per-variant validation loop, matching
-   `add_line`'s `get_or_create`-based merge on the cart side, so a payload split into duplicate
-   variant entries can't be validated fragment-by-fragment.
-5. **`apps/orders/services/carts.py::_check_preorder_stock_limit`** now takes
-   `ProductVariant.objects.select_for_update().get(pk=variant.pk)` before reading the running
-   preordered total, closing the check-then-write race between two concurrent checkouts for the
-   same variant. This is shared by `carts.py`, `checkout.py`, and `guest_checkout.py`. Note: this
-   test suite's SQLite DB doesn't support row-level locking (`has_select_for_update` is `False`
-   there), so the lock is a no-op in tests — it takes effect on Postgres, the production database.
-
-**Tests** (`apps/catalog/tests/test_services.py`, `apps/orders/tests/test_services.py`,
-`apps/orders/tests/test_public_checkout_api.py`): active pre-order without `preorder_price`
-correctly flags its cart line; that same pre-order checks out and keeps `is_preorder=True`
-through to the order; a pre-order line ships without ever having held a reservation; two separate
-orders can't jointly exceed a shared `preorder_stock_limit`; duplicate variant entries in a guest
-checkout payload are combined and still capped. All 5 verified to fail against the pre-fix code
-(confirmed by temporarily reverting each source file and re-running) and pass with the fix.
-
-Full suite: 1588 tests green (1583 + 5 new). `ruff`, `mypy` (still only the pre-existing,
-unrelated `api/v1/webhooks` error), `manage.py check` all clean.
-
-## 12. Recent changes (2026-09-30): public pre-order capacity fields
-
-`PublicProductVariantSerializer` (`api/v1/public/catalog/serializers.py`, used by both
-`GET /public/catalog/products/` and `GET /public/catalog/products/<slug>/`) gained three
-read-only fields, backend-only — no frontend files touched:
-
-- `preorder_stock_limit` — direct passthrough of the model field (`int | null`)
-- `preordered_quantity` — quantity already committed, via the *existing*
-  `apps.orders.services.carts.get_preordered_quantities()` batch helper (same one the admin
-  catalog API already uses for `can_preorder`) — no new counting logic
-- `preorder_remaining` — `max(limit - preordered_quantity, 0)`, or `null` when
-  `preorder_stock_limit` is `null` (no ceiling to report against); always `null` for a variant
-  with no configured limit, consistently — never `0` for that case
-
-**Batching**: `stock_context_for_products()` (already the single context-builder both public
-views call) now also returns the `preordered_by_variant` batch dict alongside the existing
-`stock_by_variant` one, reusing the same already-gathered variant list — one extra query for the
-whole page, not one per variant. No changes to `views.py` were needed. Confirmed by temporarily
-bypassing the context lookup: query count jumped from 18 to 54 queries as the catalog grew;
-restored, it stays flat.
-
-Nothing about checkout, pricing, shipment, or inventory logic changed — this is a pure read
-exposure of numbers those flows already compute.
-
-Tests (`apps/catalog/tests/test_api.py`, `apps/catalog/tests/test_public_query_counts.py`): an
-active pre-order with committed quantity reports its limit/quantity/remaining correctly; an
-unlimited pre-order reports `preorder_remaining: null` (with a real `preordered_quantity`); a
-regular variant reports `null`/`0`/`null`; list-endpoint query count stays flat as pre-order
-variant count grows (verified to fail — 18→54 queries — without the batch context, confirming
-the test actually catches the N+1).
-
-Full suite: 1592 tests green (1588 + 4 new). `ruff`, `mypy` (same one pre-existing unrelated
-`api/v1/webhooks` error), `manage.py check` all clean.
-
-
 ## 13. Recent changes (2026-10-03): guest checkout identities
 
 **Rule.** Anonymous `POST /api/v1/public/checkout/` never attaches an order to — or edits — a
@@ -600,7 +518,7 @@ re-checks completeness, so a row edited around the service still cannot publish 
 `effective_date` is the policy's date, never the row's `updated_at`.
 
 **Return eligibility** lives on the `returns` row (`return_window_days`,
-`preorder_returns_allowed`, `non_returnable_categories`) and defaults to imposing nothing.
+`non_returnable_categories`) and defaults to imposing nothing.
 `create_rma` enforces it only while the return policy is published, for every caller, and
 per line applies the **version in force when that line was delivered**:
 - versions are the published snapshots in `StorePolicyRevision.current` (plus the live row),
@@ -614,8 +532,7 @@ per line applies the **version in force when that line was delivered**:
   carrying the line — the same moment the window runs from — so a split shipment straddling an
   effective date is governed entirely by the later delivery; a line with no recorded delivery
   falls under today's version and has not started its window;
-- category matching is exact (no descendant categories); a bundle line uses the bundle's category;
-- pre-order exclusion uses `SalesOrderLine.is_preorder`.
+- category matching is exact (no descendant categories); a bundle line uses the bundle's category.
 
 **Refunds** remain manual: staff record them with `refund_payment` against a captured `Payment`
 (`refunds.approve`). There is no gateway payout, no RMA-to-refund link and no refund timing, so

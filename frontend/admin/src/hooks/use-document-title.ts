@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 
-const APP_NAME = "Kull Mart"
+const APP_NAME = "School Project"
 
 /**
  * Sets the browser tab/window title for a route. Passing an empty string

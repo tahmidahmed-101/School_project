@@ -32,35 +32,33 @@ describe("forListing", () => {
 });
 
 describe("relatedForProduct", () => {
-  const product = makeProduct({ id: "p", category: "bags", kind: "preorder" });
-  const samePreorder = makeProduct({ id: "a", category: "bags", kind: "preorder" });
-  const stockPick = makeProduct({ id: "b", category: "bags", kind: "stock" });
-  const otherCategory = makeProduct({ id: "c", category: "gadgets", kind: "preorder" });
+  const product = makeProduct({ id: "p", category: "bags" });
+  const sameCategory = makeProduct({ id: "a", category: "bags" });
+  const otherCategory = makeProduct({ id: "c", category: "gadgets" });
 
-  it("drops API picks from the other shop and the product itself", () => {
-    const related = relatedForProduct(product, [stockPick, product, samePreorder, otherCategory], [], 4);
+  it("keeps the API picks but drops the product itself", () => {
+    const related = relatedForProduct(product, [product, sameCategory, otherCategory], [], 4);
     expect(related.map((p) => p.id)).toEqual(["a", "c"]);
   });
 
-  it("falls back to the same category, still within the product's shop", () => {
-    const related = relatedForProduct(product, null, [product, stockPick, samePreorder, otherCategory], 4);
+  it("falls back to the same category", () => {
+    const related = relatedForProduct(product, null, [product, sameCategory, otherCategory], 4);
     expect(related.map((p) => p.id)).toEqual(["a"]);
   });
 
   it("returns at most the asked count", () => {
-    expect(relatedForProduct(product, [samePreorder, otherCategory], [], 1)).toHaveLength(1);
+    expect(relatedForProduct(product, [sameCategory, otherCategory], [], 1)).toHaveLength(1);
   });
 });
 
 describe("moreForProduct", () => {
-  const product = makeProduct({ id: "p", kind: "stock" });
-  const related = makeProduct({ id: "r", kind: "stock" });
-  const other = makeProduct({ id: "a", category: "gadgets", kind: "stock" });
-  const another = makeProduct({ id: "b", kind: "stock" });
-  const preorder = makeProduct({ id: "c", kind: "preorder" });
+  const product = makeProduct({ id: "p" });
+  const related = makeProduct({ id: "r" });
+  const other = makeProduct({ id: "a", category: "gadgets" });
+  const another = makeProduct({ id: "b" });
 
-  it("lists the shop's other products, leaving out the product, its related picks and the other shop", () => {
-    const more = moreForProduct(product, [related], [product, related, other, preorder, another], 12);
+  it("lists the other products, leaving out the product and its related picks", () => {
+    const more = moreForProduct(product, [related], [product, related, other, another], 12);
     expect(more.map((p) => p.id)).toEqual(["a", "b"]);
   });
 

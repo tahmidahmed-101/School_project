@@ -36,7 +36,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 /** Set while a refresh cookie may exist, so guests never pay for a refresh request that can only fail. */
-const SESSION_HINT = "kullmart:session";
+const SESSION_HINT = "schoolproject:session";
 
 function toUser(api: ApiAuthUser): AuthUser {
   return {

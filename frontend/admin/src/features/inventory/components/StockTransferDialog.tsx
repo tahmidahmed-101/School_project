@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FieldError } from "@/components/ui/field"
 import { FormDialog } from "@/components/common/FormDialog"
-import type { Kind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
 
@@ -45,19 +44,17 @@ type FormValues = z.infer<typeof schema>
 const emptyLine = () => ({ variant: null, quantity: 1 })
 
 /**
- * Moves available stock between two warehouses of the same kind:
+ * Moves available stock between two warehouses:
  * POST /admin/inventory/transfers/ (all-or-nothing). Reserved units stay where they are.
  */
 export function StockTransferDialog({
   open,
   onOpenChange,
-  kind,
   warehouses,
   onDone,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  kind: Kind
   warehouses: Warehouse[]
   onDone: (transfer: StockTransfer) => void
 }) {
@@ -170,7 +167,7 @@ export function StockTransferDialog({
                 <VariantPicker
                   value={field.value ?? null}
                   onChange={field.onChange}
-                  filters={{ category_type: kind, ...(fromWarehouseId && { warehouse_id: fromWarehouseId }) }}
+                  filters={{ category_type: "stock", ...(fromWarehouseId && { warehouse_id: fromWarehouseId }) }}
                 />
               )}
             />

@@ -7,20 +7,13 @@ from django.db import transaction
 from apps.catalog.selectors.bundles import expand_variant
 from apps.catalog.selectors.sales import prime_running_sales
 from apps.common.exceptions import BusinessRuleViolationError
-from apps.common.utils.codes import generate_document_number
 from apps.inventory.services.stock import lock_variant_stock
 from apps.logistics.selectors.rates import address_zone_text, find_zone_by_address_text
 from apps.logistics.services.rates import quote_shipping
 from apps.orders.models import SalesOrder
 from apps.orders.services.address_snapshot import build_address_snapshot
-from apps.orders.services.carts import (
-    MIXED_BASKET_MESSAGE,
-    _check_preorder_stock_limit,
-    compute_line_tax,
-    ensure_preorder_minimums,
-    ensure_purchasable,
-)
-from apps.orders.services.coupons import COUPON_STOCK_ONLY_MESSAGE, revalidate_applied_coupon
+from apps.orders.services.carts import compute_line_tax
+from apps.orders.services.coupons import revalidate_applied_coupon
 from apps.orders.services.orders import lock_order
 from apps.orders.services.referrals import record_referral
 from apps.orders.services.reservations import hold_line_stock
@@ -45,10 +38,6 @@ def order_subtotal_now(order: SalesOrder) -> Decimal:
     return sum((line.variant.effective_price * line.quantity for line in lines), Decimal("0"))
 
 
-def _is_preorder_line(line) -> bool:
-    return line.variant.is_preorder_kind
-
-
 def _reprice_lines(order: SalesOrder, lines) -> None:
     """A cart can outlive a price change or the end of an offer. The order is
     charged at today's price, which is the one the storefront is showing."""
@@ -65,9 +54,7 @@ def _reprice_lines(order: SalesOrder, lines) -> None:
         order.recalculate_totals()
 
 
-def _settle_coupon(order: SalesOrder, lines) -> None:
-    if order.coupon_id is not None and any(_is_preorder_line(line) for line in lines):
-        raise BusinessRuleViolationError(COUPON_STOCK_ONLY_MESSAGE, code="coupon_stock_only")
+def _settle_coupon(order: SalesOrder) -> None:
     # A cart can sit long enough for its applied coupon to expire or hit its
     # usage limit before checkout actually runs — re-validate here too.
     revalidate_applied_coupon(order)
@@ -89,19 +76,6 @@ def _free_expired_holds(order: SalesOrder) -> None:
         "component_variant_id", flat=True
     )
     release_expired_reservations(variant_ids=line_variant_ids | set(component_ids))
-
-
-def _prefix_preorder_number(order: SalesOrder) -> None:
-    # A cart is born with an SO- number; a pre-order is re-issued with PRE- so
-    # the two kinds are distinguishable at a glance.
-    if order.order_type != SalesOrder.OrderType.PREORDER or not order.order_number.startswith(
-        "SO-"
-    ):
-        return
-    order_number = generate_document_number("PRE")
-    while SalesOrder.objects.filter(order_number=order_number).exists():
-        order_number = generate_document_number("PRE")
-    order.order_number = order_number
 
 
 def _refuse_blocked(order: SalesOrder, shipping_address, ip_address: str) -> None:
@@ -130,10 +104,6 @@ def checkout(
     checkouts of the same cart can't both pass the status gate and reserve
     stock twice.
 
-    Pre-order lines skip real inventory stock reservation since the product
-    may not be in stock yet. Each must reach its variant's minimum quantity
-    here, the one gate every placement route passes through.
-
     Refuses a checkout out from a blocked IP, or to a phone number staff have
     fully refused — both are standing merchant decisions, checked before any
     stock is touched. Advance-only phone blocks are a payment-method decision,
@@ -152,16 +122,9 @@ def checkout(
     if not lines:
         raise BusinessRuleViolationError("Cannot checkout an empty order.", code="empty_order")
 
-    for line in lines:
-        variant = line.variant
-        ensure_purchasable(variant)
-        if variant.is_preorder_kind and variant.preorder_stock_limit is not None:
-            _check_preorder_stock_limit(variant, line.quantity)
-    ensure_preorder_minimums(lines)
-
     _reprice_lines(order, lines)
 
-    _settle_coupon(order, lines)
+    _settle_coupon(order)
 
     # Lock every stock row the holds below can touch in one go, in a fixed
     # order (by row), so two checkouts of the same items in a different cart
@@ -170,40 +133,21 @@ def checkout(
         {
             component.id
             for line in lines
-            if not _is_preorder_line(line)
             for component, _ in expand_variant(line.variant, line.quantity)
         },
         create_missing=False,
     )
 
-    kinds: set[bool] = set()
     for line in lines:
-        # Re-derive and persist is_preorder here, not just at cart-add time:
-        # this is the decision point for whether a reservation gets created,
-        # so the stored flag must match it exactly or shipment can't tell
-        # later whether a reservation exists to release.
-        is_preorder = _is_preorder_line(line)
-        if line.is_preorder != is_preorder:
-            line.is_preorder = is_preorder
-            line.save(update_fields=["is_preorder"])
-        kinds.add(is_preorder)
-        # Skip stock reservation for pre-order items (they don't need real inventory yet)
-        if is_preorder:
-            continue
         for component, component_qty in expand_variant(line.variant, line.quantity):
             hold_line_stock(order_line=line, variant=component, quantity=component_qty)
 
-    if len(kinds) > 1:
-        raise BusinessRuleViolationError(MIXED_BASKET_MESSAGE, code="mixed_basket")
-    order.order_type = (
-        SalesOrder.OrderType.PREORDER if True in kinds else SalesOrder.OrderType.STOCK
-    )
-    _prefix_preorder_number(order)
+    order.order_type = SalesOrder.OrderType.STOCK
 
     if shipping_address is not None:
         order.shipping_address = shipping_address
         order.shipping_address_snapshot = build_address_snapshot(shipping_address)
-        zone = find_zone_by_address_text(address_zone_text(shipping_address), kind=order.order_type)
+        zone = find_zone_by_address_text(address_zone_text(shipping_address))
         if zone is None:
             raise BusinessRuleViolationError(
                 "Delivery is not available yet — no shipping zones are configured.",
@@ -212,7 +156,6 @@ def checkout(
         order.shipping_total = quote_shipping(
             zone=zone,
             weight=order_weight(order),
-            kind=order.order_type,
             carrier=carrier,
             subtotal=sum((line.unit_price * line.quantity for line in lines), Decimal("0")),
         )

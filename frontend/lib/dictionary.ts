@@ -19,7 +19,7 @@ export const DICT = {
   contactWhatsApp: { en: "WhatsApp", bn: "হোয়াটসঅ্যাপ" },
   contactMessenger: { en: "Messenger", bn: "মেসেঞ্জার" },
   loginTitle: { en: "Log in", bn: "লগ ইন" },
-  loginSubtitle: { en: "Welcome back to Kull Mart", bn: "কুল মার্টে আবার স্বাগতম" },
+  loginSubtitle: { en: "Welcome back to School Project", bn: "কুল মার্টে আবার স্বাগতম" },
   loginIdentifierLabel: { en: "Email", bn: "ইমেইল" },
   loginIdentifierPlaceholder: { en: "you@example.com", bn: "you@example.com" },
   loginPasswordLabel: { en: "Password", bn: "পাসওয়ার্ড" },
@@ -60,15 +60,6 @@ export const DICT = {
   },
   ordersTotal: { en: "Total", bn: "মোট" },
   ordersTrack: { en: "Track order", bn: "অর্ডার ট্র্যাক করুন" },
-  ordersTabStock: { en: "Orders", bn: "অর্ডার" },
-  ordersTabPreorder: { en: "Pre-orders", bn: "প্রি-অর্ডার" },
-  ordersPreorderEmpty: {
-    en: "You have no pre-orders yet. Pre-orders you place while logged in will appear here.",
-    bn: "এখনও কোনো প্রি-অর্ডার নেই। লগ ইন অবস্থায় করা প্রি-অর্ডার এখানে দেখা যাবে।",
-  },
-  preorderAdvance: { en: "Advance", bn: "অগ্রিম" },
-  preorderPaid: { en: "Paid", bn: "পেমেন্ট হয়েছে" },
-  preorderBalanceDue: { en: "Balance due", bn: "বাকি আছে" },
   orderStatusAwaitingPayment: { en: "Awaiting payment", bn: "পেমেন্টের অপেক্ষায়" },
   orderStatusConfirmed: { en: "Confirmed", bn: "নিশ্চিত" },
   orderStatusShipped: { en: "Shipped", bn: "পাঠানো হয়েছে" },
@@ -95,7 +86,7 @@ export const DICT = {
     bn: "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।",
   },
   registerTitle: { en: "Register", bn: "রেজিস্টার" },
-  registerSubtitle: { en: "Create your Kull Mart account", bn: "আপনার কুল মার্ট অ্যাকাউন্ট তৈরি করুন" },
+  registerSubtitle: { en: "Create your School Project account", bn: "আপনার কুল মার্ট অ্যাকাউন্ট তৈরি করুন" },
   registerNameLabel: { en: "Full name", bn: "পুরো নাম" },
   registerPhoneLabel: { en: "Phone number", bn: "ফোন নম্বর" },
   registerConfirmLabel: { en: "Confirm password", bn: "পাসওয়ার্ড নিশ্চিত করুন" },
@@ -121,12 +112,10 @@ export const DICT = {
   clearSearch: { en: "Clear search", bn: "লেখা মুছুন" },
   matchingProducts: { en: "Matching products", bn: "সম্পর্কিত পণ্যসমূহ" },
   viewAllResults: { en: "View all matching results", bn: "সব ফলাফল দেখুন" },
-  searchViewAllStock: { en: "View all stock results", bn: "স্টকের সব ফলাফল দেখুন" },
-  searchViewAllPreorder: { en: "View all pre-order results", bn: "প্রি-অর্ডারের সব ফলাফল দেখুন" },
 
   // Hero
   heroCategoriesTitle: { en: "Shop by Category", bn: "ক্যাটাগরি দেখুন" },
-  heroWelcomeTitle: { en: "Welcome to Kull Mart", bn: "কুল মার্টে স্বাগতম" },
+  heroWelcomeTitle: { en: "Welcome to School Project", bn: "কুল মার্টে স্বাগতম" },
   heroMyAccount: { en: "My account", bn: "আমার অ্যাকাউন্ট" },
   heroWelcomeSubtitle: {
     en: "Women's fashion, innerwear, kids & gadgets",
@@ -136,8 +125,6 @@ export const DICT = {
   heroWhatsapp: { en: "WhatsApp us", bn: "হোয়াটসঅ্যাপ করুন" },
   heroFeaturedTitle: { en: "Featured product", bn: "ফিচারড পণ্য" },
   heroFeaturedSubtitle: { en: "Don't miss out", bn: "মিস করবেন না" },
-  heroPreorderTitle: { en: "Preorder", bn: "প্রি-অর্ডার" },
-  heroPreorderSubtitle: { en: "Reserve yours early", bn: "আগেভাগে বুক করুন" },
   heroPromotionTitle: { en: "Promotion", bn: "প্রমোশন" },
   heroPromotionSubtitle: { en: "Special offers", bn: "বিশেষ অফার" },
 
@@ -298,65 +285,13 @@ export const DICT = {
   shareCopy: { en: "Copy link", bn: "লিংক কপি করুন" },
   shareCopied: { en: "Link copied", bn: "লিংক কপি হয়েছে" },
   shareMore: { en: "More", bn: "আরও" },
-  shareMessage: { en: "Have a look at this on Kull Mart:", bn: "কুল মার্টে এটি দেখুন:" },
+  shareMessage: { en: "Have a look at this on School Project:", bn: "কুল মার্টে এটি দেখুন:" },
   policyReturnWindow: { en: "Returns are accepted within", bn: "রিটার্ন করা যাবে" },
   policyReturnWindowDays: { en: "days of delivery.", bn: "দিনের মধ্যে (ডেলিভারির পর থেকে)।" },
   policyReadFull: { en: "Read the full return policy", bn: "সম্পূর্ণ রিটার্ন নীতি পড়ুন" },
   policyLastUpdated: { en: "Last updated", bn: "সর্বশেষ আপডেট" },
-  // Pre-order system
-  navPreOrder: { en: "Pre-order", bn: "প্রি-অর্ডার" },
+  // Shop navigation
   navReadyStock: { en: "Stock Items", bn: "স্টক আইটেম" },
-  preOrderEmpty: { en: "No pre-order products right now.", bn: "এখন কোনো প্রি-অর্ডার পণ্য নেই।" },
-  preOrderNow: { en: "Pre-order now", bn: "প্রি-অর্ডার করুন" },
-  preOrderUnavailable: { en: "Pre-order unavailable", bn: "প্রি-অর্ডার সমাপ্ত" },
-  preOrderSoldOut: { en: "Pre-order sold out", bn: "প্রি-অর্ডার স্টক শেষ" },
-  preOrderNotOpen: { en: "Pre-order not open yet", bn: "প্রি-অর্ডার এখনো শুরু হয়নি" },
-  preOrderClosed: { en: "Pre-order closed", bn: "প্রি-অর্ডার বন্ধ" },
-  preOrderClosingSoon: { en: "Closing soon", bn: "শীঘ্রই শেষ হবে" },
-  preOrderBadge: { en: "Pre-order", bn: "প্রি-অর্ডার" },
-  preOrderOpen: { en: "Pre-order open", bn: "প্রি-অর্ডার চলছে" },
-  preOrderMinQuantity: { en: "Minimum order: {count} pcs", bn: "সর্বনিম্ন অর্ডার: {count} পিস" },
-  preOrderMinNotMet: {
-    en: "Order at least {count} pcs of this item to check out.",
-    bn: "চেকআউট করতে এই পণ্যটি কমপক্ষে {count} পিস অর্ডার করুন।",
-  },
-  cartBelowMinimum: {
-    en: "Some pre-order items are below their minimum quantity. Increase them to check out.",
-    bn: "কিছু প্রি-অর্ডার পণ্য সর্বনিম্ন পরিমাণের কম। চেকআউট করতে পরিমাণ বাড়ান।",
-  },
-  preOrderCapacityReached: {
-    en: "Pre-order capacity has been reached.",
-    bn: "প্রি-অর্ডারের সর্বোচ্চ সীমা পূর্ণ হয়েছে।",
-  },
-  expectedDelivery: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারি" },
-  preOrderCloses: { en: "Pre-order closes", bn: "প্রি-অর্ডার শেষ হবে" },
-  preOrderEndsIn: { en: "Pre-order ends in", bn: "প্রি-অর্ডার শেষ হতে বাকি" },
-  preOrderInfoTitle: { en: "Pre-order information", bn: "প্রি-অর্ডার সংক্রান্ত তথ্য" },
-  preOrderInfo1: {
-    en: "Reserve your product before regular stock arrives",
-    bn: "সাধারণ স্টক আসার আগেই পণ্যটি নিশ্চিত বুকিং করুন",
-  },
-  preOrderInfo2: { en: "Expected delivery", bn: "সম্ভাব্য ডেলিভারির তারিখ" },
-  deliveryDateTbc: { en: "Date to be confirmed", bn: "তারিখ এখনো ঠিক হয়নি" },
-  preOrderInfo3: { en: "We will contact you about your order", bn: "অর্ডার সম্পর্কে আমরা আপনার সাথে যোগাযোগ করব" },
-  preOrderInfo4: {
-    en: "Delivery dates may change depending on stock arrival",
-    bn: "স্টক আসার সময়ের উপর নির্ভর করে ডেলিভারির তারিখ পরিবর্তিত হতে পারে",
-  },
-  confirmPreOrder: { en: "Confirm pre-order", bn: "প্রি-অর্ডার নিশ্চিতকরণ" },
-  confirmPreOrderNotice: {
-    en: "This is a pre-order item. It will be shipped after stock arrives.",
-    bn: "এটি একটি প্রি-অর্ডার পণ্য। স্টক পৌঁছানোর পর এটি আপনার ঠিকানায় পাঠিয়ে দেওয়া হবে।",
-  },
-  cancel: { en: "Cancel", bn: "বাতিল" },
-  confirmPreOrderBtn: { en: "Confirm pre-order", bn: "প্রি-অর্ডার নিশ্চিত করুন" },
-  acceptAndPlaceOrder: { en: "Accept & place order", bn: "শর্ত মেনে অর্ডার করুন" },
-  termsTitle: { en: "Terms", bn: "শর্তাবলি" },
-  checkoutPreOrderNotice: { en: "This order contains a pre-order product.", bn: "এই অর্ডারে প্রি-অর্ডার পণ্য রয়েছে।" },
-  checkoutPreOrderShipping: {
-    en: "The product will be shipped after stock arrives.",
-    bn: "স্টক পৌঁছানোর পর পণ্যটি ডেলিভারি করা হবে।",
-  },
   backToShopping: { en: "Back to shopping", bn: "কেনাকাটায় ফিরে যান" },
 
   // Cart Drawer
@@ -373,24 +308,6 @@ export const DICT = {
   freeDeliveryReached: { en: "Free delivery", bn: "ফ্রি ডেলিভারি" },
   cartProceedToCheckout: { en: "Proceed to checkout", bn: "চেকআউটে এগিয়ে যান" },
   cartRemove: { en: "Remove", bn: "মুছুন" },
-  cartPreOrderNotice: {
-    en: "This item is a pre-order and will be shipped once available.",
-    bn: "এটি একটি প্রি-অর্ডার পণ্য এবং স্টক আসার সাথে সাথে পাঠানো হবে।",
-  },
-  cartMixedNotice: {
-    en: "Stock items and pre-order items are ordered separately. Remove one kind to continue.",
-    bn: "স্টকের পণ্য আর প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। এগোতে চাইলে যেকোনো এক ধরনের পণ্য সরিয়ে দিন।",
-  },
-  cartHoldsStock: {
-    en: "Your cart has stock items. Pre-order items are ordered separately. Finish this order or remove these items first.",
-    bn: "কার্টে স্টকের পণ্য আছে। প্রি-অর্ডার পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
-  },
-  cartHoldsPreorder: {
-    en: "Your cart has pre-order items. Stock items are ordered separately. Finish this order or remove these items first.",
-    bn: "কার্টে প্রি-অর্ডার পণ্য আছে। স্টকের পণ্য আলাদা অর্ডারে নিতে হয়। আগে এই অর্ডারটা শেষ করুন, নয়তো পণ্যগুলো কার্ট থেকে সরিয়ে দিন।",
-  },
-  kindStockItems: { en: "Stock items", bn: "স্টকের পণ্য" },
-  kindPreorderItems: { en: "Pre-order items", bn: "প্রি-অর্ডার পণ্য" },
 
   // Wishlist Drawer
   wishlistTitle: { en: "My wishlist", bn: "আমার পছন্দের তালিকা" },
@@ -401,8 +318,7 @@ export const DICT = {
   },
   wishlistMoveToCart: { en: "Move to cart", bn: "কার্টে নিন" },
   wishlistClear: { en: "Clear all", bn: "সব মুছুন" },
-  wishlistMoveStockToCart: { en: "Move stock items to cart", bn: "স্টকের পণ্যগুলো কার্টে নিন" },
-  wishlistMovePreorderToCart: { en: "Move pre-order items to cart", bn: "প্রি-অর্ডার পণ্যগুলো কার্টে নিন" },
+  wishlistMoveAllToCart: { en: "Move all to cart", bn: "সবগুলো কার্টে নিন" },
 
   // Checkout Page
   checkoutTitle: { en: "Complete your order", bn: "অর্ডার সম্পন্ন করুন" },
@@ -443,7 +359,6 @@ export const DICT = {
     bn: "এই অর্ডারের জন্য এখন কোনো পেমেন্ট মাধ্যম চালু নেই। অর্ডার করতে দোকানে যোগাযোগ করুন।",
   },
   checkoutPayTo: { en: "Send payment to", bn: "টাকা পাঠাবেন এই নম্বরে" },
-  checkoutDepositDue: { en: "Advance to pay now", bn: "এখন অগ্রিম দিতে হবে" },
   checkoutCodLabel: { en: "Cash on delivery", bn: "ক্যাশ অন ডেলিভারি" },
   payCash: { en: "Cash", bn: "ক্যাশ" },
   payCard: { en: "Card", bn: "কার্ড" },
@@ -470,7 +385,7 @@ export const DICT = {
   // Order Success Screen
   orderSuccessTitle: { en: "Order placed successfully!", bn: "আপনার অর্ডারটি সফল হয়েছে!" },
   orderSuccessSubtitle: {
-    en: "Thank you for shopping with Kull Mart. We will contact you shortly to confirm your order and dispatch.",
+    en: "Thank you for shopping with School Project. We will contact you shortly to confirm your order and dispatch.",
     bn: "কুল মার্ট থেকে অর্ডার করার জন্য ধন্যবাদ। পার্সেল পাঠানোর আগে যোগাযোগ করে অর্ডার কনফার্ম করা হবে।",
   },
   orderNumberLabel: { en: "Order ID", bn: "অর্ডার আইডি" },
@@ -504,7 +419,7 @@ export const DICT = {
   trackOrderSearchAnother: { en: "Track another order", bn: "অন্য অর্ডার ট্র্যাক করুন" },
 
   // Newsletter
-  newsletterTitle: { en: "Join the Kull Mart list", bn: "কুল মার্টের সাথে যুক্ত থাকুন" },
+  newsletterTitle: { en: "Join the School Project list", bn: "কুল মার্টের সাথে যুক্ত থাকুন" },
   newsletterSubtitle: {
     en: "Be first to hear about new arrivals, restocks and special offers.",
     bn: "নতুন পণ্য, রিস্টক আর বিশেষ অফারের আপডেট সবার আগে পান।",
@@ -518,7 +433,7 @@ export const DICT = {
 
   // Footer
   footerAboutText: {
-    en: "Kull Mart is a Dhaka-based store for women's fashion, innerwear, kids' items and gadgets — wholesale and retail, with delivery all across Bangladesh.",
+    en: "School Project is a Dhaka-based store for women's fashion, innerwear, kids' items and gadgets — wholesale and retail, with delivery all across Bangladesh.",
     bn: "কুল মার্ট — ঢাকাভিত্তিক নারীদের ফ্যাশন, ইনারওয়্যার, কিডস আইটেম ও গ্যাজেটসের দোকান। পাইকারি ও খুচরা, সারা বাংলাদেশে ডেলিভারি।",
   },
   footerQuickLinks: { en: "Quick links", bn: "প্রয়োজনীয় লিংক" },
@@ -556,10 +471,6 @@ export const DICT = {
   checkoutAdvancePaymentRequired: {
     en: "Cash on delivery isn't available for this phone number. Please choose bKash or Nagad and place the order again.",
     bn: "এই ফোন নম্বরে ক্যাশ অন ডেলিভারি পাওয়া যাবে না। বিকাশ বা নগদ বেছে নিয়ে আবার অর্ডার করুন।",
-  },
-  checkoutCouponStockOnly: {
-    en: "Coupons work on stock orders only, not on a pre-order.",
-    bn: "কুপন শুধু স্টকের অর্ডারে চলে, প্রি-অর্ডারে চলে না।",
   },
   checkoutYourVouchers: { en: "Your vouchers", bn: "আপনার ভাউচার" },
   couponInvalid: { en: "This coupon code is not valid.", bn: "কুপন কোডটা ঠিক নয়।" },
@@ -649,7 +560,6 @@ export const DICT = {
     en: "Check the order number and the phone number used when ordering, then try again.",
     bn: "অর্ডার নম্বর এবং অর্ডারের সময় দেওয়া মোবাইল নম্বরটি মিলিয়ে আবার চেষ্টা করুন।",
   },
-  trackPreorderTitle: { en: "Where your pre-order is", bn: "প্রি-অর্ডার এখন কোথায়" },
   trackOrderTimeline: { en: "Order timeline", bn: "অর্ডারের ধাপ" },
   trackOrderShipment: { en: "Shipment", bn: "শিপমেন্ট" },
   trackOrderTrackingNo: { en: "Tracking no.", bn: "ট্র্যাকিং নম্বর" },
@@ -660,10 +570,6 @@ export const DICT = {
   price: { en: "Price", bn: "দাম" },
   close: { en: "Close", bn: "বন্ধ করুন" },
   noMatches: { en: "No matches found", bn: "কিছু পাওয়া যায়নি" },
-  countdownDays: { en: "Days", bn: "দিন" },
-  countdownHours: { en: "Hours", bn: "ঘণ্টা" },
-  countdownMins: { en: "Mins", bn: "মিনিট" },
-  countdownSecs: { en: "Secs", bn: "সেকেন্ড" },
   checkoutDistrictPlaceholder: { en: "Type to search district", bn: "জেলার নাম লিখে খুঁজুন" },
   shippingReturnsTitle: { en: "Shipping & returns", bn: "ডেলিভারি ও রিটার্ন" },
   shippingReturnsDelivery: {
@@ -702,8 +608,8 @@ export const DICT = {
   previousSlide: { en: "Previous slide", bn: "আগের স্লাইড" },
   nextSlide: { en: "Next slide", bn: "পরের স্লাইড" },
   slide: { en: "Slide", bn: "স্লাইড" },
-  facebookLink: { en: "Kull Mart on Facebook", bn: "ফেসবুকে কুল মার্ট" },
-  whatsappLink: { en: "Chat with Kull Mart on WhatsApp", bn: "হোয়াটসঅ্যাপে কুল মার্টের সাথে চ্যাট করুন" },
+  facebookLink: { en: "School Project on Facebook", bn: "ফেসবুকে কুল মার্ট" },
+  whatsappLink: { en: "Chat with School Project on WhatsApp", bn: "হোয়াটসঅ্যাপে কুল মার্টের সাথে চ্যাট করুন" },
 } satisfies Record<string, T>;
 
 export type UiKey = keyof typeof DICT;

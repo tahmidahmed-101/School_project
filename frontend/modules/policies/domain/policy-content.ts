@@ -58,8 +58,8 @@ export const RETURN_POLICY: PolicyContent = {
     {
       heading: { en: "Non-returnable items", bn: "যেসব পণ্য রিটার্নযোগ্য নয়" },
       body: {
-        en: "Innerwear, earrings, and other personal-care or hygiene items cannot be returned once opened, unless they arrived damaged or defective. Pre-order items are confirmed at the time of booking and are not eligible for change of mind returns.",
-        bn: "ইনারওয়্যার, দুল এবং অন্যান্য পার্সোনাল-কেয়ার বা হাইজিন পণ্য একবার খোলা হলে ফেরত নেওয়া হয় না, তবে সেগুলো ক্ষতিগ্রস্ত বা ত্রুটিপূর্ণ অবস্থায় পৌঁছালে ভিন্ন কথা। প্রি-অর্ডার পণ্য বুকিংয়ের সময় নিশ্চিত করা হয়, তাই মত পরিবর্তনের কারণে তা রিটার্ন করা যায় না।",
+        en: "Innerwear, earrings, and other personal-care or hygiene items cannot be returned once opened, unless they arrived damaged or defective.",
+        bn: "ইনারওয়্যার, দুল এবং অন্যান্য পার্সোনাল-কেয়ার বা হাইজিন পণ্য একবার খোলা হলে ফেরত নেওয়া হয় না, তবে সেগুলো ক্ষতিগ্রস্ত বা ত্রুটিপূর্ণ অবস্থায় পৌঁছালে ভিন্ন কথা।",
       },
     },
     {

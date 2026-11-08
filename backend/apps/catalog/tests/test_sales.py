@@ -36,8 +36,8 @@ def _fresh(variant) -> ProductVariant:
     return ProductVariant.objects.select_related("product__category").get(id=variant.id)
 
 
-def _brand(kind="stock", name="Aarong") -> Brand:
-    return Brand.objects.create(name=name, slug=f"{name.lower()}-{kind}", kind=kind)
+def _brand(name="Aarong") -> Brand:
+    return Brand.objects.create(name=name, slug=name.lower())
 
 
 def test_a_running_storewide_sale_cuts_the_price_rounded_once():
@@ -111,29 +111,6 @@ def test_a_brand_sale_covers_only_that_brand():
 
     assert _fresh(branded).effective_price == Decimal("800.00")
     assert _fresh(other).effective_price == Decimal("1000.00")
-
-
-def test_a_preorder_product_is_never_discounted_by_a_sale():
-    variant = _variant(product__category__category_type="preorder")
-    _sale("50.00")
-
-    assert _fresh(variant).sale_price is None
-    assert _fresh(variant).effective_price == Decimal("1000.00")
-
-
-def test_a_sale_refuses_preorder_targets():
-    preorder_category = CategoryFactory(category_type="preorder")
-    preorder_product = ProductFactory(category=preorder_category)
-    cases = [
-        (Sale.AppliesTo.CATEGORIES, {"category_ids": [preorder_category.id]}),
-        (Sale.AppliesTo.BRANDS, {"brand_ids": [_brand(kind="preorder").id]}),
-        (Sale.AppliesTo.PRODUCTS, {"product_ids": [preorder_product.id]}),
-    ]
-    for applies_to, ids in cases:
-        with pytest.raises(BusinessRuleViolationError) as refused:
-            _sale(applies_to=applies_to, **ids)
-        assert refused.value.code == "sale_stock_only"
-    assert not Sale.objects.exists()
 
 
 def test_a_targeted_sale_needs_at_least_one_target():
@@ -245,19 +222,7 @@ def test_admin_list_is_paginated_and_filters_by_status(api_client, admin_user):
 def test_admin_api_reports_the_rule_that_refused_a_sale(api_client, admin_user):
     api_client.force_authenticate(user=admin_user)
     starts_at = timezone.now().isoformat()
-    preorder_category = CategoryFactory(category_type="preorder")
 
-    stock_only = api_client.post(
-        SALES_URL,
-        {
-            "name": "Wrong half",
-            "percent_off": "10",
-            "starts_at": starts_at,
-            "applies_to": "categories",
-            "category_ids": [str(preorder_category.id)],
-        },
-        format="json",
-    )
     no_target = api_client.post(
         SALES_URL,
         {"name": "Empty", "percent_off": "10", "starts_at": starts_at, "applies_to": "products"},
@@ -269,8 +234,7 @@ def test_admin_api_reports_the_rule_that_refused_a_sale(api_client, admin_user):
         format="json",
     )
 
-    assert stock_only.status_code == 400
-    assert stock_only.data["error"]["code"] == "sale_stock_only"
+    assert no_target.status_code == 400
     assert no_target.data["error"]["code"] == "sale_target_required"
     assert too_big.status_code == 400
     assert not Sale.objects.exists()
@@ -289,7 +253,6 @@ def test_public_product_carries_the_sale_and_each_variant_its_sale_price(api_cli
         price=Decimal("1000.00"),
         discount_price=Decimal("500.00"),
     )
-    untouched = _variant(product__category__category_type="preorder")
     ends_at = timezone.now() + timedelta(days=2)
     create_sale(
         name="Eid offer",
@@ -310,8 +273,6 @@ def test_public_product_carries_the_sale_and_each_variant_its_sale_price(api_cli
     assert variants[str(on_sale.id)]["compare_at_price"] == "1000.00"
     assert variants[str(discounted_lower.id)]["sale_price"] is None
     assert variants[str(discounted_lower.id)]["effective_price"] == "500.00"
-    assert rows[str(untouched.product_id)]["sale"] is None
-    assert rows[str(untouched.product_id)]["variants"][0]["sale_price"] is None
 
     detail = api_client.get(f"{PRODUCTS_URL}{on_sale.product.slug}/").data["data"]
     assert detail["sale"]["name"] == "Eid offer"

@@ -31,7 +31,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         >
           <h1 style={{ fontSize: "24px", margin: 0 }}>Something went wrong</h1>
           <p style={{ maxWidth: "24rem", fontSize: "14px", color: "#536450", margin: 0 }}>
-            Kull Mart hit an unexpected problem. Please try again in a moment.
+            School Project hit an unexpected problem. Please try again in a moment.
           </p>
           <button
             type="button"

@@ -51,10 +51,8 @@ class PublicCategoryListView(APIView):
     throttle_classes: ClassVar[list] = [PublicReadRateThrottle]
 
     def get(self, request) -> Response:
-        category_type = get_choice(
-            request.query_params, "category_type", Category.CategoryType.values
-        )
-        categories = active_categories(category_type=category_type)
+        get_choice(request.query_params, "category_type", Category.CategoryType.values)
+        categories = active_categories(category_type=Category.CategoryType.STOCK)
         return Response(
             {
                 "data": PublicCategorySerializer(
@@ -99,18 +97,16 @@ class PublicProductListView(GenericListAPIView):
     def get_queryset(self):
         params = self.request.query_params
         category = get_related(params, "category_id", get_category_by_id, "Category not found.")
-        category_type = get_choice(params, "category_type", Category.CategoryType.values)
-        preorder_only = bool(get_bool(params, "preorder_only", default=False))
+        get_choice(params, "category_type", Category.CategoryType.values)
         featured = get_bool(params, "featured", default=None)
         trending = get_bool(params, "trending", default=None)
         new_arrival = get_bool(params, "new_arrival", default=None)
         badge = params.get("badge") or None
         return products_list(
             category=category,
-            category_type=category_type,
+            category_type=Category.CategoryType.STOCK,
             is_active=True,
             sellable_only=True,
-            preorder_only=preorder_only,
             featured=featured,
             trending=trending,
             new_arrival=new_arrival,

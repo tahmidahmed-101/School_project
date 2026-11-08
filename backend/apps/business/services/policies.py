@@ -11,7 +11,7 @@ from apps.business.policy_content import missing_policy_fields, normalize_policy
 from apps.business.selectors.policies import policy_date
 from apps.common.exceptions import BusinessRuleViolationError
 
-RULE_FIELDS = ("return_window_days", "preorder_returns_allowed", "non_returnable_category_ids")
+RULE_FIELDS = ("return_window_days", "non_returnable_category_ids")
 MAX_RETURN_WINDOW_DAYS = 365
 # Keys of a snapshot that are the policy's terms, as opposed to its date and
 # publication state.
@@ -27,7 +27,6 @@ def _snapshot(policy: StorePolicy, category_ids: list[str]) -> dict:
     if policy.kind == PolicyKind.RETURNS:
         snapshot.update(
             return_window_days=policy.return_window_days,
-            preorder_returns_allowed=policy.preorder_returns_allowed,
             non_returnable_category_ids=category_ids,
         )
     return snapshot
@@ -54,8 +53,6 @@ def _apply_rules(policy: StorePolicy, data: dict) -> None:
                 code="invalid_return_window",
             )
         policy.return_window_days = days
-    if "preorder_returns_allowed" in data:
-        policy.preorder_returns_allowed = bool(data["preorder_returns_allowed"])
 
 
 def _validate_publication(policy: StorePolicy, before: dict, after: dict, data: dict) -> None:
@@ -140,7 +137,6 @@ def update_store_policy(*, policy: StorePolicy, actor, data: dict) -> StorePolic
             "effective_date",
             "is_published",
             "return_window_days",
-            "preorder_returns_allowed",
         ]
     )
     if categories is not None:

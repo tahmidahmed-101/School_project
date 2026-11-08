@@ -6,16 +6,9 @@ import { absoluteUrl } from "@/lib/site-url";
 
 /** Plain-text site summary for AI crawlers and LLM assistants, following the llms.txt convention. */
 export function buildLlmsTxt({ products: PRODUCTS, categories: CATEGORIES }: Catalog, BRAND_INFO: BrandInfo): string {
-  const categoryLines = (kind: "stock" | "preorder") =>
-    CATEGORIES.filter((category) => category.type === kind)
-      .map((category) => `- ${category.name.en}: ${absoluteUrl(shopListing(kind, { category: category.slug }))}`)
-      .join("\n");
-  const count = (kind: "stock" | "preorder") => ({
-    products: PRODUCTS.filter((product) => product.kind === kind).length,
-    categories: CATEGORIES.filter((category) => category.type === kind).length,
-  });
-  const stock = count("stock");
-  const preorder = count("preorder");
+  const categoryLines = CATEGORIES.map(
+    (category) => `- ${category.name.en}: ${absoluteUrl(shopListing({ category: category.slug }))}`,
+  ).join("\n");
 
   const sections = [
     `# ${SITE_NAME}`,
@@ -24,17 +17,14 @@ export function buildLlmsTxt({ products: PRODUCTS, categories: CATEGORIES }: Cat
       "## Sections",
       "",
       `- Shop (in-stock products): ${absoluteUrl("/shop")}`,
-      `- Pre-order collection: ${absoluteUrl("/pre-order")} (all pre-order items: ${absoluteUrl("/shop?type=preorder")})`,
       `- Product pages: ${absoluteUrl("/product/{slug}")} — full details, price, specs and images`,
       `- Product feed (machine-readable): ${absoluteUrl("/products.xml")}`,
     ].join("\n"),
-    ["## Shop categories (in stock)", "", categoryLines("stock")].join("\n"),
-    ["## Pre-order categories", "", categoryLines("preorder")].join("\n"),
+    ["## Shop categories (in stock)", "", categoryLines].join("\n"),
     [
       "## Catalogue",
       "",
-      `- Shop: ${stock.products} in-stock products across ${stock.categories} categories`,
-      `- Pre-order: ${preorder.products} pre-order products across ${preorder.categories} categories`,
+      `- Shop: ${PRODUCTS.length} in-stock products across ${CATEGORIES.length} categories`,
       `- Prices in Bangladeshi Taka (BDT)`,
     ].join("\n"),
     [

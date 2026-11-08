@@ -17,8 +17,8 @@ export interface ListSliceState {
  *   change, the list returns to page 1 — callers never reset paging by hand.
  * - The search box is debounced and trimmed before it is sent.
  * - Each fetch is aborted when a newer one starts or the page unmounts.
- * - Rows and totals a slice still holds from another page (the other half's list) stay hidden
- *   until this page's own response lands; a page serving both halves remounts with `key={kind}`.
+ * - Rows and totals a slice still holds from another page stay hidden until this page's own
+ *   response lands.
  * - `tableProps` spreads straight into <DataTable>.
  */
 export function useListPage({

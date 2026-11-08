@@ -16,7 +16,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import type { Option } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -60,8 +59,8 @@ function Stars({ rating }: { rating: number }) {
  * Product reviews left by customers on the storefront. Staff publish the ones waiting for
  * approval, hide any from the storefront (kept, so it can be undone) or remove them.
  */
-const Reviews = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order reviews" : "Reviews"
+const Reviews = () => {
+  const title = "Reviews"
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
@@ -70,7 +69,6 @@ const Reviews = ({ kind }: { kind: Kind }) => {
   const [hiding, setHiding] = useState<ProductReview | null>(null)
 
   const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
-    kind,
     fetch: (p) => dispatch(fetchAll(p)),
     state: reviewState,
     filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
@@ -102,7 +100,7 @@ const Reviews = ({ kind }: { kind: Kind }) => {
       id: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
+        <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
           {row.original.product_name}
         </LinkCell>
       ),
@@ -180,7 +178,7 @@ const Reviews = ({ kind }: { kind: Kind }) => {
               return (
                 <TableActions
                   itemName={`the review by ${review.customer_name}`}
-                  viewUrl={withKind(`/product_detail/${review.product_id}`, kind)}
+                  viewUrl={`/product_detail/${review.product_id}`}
                   actions={[
                     ...(review.status !== "published"
                       ? [{ label: "Publish", icon: Eye, onSelect: () => handlePublish(review) }]
@@ -299,9 +297,4 @@ function HideDialog({
   )
 }
 
-const ReviewsPage = () => {
-  const kind = useKind()
-  return <Reviews key={kind} kind={kind} />
-}
-
-export default ReviewsPage
+export default Reviews

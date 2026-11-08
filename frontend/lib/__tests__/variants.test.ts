@@ -45,12 +45,9 @@ const product = makeProduct({ options, skuVariants: skus, defaultVariantId: "bla
 const simple = makeProduct({ skuVariants: [makeSku()] });
 
 describe("isSellable", () => {
-  it("needs stock, and room left on a pre-order", () => {
+  it("needs stock", () => {
     expect(isSellable(makeSku())).toBe(true);
     expect(isSellable(makeSku({ inStock: false }))).toBe(false);
-    expect(isSellable(makeSku({ isPreOrder: true, preorderStatus: "sold-out" }))).toBe(false);
-    expect(isSellable(makeSku({ isPreOrder: true, maxPreorderQuantity: 5, currentPreorderQuantity: 5 }))).toBe(false);
-    expect(isSellable(makeSku({ isPreOrder: true, maxPreorderQuantity: 5, currentPreorderQuantity: 4 }))).toBe(true);
   });
 });
 

@@ -21,7 +21,7 @@ paths:
           name: category_type
           schema:
             type: string
-            enum: [stock, preorder]
+            enum: [stock]
           description: Filter by category type.
       responses:
         '200':
@@ -95,13 +95,8 @@ paths:
           name: category_type
           schema:
             type: string
-            enum: [stock, preorder]
+            enum: [stock]
           description: Filter by category type.
-        - in: query
-          name: preorder_only
-          schema:
-            type: boolean
-          description: If true, return only pre-order products.
         - in: query
           name: featured
           schema:
@@ -538,7 +533,7 @@ components:
           nullable: true
         category_type:
           type: string
-          enum: [stock, preorder]
+          enum: [stock]
           readOnly: true
           description: A subcategory always shares its root ancestor's type.
 
@@ -590,13 +585,7 @@ components:
         - size
         - components
         - is_bundle
-        - is_preorder_enabled
-        - preorder_price
-        - preorder_start_date
-        - preorder_end_date
         - release_date
-        - is_preorder_active
-        - is_preorder_price_applied
       properties:
         id:
           type: string
@@ -634,32 +623,10 @@ components:
         is_bundle:
           type: boolean
           readOnly: true
-        is_preorder_enabled:
-          type: boolean
-          readOnly: true
-        preorder_price:
-          type: string
-          format: decimal
-          nullable: true
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-        preorder_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        preorder_end_date:
-          type: string
-          format: date-time
-          nullable: true
         release_date:
           type: string
           format: date-time
           nullable: true
-        is_preorder_active:
-          type: boolean
-          readOnly: true
-        is_preorder_price_applied:
-          type: boolean
-          readOnly: true
 
     PublicBundleItemProduct:
       type: object
@@ -1081,8 +1048,6 @@ components:
               total:
                 type: string
                 format: decimal
-              is_preorder:
-                type: boolean
           readOnly: true
         shipments:
           type: array

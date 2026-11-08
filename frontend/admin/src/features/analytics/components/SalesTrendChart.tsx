@@ -1,7 +1,6 @@
 import { lazy, Suspense, useMemo } from "react"
 import { BarChart3 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Kind } from "@/hooks/use-kind"
 import { formatCurrency } from "@/lib/format"
 import { longDay } from "../dateRange"
 import type { SalesTrendPoint } from "../types"
@@ -10,26 +9,15 @@ import { ReportWidget } from "./ReportWidget"
 const SalesTrendBars = lazy(() => import("./SalesTrendBars"))
 
 const COPY = {
-  stock: {
-    title: "Stock sales trend",
-    description: "Daily revenue from paid, non-cancelled stock orders",
-    emptyTitle: "No stock sales in this period",
-    emptyDescription: "Daily sales appear here once paid orders come in. Try a wider date range.",
-    total: "Total sales",
-    activeDays: "Days with sales",
-  },
-  preorder: {
-    title: "Pre-order trend",
-    description: "Daily value of pre-orders placed. Deposits are money held, not sales, and are listed apart.",
-    emptyTitle: "No pre-orders in this period",
-    emptyDescription: "Daily pre-order value appears here once pre-orders come in. Try a wider date range.",
-    total: "Total pre-ordered",
-    activeDays: "Days with pre-orders",
-  },
-} satisfies Record<Kind, Record<string, string>>
+  title: "Stock sales trend",
+  description: "Daily revenue from paid, non-cancelled stock orders",
+  emptyTitle: "No stock sales in this period",
+  emptyDescription: "Daily sales appear here once paid orders come in. Try a wider date range.",
+  total: "Total sales",
+  activeDays: "Days with sales",
+}
 
 interface Props {
-  kind: Kind
   points: SalesTrendPoint[] | null
   isLoading: boolean
   error: unknown
@@ -37,8 +25,7 @@ interface Props {
   className?: string
 }
 
-export function SalesTrendChart({ kind, points, isLoading, error, onRetry, className }: Props) {
-  const copy = COPY[kind]
+export function SalesTrendChart({ points, isLoading, error, onRetry, className }: Props) {
   const data = useMemo(() => (points ?? []).map((p) => ({ date: p.date, total: Number(p.total) || 0 })), [points])
   const stats = useMemo(() => {
     const total = data.reduce((s, p) => s + p.total, 0)
@@ -56,15 +43,15 @@ export function SalesTrendChart({ kind, points, isLoading, error, onRetry, class
 
   return (
     <ReportWidget
-      title={copy.title}
-      description={copy.description}
+      title={COPY.title}
+      description={COPY.description}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
       isEmpty={stats.total === 0}
       emptyIcon={BarChart3}
-      emptyTitle={copy.emptyTitle}
-      emptyDescription={copy.emptyDescription}
+      emptyTitle={COPY.emptyTitle}
+      emptyDescription={COPY.emptyDescription}
       skeleton={
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -78,14 +65,14 @@ export function SalesTrendChart({ kind, points, isLoading, error, onRetry, class
       className={className}
     >
       <dl className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label={copy.total} value={formatCurrency(stats.total)} />
+        <Stat label={COPY.total} value={formatCurrency(stats.total)} />
         <Stat label="Daily average" value={formatCurrency(stats.average)} />
         <Stat
           label="Best day"
           value={stats.best ? formatCurrency(stats.best.total) : "—"}
           hint={stats.best ? longDay(stats.best.date) : undefined}
         />
-        <Stat label={copy.activeDays} value={`${stats.activeDays} / ${data.length}`} />
+        <Stat label={COPY.activeDays} value={`${stats.activeDays} / ${data.length}`} />
       </dl>
       <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
         <SalesTrendBars data={data} />

@@ -2,7 +2,6 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { PackageOpen } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataTable } from "@/components/common/data-table"
-import type { Kind } from "@/hooks/use-kind"
 import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { formatCount } from "../measure"
@@ -11,24 +10,14 @@ import { ReportWidget } from "./ReportWidget"
 import { Sparkline } from "./Sparkline"
 
 const COPY = {
-  stock: {
-    title: "Top stock products",
-    description: "Best-selling stock items by units in this period",
-    link: { to: "/products", label: "Catalog" },
-    emptyTitle: "No products sold",
-    emptyDescription: "Best sellers show up here once orders are paid in this period.",
-  },
-  preorder: {
-    title: "Top pre-order products",
-    description: "Most pre-ordered items by units in this period",
-    link: { to: "/preorder_products", label: "Products" },
-    emptyTitle: "No pre-orders in this period",
-    emptyDescription: "The most pre-ordered items show up here once pre-orders come in.",
-  },
-} satisfies Record<Kind, object>
+  title: "Top stock products",
+  description: "Best-selling stock items by units in this period",
+  link: { to: "/products", label: "Catalog" },
+  emptyTitle: "No products sold",
+  emptyDescription: "Best sellers show up here once orders are paid in this period.",
+}
 
 interface Props {
-  kind: Kind
   products: TopProduct[] | undefined
   isLoading: boolean
   error: unknown
@@ -36,9 +25,8 @@ interface Props {
   className?: string
 }
 
-export function TopProductsTable({ kind, products, isLoading, error, onRetry, className }: Props) {
-  const copy = COPY[kind]
-  const allColumns: ColumnDef<TopProduct>[] = [
+export function TopProductsTable({ products, isLoading, error, onRetry, className }: Props) {
+  const columns: ColumnDef<TopProduct>[] = [
     {
       id: "rank",
       header: "#",
@@ -86,21 +74,19 @@ export function TopProductsTable({ kind, products, isLoading, error, onRetry, cl
       cell: ({ row }) => <Sparkline values={row.original.spark} className="h-8" />,
     },
   ]
-  // "Available" is shop stock on the shelf; a pre-order item is bought to order.
-  const columns = kind === "preorder" ? allColumns.filter((column) => column.id !== "available") : allColumns
 
   return (
     <ReportWidget
-      title={copy.title}
-      description={copy.description}
-      link={copy.link}
+      title={COPY.title}
+      description={COPY.description}
+      link={COPY.link}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
       isEmpty={!products?.length}
       emptyIcon={PackageOpen}
-      emptyTitle={copy.emptyTitle}
-      emptyDescription={copy.emptyDescription}
+      emptyTitle={COPY.emptyTitle}
+      emptyDescription={COPY.emptyDescription}
       skeleton={
         <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }, (_, i) => (
@@ -116,12 +102,8 @@ export function TopProductsTable({ kind, products, isLoading, error, onRetry, cl
         showPagination={false}
         columns={columns}
         data={products ?? []}
-        minWidth={kind === "preorder" ? "480px" : "560px"}
-        columnWidths={
-          kind === "preorder"
-            ? ["48px", "240px", "90px", "120px", "112px"]
-            : ["48px", "240px", "90px", "120px", "100px", "112px"]
-        }
+        minWidth="560px"
+        columnWidths={["48px", "240px", "90px", "120px", "100px", "112px"]}
       />
     </ReportWidget>
   )

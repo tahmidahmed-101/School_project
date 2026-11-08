@@ -26,13 +26,6 @@ class ProductVariantInline(admin.TabularInline):
         "price",
         "cost_price",
         "discount_price",
-        "is_preorder_enabled",
-        "preorder_price",
-        "preorder_start_date",
-        "preorder_end_date",
-        "release_date",
-        "preorder_stock_limit",
-        "preorder_min_quantity",
         "is_active",
     )
     readonly_fields = ("title",)
@@ -78,14 +71,9 @@ class ProductVariantAdmin(StaffPermissionAdminMixin, admin.ModelAdmin):
         "price",
         "cost_price",
         "discount_price",
-        "is_preorder_enabled",
-        "preorder_price",
-        "preorder_start_date",
-        "preorder_end_date",
-        "release_date",
         "is_active",
     )
-    list_filter = ("is_active", "is_preorder_enabled")
+    list_filter = ("is_active",)
     search_fields = ("sku", "barcode", "product__name", "title")
     autocomplete_fields = ("product",)
     exclude = ("color", "size", "option_values")

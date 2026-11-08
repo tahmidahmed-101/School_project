@@ -14,7 +14,6 @@ from apps.accounts.services.staff_permissions import set_staff_permission
 from apps.accounts.tests.helpers import create_user
 from apps.business.models import PromotionPopup
 from apps.catalog.factories import CategoryFactory, ProductFactory
-from apps.catalog.models import Category
 
 from .promotions import POPUPS, png, popup, sale
 
@@ -252,60 +251,25 @@ def test_invalid_fields_are_refused(admin_client, overrides, field):
     assert field in _field_errors(response)
 
 
-def test_a_popup_stays_in_its_shop(admin_client):
+def test_a_popup_stays_in_the_stock_shop(admin_client):
     row = popup()
 
-    response = admin_client.patch(f"{POPUPS}{row.id}/", {"shop": "preorder"}, format="json")
+    response = admin_client.patch(f"{POPUPS}{row.id}/", {"shop": "outlet"}, format="json")
 
     assert response.status_code == 400
-    assert _error(response) == "promotion_shop_fixed"
     row.refresh_from_db()
     assert row.shop == "stock"
 
 
-def test_destination_must_belong_to_the_popups_shop(admin_client):
-    stock_product = ProductFactory(is_active=True)
-    preorder_category = CategoryFactory(category_type=Category.CategoryType.PREORDER)
-
-    product = admin_client.post(
-        POPUPS,
-        _payload(shop="preorder", destination_type="product", product_id=str(stock_product.id)),
-        format="multipart",
-    )
-    category = admin_client.post(
-        POPUPS,
-        _payload(destination_type="category", category_id=str(preorder_category.id)),
-        format="multipart",
-    )
-
-    assert product.status_code == 400
-    assert "product_id" in _field_errors(product)
-    assert category.status_code == 400
-    assert "category_id" in _field_errors(category)
-    assert not PromotionPopup.objects.exists()
-
-
-def test_a_preorder_popup_cannot_lead_to_a_sale(admin_client):
-    response = admin_client.post(
-        POPUPS,
-        _payload(shop="preorder", destination_type="campaign", sale_id=str(sale().id)),
-        format="multipart",
-    )
-
-    assert response.status_code == 400
-    assert _error(response) == "promotion_campaign_stock_only"
-    assert "destination_type" in _field_errors(response)
-
-
-def test_list_can_be_narrowed_to_one_shop(admin_client):
+def test_list_can_be_narrowed_to_the_stock_shop(admin_client):
     stock = popup()
-    preorder = popup(shop="preorder")
 
     def ids(shop):
         return [item["id"] for item in admin_client.get(POPUPS, {"shop": shop}).data["data"]]
 
     assert ids("stock") == [str(stock.id)]
-    assert ids("preorder") == [str(preorder.id)]
+    # The pre-order shop is gone: asking for it is a 400 like any unknown shop.
+    assert admin_client.get(POPUPS, {"shop": "preorder"}).status_code == 400
     assert admin_client.get(POPUPS, {"shop": "outlet"}).status_code == 400
 
 

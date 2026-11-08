@@ -1,5 +1,3 @@
-import { formatDate } from "@/lib/format"
-
 import type { ProductVariant } from "../types"
 
 export function VariantStockCell({ variant, showLow = false }: { variant: ProductVariant; showLow?: boolean }) {
@@ -16,17 +14,5 @@ export function VariantStockCell({ variant, showLow = false }: { variant: Produc
       {variant.stock}
       {showLow && variant.is_low_stock && variant.stock > 0 && " (low)"}
     </span>
-  )
-}
-
-/** Pre-order variants: whether customers can order now, and the day ordering closes. */
-export function VariantOrderingCell({ variant }: { variant: ProductVariant }) {
-  return (
-    <div className="flex flex-col text-sm">
-      <span>{variant.is_preorder_active ? "Open" : "Closed"}</span>
-      <span className="text-xs text-muted-foreground">
-        {variant.preorder_end_date ? `Until ${formatDate(variant.preorder_end_date)}` : "No dates set"}
-      </span>
-    </div>
   )
 }

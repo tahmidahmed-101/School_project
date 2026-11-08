@@ -2,7 +2,6 @@ import { useState } from "react"
 
 import { Combobox } from "@/components/common/ComboBox"
 import { SortSelect } from "@/components/common/SortSelect"
-import type { Kind } from "@/hooks/use-kind"
 import { useListPage, type ListSliceState } from "@/hooks/use-list-page"
 import type { Option } from "@/lib/types"
 
@@ -14,18 +13,15 @@ interface ModerationFilter {
 
 /**
  * Search, one or two filters and a sort order (the first is the default) for the reviews,
- * questions and price-report lists. Each list holds one kind only: stock products or pre-order
- * products.
+ * questions and price-report lists. Each list holds stock products only.
  */
 export function useModerationList({
-  kind,
   fetch,
   state,
   filter,
   secondFilter,
   orderingOptions,
 }: {
-  kind: Kind
   fetch: Parameters<typeof useListPage>[0]["fetch"]
   state: ListSliceState
   filter: ModerationFilter
@@ -40,7 +36,7 @@ export function useModerationList({
     fetch,
     state,
     params: {
-      kind,
+      kind: "stock",
       [filter.param]: selected?.value,
       ...(secondFilter ? { [secondFilter.param]: secondSelected?.value } : {}),
       ordering: ordering?.value ?? orderingOptions[0].value,

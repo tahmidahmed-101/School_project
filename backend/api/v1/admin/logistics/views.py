@@ -143,8 +143,11 @@ class AdminShippingZoneListCreateView(
     def post(self, request) -> Response:
         serializer = ShippingZoneCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        # `kind` is still accepted but only as "stock", which every new zone is.
+        data = dict(serializer.validated_data)
+        data.pop("kind", None)
         try:
-            zone = create_zone(**serializer.validated_data)
+            zone = create_zone(**data)
         except DomainError as exc:
             return error_from_exception(exc, status_for_code(exc.code))
         return Response(
@@ -255,6 +258,8 @@ class AdminShippingZoneRateCreateView(APIView):
         data = dict(serializer.validated_data)
 
         carrier = get_carrier_by_id(data.pop("carrier_id"))
+        # A rate takes its zone's kind; a stated `kind` can only be "stock".
+        data.pop("kind", None)
         if carrier is None:
             return error_from_exception(DomainError("Carrier not found.", code="carrier_not_found"))
 

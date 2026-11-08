@@ -12,7 +12,6 @@ import { reportFormError } from "@/lib/forms"
 import { FormDialog } from "@/components/common/FormDialog"
 import { MoneyField } from "@/components/common/form-fields"
 import { VariantPicker, type PickedVariant } from "@/components/common/VariantPicker"
-import type { Kind } from "@/hooks/use-kind"
 
 import { postAdjustment, postIntake, postWriteOff } from "../api"
 import type { Warehouse } from "../types"
@@ -41,24 +40,6 @@ const COPY: Record<MovementMode, Copy> = {
   },
 }
 
-const PREORDER_COPY: Record<MovementMode, Copy> = {
-  intake: {
-    title: "Receive goods",
-    description: "Records units that have arrived from the supplier and updates the average cost.",
-    submit: "Receive",
-  },
-  adjust: {
-    title: "Correct arrived quantity",
-    description: "Fixes a wrong count. Use a negative number to reduce it.",
-    submit: "Save correction",
-  },
-  write_off: {
-    title: "Write off units",
-    description: "Removes damaged or lost units from what has arrived.",
-    submit: "Write off",
-  },
-}
-
 const schema = z.object({
   variant: z.custom<PickedVariant | null>().refine((v) => Boolean(v), "Choose a variant"),
   warehouse_id: z.string(),
@@ -78,8 +59,6 @@ interface Props {
   /** Pre-selected variant / warehouse (e.g. launched from a stock row). */
   variant?: PickedVariant | null
   warehouseId?: string | null
-  /** Which half opened the dialog: sets the wording and which variants can be picked. */
-  kind?: Kind
   /** Limits the variant picker to one product (opened from that product's row). */
   productId?: string
   onDone: () => void
@@ -91,12 +70,11 @@ export function StockMovementDialog({
   warehouses,
   variant,
   warehouseId,
-  kind = "stock",
   productId,
   onDone,
 }: Props) {
   const open = mode !== null
-  const copy = (kind === "preorder" ? PREORDER_COPY : COPY)[mode ?? "intake"]
+  const copy = COPY[mode ?? "intake"]
   const {
     control,
     register,
@@ -127,7 +105,7 @@ export function StockMovementDialog({
       return
     }
     const base = {
-      kind,
+      kind: "stock" as const,
       variant_id: (values.variant as PickedVariant).id,
       warehouse_id: values.warehouse_id === DEFAULT_WAREHOUSE ? null : values.warehouse_id,
     }
@@ -154,7 +132,7 @@ export function StockMovementDialog({
         setError,
         fields: ["quantity", "unit_cost"],
         fieldMap: { quantity_delta: "quantity" },
-        fallback: kind === "preorder" ? "Couldn't save this" : "Stock movement failed",
+        fallback: "Stock movement failed",
       })
     }
   }
@@ -181,7 +159,7 @@ export function StockMovementDialog({
                 id="movement-variant"
                 value={field.value ?? null}
                 onChange={field.onChange}
-                filters={{ category_type: kind, product_id: productId }}
+                filters={{ category_type: "stock", product_id: productId }}
               />
             )}
           />

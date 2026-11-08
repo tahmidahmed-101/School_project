@@ -77,7 +77,7 @@ const ForgotPasswordForm = () => {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <img src="/brand/logo.png" alt="" width={72} height={72} className="mx-auto size-18 rounded-full" />
-          <p className="text-lg font-bold tracking-[0.12em] text-foreground">KULL MART</p>
+          <p className="text-lg font-bold tracking-[0.12em] text-foreground">SCHOOL PROJECT</p>
           <CardTitle className="text-2xl">Reset password</CardTitle>
           <p className="text-sm text-muted-foreground">
             {email

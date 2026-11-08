@@ -20,7 +20,6 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
 import { useAllPages } from "@/hooks/use-all-pages"
-import { useKind } from "@/hooks/use-kind"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
 import { useWarehouses } from "@/features/inventory/lib/useWarehouses"
 
@@ -45,11 +44,10 @@ export function GoodsReceiptDialog({
   purchaseOrder?: PurchaseOrder | null
   onReceived?: (grn: GoodsReceipt) => void
 }) {
-  const kind = useKind()
   const pickMode = !purchaseOrder
   const { items: submittedPos, isLoading: posLoading } = useAllPages<PurchaseOrder>(
     "/admin/procurement/purchase-orders/",
-    { status: "submitted", kind },
+    { status: "submitted", kind: "stock" },
     { enabled: open && pickMode }
   )
   const { picked, handleOpenChange, handlePick } = usePurchaseOrderPick(onOpenChange)
@@ -67,9 +65,7 @@ export function GoodsReceiptDialog({
             Receive Goods{po ? ` — ${po.po_number}` : ""}
           </DialogTitle>
           <DialogDescription>
-            {kind === "preorder"
-              ? "Accepted quantities count as arrived at the PO unit cost."
-              : "Accepted quantities go into stock at the PO unit cost and post to the ledger."}{" "}
+            Accepted quantities go into stock at the PO unit cost and post to the ledger.
             Rejected quantities are logged on the receipt only.
           </DialogDescription>
         </DialogHeader>
@@ -124,11 +120,9 @@ function ReceiptForm({
   onReceived: (grn: GoodsReceipt) => void
 }) {
   const dispatch = useAppDispatch()
-  const pageKind = useKind()
-  const isPreorder = (po?.kind ?? pageKind) === "preorder"
   const [receivedDate, setReceivedDate] = useState(todayLocalISODate)
-  // Accepted goods go into this warehouse; empty means the default one of the order's kind.
-  const { warehouses } = useWarehouses(isPreorder ? "preorder" : "stock")
+  // Accepted goods go into this warehouse; empty means the default one.
+  const { warehouses } = useWarehouses()
   const receivingWarehouses = warehouses.filter((w) => w.is_active && !w.deleted_at)
   const [warehouseId, setWarehouseId] = useState("")
   const chosenWarehouse =
@@ -175,12 +169,8 @@ function ReceiptForm({
       ).unwrap()
       toast.success(
         grn.status === "qc_reject"
-          ? isPreorder
-            ? "Receipt recorded — rejected lines were not counted as arrived"
-            : "Receipt recorded — rejected lines were not added to stock"
-          : isPreorder
-            ? "Goods received and counted as arrived"
-            : "Goods received and added to stock"
+          ? "Receipt recorded — rejected lines were not added to stock"
+          : "Goods received and added to stock"
       )
       onReceived(grn)
     } catch (err) {

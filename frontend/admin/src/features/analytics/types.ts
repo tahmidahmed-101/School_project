@@ -1,7 +1,5 @@
-// Mirrors kull-mart backend api/v1/admin/reporting/serializers.py.
+// Mirrors school-project backend api/v1/admin/reporting/serializers.py.
 // DecimalField values arrive as strings; FloatField/IntegerField as numbers.
-
-import type { Kind } from "@/hooks/use-kind"
 
 export type MeasureUnit = "currency" | "count" | "ratio"
 export type TrendDirection = "up" | "down" | "flat"
@@ -12,9 +10,9 @@ export interface DateRangeParams {
   end: string
 }
 
-/** A report window for one half of the shop; with `kind` the backend answers for that half only. */
+/** A report window; `kind=stock` keeps the backend to stock items. */
 export interface ReportQuery extends DateRangeParams {
-  kind: Kind
+  kind: "stock"
 }
 
 export interface DashboardKpi {
@@ -48,7 +46,7 @@ export interface DashboardOrderLine {
 }
 
 export interface DashboardOrder {
-  /** Order number, e.g. "SO-123456789" (pre-orders: "PRE-123456789"). */
+  /** Order number, e.g. "SO-123456789". */
   id: string
   /** Order UUID (for /order_detail/:id). */
   order_id: string
@@ -117,15 +115,6 @@ export interface DashboardData {
   segments: CustomerSegment[]
   fulfillment: FulfillmentMetric[]
   ticker: TickerItem[]
-  /** The open pre-order book; not sent when the request is for `kind=stock`. */
-  preorder?: PreorderSummary
-}
-
-/** PreorderBookSerializer */
-export interface PreorderSummary {
-  open_orders: number
-  deposits_held: string
-  balances_outstanding: string
 }
 
 export interface SalesTrendPoint {

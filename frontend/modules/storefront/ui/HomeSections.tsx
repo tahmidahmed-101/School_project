@@ -28,30 +28,30 @@ export function HomeSections({
 }) {
   const { t, ui } = useLang();
   const { categories, catalogFailed } = useCatalog();
-  const { stockProducts } = useProducts();
+  const { products } = useProducts();
 
-  const trendingProducts = useMemo(() => trending(stockProducts), [stockProducts]);
-  const bestSellerProducts = useMemo(() => bestSellers(stockProducts), [stockProducts]);
+  const trendingProducts = useMemo(() => trending(products), [products]);
+  const bestSellerProducts = useMemo(() => bestSellers(products), [products]);
 
   // One shelf per category, each linking to the full category
   const categorySections = useMemo(() => {
     return categories
       .map((category) => ({
         category,
-        products: categoryShelf(stockProducts, category.id),
+        products: categoryShelf(products, category.id),
       }))
       .filter((section) => section.products.length > 0);
-  }, [categories, stockProducts]);
+  }, [categories, products]);
 
   return (
     <div>
       <Hero
         heading={`${BRAND_INFO.name} — ${t(BRAND_INFO.tagline)}`}
-        slides={heroSlidesFor("home", content)}
+        slides={heroSlidesFor(content)}
         hasOffers={hasOffers}
       />
-      <PromoMarquee lines={promoLinesFor("home", content)} />
-      <PromotionPopup popups={content?.promotionPopups ?? []} shop="stock" />
+      <PromoMarquee lines={promoLinesFor(content)} />
+      <PromotionPopup popups={content?.promotionPopups ?? []} />
       <VoucherSection vouchers={vouchers} />
       <CategoryShowcase />
 

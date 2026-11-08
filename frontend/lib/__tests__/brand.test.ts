@@ -31,26 +31,12 @@ const profile = (overrides: Partial<ApiBusinessProfile> = {}): ApiBusinessProfil
   ...overrides,
 });
 
-describe("mergeBrand pre-order terms", () => {
-  it("keeps each language as staff wrote it, line breaks included, trimmed at the ends", () => {
-    const terms = mergeBrand(
-      profile({ preorder_terms: { en: "  No refunds.\nDates may change.  ", bn: " ফেরত নেই। " } }),
-    ).preorderTerms;
-    expect(terms).toEqual({ en: "No refunds.\nDates may change.", bn: "ফেরত নেই।" });
-  });
-
-  it("has none for a missing field or without a profile", () => {
-    expect(mergeBrand(profile()).preorderTerms).toEqual({ en: "", bn: "" });
-    expect(mergeBrand(null).preorderTerms).toEqual({ en: "", bn: "" });
-  });
-});
-
 describe("mergeBrand", () => {
   it("uses the contact details the business profile has", () => {
-    const brand = mergeBrand(profile({ phone: "01811-222333", email: "hello@kullmart.com" }));
+    const brand = mergeBrand(profile({ phone: "01811-222333", email: "hello@schoolproject.com" }));
     expect(brand.phone).toBe("01811-222333");
     expect(brand.phoneTel).toBe("01811222333");
-    expect(brand.email).toBe("hello@kullmart.com");
+    expect(brand.email).toBe("hello@schoolproject.com");
   });
 
   it("keeps the built-in details when the profile is empty or missing", () => {
@@ -71,12 +57,12 @@ describe("mergeBrand", () => {
     const brand = mergeBrand(
       profile({
         google_maps_url: " https://maps.app.goo.gl/abc ",
-        social: { instagram: "https://instagram.com/kullmartbd", tiktok: "" },
+        social: { instagram: "https://instagram.com/schoolprojectbd", tiktok: "" },
       }),
     );
     expect(brand.mapsUrl).toBe("https://maps.app.goo.gl/abc");
     expect(brand.social).toEqual({
-      instagram: "https://instagram.com/kullmartbd",
+      instagram: "https://instagram.com/schoolprojectbd",
       tiktok: "",
       youtube: "",
       linkedin: "",
@@ -84,9 +70,9 @@ describe("mergeBrand", () => {
   });
 
   it("takes the store name and legal name from the profile", () => {
-    const brand = mergeBrand(profile({ name: " Kull Mart BD ", legal_name: "Kull Mart Trading" }));
-    expect(brand.name).toBe("Kull Mart BD");
-    expect(brand.legalName).toBe("Kull Mart Trading");
+    const brand = mergeBrand(profile({ name: " School Project BD ", legal_name: "School Project Trading" }));
+    expect(brand.name).toBe("School Project BD");
+    expect(brand.legalName).toBe("School Project Trading");
   });
 
   it("ignores the store name a fresh backend ships with", () => {
@@ -106,7 +92,7 @@ describe("mergeBrand", () => {
   });
 
   it("does not take the tagline from the profile", () => {
-    expect(mergeBrand(profile({ tagline: "#kullmart" })).tagline).toEqual(BRAND_INFO.tagline);
+    expect(mergeBrand(profile({ tagline: "#schoolproject" })).tagline).toEqual(BRAND_INFO.tagline);
   });
 
   it("shows a logo uploaded in the dashboard in place of the built-in one", () => {
@@ -138,13 +124,13 @@ describe("mergeBrand contact (floating button)", () => {
       profile({
         phone: "01811-222 333",
         whatsapp: "+880 1811-222333",
-        social: { facebook: "https://www.facebook.com/kullmartbd/" },
+        social: { facebook: "https://www.facebook.com/schoolprojectbd/" },
       }),
     );
     expect(brand.contact).toEqual({
       phoneTel: "01811222333",
       whatsapp: "8801811222333",
-      messenger: "https://m.me/kullmartbd",
+      messenger: "https://m.me/schoolprojectbd",
     });
   });
 

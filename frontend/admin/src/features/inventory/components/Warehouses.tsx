@@ -18,7 +18,6 @@ import { TextField, TextareaField } from "@/components/common/form-fields"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { reportFormError } from "@/lib/forms"
@@ -35,10 +34,8 @@ const STATUS_OPTIONS: Option[] = [
   { label: "Inactive", value: "false" },
 ]
 
-const WarehousesList = () => {
-  const kind = useKind()
-  const title = kind === "preorder" ? "Pre-order warehouses" : "Warehouses"
-  useDocumentTitle(title)
+const Warehouses = () => {
+  useDocumentTitle("Warehouses")
   const dispatch = useAppDispatch()
   const canManage = useCan("inventory.manage")
   const warehouseState = useAppSelector((s) => s.inventoryWarehouses)
@@ -46,7 +43,7 @@ const WarehousesList = () => {
   const list = useListPage({
     fetch: (p) => dispatch(fetchAll(p)),
     state: warehouseState,
-    params: { kind, is_active: status?.value },
+    params: { kind: "stock", is_active: status?.value },
     pageSize: PAGE_SIZE,
   })
 
@@ -125,7 +122,7 @@ const WarehousesList = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Warehouses"
         actions={
           canManage && (
             <Button
@@ -171,11 +168,6 @@ const WarehousesList = () => {
         {...list.tableProps}
         emptyIcon={WarehouseIcon}
         emptyTitle="No warehouses"
-        emptyDescription={
-          kind === "preorder"
-            ? "Pre-order goods can't be received until there is a default pre-order warehouse."
-            : undefined
-        }
         minWidth="860px"
         columnWidths={["240px", "110px", "260px", "110px", "120px", ...(canManage ? ["80px"] : [])]}
         unlabelledColumns={["actions"]}
@@ -186,7 +178,6 @@ const WarehousesList = () => {
           open={formOpen}
           onOpenChange={setFormOpen}
           warehouse={editing}
-          kind={kind}
           onSaved={list.reload}
         />
       )}
@@ -207,13 +198,11 @@ function WarehouseFormDialog({
   open,
   onOpenChange,
   warehouse,
-  kind,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   warehouse: Warehouse | null
-  kind: Kind
   onSaved: () => void
 }) {
   const {
@@ -241,7 +230,7 @@ function WarehouseFormDialog({
   }, [open, warehouse, reset])
 
   const onSubmit = async (values: FormValues) => {
-    const payload: WarehousePayload = warehouse ? { ...values } : { ...values, kind }
+    const payload: WarehousePayload = warehouse ? { ...values } : { ...values, kind: "stock" }
     try {
       if (warehouse) {
         await updateWarehouse(warehouse.id, payload)
@@ -261,12 +250,8 @@ function WarehouseFormDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={warehouse ? `Edit ${warehouse.name}` : kind === "preorder" ? "Add pre-order warehouse" : "Add warehouse"}
-      description={
-        kind === "preorder"
-          ? "Holds arrived pre-order goods only. A warehouse with goods in it can't be deleted."
-          : "Warehouses with stock can't be deleted — move or zero their stock first."
-      }
+      title={warehouse ? `Edit ${warehouse.name}` : "Add warehouse"}
+      description="Warehouses with stock can't be deleted — move or zero their stock first."
       onSubmit={handleSubmit(onSubmit)}
       submitting={isSubmitting}
       submitLabel={warehouse ? "Save" : "Create"}
@@ -287,16 +272,12 @@ function WarehouseFormDialog({
           control={control}
           name="is_default"
           label="Default"
-          description={
-            kind === "preorder" ? "Replaces the current default pre-order warehouse." : "Replaces the current default."
-          }
+          description="Replaces the current default."
           disabled={warehouse?.is_default}
         />
       </div>
     </FormDialog>
   )
 }
-
-const Warehouses = () => <WarehousesList key={useKind()} />
 
 export default Warehouses

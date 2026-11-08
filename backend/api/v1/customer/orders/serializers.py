@@ -11,12 +11,7 @@ from apps.catalog.selectors.options import (
     variant_legacy_field,
 )
 from apps.orders.models import ReturnRMA, ReturnRMALine, SalesOrder, Shipment
-from apps.orders.selectors.payments import (
-    DEPOSIT_PERCENT_CONTEXT_KEY,
-    order_balance_due,
-    order_deposit_due,
-    order_paid_total,
-)
+from apps.orders.selectors.payments import order_balance_due, order_paid_total
 
 
 class SalesOrderLineSerializer(serializers.Serializer):
@@ -32,7 +27,6 @@ class SalesOrderLineSerializer(serializers.Serializer):
     tax_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     # unit_price x quantity: the lines add up to the order's subtotal.
     total = serializers.SerializerMethodField()
-    is_preorder = serializers.BooleanField(read_only=True)
 
     def get_total(self, obj) -> str:
         return str((obj.unit_price * obj.quantity).quantize(Decimal("0.01")))
@@ -62,14 +56,9 @@ class SalesOrderSerializer(serializers.Serializer):
     discount_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=14, decimal_places=2)
     order_type = serializers.CharField(read_only=True)
-    deposit_due = serializers.SerializerMethodField()
     coupon_code = serializers.CharField(source="coupon.code", read_only=True, allow_null=True)
     lines = serializers.SerializerMethodField()
     shipments = serializers.SerializerMethodField()
-
-    def get_deposit_due(self, obj) -> str:
-        percent = self.context.get(DEPOSIT_PERCENT_CONTEXT_KEY)
-        return str(order_deposit_due(obj, deposit_percent=percent))
 
     def get_lines(self, obj) -> list[dict]:
         return SalesOrderLineSerializer(obj.lines.all(), many=True).data
@@ -108,7 +97,6 @@ class OrderHistorySerializer(SalesOrderSerializer):
     `orders_for_customer`, which prefetches each line's variant and product."""
 
     created_at = serializers.DateTimeField(read_only=True)
-    preorder_stage = serializers.CharField(read_only=True)
     paid_total = serializers.SerializerMethodField()
     balance_due = serializers.SerializerMethodField()
 

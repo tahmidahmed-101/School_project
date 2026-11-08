@@ -12,7 +12,6 @@ from apps.common.exceptions import BusinessRuleViolationError
 from apps.common.utils.codes import generate_document_number
 from apps.common.utils.money import quantize
 from apps.procurement.models import PurchaseOrder, VendorBill, VendorPayment
-from apps.procurement.selectors.kind import purchase_order_kind
 
 BILL_MATCH_TOLERANCE = Decimal("0.01")
 
@@ -78,11 +77,6 @@ def create_vendor_bill(
 ) -> VendorBill:
     # Locked so two bills raised at once cannot both see the goods unbilled.
     purchase_order = PurchaseOrder.objects.select_for_update().get(pk=purchase_order.pk)
-    if supplier.kind != purchase_order_kind(purchase_order):
-        raise BusinessRuleViolationError(
-            "Pick a supplier from the same side as the purchase order: stock or pre-order.",
-            code="supplier_kind_mismatch",
-        )
     _ensure_three_way_match(purchase_order, amount)
 
     bill_number = generate_document_number("BILL")

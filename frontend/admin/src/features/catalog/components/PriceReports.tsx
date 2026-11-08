@@ -20,7 +20,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useCan } from "@/hooks/use-can"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import { reportFormError } from "@/lib/forms"
@@ -48,8 +47,8 @@ const ORDERING_OPTIONS: Option[] = [
  * Reports customers send from a product page when a price looks wrong. They are never shown
  * on the storefront; staff check the price, then mark each report resolved or dismissed.
  */
-const PriceReports = ({ kind }: { kind: Kind }) => {
-  const title = kind === "preorder" ? "Pre-order price reports" : "Price reports"
+const PriceReports = () => {
+  const title = "Price reports"
   useDocumentTitle(title)
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
@@ -58,7 +57,6 @@ const PriceReports = ({ kind }: { kind: Kind }) => {
   const [reviewing, setReviewing] = useState<PriceReport | null>(null)
 
   const { list, filters, isFiltered, reloadIfFiltered } = useModerationList({
-    kind,
     fetch: (p) => dispatch(fetchAll(p)),
     state: reportState,
     filter: { param: "status", placeholder: "Status", options: STATUS_OPTIONS },
@@ -81,7 +79,7 @@ const PriceReports = ({ kind }: { kind: Kind }) => {
       header: "PRODUCT",
       cell: ({ row }) => (
         <div className="min-w-0" data-no-row-click="true">
-          <LinkCell to={withKind(`/product_detail/${row.original.product_id}`, kind)} className="block truncate font-medium">
+          <LinkCell to={`/product_detail/${row.original.product_id}`} className="block truncate font-medium">
             {row.original.product_name}
           </LinkCell>
           <p className="truncate font-mono text-xs text-muted-foreground">
@@ -290,9 +288,4 @@ function ReviewDialog({
   )
 }
 
-const PriceReportsPage = () => {
-  const kind = useKind()
-  return <PriceReports key={kind} kind={kind} />
-}
-
-export default PriceReportsPage
+export default PriceReports

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from django.db import transaction
 from django.db.models import F, Sum
-from django.db.models.functions import Greatest
 from django.utils import timezone
 
 from apps.catalog.selectors.bundles import expand_variant
@@ -157,7 +156,6 @@ def release_stock_reservation(
         release_reservation(variant=locked.variant, warehouse=locked.warehouse, quantity=held)
     locked.status = StockReservation.Status.RELEASED
     locked.save(update_fields=["status", "updated_at"])
-    _return_preorder_units_to_queue(locked)
 
     reservation.status = locked.status
     return reservation
@@ -166,18 +164,16 @@ def release_stock_reservation(
 @transaction.atomic
 def release_reservation_by_staff(*, reservation: StockReservation, actor=None) -> StockReservation:
     """Release a hold by hand from the dashboard. Allowed while the order is
-    unpaid, and for a pre-order allocation (its units go back to the queue).
-    A confirmed order's ready-stock hold is promised to the customer: freeing
+    unpaid. A confirmed order's ready-stock hold is promised to the customer: freeing
     it would let the units sell twice, so it ends only by shipping or by
     cancelling the order."""
     from apps.orders.models import SalesOrder
 
     line = reservation.order_line
     order = line.order
-    if (
-        not line.is_preorder
-        and reservation.status == StockReservation.Status.ACTIVE
-        and order.status not in (SalesOrder.Status.PENDING, SalesOrder.Status.AWAITING_PAYMENT)
+    if reservation.status == StockReservation.Status.ACTIVE and order.status not in (
+        SalesOrder.Status.PENDING,
+        SalesOrder.Status.AWAITING_PAYMENT,
     ):
         raise BusinessRuleViolationError(
             f"Order {order.order_number} is {order.get_status_display().lower()}, so this "
@@ -215,23 +211,6 @@ def _units_still_held(reservation: StockReservation) -> int:
     return max(0, min(reservation.held_quantity, unshipped - other_rows))
 
 
-def _return_preorder_units_to_queue(reservation: StockReservation) -> None:
-    """A pre-order line whose hold is released is no longer allocated those
-    units, so it waits for the next allocation instead of looking shippable."""
-    line = reservation.order_line
-    if not line.is_preorder:
-        return
-    # A bundle holds one row per component; count its units once, on the first.
-    component, per_unit = expand_variant(line.variant, 1)[0]
-    if component.id != reservation.variant_id:
-        return
-    SalesOrderLine.objects.filter(pk=line.pk).update(
-        allocated_quantity=Greatest(
-            F("shipped_quantity"), F("allocated_quantity") - reservation.quantity // per_unit
-        )
-    )
-
-
 def release_expired_reservations(*, now=None, actor=None, variant_ids=None) -> int:
     """Release every checkout hold past its `expires_at`. Each one commits on
     its own so a single bad row can't strand the rest of the sweep.
@@ -244,17 +223,11 @@ def release_expired_reservations(*, now=None, actor=None, variant_ids=None) -> i
     from apps.orders.models import SalesOrder
 
     now = now or timezone.now()
-    # Stock allocated to a pre-order is held for a paying customer until it
-    # ships or staff release it; it does not time out like a checkout hold.
-    expired = (
-        StockReservation.objects.filter(
-            status=StockReservation.Status.ACTIVE,
-            expires_at__lte=now,
-            order_line__order__status=SalesOrder.Status.AWAITING_PAYMENT,
-        )
-        .exclude(order_line__is_preorder=True)
-        .order_by("created_at")
-    )
+    expired = StockReservation.objects.filter(
+        status=StockReservation.Status.ACTIVE,
+        expires_at__lte=now,
+        order_line__order__status=SalesOrder.Status.AWAITING_PAYMENT,
+    ).order_by("created_at")
     if variant_ids is not None:
         expired = expired.filter(variant_id__in=list(variant_ids))
 
@@ -283,7 +256,7 @@ def reinstate_lapsed_holds(order) -> int:
     nothing held would oversell. Refused when the stock has since been sold.
     Returns how many units were held again."""
     held_again = 0
-    lines = SalesOrderLine.objects.filter(order=order, is_preorder=False).select_related("variant")
+    lines = SalesOrderLine.objects.filter(order=order).select_related("variant")
     for line in lines:
         unshipped = line.quantity - line.shipped_quantity
         if unshipped <= 0:

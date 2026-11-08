@@ -4,7 +4,6 @@ import { dashboardModule } from "@/features/dashboard/module"
 import { catalogModule } from "@/features/catalog/module"
 import { inventoryModule } from "@/features/inventory/module"
 import { salesModule } from "@/features/sales/module"
-import { preorderModule } from "@/features/preorder/module"
 import { financeModule } from "@/features/finance/module"
 import { usersModule } from "@/features/users/module"
 import { marketingModule } from "@/features/marketing/module"
@@ -18,7 +17,6 @@ export const featureModules: FeatureModule[] = [
   catalogModule,
   inventoryModule,
   salesModule,
-  preorderModule,
   procurementModule,
   financeModule,
   usersModule,

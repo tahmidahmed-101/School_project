@@ -1,5 +1,5 @@
 import type { StatusTone } from "@/components/common/status-tones"
-import type { PopupDisplayStatus, PopupShop, PromotionPopup } from "@/features/system/types"
+import type { PopupDisplayStatus, PromotionPopup } from "@/features/system/types"
 import { formatDateTime } from "@/lib/format"
 
 export const POPUP_STATUS_TONES: Record<PopupDisplayStatus, StatusTone> = {
@@ -7,11 +7,6 @@ export const POPUP_STATUS_TONES: Record<PopupDisplayStatus, StatusTone> = {
   scheduled: "info",
   active: "success",
   expired: "destructive",
-}
-
-export const SHOP_COPY: Record<PopupShop, { pages: string; label: string }> = {
-  stock: { pages: "the stock storefront (home page, shop and stock product pages)", label: "stock" },
-  preorder: { pages: "the pre-order storefront (pre-order page and pre-order product pages)", label: "pre-order" },
 }
 
 /** Where clicking the popup goes, for the table. */

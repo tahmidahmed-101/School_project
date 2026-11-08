@@ -1,7 +1,6 @@
-import { productKind } from "@/lib/product";
 import type { Product } from "@/lib/types";
 
-/** "You may also like" for a product: the API's picks, else its own category, and only ever from its own shop. */
+/** "You may also like" for a product: the API's picks, else its own category. */
 export function relatedForProduct(
   product: Product,
   apiPicks: Product[] | null,
@@ -9,13 +8,13 @@ export function relatedForProduct(
   count: number,
 ): Product[] {
   const candidates = apiPicks ?? catalog.filter((p) => p.category === product.category);
-  return candidates.filter((p) => p.id !== product.id && productKind(p) === productKind(product)).slice(0, count);
+  return candidates.filter((p) => p.id !== product.id).slice(0, count);
 }
 
-/** The product page's "More products" rail: others from the same shop that "You may also like" doesn't show. */
+/** The product page's "More products" rail: other products that "You may also like" doesn't show. */
 export function moreForProduct(product: Product, related: Product[], catalog: Product[], count: number): Product[] {
   const shown = new Set([product.id, ...related.map((p) => p.id)]);
-  return catalog.filter((p) => !shown.has(p.id) && productKind(p) === productKind(product)).slice(0, count);
+  return catalog.filter((p) => !shown.has(p.id)).slice(0, count);
 }
 
 /**

@@ -13,7 +13,7 @@ import { DeleteModal } from "@/components/common/DeleteModal"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { Account, Expense, ExpenseCategory } from "../types"
 import { accountLabel } from "../hooks/useFinanceHelpers"
-import { belongsToLabel, EXPENSE_DELETE_DESCRIPTION } from "../utils"
+import { EXPENSE_DELETE_DESCRIPTION } from "../utils"
 import { DetailRow } from "@/components/common/DetailRow"
 import { useLastValue } from "@/hooks/use-dialog-presence"
 
@@ -70,7 +70,6 @@ export function ExpenseDetailDialog({
             <DetailRow label="Category">
               {expense.category_id ? categoriesById.get(expense.category_id)?.name ?? "—" : "Uncategorised"}
             </DetailRow>
-            <DetailRow label="Belongs to">{belongsToLabel(expense.kind)}</DetailRow>
             <DetailRow label="Expense account">{accountLabel(accountsById.get(expense.expense_account_id))}</DetailRow>
             <DetailRow label="Paid from">{accountLabel(accountsById.get(expense.payment_account_id))}</DetailRow>
             <DetailRow label="Journal entry">

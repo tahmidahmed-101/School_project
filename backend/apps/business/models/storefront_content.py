@@ -19,12 +19,11 @@ def _promotion_image_path(instance: PromotionPopup, filename: str) -> str:
 
 class HeroPlacement(models.TextChoices):
     HOME = "home", "Home"
-    PREORDER = "preorder", "Pre-order"
-    # Old rows only, until `split_both_placements` has run. Never written again.
+    # Old rows only, shown on the home page. Never written again.
     BOTH = "both", "Both"
 
 
-WRITABLE_PLACEMENTS = (HeroPlacement.HOME.value, HeroPlacement.PREORDER.value)
+WRITABLE_PLACEMENTS = (HeroPlacement.HOME.value,)
 
 
 class HeroSlide(TimeStampedModel):
@@ -90,7 +89,6 @@ class PromotionPopup(TimeStampedModel):
 
     class Shop(models.TextChoices):
         STOCK = "stock", "Stock"
-        PREORDER = "preorder", "Pre-order"
 
     class Destination(models.TextChoices):
         NONE = "none", "No link"
@@ -99,8 +97,8 @@ class PromotionPopup(TimeStampedModel):
         CAMPAIGN = "campaign", "Campaign page"
         URL = "url", "Custom URL"
 
-    # Campaign information. `shop` is fixed once created: a stock popup shows
-    # on the stock pages, a pre-order one on the pre-order pages.
+    # Campaign information. `shop` is fixed once created; every new popup is
+    # a stock one and shows on the shop's pages.
     shop = models.CharField(max_length=10, choices=Shop.choices, default=Shop.STOCK)
     name = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)

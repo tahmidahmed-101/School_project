@@ -20,9 +20,7 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # deploy time; tests never run that, so keep the counters in memory.
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-# A developer's .env may hold a real bot token; tests must never message it.
-TELEGRAM_BOT_TOKEN = ""
-# Likewise real analytics credentials: tests switch providers on themselves.
+# A developer's .env may hold real analytics credentials: tests switch providers on themselves.
 GA4_MEASUREMENT_ID = ""
 GA4_API_SECRET = ""
 META_PIXEL_ID = ""

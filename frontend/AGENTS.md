@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Kull Mart storefront
+# School Project storefront
 
 Next.js 16 (App Router) + React 19 + Tailwind 4 storefront for the LaunchCart Django API in `../backend`. There is no
 database or server state here: the catalogue, checkout and order tracking all go through the public API, and
@@ -29,8 +29,8 @@ live API, so start the backend first (see the root README). E2E: `npx playwright
 ```text
 app/             routes ONLY: page/layout/route handlers, metadata, error/loading/not-found, CSS, fonts, icons.
                  Keep pages thin: fetch on the server, render a module component. No business logic here.
-modules/<name>/  one folder per feature (catalog, cart, wishlist, checkout, preorder, tracking, marketing, auth,
-                 policies, seo, shell, storefront, business). Inside: ui/, domain/ (pure rules), data/ (API access),
+modules/<name>/  one folder per feature (catalog, cart, wishlist, checkout, tracking, marketing, auth, policies, seo,
+                 shell, storefront, business). Inside: ui/, domain/ (pure rules), data/ (API access),
                  context.tsx, __tests__/.
 design-system/   feature-agnostic UI: ui/ (Drawer, Modal, FormField...), patterns/, icons/.
 lib/             shared kernel: types.ts, i18n, format, env, cache, api/client, variants/product helpers, hooks.

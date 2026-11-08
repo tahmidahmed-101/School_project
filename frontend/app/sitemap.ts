@@ -15,15 +15,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const paths = [
     "/",
     "/shop",
-    "/pre-order",
     "/return-policy",
     "/refund-policy",
     ...(hasShippingPolicy ? ["/shipping-policy"] : []),
-    ...categories.map((category) =>
-      category.type === "preorder"
-        ? `/shop?category=${category.slug}&type=preorder`
-        : `/shop?category=${category.slug}`,
-    ),
+    ...categories.map((category) => `/shop?category=${category.slug}`),
     ...products.map((product) => `/product/${product.slug}`),
   ];
   return paths.map((path) => ({ url: absoluteUrl(path) }));

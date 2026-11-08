@@ -119,14 +119,13 @@ export function StockProductForm({
   return (
     <FormProvider {...form}>
       <ProductFormShell
-        kind="stock"
         product={product}
         formId={formId}
         onSubmit={handleSubmit(onSubmit)}
         submitting={isSubmitting}
-        after={product && <SavedVariants product={product} kind="stock" />}
+        after={product && <SavedVariants product={product} />}
       >
-        <BasicsCard kind="stock" categoryOptions={categoryOptions} />
+        <BasicsCard categoryOptions={categoryOptions} />
         <PricingCard
           isEditing={isEditing}
           perVariant={hasOptions}

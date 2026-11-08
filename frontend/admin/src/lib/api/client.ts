@@ -14,7 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
  */
 const AUTH_CLIENT_HEADERS = { "X-Auth-Client": "dashboard" }
 
-// The kull-mart backend keeps the refresh token in an HttpOnly cookie scoped to
+// The school-project backend keeps the refresh token in an HttpOnly cookie scoped to
 // /api/v1/customer/auth/, so requests must carry credentials for refresh/logout to work.
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -114,7 +114,7 @@ function isApiError(err: unknown): err is ApiError {
   return typeof e.status === "number" && typeof e.code === "string" && typeof e.message === "string" && !!e.fields
 }
 
-// Kull-mart errors look like { error: { code, message, fields } } (apps/common/exception_handler.py).
+// School Project errors look like { error: { code, message, fields } } (apps/common/exception_handler.py).
 export function extractApiError(err: unknown): ApiError {
   if (isApiError(err)) return err
   if (axios.isAxiosError(err)) {

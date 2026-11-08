@@ -102,6 +102,6 @@ describe("clearStoredRef", () => {
 
 describe("referralLink", () => {
   it("puts the code on the storefront home", () => {
-    expect(referralLink("https://kullmart.com/", "K7M2X9A")).toBe("https://kullmart.com/?ref=K7M2X9A");
+    expect(referralLink("https://schoolproject.com/", "K7M2X9A")).toBe("https://schoolproject.com/?ref=K7M2X9A");
   });
 });

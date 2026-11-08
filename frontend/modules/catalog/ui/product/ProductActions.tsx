@@ -1,13 +1,12 @@
 "use client";
 
-import { ShoppingCart, Zap, Heart, Sparkles } from "lucide-react";
+import { ShoppingCart, Zap, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { useCart } from "@/modules/cart";
 import { useWishlist } from "@/modules/wishlist";
-import { usePreOrderModal } from "@/modules/preorder";
-import { getMaxOrderQuantity, getMinOrderQuantity, unavailableLabel } from "@/lib/product";
+import { getMaxOrderQuantity } from "@/lib/product";
 import { Button } from "@/design-system/ui/Button";
 import { QuantityStepper } from "@/design-system/patterns/QuantityStepper";
 
@@ -21,7 +20,6 @@ interface ProductActionsProps {
   variantId?: string;
   /** What to pick next, shown while the purchase buttons wait for it. */
   hint?: string;
-  isSoldOut: boolean;
   /** The chosen SKU can't be bought right now (a regular product with no stock). */
   isOutOfStock?: boolean;
 }
@@ -33,21 +31,17 @@ export function ProductActions({
   onQuantityChange,
   variantId,
   hint,
-  isSoldOut,
   isOutOfStock = false,
 }: ProductActionsProps) {
-  const { ui, n } = useLang();
+  const { ui } = useLang();
   const router = useRouter();
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
-  const { openPreOrderModal } = usePreOrderModal();
 
   const isWishlisted = isInWishlist(product.id);
-  const minQuantity = getMinOrderQuantity(product);
-  // Never below the minimum, even when less capacity is left: the backend then says how many remain.
-  const maxQuantity = Math.max(minQuantity, getMaxOrderQuantity(product));
+  const maxQuantity = Math.max(1, getMaxOrderQuantity(product));
 
-  const canBuy = !isOutOfStock && !(product.isPreOrder && isSoldOut);
+  const canBuy = !isOutOfStock;
   const waiting = !variantId;
   const hintId = waiting && hint && canBuy ? "option-hint" : undefined;
 
@@ -55,17 +49,17 @@ export function ProductActions({
     if (addItem(product, quantity, variantId, { openDrawer: false })) router.push("/checkout");
   };
 
-  const showBuyNow = !isOutOfStock && !product.isPreOrder;
+  const showBuyNow = !isOutOfStock;
   const buyNowButton = (
     <Button
       {...CTA}
-      variant={product.isPreOrder ? "secondary" : "primary"}
+      variant="primary"
       onClick={buyNow}
       disabled={waiting}
       aria-describedby={hintId}
       // Animated only once it can be pressed: a shaking button that does nothing reads as broken.
       className={waiting ? undefined : "cta-attention"}
-      leadingIcon={<Zap className={`h-4 w-4 fill-current ${product.isPreOrder ? "text-gold-400" : ""}`} />}
+      leadingIcon={<Zap className="h-4 w-4 fill-current" />}
     >
       {ui("buyNow")}
     </Button>
@@ -77,13 +71,7 @@ export function ProductActions({
           from tablet width up and stack on a phone. */}
       <div className="mt-7 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <QuantityStepper
-            size="lg"
-            quantity={quantity}
-            onChange={onQuantityChange}
-            min={minQuantity}
-            max={maxQuantity}
-          />
+          <QuantityStepper size="lg" quantity={quantity} onChange={onQuantityChange} min={1} max={maxQuantity} />
           <button
             type="button"
             onClick={() => toggleItem(product)}
@@ -99,33 +87,11 @@ export function ProductActions({
           </button>
         </div>
 
-        {minQuantity > 1 && (
-          <p className="text-xs font-semibold text-gold-900">
-            {ui("preOrderMinQuantity").replace("{count}", n(minQuantity))}
-          </p>
-        )}
-
         <div className={`grid gap-3 ${showBuyNow ? "sm:grid-cols-2" : ""}`}>
           {isOutOfStock ? (
             <Button {...CTA} variant="outline" disabled>
-              {ui(unavailableLabel(product))}
+              {ui("outOfStock")}
             </Button>
-          ) : product.isPreOrder ? (
-            isSoldOut ? (
-              <Button {...CTA} variant="outline" disabled>
-                {ui("preOrderUnavailable")}
-              </Button>
-            ) : (
-              <Button
-                {...CTA}
-                onClick={() => openPreOrderModal(product, quantity, variantId)}
-                disabled={waiting}
-                aria-describedby={hintId}
-                leadingIcon={<Sparkles className="h-4 w-4 fill-current" />}
-              >
-                {ui("preOrderNow")}
-              </Button>
-            )
           ) : (
             <Button
               {...CTA}

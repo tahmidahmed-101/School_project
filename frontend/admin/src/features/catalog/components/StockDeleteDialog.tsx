@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DialogActions } from "@/components/common/FormDialog"
 import { useCan } from "@/hooks/use-can"
-import type { Kind } from "@/hooks/use-kind"
 import { fetchAllPages } from "@/lib/api/fetchAll"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
@@ -31,7 +30,6 @@ interface Props {
   name: string
   /** Whose stock and reservations stand in the way: a whole product's or one variant's. */
   scope: { product_id: string } | { variant_id: string }
-  kind: Kind
   /** The delete call itself; it rejects with the API error when the backend refuses. */
   remove: () => Promise<unknown>
   onDeleted: () => void
@@ -45,7 +43,7 @@ interface Props {
  * is a plain confirmation; otherwise it shows what still holds the item and lets the admin write
  * the stock off and release the reservations here. The backend enforces the same rule on delete.
  */
-export function StockDeleteDialog({ open, name, scope, kind, remove, onDeleted, onClose, onStockChanged }: Props) {
+export function StockDeleteDialog({ open, name, scope, remove, onDeleted, onClose, onStockChanged }: Props) {
   const scopeKey = JSON.stringify(scope)
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
   const canRelease = useCan("orders.manage")
@@ -102,7 +100,7 @@ export function StockDeleteDialog({ open, name, scope, kind, remove, onDeleted, 
     try {
       await postWriteOff({
         variant_id: item.variant_id,
-        kind,
+        kind: "stock",
         warehouse_id: item.warehouse_id,
         quantity,
         reason: reason.trim() || DEFAULT_REASON,

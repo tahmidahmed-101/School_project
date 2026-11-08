@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.common.models import TimeStampedModel
@@ -45,20 +45,7 @@ class BusinessProfile(TimeStampedModel):
     youtube_url = models.URLField(max_length=500, blank=True)
     linkedin_url = models.URLField(max_length=500, blank=True)
 
-    # Share of a pre-order's total taken before it is confirmed. 100 = full advance.
-    preorder_deposit_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("100"),
-        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
-    )
-
-    # Terms the shopper accepts before placing a pre-order, in English and Bangla.
-    # Both blank = none: the pre-order is confirmed without terms.
-    preorder_terms_en = models.TextField(blank=True, default="")
-    preorder_terms_bn = models.TextField(blank=True, default="")
-
-    # Stock orders with a subtotal at or above this ship free. Blank or 0 = off.
+    # Orders with a subtotal at or above this ship free. Blank or 0 = off.
     free_delivery_min_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,

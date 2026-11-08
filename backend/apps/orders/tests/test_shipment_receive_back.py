@@ -192,15 +192,12 @@ def test_partly_shipped_line_keeps_its_reservation_rows():
     assert _stock(variant) == (STOCK, 3)
 
 
-def test_an_old_preorder_consignment_comes_back_without_any_stock_movement():
-    """Pre-order consignments sent before pre-order lines moved stock are
-    marked `stock_posted=False`; the units go back to the allocation queue."""
+def test_an_old_consignment_that_moved_no_stock_comes_back_without_any_stock_movement():
+    """Old consignments that moved no stock when sent are marked
+    `stock_posted=False`; receiving them back adds nothing to stock."""
     order, (variant,) = _confirmed(1)
     line = order.lines.get()
     shipment = _cancelled(order, {line: 1})
-    line.is_preorder = True
-    line.allocated_quantity = 1
-    line.save(update_fields=["is_preorder", "allocated_quantity"])
     shipment.lines.update(stock_posted=False)
     entries_before = StockLedgerEntry.objects.filter(variant=variant).count()
     stock_before = _stock(variant)
@@ -208,7 +205,7 @@ def test_an_old_preorder_consignment_comes_back_without_any_stock_movement():
     _receive(shipment)
 
     line.refresh_from_db()
-    assert (line.shipped_quantity, line.allocated_quantity) == (0, 0)
+    assert line.shipped_quantity == 0
     assert StockLedgerEntry.objects.filter(variant=variant).count() == entries_before
     assert _stock(variant) == stock_before
 

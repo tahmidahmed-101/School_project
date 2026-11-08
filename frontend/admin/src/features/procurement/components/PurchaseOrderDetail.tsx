@@ -33,8 +33,6 @@ import { api, getApiErrorMessage } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { useAppDispatch } from "@/app/hooks"
-import { useKind } from "@/hooks/use-kind"
-import { purchasingBase } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useAllPages } from "@/hooks/use-all-pages"
 import { useDelayedUnmount } from "@/hooks/use-dialog-presence"
@@ -80,8 +78,7 @@ function HeaderEditDialog({
   po: PurchaseOrder
 }) {
   const dispatch = useAppDispatch()
-  const kind = useKind()
-  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind }, { enabled: open })
+  const { items: suppliers } = useAllPages<Supplier>("/admin/procurement/suppliers/", { kind: "stock" }, { enabled: open })
   const [supplierId, setSupplierId] = useState(po.supplier_id)
   const [orderDate, setOrderDate] = useState(po.order_date)
   const [notes, setNotes] = useState(po.notes)
@@ -155,7 +152,6 @@ function LineDialog({
   line: PurchaseOrderLine | null
   onSaved: () => void
 }) {
-  const kind = useKind()
   const dispatch = useAppDispatch()
   const [variant, setVariant] = useState<PickedVariant | null>(
     line
@@ -210,7 +206,7 @@ function LineDialog({
           <VariantPicker
             variant="combobox"
             id="line-variant"
-            filters={{ category_type: kind }}
+            filters={{ category_type: "stock" }}
             value={variant}
             onChange={(v) => {
               setVariant(v)
@@ -258,8 +254,6 @@ function SummaryStat({ label, value, sub }: { label: string; value: string; sub?
 }
 
 const PurchaseOrderDetail = () => {
-  const kind = useKind()
-  const base = purchasingBase(kind)
   const { id = "" } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -268,7 +262,7 @@ const PurchaseOrderDetail = () => {
   const po = loaded && loaded.id === id ? loaded : null
   const canManage = useCanManagePurchasing()
   const canBill = useCanWriteBills()
-  const { billedFor, unbilledFor, isLoading: billsLoading } = useUnbilledValue(kind)
+  const { billedFor, unbilledFor, isLoading: billsLoading } = useUnbilledValue()
 
   const [headerOpen, setHeaderOpen] = useState(false)
   const [lineDialog, setLineDialog] = useState<{ open: boolean; line: PurchaseOrderLine | null }>({
@@ -289,12 +283,6 @@ const PurchaseOrderDetail = () => {
   useEffect(() => {
     load()
   }, [load])
-
-  // A purchase order opened under the other half's address moves to its own.
-  const ownBase = po ? purchasingBase(po.kind ?? "stock") : base
-  useEffect(() => {
-    if (ownBase !== base) navigate(`${ownBase}/orders/${id}`, { replace: true })
-  }, [ownBase, base, id, navigate])
 
   const poNumber = po?.po_number
   useEffect(() => {
@@ -318,12 +306,12 @@ const PurchaseOrderDetail = () => {
   const linesById = useMemo(() => new Map((po?.lines ?? []).map((l) => [l.id, l])), [po])
 
   const state = resolveDetailState(singleStatus, singleError, !!po)
-  if (state || !po || ownBase !== base) {
+  if (state || !po) {
     return (
       <DetailPageState
         state={state ?? "loading"}
         entity="Purchase order"
-        backTo={`${base}/orders`}
+        backTo="/purchasing/orders"
         backLabel="Back to purchase orders"
         error={singleError}
         onRetry={load}
@@ -352,7 +340,7 @@ const PurchaseOrderDetail = () => {
   const handleDelete = () =>
     runAction(async () => {
       await dispatch(deleteData(po.id)).unwrap()
-      navigate(`${base}/orders`)
+      navigate("/purchasing/orders")
     }, `${po.po_number} deleted`)
 
   const canEditLines = canManage && isDraft
@@ -437,7 +425,7 @@ const PurchaseOrderDetail = () => {
   return (
     <div className="section-container space-y-6">
       <PageHeader
-        back={{ to: `${base}/orders`, label: "Back to purchase orders" }}
+        back={{ to: "/purchasing/orders", label: "Back to purchase orders" }}
         title={<span className="font-mono">{po.po_number}</span>}
         badges={<StatusBadge status={po.status} tone={PO_STATUS_TONE[po.status]} />}
         description={`${po.supplier_name} · ordered ${formatDate(po.order_date)}`}
@@ -480,11 +468,7 @@ const PurchaseOrderDetail = () => {
             {canManage && (po.status === "draft" || po.status === "submitted") && (
               <ConfirmDialog
                 title={`Cancel ${po.po_number}?`}
-                description={
-                  po.kind === "preorder"
-                    ? "The order will be marked cancelled. Goods already received stay counted as arrived."
-                    : "The order will be marked cancelled. Stock already received stays in inventory."
-                }
+                description="The order will be marked cancelled. Stock already received stays in inventory."
                 confirmLabel="Cancel order"
                 destructive
                 onConfirm={() => runAction(() => dispatch(cancelPurchaseOrder(po.id)).unwrap(), "Purchase order cancelled")}
@@ -614,7 +598,7 @@ const PurchaseOrderDetail = () => {
         open={billOpen}
         onOpenChange={setBillOpen}
         purchaseOrder={po}
-        onSaved={() => navigate(`${base}/bills`)}
+        onSaved={() => navigate("/purchasing/bills")}
       />
     </div>
   )

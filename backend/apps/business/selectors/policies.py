@@ -14,7 +14,11 @@ from apps.business.selectors.modules import is_feature_enabled
 
 def store_policies_list() -> QuerySet[StorePolicy]:
     """Every policy row, drafts included, for the settings screen."""
-    return StorePolicy.objects.prefetch_related("non_returnable_categories").order_by("kind")
+    return (
+        StorePolicy.objects.filter(kind__in=PolicyKind.values)
+        .prefetch_related("non_returnable_categories")
+        .order_by("kind")
+    )
 
 
 def get_store_policy(kind: str) -> StorePolicy | None:
@@ -54,7 +58,6 @@ class ReturnRules:
 
     effective_date: date
     window_days: int | None
-    preorder_returns_allowed: bool
     non_returnable_category_ids: frozenset[str]
 
 
@@ -62,7 +65,6 @@ def _rules_from_snapshot(snapshot: dict) -> ReturnRules:
     return ReturnRules(
         effective_date=date.fromisoformat(snapshot["effective_date"]),
         window_days=snapshot.get("return_window_days"),
-        preorder_returns_allowed=snapshot.get("preorder_returns_allowed", True),
         non_returnable_category_ids=frozenset(
             str(category_id) for category_id in snapshot.get("non_returnable_category_ids", [])
         ),
@@ -94,7 +96,6 @@ def return_rule_versions() -> list[ReturnRules]:
         ReturnRules(
             effective_date=policy.effective_date,
             window_days=policy.return_window_days,
-            preorder_returns_allowed=policy.preorder_returns_allowed,
             non_returnable_category_ids=frozenset(
                 str(category.id) for category in policy.non_returnable_categories.all()
             ),

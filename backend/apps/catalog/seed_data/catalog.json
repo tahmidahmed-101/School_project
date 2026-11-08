@@ -3,11 +3,9 @@
   "slug": "blue-black-check-shirt",
   "name": "Blue & Black Check Shirt",
   "category": "Men's Shirts",
-  "kind": "stock",
   "brand": "Fashion Trends",
   "price": 3600,
   "discount_price": 3050,
-  "preorder_price": null,
   "stock": 38,
   "sku": "MEN-FAS-BLU-083",
   "description": "The Blue & Black Check Shirt is a stylish and comfortable men's shirt featuring a classic check pattern. Made from high-quality fabric, it's suitable for both casual and semi-formal occasions.",
@@ -44,11 +42,9 @@
   "slug": "man-plaid-shirt",
   "name": "Man Plaid Shirt",
   "category": "Men's Shirts",
-  "kind": "stock",
   "brand": "Classic Wear",
   "price": 4200,
   "discount_price": 3380,
-  "preorder_price": null,
   "stock": 82,
   "sku": "MEN-CLA-PLA-085",
   "description": "The Man Plaid Shirt is a timeless and versatile men's shirt with a classic plaid pattern. Its comfortable fit and casual style make it a wardrobe essential for various occasions.",
@@ -85,11 +81,9 @@
   "slug": "blue-women-s-handbag",
   "name": "Blue Women's Handbag",
   "category": "Women's Bags",
-  "kind": "stock",
   "brand": "Fashionista",
   "price": 6000,
   "discount_price": 4930,
-  "preorder_price": null,
   "stock": 76,
   "sku": "WOM-FAS-BLU-172",
   "description": "The Blue Women's Handbag is a stylish and spacious accessory for everyday use. With a vibrant blue color and multiple compartments, it combines fashion and functionality.",
@@ -126,11 +120,9 @@
   "slug": "white-faux-leather-backpack",
   "name": "White Faux Leather Backpack",
   "category": "Women's Bags",
-  "kind": "stock",
   "brand": "Urban Chic",
   "price": 4800,
   "discount_price": 4070,
-  "preorder_price": null,
   "stock": 39,
   "sku": "WOM-URB-WHI-175",
   "description": "The White Faux Leather Backpack is a trendy and practical backpack for the modern woman. With a sleek white design and ample storage space, it's perfect for both casual and on-the-go styles.",
@@ -167,11 +159,9 @@
   "slug": "black-sun-glasses",
   "name": "Black Sun Glasses",
   "category": "Sunglasses",
-  "kind": "stock",
   "brand": "Fashion Shades",
   "price": 3600,
   "discount_price": 3420,
-  "preorder_price": null,
   "stock": 60,
   "sku": "SUN-FAS-BLA-154",
   "description": "The Black Sun Glasses are a classic and stylish choice, featuring a sleek black frame and tinted lenses. They provide both UV protection and a fashionable look.",
@@ -208,11 +198,9 @@
   "slug": "golden-shoes-woman",
   "name": "Golden Shoes Woman",
   "category": "Footwear",
-  "kind": "stock",
   "brand": "Fashion Diva",
   "price": 6000,
   "discount_price": 5160,
-  "preorder_price": null,
   "stock": 88,
   "sku": "WOM-FAS-GOL-187",
   "description": "The Golden Shoes for Women are a glamorous choice for special occasions. Featuring a golden hue and stylish design, they add a touch of luxury to your outfit.",
@@ -249,11 +237,9 @@
   "slug": "green-crystal-earring",
   "name": "Green Crystal Earring",
   "category": "Jewellery",
-  "kind": "stock",
   "brand": null,
   "price": 3600,
   "discount_price": 3050,
-  "preorder_price": null,
   "stock": 54,
   "sku": "WOM-BRD-GRE-182",
   "description": "The Green Crystal Earring is a dazzling accessory that features a vibrant green crystal. With a classic design, it adds a touch of elegance to your ensemble, perfect for formal or special occasions.",
@@ -286,11 +272,9 @@
   "slug": "brown-leather-belt-watch",
   "name": "Brown Leather Belt Watch",
   "category": "Watches",
-  "kind": "stock",
   "brand": "Fashion Timepieces",
   "price": 10800,
   "discount_price": 10150,
-  "preorder_price": null,
   "stock": 32,
   "sku": "MEN-FAS-BRO-093",
   "description": "The Brown Leather Belt Watch is a stylish timepiece with a classic design. Featuring a genuine leather strap and a sleek dial, it adds a touch of sophistication to your look.",
@@ -327,11 +311,9 @@
   "slug": "beats-flex-wireless-earphones",
   "name": "Beats Flex Wireless Earphones",
   "category": "Audio & Accessories",
-  "kind": "stock",
   "brand": "Beats",
   "price": 6000,
   "discount_price": 5660,
-  "preorder_price": null,
   "stock": 50,
   "sku": "MOB-BEA-BEA-107",
   "description": "The Beats Flex Wireless Earphones offer a comfortable and versatile audio experience. With magnetic earbuds and up to 12 hours of battery life, they are ideal for everyday use.",
@@ -368,11 +350,9 @@
   "slug": "selfie-lamp-with-iphone",
   "name": "Selfie Lamp with iPhone",
   "category": "Audio & Accessories",
-  "kind": "stock",
   "brand": "GadgetMaster",
   "price": 1800,
   "discount_price": 1450,
-  "preorder_price": null,
   "stock": 58,
   "sku": "MOB-GAD-SEL-110",
   "description": "The Selfie Lamp with iPhone is a portable and adjustable LED light designed to enhance your selfies and video calls. Attach it to your iPhone for well-lit photos.",
@@ -409,11 +389,9 @@
   "slug": "table-lamp",
   "name": "Table Lamp",
   "category": "Home & Living",
-  "kind": "stock",
   "brand": null,
   "price": 6000,
   "discount_price": 5570,
-  "preorder_price": null,
   "stock": 9,
   "sku": "HOM-BRD-TAB-047",
   "description": "The Table Lamp is a functional and decorative lighting solution for your living space. With a modern design, it provides both ambient and task lighting, enhancing the atmosphere.",
@@ -446,11 +424,9 @@
   "slug": "plant-pot",
   "name": "Plant Pot",
   "category": "Home & Living",
-  "kind": "stock",
   "brand": null,
   "price": 1800,
   "discount_price": 1680,
-  "preorder_price": null,
   "stock": 59,
   "sku": "HOM-BRD-PLA-046",
   "description": "The Plant Pot is a stylish container for your favorite plants. With a sleek design, it complements your indoor or outdoor garden, adding a modern touch to your plant display.",
@@ -483,11 +459,9 @@
   "slug": "boxed-blender",
   "name": "Boxed Blender",
   "category": "Kitchen",
-  "kind": "stock",
   "brand": null,
   "price": 4800,
   "discount_price": 4450,
-  "preorder_price": null,
   "stock": 9,
   "sku": "KIT-BRD-BOX-051",
   "description": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance.",
@@ -520,11 +494,9 @@
   "slug": "red-lipstick",
   "name": "Red Lipstick",
   "category": "Beauty",
-  "kind": "stock",
   "brand": "Chic Cosmetics",
   "price": 1560,
   "discount_price": 1370,
-  "preorder_price": null,
   "stock": 91,
   "sku": "BEA-CHI-LIP-004",
   "description": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
@@ -555,251 +527,6 @@
    "red-lipstick-2.webp",
    "red-lipstick-3.webp",
    "red-lipstick-4.webp"
-  ]
- },
- {
-  "slug": "oppo-f19-pro-plus",
-  "name": "Oppo F19 Pro Plus",
-  "category": "Smartphones",
-  "kind": "preorder",
-  "brand": "Oppo",
-  "price": 48000,
-  "discount_price": null,
-  "preorder_price": 45600,
-  "stock": 78,
-  "sku": "SMA-OPP-OPP-126",
-  "description": "The Oppo F19 Pro Plus is a feature-rich smartphone with a focus on camera capabilities. It boasts advanced photography features and a powerful performance for a premium user experience.",
-  "highlights": [
-   "Smartphones",
-   "Oppo"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Oppo"
-   },
-   {
-    "name": "Warranty",
-    "value": "3 year warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 1 week"
-   },
-   {
-    "name": "Returns",
-    "value": "90 days return policy"
-   }
-  ],
-  "images": [
-   "oppo-f19-pro-plus-1.webp",
-   "oppo-f19-pro-plus-2.webp",
-   "oppo-f19-pro-plus-3.webp",
-   "oppo-f19-pro-plus-4.webp"
-  ]
- },
- {
-  "slug": "realme-xt",
-  "name": "Realme XT",
-  "category": "Smartphones",
-  "kind": "preorder",
-  "brand": "Realme",
-  "price": 42000,
-  "discount_price": null,
-  "preorder_price": 39900,
-  "stock": 80,
-  "sku": "SMA-REA-REA-130",
-  "description": "The Realme XT is a feature-rich smartphone with a focus on camera technology. It comes equipped with advanced camera sensors, delivering high-quality photos and videos for photography enthusiasts.",
-  "highlights": [
-   "Smartphones",
-   "Realme"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Realme"
-   },
-   {
-    "name": "Warranty",
-    "value": "3 year warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 1 month"
-   },
-   {
-    "name": "Returns",
-    "value": "60 days return policy"
-   }
-  ],
-  "images": [
-   "realme-xt-1.webp",
-   "realme-xt-2.webp",
-   "realme-xt-3.webp",
-   "realme-xt-4.webp"
-  ]
- },
- {
-  "slug": "iphone-13-pro",
-  "name": "iPhone 13 Pro",
-  "category": "Smartphones",
-  "kind": "preorder",
-  "brand": "Apple",
-  "price": 132000,
-  "discount_price": null,
-  "preorder_price": 125400,
-  "stock": 56,
-  "sku": "SMA-APP-IPH-123",
-  "description": "The iPhone 13 Pro is a cutting-edge smartphone with a powerful camera system, high-performance chip, and stunning display. It offers advanced features for users who demand top-notch technology.",
-  "highlights": [
-   "Smartphones",
-   "Apple"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Apple"
-   },
-   {
-    "name": "Warranty",
-    "value": "3 year warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 2 weeks"
-   },
-   {
-    "name": "Returns",
-    "value": "7 days return policy"
-   }
-  ],
-  "images": [
-   "iphone-13-pro-1.webp",
-   "iphone-13-pro-2.webp",
-   "iphone-13-pro-3.webp",
-   "iphone-13-pro-4.webp"
-  ]
- },
- {
-  "slug": "samsung-galaxy-tab-s8-plus-grey",
-  "name": "Samsung Galaxy Tab S8 Plus Grey",
-  "category": "Tablets & Laptops",
-  "kind": "preorder",
-  "brand": "Samsung",
-  "price": 72000,
-  "discount_price": null,
-  "preorder_price": 68400,
-  "stock": 62,
-  "sku": "TAB-SAM-SAM-160",
-  "description": "The Samsung Galaxy Tab S8 Plus in Grey is a high-performance Android tablet by Samsung. With a large AMOLED display, powerful processor, and S Pen support, it's ideal for productivity and entertainment.",
-  "highlights": [
-   "Electronics",
-   "Tablets"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Samsung"
-   },
-   {
-    "name": "Warranty",
-    "value": "3 months warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 2 weeks"
-   },
-   {
-    "name": "Returns",
-    "value": "7 days return policy"
-   }
-  ],
-  "images": [
-   "samsung-galaxy-tab-s8-plus-grey-1.webp",
-   "samsung-galaxy-tab-s8-plus-grey-2.webp",
-   "samsung-galaxy-tab-s8-plus-grey-3.webp",
-   "samsung-galaxy-tab-s8-plus-grey-4.webp"
-  ]
- },
- {
-  "slug": "ipad-mini-2021-starlight",
-  "name": "iPad Mini 2021 Starlight",
-  "category": "Tablets & Laptops",
-  "kind": "preorder",
-  "brand": "Apple",
-  "price": 60000,
-  "discount_price": null,
-  "preorder_price": 57000,
-  "stock": 47,
-  "sku": "TAB-APP-IPA-159",
-  "description": "The iPad Mini 2021 in Starlight is a compact and powerful tablet from Apple. Featuring a stunning Retina display, powerful A-series chip, and a sleek design, it offers a premium tablet experience.",
-  "highlights": [
-   "Electronics",
-   "Tablets"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Apple"
-   },
-   {
-    "name": "Warranty",
-    "value": "2 year warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 1-2 business days"
-   },
-   {
-    "name": "Returns",
-    "value": "No return policy"
-   }
-  ],
-  "images": [
-   "ipad-mini-2021-starlight-1.webp",
-   "ipad-mini-2021-starlight-2.webp",
-   "ipad-mini-2021-starlight-3.webp",
-   "ipad-mini-2021-starlight-4.webp"
-  ]
- },
- {
-  "slug": "new-dell-xps-13-9300-laptop",
-  "name": "New DELL XPS 13 9300 Laptop",
-  "category": "Tablets & Laptops",
-  "kind": "preorder",
-  "brand": "Dell",
-  "price": 180000,
-  "discount_price": null,
-  "preorder_price": 171000,
-  "stock": 74,
-  "sku": "LAP-DEL-DEL-082",
-  "description": "The New DELL XPS 13 9300 Laptop is a compact and powerful device, featuring a virtually borderless InfinityEdge display and high-end performance for various tasks.",
-  "highlights": [
-   "Laptops"
-  ],
-  "specs": [
-   {
-    "name": "Brand",
-    "value": "Dell"
-   },
-   {
-    "name": "Warranty",
-    "value": "2 year warranty"
-   },
-   {
-    "name": "Delivery",
-    "value": "Ships in 2 weeks"
-   },
-   {
-    "name": "Returns",
-    "value": "60 days return policy"
-   }
-  ],
-  "images": [
-   "new-dell-xps-13-9300-laptop-1.webp",
-   "new-dell-xps-13-9300-laptop-2.webp",
-   "new-dell-xps-13-9300-laptop-3.webp",
-   "new-dell-xps-13-9300-laptop-4.webp"
   ]
  }
 ]

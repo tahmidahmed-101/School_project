@@ -28,12 +28,8 @@ def test_seed_catalog_replaces_everything(settings, tmp_path):
     assert not Product.objects.filter(name="Old product").exists()
     assert not Category.objects.filter(name="Old demo").exists()
 
-    kinds = {i["kind"] for i in items}
-    assert kinds == {"stock", "preorder"}
-    assert ProductVariant.objects.filter(is_preorder_enabled=True).count() == sum(
-        i["kind"] == "preorder" for i in items
-    )
-    assert StockItem.objects.count() == sum(i["kind"] == "stock" for i in items)
+    assert ProductVariant.objects.count() == len(items)
+    assert StockItem.objects.count() == len(items)
 
     for image in ProductImage.objects.all():
         assert image.url.startswith("https://api.example.test/media/products/")

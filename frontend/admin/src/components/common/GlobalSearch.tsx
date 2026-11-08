@@ -254,7 +254,7 @@ const SearchResults = ({
       <div className="border-t border-border/60 bg-muted/20 px-3 py-2 flex items-center justify-between text-[11px] text-muted-foreground">
         <span>Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Esc</kbd> to close</span>
         <span className="text-primary font-medium flex items-center gap-1">
-          Kull Mart Workspace
+          School Project Workspace
         </span>
       </div>
     </div>

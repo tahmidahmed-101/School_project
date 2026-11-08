@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.db.models import QuerySet
 
+from apps.common.params import KIND_STOCK
 from apps.logistics.models import Carrier, ShippingRate, ShippingZone
 
 
@@ -68,20 +69,18 @@ def get_rate_by_id(rate_id: str | UUID, *, include_deleted: bool = False) -> Shi
     return queryset.filter(id=rate_id).first()
 
 
-def get_rate_for_zone_and_carrier(
-    *, zone: ShippingZone, carrier: Carrier, kind: str
-) -> ShippingRate | None:
-    return _live_rates().filter(zone=zone, carrier=carrier, kind=kind).first()
+def get_rate_for_zone_and_carrier(*, zone: ShippingZone, carrier: Carrier) -> ShippingRate | None:
+    return _live_rates().filter(zone=zone, carrier=carrier, kind=zone.kind).first()
 
 
-def find_zone_by_address_text(text: str, *, kind: str) -> ShippingZone | None:
-    """Matches one of this kind's zones by keyword (stored in
+def find_zone_by_address_text(text: str) -> ShippingZone | None:
+    """Matches one of the shop's zones by keyword (stored in
     `country_codes`, repurposed as free-text match terms) against the
     customer's address. A zone configured with no keywords is the catch-all,
     matched when nothing more specific does."""
     text_lower = (text or "").lower()
     fallback = None
-    for zone in zones_list(kind=kind):
+    for zone in zones_list(kind=KIND_STOCK):
         keywords = zone.country_codes or []
         if not keywords:
             if fallback is None:

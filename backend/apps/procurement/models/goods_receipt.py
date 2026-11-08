@@ -20,8 +20,8 @@ class GoodsReceiptNote(FullAuditModel):
         PurchaseOrder, on_delete=models.PROTECT, related_name="goods_receipts"
     )
     received_date = models.DateField()
-    # Where the accepted goods were put. Empty means the default warehouse of
-    # the order's kind, as every receipt was before warehouses could be chosen.
+    # Where the accepted goods were put. Empty means the default warehouse,
+    # as every receipt was before warehouses could be chosen.
     warehouse = models.ForeignKey(
         "inventory.Warehouse",
         on_delete=models.PROTECT,

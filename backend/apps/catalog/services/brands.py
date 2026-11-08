@@ -10,8 +10,8 @@ from apps.common.params import KIND_STOCK
 from apps.common.utils.text import unique_slug_for
 
 
-def _check_name_free(*, name: str, kind: str, brand: Brand | None = None) -> None:
-    taken = Brand.objects.filter(name=name, kind=kind)
+def _check_name_free(*, name: str, brand: Brand | None = None) -> None:
+    taken = Brand.objects.filter(name=name, kind=KIND_STOCK)
     if brand is not None:
         taken = taken.exclude(pk=brand.pk)
     if taken.exists():
@@ -20,26 +20,16 @@ def _check_name_free(*, name: str, kind: str, brand: Brand | None = None) -> Non
         )
 
 
-def _check_kind_can_change(brand: Brand) -> None:
-    if brand.products.exists():
-        raise BusinessRuleViolationError(
-            "This brand already has products, so it cannot move between stock and pre-order.",
-            code="brand_kind_in_use",
-        )
-
-
 @transaction.atomic
 def create_brand(
     *,
     name: str,
     description: str = "",
-    kind: str = KIND_STOCK,
     actor=None,
 ) -> Brand:
-    _check_name_free(name=name, kind=kind)
+    _check_name_free(name=name)
     brand = Brand(
         name=name,
-        kind=kind,
         description=description,
         slug=unique_slug_for(model=Brand, text=name),
     )
@@ -56,14 +46,10 @@ def create_brand(
 
 @transaction.atomic
 def update_brand(*, brand: Brand, data: dict, actor=None) -> Brand:
-    allowed_fields = {"name", "description", "is_active", "image", "kind"}
+    allowed_fields = {"name", "description", "is_active", "image"}
     changed_fields = [field for field in data if field in allowed_fields]
-    if "kind" in changed_fields and data["kind"] != brand.kind:
-        _check_kind_can_change(brand)
-    if "name" in changed_fields or "kind" in changed_fields:
-        _check_name_free(
-            name=data.get("name", brand.name), kind=data.get("kind", brand.kind), brand=brand
-        )
+    if "name" in changed_fields:
+        _check_name_free(name=data["name"], brand=brand)
     previous_values = {field: getattr(brand, field) for field in changed_fields}
     for field in changed_fields:
         setattr(brand, field, data[field])

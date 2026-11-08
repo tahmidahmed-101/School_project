@@ -39,9 +39,9 @@ export function VoucherSection({ vouchers }: { vouchers: Voucher[] }) {
                 <div className={cardClass("canvas", "flex h-full items-stretch overflow-hidden shadow-sm")}>
                   <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 bg-brand-800 py-3 text-gold-300 sm:w-20 lg:w-16">
                     <Ticket className="h-6 w-6" />
-                    {/* Decorative stamp in a 64px column; 10px is the largest size that fits "KULL MART". */}
+                    {/* Decorative stamp in a 64px column; 10px is the largest size that fits "SCHOOL PROJECT". */}
                     <span aria-hidden="true" className="whitespace-nowrap text-[9px] font-extrabold leading-none">
-                      {lang === "bn" ? "কুল মার্ট" : "KULL MART"}
+                      {lang === "bn" ? "কুল মার্ট" : "SCHOOL PROJECT"}
                     </span>
                   </div>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-3 sm:gap-3 sm:px-3 lg:gap-2 lg:px-2.5">

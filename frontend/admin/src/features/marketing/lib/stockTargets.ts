@@ -22,7 +22,7 @@ const withSaved = (rows: TickRow[], saved: NamedRef[], isLoading: boolean) => {
 
 /** Stock categories in tree order, for a tick-list. */
 export function useStockCategoryRows(saved: NamedRef[]) {
-  const { options, isLoading } = useCategoryOptions("stock")
+  const { options, isLoading } = useCategoryOptions()
   const rows = useMemo(
     () => withSaved(options.map((o) => ({ id: o.value, name: o.label, depth: o.depth })), saved, isLoading),
     [options, saved, isLoading]

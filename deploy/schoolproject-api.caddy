@@ -1,0 +1,3 @@
+api.schoolproject.com {
+	reverse_proxy school-project-api:4361
+}

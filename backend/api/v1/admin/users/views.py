@@ -133,11 +133,8 @@ class AdminUserListCreateView(UsersPermissionMixin, APIView):
         # With include_deleted, narrows to the deleted accounts (the restore list).
         if get_bool(params, "deleted_only", default=False):
             queryset = queryset.filter(deleted_at__isnull=False)
-        kind = get_kind(params)
-        if kind:
-            from apps.orders.selectors.sales_orders import customers_of_kind
-
-            queryset = customers_of_kind(queryset, kind)
+        # `kind` is still validated: the dashboard sends `stock`, which is every customer.
+        get_kind(params)
         return list_response(request, queryset, _AdminUserListSerializer, view=self)
 
     @extend_schema(

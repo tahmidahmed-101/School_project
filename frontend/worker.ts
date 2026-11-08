@@ -4,7 +4,7 @@ export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-nex
 
 const PAGE_SECONDS = 60;
 const OG_PATH = /^\/og\/(product|category)\/[^/]+$/;
-const PAGE_PATHS = /^\/(shop|pre-order|product\/[^/]+|(shipping|return|refund)-policy)$/;
+const PAGE_PATHS = /^\/(shop|product\/[^/]+|(shipping|return|refund)-policy)$/;
 
 interface Env {
   CF_VERSION_METADATA?: { id: string };
@@ -16,7 +16,7 @@ function pageCacheKey(request: Request, env: Env): Request | null {
   if (request.method !== "GET") return null;
   const url = new URL(request.url);
   if (url.pathname !== "/" && !PAGE_PATHS.test(url.pathname)) return null;
-  const lang = /(?:^|;\s*)kullmart_lang=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1] ?? "";
+  const lang = /(?:^|;\s*)schoolproject_lang=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1] ?? "";
   // The deploy id is in the key: HTML cached before a deploy points at chunks that no longer exist.
   url.searchParams.set("__page", `${env.CF_VERSION_METADATA?.id ?? "dev"}:${lang}`);
   return new Request(url.toString());

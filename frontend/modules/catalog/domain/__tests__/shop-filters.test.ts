@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeProduct } from "@/tests/fixtures";
-import {
-  DEFAULT_FILTERS,
-  PRICE_STEP,
-  countActiveFilters,
-  filterAndSortProducts,
-  parseStockType,
-  priceBounds,
-  shopKindFor,
-} from "../shop-filters";
+import { DEFAULT_FILTERS, PRICE_STEP, countActiveFilters, filterAndSortProducts, priceBounds } from "../shop-filters";
 
 const products = [
   makeProduct({ id: "1", name: { en: "Cheap Bag", bn: "" }, price: 300, category: "bags", featured: true }),
@@ -28,49 +20,16 @@ const products = [
     newArrival: true,
     inStock: false,
   }),
-  makeProduct({
-    id: "4",
-    name: { en: "Earbuds", bn: "" },
-    price: 900,
-    category: "gadgets",
-    isPreOrder: true,
-    kind: "preorder",
-  }),
 ];
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
 
-describe("parseStockType", () => {
-  it("only shows pre-orders when explicitly asked", () => {
-    expect(parseStockType("preorder")).toBe("preorder");
-    expect(parseStockType("anything")).toBe("normal");
-    expect(parseStockType(null)).toBe("normal");
-  });
-});
-
 describe("filterAndSortProducts", () => {
-  it("hides pre-order items by default and shows only them for stockType preorder", () => {
+  it("lists every product by default", () => {
     expect(ids(filterAndSortProducts(products, DEFAULT_FILTERS)).sort()).toEqual(["1", "2", "3"]);
-    expect(ids(filterAndSortProducts(products, { ...DEFAULT_FILTERS, stockType: "preorder" }))).toEqual(["4"]);
   });
 
   it("filters by category case-insensitively", () => {
     expect(ids(filterAndSortProducts(products, { ...DEFAULT_FILTERS, category: "BAGS" })).sort()).toEqual(["1", "2"]);
-  });
-
-  it("ignores the sale collection in the pre-order shop, like in-stock only", () => {
-    const preorderOnSale = makeProduct({
-      id: "5",
-      price: 700,
-      compareAtPrice: 900,
-      isPreOrder: true,
-      kind: "preorder",
-    });
-    const preorderSale = { ...DEFAULT_FILTERS, stockType: "preorder" as const, collection: "sale" };
-
-    expect(ids(filterAndSortProducts([...products, preorderOnSale], preorderSale)).sort()).toEqual(["4", "5"]);
-    expect(countActiveFilters(preorderSale)).toBe(0);
-    expect(countActiveFilters({ ...DEFAULT_FILTERS, collection: "sale" })).toBe(1);
-    expect(countActiveFilters({ ...preorderSale, collection: "new" })).toBe(1);
   });
 
   it("filters by collection", () => {
@@ -126,26 +85,7 @@ describe("countActiveFilters", () => {
     expect(
       countActiveFilters({ ...DEFAULT_FILTERS, searchQuery: "x", category: "bags", maxPrice: 500, inStockOnly: true }),
     ).toBe(4);
-  });
-});
-
-describe("shopKindFor", () => {
-  it("follows the type in the URL, and the category's own shop when one is named", () => {
-    expect(shopKindFor(undefined)).toBe("stock");
-    expect(shopKindFor("preorder")).toBe("preorder");
-    expect(shopKindFor(["preorder"])).toBe("stock");
-    expect(shopKindFor(undefined, { type: "preorder" })).toBe("preorder");
-    expect(shopKindFor("preorder", { type: "stock" })).toBe("stock");
-  });
-});
-
-describe("in stock only", () => {
-  const preorderShop = { ...DEFAULT_FILTERS, stockType: "preorder" as const, inStockOnly: true };
-
-  it("is not a pre-order shop filter: it neither hides pre-orders nor counts as active", () => {
-    const closed = makeProduct({ id: "9", kind: "preorder", inStock: false });
-    expect(filterAndSortProducts([closed], preorderShop)).toHaveLength(1);
-    expect(countActiveFilters(preorderShop)).toBe(0);
+    expect(countActiveFilters({ ...DEFAULT_FILTERS, collection: "sale" })).toBe(1);
     expect(countActiveFilters({ ...DEFAULT_FILTERS, inStockOnly: true })).toBe(1);
   });
 });

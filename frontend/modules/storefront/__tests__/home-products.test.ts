@@ -16,26 +16,11 @@ const makeCatalogue = (length: number) =>
       id: `p${i}`,
       category: (["shirts", "denim", "footwear"] as const)[i % 3],
       featured: i % 7 === 0,
-      kind: i % 11 === 0 ? "preorder" : "stock",
     }),
   );
 const catalogue = makeCatalogue(60);
 
 const ids = (list: { id: string }[]) => list.map((p) => p.id);
-const stock = (list: typeof catalogue) => list.filter((p) => p.kind !== "preorder");
-
-describe("homeProducts shop split", () => {
-  it("keeps a closed pre-order out of the stock home", () => {
-    const closed = makeProduct({
-      id: "closed",
-      category: "shirts",
-      kind: "preorder",
-      isPreOrder: false,
-      inStock: false,
-    });
-    expect(ids(homeProducts([...catalogue.slice(1, 6), closed]))).not.toContain("closed");
-  });
-});
 
 describe("shelfSize", () => {
   it("fills whole rows of five up to the cap", () => {
@@ -49,16 +34,15 @@ describe("shelfSize", () => {
 describe("homeProducts", () => {
   const subset = homeProducts(catalogue);
 
-  it("drops pre-order products and anything no shelf shows", () => {
-    expect(subset.every((p) => p.kind !== "preorder")).toBe(true);
-    expect(subset.length).toBeLessThan(stock(catalogue).length);
+  it("drops anything no shelf shows", () => {
+    expect(subset.length).toBeLessThan(catalogue.length);
   });
 
   it("yields the same trending, best-seller and category shelves as the full catalogue", () => {
-    expect(ids(trending(stock(subset)))).toEqual(ids(trending(stock(catalogue))));
-    expect(ids(bestSellers(subset))).toEqual(ids(bestSellers(stock(catalogue))));
+    expect(ids(trending(subset))).toEqual(ids(trending(catalogue)));
+    expect(ids(bestSellers(subset))).toEqual(ids(bestSellers(catalogue)));
     for (const category of ["shirts", "denim", "footwear"]) {
-      expect(ids(categoryShelf(subset, category))).toEqual(ids(categoryShelf(stock(catalogue), category)));
+      expect(ids(categoryShelf(subset, category))).toEqual(ids(categoryShelf(catalogue, category)));
     }
   });
 });
@@ -82,12 +66,12 @@ describe("trending", () => {
   });
 
   it("keeps catalogue order when nothing is flagged", () => {
-    const list = stock(catalogue);
+    const list = catalogue;
     expect(ids(trending(list))).toEqual(ids(list.slice(0, TRENDING_SIZE)));
   });
 
   it("stays out of the best-seller shelf and survives the home subset", () => {
-    const list = stock(catalogue).map((p, i) => (i % 9 === 4 ? { ...p, trending: true } : p));
+    const list = catalogue.map((p, i) => (i % 9 === 4 ? { ...p, trending: true } : p));
     const shown = new Set(ids(trending(list)));
     expect(bestSellers(list).some((p) => shown.has(p.id))).toBe(false);
     const subset = homeProducts(list);
@@ -98,7 +82,7 @@ describe("trending", () => {
 
 describe("bestSellers", () => {
   it("never repeats a trending product and fills two rows", () => {
-    const list = stock(catalogue);
+    const list = catalogue;
     const shown = new Set(ids(trending(list)));
     const picks = bestSellers(list);
     expect(trending(list)).toHaveLength(TRENDING_SIZE);
@@ -107,6 +91,6 @@ describe("bestSellers", () => {
   });
 
   it("is empty when too few products are left after trending", () => {
-    expect(bestSellers(stock(makeCatalogue(14)))).toEqual([]);
+    expect(bestSellers(makeCatalogue(14))).toEqual([]);
   });
 });

@@ -4,8 +4,8 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
   test("home page renders with title, canonical-ready metadata and structured data", async ({ page }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
-    await expect(page).toHaveTitle(/Kull Mart/);
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Kull Mart/);
+    await expect(page).toHaveTitle(/School Project/);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /School Project/);
 
     const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
     const types = blocks.map((b) => (JSON.parse(b) as { "@type": string })["@type"]);
@@ -30,7 +30,7 @@ test.describe("site shell and SEO endpoints (no backend needed)", () => {
   test("sitemap, manifest, llms.txt and the search index respond", async ({ request }) => {
     expect((await request.get("/sitemap.xml")).status()).toBe(200);
     const manifest = await request.get("/manifest.webmanifest");
-    expect((await manifest.json()).short_name).toBe("Kull Mart");
+    expect((await manifest.json()).short_name).toBe("School Project");
     expect((await request.get("/llms.txt")).headers()["content-type"]).toContain("text/plain");
     const index = await request.get("/api/search-index");
     expect(index.status()).toBe(200);

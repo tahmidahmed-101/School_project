@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useKind } from "@/hooks/use-kind"
 import { toast } from "sonner"
 import { Loader2, PackageCheck, RefreshCw, Replace, Send } from "lucide-react"
 
@@ -57,8 +56,6 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
   const canReceiveBack =
     canReturn && RECEIVABLE_BACK_STATUSES.includes(shipment.status) && !shipment.received_back_at
   const owed = shipment.unresolved_damaged_quantity ?? 0
-  const pageKind = useKind()
-  const isPreorder = (shipment.order_type ?? pageKind) === "preorder"
   const canReplace = canReturn && Boolean(shipment.received_back_at) && owed > 0
 
   if (!canChangeStatus && !canReceiveBack && !canReplace) return null
@@ -105,11 +102,7 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
     setBusy(true)
     try {
       await dispatch(replaceDamagedUnits(shipment.id)).unwrap()
-      toast.success(
-        isPreorder
-          ? "Replacement units set aside — create a new shipment from the pre-order to send it"
-          : "Replacement stock reserved — create a new shipment from the order to send it"
-      )
+      toast.success("Replacement stock reserved — create a new shipment from the order to send it")
       onChanged?.()
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to replace the damaged units"))
@@ -143,11 +136,7 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
             </Button>
           }
           title={`Replace ${owed} damaged unit${owed === 1 ? "" : "s"}?`}
-          description={
-            isPreorder
-              ? "Sets aside replacement units for this pre-order and reopens it for shipping. It is refused if not enough units have arrived. Nothing is refunded; send the replacement as a new shipment from the pre-order."
-              : "Reserves replacement stock for this order and reopens it for shipping. It is refused if there is not enough stock. Nothing is refunded; send the replacement as a new shipment from the order."
-          }
+          description="Reserves replacement stock for this order and reopens it for shipping. It is refused if there is not enough stock. Nothing is refunded; send the replacement as a new shipment from the order."
           confirmLabel="Replace"
           cancelLabel="Go back"
           onConfirm={handleReplace}
@@ -205,13 +194,12 @@ export function ShipmentActions({ shipment, onChanged, size = "sm" }: ShipmentAc
               </Select>
               {nextStatus === "delivered" && (
                 <FieldDescription>
-                  The {isPreorder ? "pre-order" : "order"} is marked delivered once every shipment is delivered.
+                  The order is marked delivered once every shipment is delivered.
                 </FieldDescription>
               )}
               {(nextStatus === "returned" || nextStatus === "cancelled") && (
                 <FieldDescription>
-                  {isPreorder ? "The units are not counted as back yet." : "Stock does not come back yet."} Use "Receive
-                  back" once the parcel physically arrives.
+                  Stock does not come back yet. Use "Receive back" once the parcel physically arrives.
                 </FieldDescription>
               )}
             </FieldContent>

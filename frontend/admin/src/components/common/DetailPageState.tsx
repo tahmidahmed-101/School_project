@@ -6,7 +6,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 interface DetailPageStateProps {
   state: "loading" | "not-found" | "error"
   entity: string
-  /** Left out while the record's half (stock or pre-order) is not known. */
+  /** Left out when the page has no list to go back to. */
   backTo?: string
   backLabel?: string
   error?: unknown

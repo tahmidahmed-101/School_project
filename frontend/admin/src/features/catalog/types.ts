@@ -1,8 +1,7 @@
-// Mirrors kull-mart api/v1/admin/catalog/serializers.py + bundle_serializers.py.
+// Mirrors school-project api/v1/admin/catalog/serializers.py + bundle_serializers.py.
 // Money/decimal fields are strings (DRF DecimalField); ids are UUID strings.
 
 export type ProductType = "simple" | "variant" | "bundle"
-export type CategoryType = "stock" | "preorder"
 
 export const productTypeOptions: { label: string; value: ProductType }[] = [
   { label: "Without options", value: "simple" },
@@ -74,18 +73,7 @@ export interface ProductVariant {
   option_values: VariantOptionValue[]
   wholesale_price: string | null
   show_wholesale_price: boolean
-  is_preorder_enabled: boolean
-  preorder_price: string | null
-  preorder_start_date: string | null
-  preorder_end_date: string | null
-  release_date: string | null
-  preorder_stock_limit: number | null
-  /** Fewest units one pre-order may place; null on a stock variant. */
-  preorder_min_quantity: number | null
-  is_preorder_active: boolean
-  can_preorder: boolean
   effective_price: string
-  is_preorder_price_applied: boolean
   stock: number
   is_low_stock: boolean
   primary_image: string | null
@@ -104,13 +92,6 @@ export interface ProductVariantPayload {
   is_active?: boolean
   wholesale_price?: string | null
   show_wholesale_price?: boolean
-  is_preorder_enabled?: boolean
-  preorder_price?: string | null
-  preorder_start_date?: string | null
-  preorder_end_date?: string | null
-  release_date?: string | null
-  preorder_stock_limit?: number | null
-  preorder_min_quantity?: number
 }
 
 /** Left out, `combinations` means every missing one. */
@@ -169,7 +150,6 @@ export interface Category {
   slug: string
   parent_id: string | null
   description: string
-  category_type: CategoryType
   is_active: boolean
   image: string | null
   deleted_at: string | null
@@ -180,7 +160,8 @@ export interface CategoryPayload {
   name?: string
   parent_id?: string | null
   description?: string
-  category_type?: CategoryType
+  /** Create only, on a root category; always "stock". A subcategory takes its parent's. */
+  category_type?: "stock"
   is_active?: boolean
 }
 
@@ -210,7 +191,6 @@ export interface Product {
   images: ProductImage[]
   image: string | null
   primary_image: string | null
-  /** Null on a pre-order product: its arrived goods are per variant, on the Arrivals page. */
   total_stock: number | null
   price: string | null
   cost_price: string | null
@@ -251,7 +231,6 @@ export interface Brand {
   id: string
   name: string
   slug: string
-  kind: CategoryType
   description: string
   is_active: boolean
   image: string | null
@@ -260,7 +239,8 @@ export interface Brand {
 
 export interface BrandPayload {
   name?: string
-  kind?: CategoryType
+  /** Create only; always "stock". */
+  kind?: "stock"
   description?: string
   is_active?: boolean
 }

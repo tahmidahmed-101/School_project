@@ -16,11 +16,6 @@ from apps.catalog.selectors.options import (
     option_values_prefetch,
     variant_option_values,
 )
-from apps.catalog.services.kind_rules import (
-    PREORDER_FIELD_DEFAULTS,
-    PREORDER_ONLY_FIELDS,
-    is_preorder_category,
-)
 from apps.catalog.services.options import MAX_OPTIONS, ensure_option_values
 from apps.catalog.services.products import create_variant, update_variant
 from apps.common.exceptions import DomainError
@@ -46,29 +41,8 @@ EXPORT_COLUMNS = [
 ]
 
 
-PREORDER_EXPORT_COLUMNS = [
-    "product_name",
-    "sku",
-    "price",
-    "cost_price",
-    "preorder_price",
-    "preorder_start_date",
-    "preorder_end_date",
-    "release_date",
-    "preorder_stock_limit",
-    "preorder_min_quantity",
-    "weight",
-    *OPTION_COLUMNS,
-    "is_active",
-]
-
-
 def _text(value) -> str:
     return "" if value is None else str(value)
-
-
-def _date(value) -> str:
-    return value.isoformat() if value is not None else ""
 
 
 def _option_cells(variant: ProductVariant) -> list[str]:
@@ -97,42 +71,17 @@ def _stock_rows(variants: list[ProductVariant]) -> list[list]:
     ]
 
 
-def _preorder_rows(variants: list[ProductVariant]) -> list[list]:
-    return [
-        [
-            variant.product.name,
-            variant.sku,
-            str(variant.price),
-            str(variant.cost_price),
-            _text(variant.preorder_price),
-            _date(variant.preorder_start_date),
-            _date(variant.preorder_end_date),
-            _date(variant.release_date),
-            _text(variant.preorder_stock_limit),
-            _text(variant.preorder_min_quantity),
-            _text(variant.weight),
-            *_option_cells(variant),
-            "1" if variant.is_active else "0",
-        ]
-        for variant in variants
-    ]
-
-
 def export_variants(
     queryset: QuerySet[ProductVariant],
     *,
     fmt: Literal["csv", "xlsx"],
-    kind: str | None = None,
 ) -> bytes:
-    """One kind per file, each with its own columns. No `kind` means stock."""
-    kind = kind or Category.CategoryType.STOCK
     variants = list(
-        queryset.filter(product__category__category_type=kind).select_related("product")
+        queryset.filter(
+            product__category__category_type=Category.CategoryType.STOCK
+        ).select_related("product")
     )
-    if kind == Category.CategoryType.PREORDER:
-        columns, rows = PREORDER_EXPORT_COLUMNS, _preorder_rows(variants)
-    else:
-        columns, rows = EXPORT_COLUMNS, _stock_rows(variants)
+    columns, rows = EXPORT_COLUMNS, _stock_rows(variants)
 
     if fmt == "csv":
         return build_csv(columns, rows)
@@ -148,9 +97,6 @@ def export_variants(
     output = io.BytesIO()
     workbook.save(output)
     return output.getvalue()
-
-
-BLANK_CELLS = {"", "0", "false", "no"}
 
 
 @dataclass
@@ -175,23 +121,6 @@ def _read_rows(file, *, fmt: Literal["csv", "xlsx"]) -> list[dict]:
         dict(zip(header, [("" if cell is None else str(cell)) for cell in row], strict=False))
         for row in rows_iter
     ]
-
-
-def _refuse_preorder_row(row: dict, product: Product, variant: ProductVariant | None) -> None:
-    """The import is a stock tool: it neither touches a pre-order product nor
-    sets pre-order fields."""
-    if is_preorder_category(product.category):
-        raise ValueError(f"Product '{product.name}' is a pre-order product; import is stock only")
-    if variant is not None and is_preorder_category(variant.product.category):
-        raise ValueError(f"SKU '{variant.sku}' is a pre-order SKU; import is stock only")
-    given = [
-        name
-        for name in PREORDER_ONLY_FIELDS
-        if (cell := str(row.get(name) or "").strip().lower()) not in BLANK_CELLS
-        and cell != str(PREORDER_FIELD_DEFAULTS.get(name))
-    ]
-    if given:
-        raise ValueError(f"Pre-order fields cannot be imported: {', '.join(given)}")
 
 
 def _option_pairs(row: dict) -> list[tuple[str, str]]:
@@ -299,7 +228,6 @@ def import_variants(*, file, fmt: Literal["csv", "xlsx"]) -> ImportResult:
                     raise ValueError(f"Product '{product_name}' not found")
 
                 variant = variants_by_sku.get(sku)
-                _refuse_preorder_row(row, product, variant)
                 variant, created = _import_row(row, product, variant, sku)
             # Only once the row's savepoint has committed, so a later row with
             # the same SKU updates this variant rather than creating another.

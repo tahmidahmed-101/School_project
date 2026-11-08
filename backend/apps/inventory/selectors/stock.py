@@ -12,14 +12,12 @@ from .warehouse import default_warehouse_ids
 
 
 def _in_sellable_warehouses(queryset: QuerySet) -> QuerySet:
-    """Rows in warehouses that can sell: active and not deleted. A variant only
-    has rows in warehouses of its own kind, so this never mixes the halves."""
+    """Rows in warehouses that can sell: active and not deleted."""
     return queryset.filter(warehouse__is_active=True, warehouse__deleted_at__isnull=True)
 
 
 def _in_default_warehouse(queryset: QuerySet, warehouse) -> QuerySet:
-    """A variant only has rows in warehouses of its own kind, so the default
-    warehouses of both kinds together give one row per variant."""
+    """The default warehouse's rows, one per variant."""
     if warehouse is not None:
         return queryset.filter(warehouse=warehouse)
     default_ids = default_warehouse_ids()
@@ -48,7 +46,7 @@ def stock_items_list(
     if kind:
         queryset = queryset.filter(variant__product__category__category_type=kind)
     if low_stock_only:
-        # Reorder points exist for stock items only; a pre-order item is never low.
+        # Low stock covers items of stock categories only.
         queryset = (
             queryset.filter(variant__product__category__category_type=Category.CategoryType.STOCK)
             .annotate(

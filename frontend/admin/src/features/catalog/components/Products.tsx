@@ -18,9 +18,8 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useCan } from "@/hooks/use-can"
 import { useDelayedUnmount, useLastValue } from "@/hooks/use-dialog-presence"
-import { useKind, type Kind, withKind } from "@/hooks/use-kind"
 import { useListPage } from "@/hooks/use-list-page"
-import { formatCurrency, formatDate, getDefaultCurrency } from "@/lib/format"
+import { formatCurrency, getDefaultCurrency } from "@/lib/format"
 import { createImportLookup, splitList } from "@/lib/importLookup"
 import type { Option } from "@/lib/types"
 import { StockMovementDialog } from "@/features/inventory/components/StockMovementDialog"
@@ -45,8 +44,6 @@ const orderingOptions: Option[] = [
   { label: "Name Z–A", value: "-name" },
 ]
 
-const preorderTypeOptions = productTypeOptions.filter((o) => o.value !== "bundle")
-
 const stockColumn: ColumnDef<Product> = {
   accessorKey: "total_stock",
   header: "STOCK",
@@ -55,21 +52,6 @@ const stockColumn: ColumnDef<Product> = {
       {row.original.total_stock ?? 0}
     </span>
   ),
-}
-
-const orderingColumn: ColumnDef<Product> = {
-  id: "ordering",
-  header: "ORDERING",
-  cell: ({ row }) => {
-    const variants = row.original.variants
-    const closes = variants.find((v) => v.preorder_end_date)?.preorder_end_date
-    return (
-      <div className="flex flex-col text-sm">
-        <span>{variants.some((v) => v.is_preorder_active) ? "Open" : "Closed"}</span>
-        <span className="text-xs text-muted-foreground">{closes ? `Until ${formatDate(closes)}` : "No dates set"}</span>
-      </div>
-    )
-  },
 }
 
 const addedByColumn: ColumnDef<Product> = {
@@ -108,15 +90,14 @@ const infoColumn: ColumnDef<Product> = {
   },
 }
 
-const Products = ({ kind }: { kind: Kind }) => {
-  const isStock = kind === "stock"
-  const title = kind === "preorder" ? "Pre-order products" : "Products"
+const Products = () => {
+  const title = "Products"
   useDocumentTitle(title)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const canManage = useCan("catalog.manage")
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
-  const { warehouses } = useWarehouses(kind)
+  const { warehouses } = useWarehouses()
   const [deleting, setDeleting] = useState<Product | null>(null)
   const [adjusting, setAdjusting] = useState<Product | null>(null)
   // Kept mounted, still showing its product, while the delete dialog animates shut.
@@ -124,11 +105,11 @@ const Products = ({ kind }: { kind: Kind }) => {
   const deleteMounted = useDelayedUnmount(deleting !== null)
   const productState = useAppSelector((s) => s.products)
   const products = productState.data
-  const { options: categoryOptions, nameById } = useCategoryOptions(kind)
+  const { options: categoryOptions, nameById } = useCategoryOptions()
 
-  // CSV import (stock page only): simple products, one variant created from price/SKU in the same call.
+  // CSV import: simple products, one variant created from price/SKU in the same call.
   const categoryLookup = useMemo(
-    () => createImportLookup("Category", () => fetchAllCategories("stock"), (c) => [c.name, c.slug]),
+    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
     []
   )
   const importFields = useMemo<ImportField[]>(
@@ -171,7 +152,7 @@ const Products = ({ kind }: { kind: Kind }) => {
     params: {
       category_id: category?.value,
       product_type: productType?.value,
-      category_type: kind,
+      category_type: "stock",
       is_active: status?.value,
       ordering: ordering?.value,
     },
@@ -221,7 +202,7 @@ const Products = ({ kind }: { kind: Kind }) => {
         <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-    isStock ? stockColumn : orderingColumn,
+    stockColumn,
     {
       id: "published",
       header: "PUBLISHED",
@@ -259,8 +240,8 @@ const Products = ({ kind }: { kind: Kind }) => {
         return (
           <TableActions
             itemName={product.name}
-            viewUrl={withKind(`/product_detail/${product.id}`, kind)}
-            editUrl={canManage && product.product_type !== "bundle" ? withKind(`/product_form/${product.id}`, kind) : undefined}
+            viewUrl={`/product_detail/${product.id}`}
+            editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
             actions={[
               // A bundle holds no stock of its own; its components are adjusted instead.
               ...(canAdjust && product.product_type !== "bundle"
@@ -283,7 +264,7 @@ const Products = ({ kind }: { kind: Kind }) => {
     "150px",
     "180px",
     "150px",
-    isStock ? "80px" : "140px",
+    "80px",
     "110px",
     "100px",
     "80px",
@@ -299,29 +280,25 @@ const Products = ({ kind }: { kind: Kind }) => {
               <RestoreDeletedButton<Product>
                 noun="products"
                 endpoint="/admin/catalog/products/"
-                params={{ category_type: kind }}
+                params={{ category_type: "stock" }}
                 restore={(item) => restoreProduct(item.id)}
                 label={(item) => item.name}
                 image={(item) => item.primary_image}
                 onRestored={list.reload}
               />
-              {isStock && (
-                <>
-                  <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
-                    <Boxes className="size-5" /> New Bundle
-                  </Button>
-                  <CsvImportButton
-                    entityName="products"
-                    fields={importFields}
-                    createRow={(payload) => createProduct(payload as ProductPayload)}
-                    onComplete={() => {
-                      categoryLookup.reset()
-                      list.reload()
-                    }}
-                  />
-                </>
-              )}
-              <Button size="action" onClick={() => navigate(`/product_form/new?kind=${kind}`)}>
+              <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
+                <Boxes className="size-5" /> New Bundle
+              </Button>
+              <CsvImportButton
+                entityName="products"
+                fields={importFields}
+                createRow={(payload) => createProduct(payload as ProductPayload)}
+                onComplete={() => {
+                  categoryLookup.reset()
+                  list.reload()
+                }}
+              />
+              <Button size="action" onClick={() => navigate("/product_form/new")}>
                 <PlusIcon className="size-5" /> Add Product
               </Button>
             </>
@@ -348,7 +325,7 @@ const Products = ({ kind }: { kind: Kind }) => {
             component: (
               <Combobox
                 placeholder="Type"
-                options={isStock ? productTypeOptions : preorderTypeOptions}
+                options={productTypeOptions}
                 value={productType}
                 onValueChange={setProductType}
               />
@@ -383,7 +360,7 @@ const Products = ({ kind }: { kind: Kind }) => {
         }
         data={products}
         {...list.tableProps}
-        getRowLink={(p) => withKind(`/product_detail/${p.id}`, kind)}
+        getRowLink={(p) => `/product_detail/${p.id}`}
         unlabelledColumns={["image"]}
         emptyIcon={Package}
         emptyTitle="No products found"
@@ -398,7 +375,6 @@ const Products = ({ kind }: { kind: Kind }) => {
           open={deleting !== null}
           name={deleteTarget.name}
           scope={{ product_id: deleteTarget.id }}
-          kind={kind}
           remove={() => dispatch(deleteData(deleteTarget.id)).unwrap()}
           onDeleted={() => undefined}
           onClose={() => setDeleting(null)}
@@ -410,7 +386,6 @@ const Products = ({ kind }: { kind: Kind }) => {
         onOpenChange={(open) => !open && setAdjusting(null)}
         warehouses={warehouses}
         variant={adjustVariant}
-        kind={kind}
         productId={adjusting?.id}
         onDone={list.reload}
       />
@@ -418,9 +393,4 @@ const Products = ({ kind }: { kind: Kind }) => {
   )
 }
 
-const ProductsPage = () => {
-  const kind = useKind()
-  return <Products key={kind} kind={kind} />
-}
-
-export default ProductsPage
+export default Products

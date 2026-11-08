@@ -1,4 +1,4 @@
-// Mirrors api/v1/admin/risk/serializers.py (kull-mart).
+// Mirrors api/v1/admin/risk/serializers.py (school-project).
 
 export type FraudCaseStatus = "new" | "under_review" | "resolved"
 
@@ -8,8 +8,6 @@ export interface FraudCase {
   case_number: string
   status: FraudCaseStatus
   order_id: string | null
-  /** Kind of the flagged order; a case with no order counts as stock. */
-  order_type?: "stock" | "preorder"
   customer_id: string | null
   description: string
   resolution: string

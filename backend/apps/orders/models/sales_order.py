@@ -8,8 +8,6 @@ from django.db import models
 
 from apps.common.models import FullAuditModel, TimeStampedModel
 
-from .preorder_stage import PreorderStage
-
 
 class SalesOrder(FullAuditModel):
     """Lifecycle: `pending` (still an editable cart) -> `awaiting_payment`
@@ -24,7 +22,6 @@ class SalesOrder(FullAuditModel):
 
     class OrderType(models.TextChoices):
         STOCK = "stock", "Stock"
-        PREORDER = "preorder", "Pre-order"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -72,10 +69,6 @@ class SalesOrder(FullAuditModel):
     # Typed at checkout before the order is placed, so an abandoned checkout
     # still says who to call back.
     contact_name = models.CharField(max_length=120, blank=True, default="")
-    # Blank on stock orders and until staff set the first stage.
-    preorder_stage = models.CharField(
-        max_length=40, choices=PreorderStage.choices, blank=True, default="", db_index=True
-    )
     # Staff reached the customer and they still want a cash-on-delivery order.
     # Says nothing about money: the payment stays pending until it is captured.
     cod_verified_at = models.DateTimeField(null=True, blank=True)
@@ -141,11 +134,6 @@ class SalesOrderLine(TimeStampedModel):
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # Pre-order tracking
-    is_preorder = models.BooleanField(default=False)
-    # Units of a pre-order line that arrived stock has been set aside for.
-    # A pre-order line can ship only what is allocated.
-    allocated_quantity = models.PositiveIntegerField(default=0)
     # Fulfillment counters. Denormalized rather than aggregated per call so
     # `create_shipment` / `create_rma` can lock the line row (select_for_update)
     # and check the remaining balance in the same statement, closing the
@@ -170,13 +158,7 @@ class SalesOrderLine(TimeStampedModel):
 
     @property
     def shippable_quantity(self) -> int:
-        if self.is_preorder:
-            return self.allocated_quantity - self.shipped_quantity
         return self.quantity - self.shipped_quantity
-
-    @property
-    def awaiting_stock_quantity(self) -> int:
-        return self.quantity - self.allocated_quantity if self.is_preorder else 0
 
     @property
     def returnable_quantity(self) -> int:

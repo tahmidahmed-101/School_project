@@ -33,7 +33,6 @@ class WarehouseCreateSerializer(serializers.Serializer):
 class WarehouseUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
     code = serializers.CharField(required=False)
-    kind = serializers.ChoiceField(choices=KINDS, required=False)
     address = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)
     is_default = serializers.BooleanField(required=False)

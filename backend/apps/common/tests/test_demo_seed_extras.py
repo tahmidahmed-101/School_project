@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from io import StringIO
-
 import pytest
 from django.core.management import CommandError, call_command
 
@@ -13,7 +11,6 @@ from apps.common.services.demo_seed.constants import DEMO_DOMAIN, DEMO_PASSWORD
 from apps.common.services.demo_seed.wipe import wipe_demo_data
 from apps.inventory.models import StockItem
 from apps.logistics.models import ShippingRate, ShippingZone
-from apps.orders.models import SalesOrder
 from apps.orders.selectors.payment_methods import is_payment_method_enabled
 
 pytestmark = pytest.mark.django_db
@@ -45,7 +42,6 @@ def _extras_counts() -> dict[str, int]:
         "bundle_items": BundleItem.objects.count(),
         "questions": ProductQuestion.objects.count(),
         "wishlist": WishlistItem.objects.count(),
-        "preorders": SalesOrder.objects.filter(order_type=SalesOrder.OrderType.PREORDER).count(),
         "sales": Sale.objects.count(),
     }
 
@@ -59,34 +55,13 @@ def test_seed_demo_fills_what_the_storefront_and_dashboard_need():
     assert sale.status == Sale.Status.RUNNING
     assert set(sale.categories.values_list("category_type", flat=True)) == {"stock"}
     assert User.objects.get(email=f"admin@{DEMO_DOMAIN}").check_password(DEMO_PASSWORD)
-    preorders = SalesOrder.objects.filter(order_type=SalesOrder.OrderType.PREORDER)
-    assert set(preorders.values_list("status", flat=True)) == {
-        SalesOrder.Status.AWAITING_PAYMENT,
-        SalesOrder.Status.CONFIRMED,
-        SalesOrder.Status.SHIPPED,
-    }
-    assert any(line.shippable_quantity for order in preorders for line in order.lines.all())
-    out = StringIO()
-    call_command("fix_product_kind_mismatches", stdout=out)
-    assert "0 variant(s) would change" in out.getvalue(), out.getvalue()
-    out = StringIO()
-    call_command("split_shared_suppliers_and_brands", stdout=out)
-    assert "0 row(s) would change" in out.getvalue(), out.getvalue()
-    out = StringIO()
-    call_command("split_shared_warehouses", stdout=out)
-    assert "0 row(s) would change" in out.getvalue(), out.getvalue()
+    # The demo shop is stock only.
     assert set(StockItem.objects.values_list(WAREHOUSE_KIND, VARIANT_KIND).distinct()) == {
         ("stock", "stock"),
-        ("preorder", "preorder"),
     }
-    out = StringIO()
-    call_command("split_shared_delivery_and_payment_setup", stdout=out)
-    assert "0 row(s) would change" in out.getvalue(), out.getvalue()
-    assert is_payment_method_enabled("cod", kind="preorder")
-    assert set(ShippingRate.objects.values_list("kind", flat=True)) == {"stock", "preorder"}
+    assert set(ShippingRate.objects.values_list("kind", flat=True)) == {"stock"}
     assert set(Brand.objects.filter(products__isnull=False).values_list("kind", flat=True)) == {
-        "stock",
-        "preorder",
+        "stock"
     }
 
 

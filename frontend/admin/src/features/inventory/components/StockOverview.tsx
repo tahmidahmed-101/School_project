@@ -54,7 +54,7 @@ const StockOverview = () => {
   const dispatch = useAppDispatch()
   const canAdjust = useCan("inventory.adjust", "inventory.manage")
   const stockState = useAppSelector((s) => s.inventoryStockItems)
-  const { warehouses } = useWarehouses("stock")
+  const { warehouses } = useWarehouses()
 
   const [status, setStatus] = useState<StockStatusSummary | null>(null)
   const [statusError, setStatusError] = useState<unknown>(null)
@@ -73,7 +73,7 @@ const StockOverview = () => {
     let cancelled = false
     const run = async () => {
       try {
-        const s = await fetchStockStatus("stock")
+        const s = await fetchStockStatus()
         if (!cancelled) {
           setStatus(s)
           setStatusError(null)

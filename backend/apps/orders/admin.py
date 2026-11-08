@@ -23,9 +23,8 @@ from .models import (
 class SalesOrderLineInline(admin.TabularInline):
     model = SalesOrderLine
     extra = 0
-    fields = ("variant", "quantity", "unit_price", "tax_amount", "is_preorder")
+    fields = ("variant", "quantity", "unit_price", "tax_amount")
     autocomplete_fields = ("variant",)
-    readonly_fields = ("is_preorder",)
 
     def has_change_permission(self, request, obj=None) -> bool:
         # lines are immutable once the order leaves "pending"

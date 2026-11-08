@@ -4,7 +4,6 @@ from uuid import UUID
 
 from django.db.models import Case, Count, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 
@@ -49,8 +48,8 @@ def _filter_basic_product_fields(
     badge: str | None,
 ) -> QuerySet[Product]:
     """The plain equality/exclude filters on `products_list`, split out so the
-    surrounding function's own branching (preorder window, search,
-    sellable-only) stays under the project's McCabe complexity limit."""
+    surrounding function's own branching (search, sellable-only) stays under
+    the project's McCabe complexity limit."""
     if product_type == Product.ProductType.BUNDLE:
         include_bundles = True
     if not include_bundles:
@@ -86,9 +85,6 @@ def products_list(
     sellable_only: bool = False,
     include_bundles: bool = True,
     product_type: str | None = None,
-    preorder_only: bool = False,
-    preorder_active_only: bool = True,
-    preorder_status: str | None = None,
     featured: bool | None = None,
     trending: bool | None = None,
     new_arrival: bool | None = None,
@@ -114,25 +110,6 @@ def products_list(
         # A product with no live variant has no price and no stock; showing it
         # in a storefront is a dead end, not a listing.
         queryset = queryset.filter(SELLABLE_VARIANT_FILTER).distinct()
-    if preorder_only or preorder_status:
-        preorder_filter = Q(
-            category__category_type=Category.CategoryType.PREORDER,
-            variants__is_preorder_enabled=True,
-            variants__deleted_at__isnull=True,
-        )
-        active_window_filter = Q()
-        if preorder_active_only or preorder_status in ("active", "inactive"):
-            now = timezone.now()
-            active_window_filter = Q(
-                variants__preorder_start_date__lte=now,
-                variants__preorder_end_date__gte=now,
-            )
-        if preorder_status == "active" or (preorder_active_only and not preorder_status):
-            # Same active-window definition as ProductVariant.is_preorder_active.
-            preorder_filter &= active_window_filter
-        if preorder_status == "inactive":
-            preorder_filter &= ~active_window_filter
-        queryset = queryset.filter(preorder_filter).distinct()
     if search:
         queryset = queryset.filter(
             Q(name__icontains=search)
@@ -157,7 +134,12 @@ def _public_products() -> QuerySet[Product]:
     return (
         Product.objects.select_related("category")
         .prefetch_related(_active_variants_prefetch(), "images", PRODUCT_OPTIONS_PREFETCH)
-        .filter(SELLABLE_VARIANT_FILTER, deleted_at__isnull=True, is_active=True)
+        .filter(
+            SELLABLE_VARIANT_FILTER,
+            deleted_at__isnull=True,
+            is_active=True,
+            category__category_type=Category.CategoryType.STOCK,
+        )
     )
 
 
@@ -213,8 +195,8 @@ MAX_RELATED_PRODUCTS = 24
 def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -> list[Product]:
     """Storefront "you may also like" for one product, ranked in a single query:
     same category and brand, then same category, then same brand, then the
-    merchandised (featured/trending) catalog as a filler. Every suggestion stays
-    in the product's own shop (stock or pre-order). Built on `products_list` so
+    merchandised (featured/trending) catalog as a filler. Stock products only.
+    Built on `products_list` so
     it inherits the sellable filter and the prefetches the public list
     serializer depends on."""
     same_category = Q(category_id=product.category_id)
@@ -224,9 +206,7 @@ def related_products(product: Product, *, limit: int = RELATED_PRODUCTS_LIMIT) -
         When(same_brand, then=Value(1)), default=Value(0)
     )
     return list(
-        products_list(
-            is_active=True, sellable_only=True, category_type=product.category.category_type
-        )
+        products_list(is_active=True, sellable_only=True, category_type=Category.CategoryType.STOCK)
         .exclude(pk=product.pk)
         .filter(same_category | same_brand | merchandised)
         .annotate(relevance=score)
@@ -276,14 +256,9 @@ def variants_list(
     category=None,
     category_type: str | None = None,
     is_active: bool | None = None,
-    preorder_only: bool = False,
-    preorder_status: str | None = None,
-    preorder_active_only: bool = True,
 ) -> QuerySet[ProductVariant]:
     """Global, cross-product variant listing for the admin variant table —
     unlike `variants_for_product`, this isn't scoped to a single product."""
-    from django.utils import timezone
-
     queryset = (
         ProductVariant.objects.select_related("product", "product__category")
         .prefetch_related("images", "product__images", option_values_prefetch())
@@ -297,24 +272,6 @@ def variants_list(
         queryset = queryset.filter(product__category__category_type=category_type)
     if is_active is not None:
         queryset = queryset.filter(is_active=is_active)
-    if preorder_only or preorder_status:
-        preorder_filter = Q(
-            product__category__category_type=Category.CategoryType.PREORDER,
-            is_preorder_enabled=True,
-            deleted_at__isnull=True,
-        )
-        active_window_filter = Q()
-        if preorder_active_only or preorder_status in ("active", "inactive"):
-            now = timezone.now()
-            active_window_filter = Q(
-                preorder_start_date__lte=now,
-                preorder_end_date__gte=now,
-            )
-        if preorder_status == "active" or (preorder_active_only and not preorder_status):
-            preorder_filter &= active_window_filter
-        if preorder_status == "inactive":
-            preorder_filter &= ~active_window_filter
-        queryset = queryset.filter(preorder_filter).distinct()
     return queryset.order_by("sku")
 
 

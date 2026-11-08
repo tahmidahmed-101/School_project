@@ -10,14 +10,12 @@ import { FormActions } from "@/components/common/FormActions"
 import { FormField, TextField, TextareaField } from "@/components/common/form-fields"
 import { Combobox } from "@/components/common/ComboBox"
 import { useAppDispatch } from "@/app/hooks"
-import type { Kind } from "@/hooks/use-kind"
 import type { Option } from "@/lib/types"
 
 import { fetchSingle } from "../slices/productSlice"
 import { fetchAllBrands } from "../api"
 import type { Product } from "../types"
 import type { BaseValues } from "../lib/productFormBase"
-import { productListPath } from "../lib/productKind"
 import type { useStagedImages } from "../lib/stagedImages"
 import { savedOptionsOf } from "../lib/productKind"
 import type { CategoryOption } from "../lib/useCategoryOptions"
@@ -35,11 +33,11 @@ const PRODUCT_SWITCHES = [
 ] as const satisfies readonly { name: keyof BaseValues; label: string; description: string }[]
 
 /** Brands for the searchable picker. A failed load just leaves the list empty: brand is optional. */
-function useBrandOptions(kind: Kind) {
+function useBrandOptions() {
   const [options, setOptions] = useState<Option[]>([])
   useEffect(() => {
     let cancelled = false
-    fetchAllBrands(kind)
+    fetchAllBrands()
       .then((brands) => {
         if (!cancelled) setOptions(brands.map((b) => ({ label: b.name, value: b.id })))
       })
@@ -47,13 +45,12 @@ function useBrandOptions(kind: Kind) {
     return () => {
       cancelled = true
     }
-  }, [kind])
+  }, [])
   return options
 }
 
 /** Page header, the form element and the sticky save bar. */
 export function ProductFormShell({
-  kind,
   product,
   formId,
   onSubmit,
@@ -61,7 +58,6 @@ export function ProductFormShell({
   after,
   children,
 }: {
-  kind: Kind
   /** The product being edited; null on a new one. */
   product: Product | null
   formId: string
@@ -72,12 +68,11 @@ export function ProductFormShell({
   children: ReactNode
 }) {
   const navigate = useNavigate()
-  const noun = kind === "preorder" ? "pre-order product" : "product"
-  const backTo = product ? `/product_detail/${product.id}` : productListPath(kind)
+  const backTo = product ? `/product_detail/${product.id}` : "/products"
   return (
     <div className="section-container">
       <PageHeader
-        title={product ? `Edit ${noun}` : `Add ${noun}`}
+        title={product ? "Edit product" : "Add product"}
         description={product ? `Editing ${product.name}` : undefined}
         back={{ to: backTo, label: "Back" }}
       />
@@ -96,20 +91,13 @@ export function ProductFormShell({
   )
 }
 
-export function BasicsCard({
-  kind,
-  categoryOptions,
-}: {
-  kind: Kind
-  /** Categories of this form's kind only. */
-  categoryOptions: CategoryOption[]
-}) {
+export function BasicsCard({ categoryOptions }: { categoryOptions: CategoryOption[] }) {
   const {
     control,
     register,
     formState: { errors },
   } = useFormContext<BaseValues>()
-  const brandOptions = useBrandOptions(kind)
+  const brandOptions = useBrandOptions()
   return (
     <Card>
       <CardHeader>
@@ -286,7 +274,7 @@ export function ProductFormImages({
 }
 
 /** The variants of a saved product, on its edit form. Each change here saves at once, apart from the form. */
-export function SavedVariants({ product, kind }: { product: Product; kind: Kind }) {
+export function SavedVariants({ product }: { product: Product }) {
   const dispatch = useAppDispatch()
   return (
     <ProductVariantsSection
@@ -294,7 +282,6 @@ export function SavedVariants({ product, kind }: { product: Product; kind: Kind 
         .map((o) => o.id)
         .join()}
       product={product}
-      kind={kind}
       canManage
       onChanged={() => dispatch(fetchSingle(product.id))}
     />

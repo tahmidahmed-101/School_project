@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { api, extractApiError } from "@/lib/api/client"
 import { unwrapEnvelope, unwrapList } from "@/lib/api/envelope"
-import type { Kind } from "@/hooks/use-kind"
 import { setDefaultCurrency } from "@/lib/format"
 import type {
   BusinessModule,
@@ -124,12 +123,12 @@ export const updateBusinessProfile = createAsyncThunk(
 )
 
 export const fetchModules = get<BusinessModule[]>("businessSettings/fetchModules", "/admin/settings/modules/")
-/** GET /admin/settings/payment-methods/?kind= — one half's own switches and numbers. */
+/** GET /admin/settings/payment-methods/?kind=stock — the checkout's switches and numbers. */
 export const fetchPaymentMethods = createAsyncThunk(
   "businessSettings/fetchPaymentMethods",
-  async (kind: Kind, { rejectWithValue }) => {
+  async (_: void, { rejectWithValue }) => {
     try {
-      const res = await api.get("/admin/settings/payment-methods/", { params: { kind } })
+      const res = await api.get("/admin/settings/payment-methods/", { params: { kind: "stock" } })
       return unwrapEnvelope<PaymentMethodState[]>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
@@ -170,15 +169,15 @@ export const updateModule = createAsyncThunk(
   }
 )
 
-/** PATCH /admin/settings/payment-methods/{key}/?kind= {is_enabled?, pay_to?}. */
+/** PATCH /admin/settings/payment-methods/{key}/?kind=stock {is_enabled?, pay_to?}. */
 export const updatePaymentMethod = createAsyncThunk(
   "businessSettings/updatePaymentMethod",
   async (
-    { key, kind, ...patch }: { key: string; kind: Kind; is_enabled?: boolean; pay_to?: string },
+    { key, ...patch }: { key: string; is_enabled?: boolean; pay_to?: string },
     { rejectWithValue }
   ) => {
     try {
-      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, patch, { params: { kind } })
+      const res = await api.patch(`/admin/settings/payment-methods/${key}/`, patch, { params: { kind: "stock" } })
       return unwrapEnvelope<PaymentMethodState>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
@@ -351,9 +350,7 @@ const businessSettingsSlice = createSlice({
         state.modules.data = state.modules.data.map((m) => (m.key === action.payload.key ? action.payload : m))
       })
       .addCase(updatePaymentMethod.fulfilled, (state, action) => {
-        state.paymentMethods.data = state.paymentMethods.data.map((m) =>
-          m.key === action.payload.key && m.kind === action.payload.kind ? action.payload : m
-        )
+        state.paymentMethods.data = state.paymentMethods.data.map((m) => (m.key === action.payload.key ? action.payload : m))
       })
       .addCase(updatePolicy.fulfilled, (state, action) => {
         state.policies.data = state.policies.data.map((p) => (p.kind === action.payload.kind ? action.payload : p))

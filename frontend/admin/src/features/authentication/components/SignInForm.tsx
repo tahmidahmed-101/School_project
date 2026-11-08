@@ -61,7 +61,7 @@ const SignInForm = () => {
               height={72}
               className="mx-auto size-18 rounded-full"
             />
-            <p className="text-lg font-bold tracking-[0.12em] text-foreground">KULL MART</p>
+            <p className="text-lg font-bold tracking-[0.12em] text-foreground">SCHOOL PROJECT</p>
             <CardTitle className="text-2xl">Sign in</CardTitle>
             <p className="text-sm text-muted-foreground">
               Sign in to access the admin dashboard

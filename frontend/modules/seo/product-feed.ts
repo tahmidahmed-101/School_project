@@ -1,4 +1,3 @@
-import { isPreOrderSoldOut } from "@/lib/product";
 import { CURRENCY_CODE, SITE_DESCRIPTION, SITE_NAME, assetUrl } from "./metadata";
 import { absoluteUrl } from "@/lib/site-url";
 import type { Product } from "@/lib/types";
@@ -18,7 +17,6 @@ const tag = (name: string, value: string) => `<g:${name}>${escapeXml(value)}</g:
 
 /** Google Merchant Center / Meta Catalog availability value. */
 function availability(product: Product): string {
-  if (product.isPreOrder) return isPreOrderSoldOut(product) ? "out of stock" : "preorder";
   return product.inStock && product.stockCount > 0 ? "in stock" : "out of stock";
 }
 

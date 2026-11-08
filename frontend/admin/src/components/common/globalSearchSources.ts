@@ -7,7 +7,6 @@ import { formatCurrency, humanize } from "@/lib/format"
 import { getNavGroups, hasPermission } from "@/app/modules"
 import { NAV_GROUP_LABELS } from "@/app/moduleTypes"
 import { customerDetailPath } from "@/features/users/paths"
-import { withKind, type Kind } from "@/hooks/use-kind"
 import { useOffModules } from "@/hooks/use-modules"
 
 export interface SearchDestination {
@@ -45,7 +44,6 @@ export function useNavDestinations(permissions: readonly string[] | undefined): 
 interface OrderHit {
   id: string
   order_number: string
-  order_type: Kind
   customer_name?: string | null
   customer_email?: string | null
   status: string
@@ -68,22 +66,6 @@ interface CustomerHit {
 }
 
 const RESULTS_PER_SOURCE = 4
-const KINDS: Kind[] = ["stock", "preorder"]
-
-const SECTIONS = {
-  stock: { orders: "Stock orders", order: "Order", products: "Stock products", customers: "Stock customers" },
-  preorder: {
-    orders: "Pre-orders",
-    order: "Pre-order",
-    products: "Pre-order products",
-    customers: "Pre-order customers",
-  },
-} satisfies Record<Kind, Record<string, string>>
-
-/** One list asked once per half, so every hit is known to belong to that half. */
-function searchBothKinds<T>(url: string, params: (kind: Kind) => Record<string, string>, signal: AbortSignal) {
-  return Promise.all(KINDS.map((kind) => searchList<T>(url, params(kind), signal).catch(() => [] as T[])))
-}
 const DEBOUNCE_MS = 250
 
 async function searchList<T>(url: string, params: Record<string, string>, signal: AbortSignal): Promise<T[]> {
@@ -93,9 +75,8 @@ async function searchList<T>(url: string, params: Record<string, string>, signal
 
 /**
  * Live record search against the backend (orders, products, customers), debounced and
- * cancelled when the query changes. Every result names its half (stock or pre-order) and
- * opens that half's page. Sources the user lacks permission for are skipped, and a failing
- * source simply contributes no results.
+ * cancelled when the query changes. Sources the user lacks permission for are skipped, and a
+ * failing source simply contributes no results.
  */
 export function useRecordSearch(
   query: string,
@@ -116,16 +97,14 @@ export function useRecordSearch(
     const timer = setTimeout(async () => {
       const { signal } = controller
       const [orders, products, customers] = await Promise.allSettled([
-        canOrders ? searchList<OrderHit>("/admin/orders/", { search: q }, signal) : Promise.resolve([]),
+        canOrders
+          ? searchList<OrderHit>("/admin/orders/", { search: q, order_type: "stock" }, signal)
+          : Promise.resolve([]),
         canProducts
-          ? searchBothKinds<ProductHit>(
-              "/admin/catalog/products/",
-              (kind) => ({ search: q, category_type: kind }),
-              signal
-            )
+          ? searchList<ProductHit>("/admin/catalog/products/", { search: q, category_type: "stock" }, signal)
           : Promise.resolve([]),
         canCustomers
-          ? searchBothKinds<CustomerHit>("/admin/users/", (kind) => ({ search: q, role: "customer", kind }), signal)
+          ? searchList<CustomerHit>("/admin/users/", { search: q, role: "customer", kind: "stock" }, signal)
           : Promise.resolve([]),
       ])
       if (signal.aborted) return
@@ -134,49 +113,43 @@ export function useRecordSearch(
       if (orders.status === "fulfilled") {
         for (const o of orders.value) {
           const who = o.customer_name || o.customer_email || "Guest"
-          const copy = SECTIONS[o.order_type === "preorder" ? "preorder" : "stock"]
           results.push({
             id: `ord-${o.id}`,
-            title: `${copy.order} ${o.order_number}`,
+            title: `Order ${o.order_number}`,
             subtitle: `${who} • ${humanize(o.status)} • ${formatCurrency(o.grand_total)}`,
-            section: copy.orders,
-            url: withKind(`/order_detail/${o.id}`, o.order_type === "preorder" ? "preorder" : "stock"),
+            section: "Orders",
+            url: `/order_detail/${o.id}`,
             icon: ShoppingCart,
             keywords: [],
           })
         }
       }
       if (products.status === "fulfilled") {
-        products.value.forEach((hits, i) => {
-          for (const p of hits) {
-            results.push({
-              id: `prod-${p.id}`,
-              title: p.name,
-              subtitle: `${p.price != null ? formatCurrency(p.price) : "No price"} • ${p.is_active ? "Active" : "Inactive"}`,
-              section: SECTIONS[KINDS[i]].products,
-              url: withKind(`/product_detail/${p.id}`, KINDS[i]),
-              icon: Boxes,
-              keywords: [],
-            })
-          }
-        })
+        for (const p of products.value) {
+          results.push({
+            id: `prod-${p.id}`,
+            title: p.name,
+            subtitle: `${p.price != null ? formatCurrency(p.price) : "No price"} • ${p.is_active ? "Active" : "Inactive"}`,
+            section: "Products",
+            url: `/product_detail/${p.id}`,
+            icon: Boxes,
+            keywords: [],
+          })
+        }
       }
       if (customers.status === "fulfilled") {
-        customers.value.forEach((hits, i) => {
-          const kind = KINDS[i]
-          for (const c of hits) {
-            const name = [c.first_name, c.last_name].filter(Boolean).join(" ")
-            results.push({
-              id: `cust-${kind}-${c.id}`,
-              title: name || c.email,
-              subtitle: [c.email, c.phone].filter(Boolean).join(" • "),
-              section: SECTIONS[kind].customers,
-              url: customerDetailPath(kind, c.id),
-              icon: Users,
-              keywords: [],
-            })
-          }
-        })
+        for (const c of customers.value) {
+          const name = [c.first_name, c.last_name].filter(Boolean).join(" ")
+          results.push({
+            id: `cust-${c.id}`,
+            title: name || c.email,
+            subtitle: [c.email, c.phone].filter(Boolean).join(" • "),
+            section: "Customers",
+            url: customerDetailPath(c.id),
+            icon: Users,
+            keywords: [],
+          })
+        }
       }
       setState({ query: q, results })
     }, DEBOUNCE_MS)

@@ -1,7 +1,7 @@
-# Kull Mart
+# School Project
 
 ```
-kull-mart/
+school-project/
   frontend/   Next.js storefront (port 3002)
   backend/    LaunchCart Django API (port 8000)
 ```
@@ -26,11 +26,6 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\pip install -e ".[dev]"
 ```
-
-### Telegram staff bot
-
-See the [client Telegram setup guide](backend/docs/telegram-setup.md) for bot creation, server configuration,
-webhook registration, staff linking, and available commands.
 
 ## Frontend
 

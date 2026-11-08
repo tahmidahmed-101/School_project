@@ -12,8 +12,6 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { DateCell, MoneyCell } from "@/components/common/cells"
 import type { Option } from "@/lib/types"
 import { useAppDispatch } from "@/app/hooks"
-import { useKind } from "@/hooks/use-kind"
-import { purchasingBase, purchasingTitle } from "../lib/kind"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useListPage } from "@/hooks/use-list-page"
 
@@ -36,18 +34,15 @@ const SORT_OPTIONS: Option[] = [
   { label: "Recently created", value: "-created_at" },
 ]
 
-const PurchaseOrdersList = () => {
-  const kind = useKind()
-  const base = purchasingBase(kind)
-  const title = purchasingTitle(kind, "Purchase orders")
-  useDocumentTitle(title)
+const PurchaseOrders = () => {
+  useDocumentTitle("Purchase orders")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const state = useProcurementSelector((state) => state.purchaseOrders)
   const canManage = useCanManagePurchasing()
 
   const filters = useStatusSortFilters(STATUS_OPTIONS, SORT_OPTIONS)
-  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ...filters.params, kind } })
+  const list = useListPage({ fetch: (p) => dispatch(fetchAll(p)), state, params: { ...filters.params, kind: "stock" } })
 
   const columns: ColumnDef<PurchaseOrder>[] = [
     {
@@ -100,7 +95,7 @@ const PurchaseOrdersList = () => {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <TableActions itemName={row.original.po_number} viewUrl={`${base}/orders/${row.original.id}`} />
+        <TableActions itemName={row.original.po_number} viewUrl={`/purchasing/orders/${row.original.id}`} />
       ),
     },
   ]
@@ -108,11 +103,11 @@ const PurchaseOrdersList = () => {
   return (
     <div className="section-container">
       <PageHeader
-        title={title}
+        title="Purchase orders"
         actions={
           canManage && (
             <Button size="action" asChild>
-              <Link to={`${base}/orders/new`}>
+              <Link to="/purchasing/orders/new">
                 <Plus className="size-5" /> New Purchase Order
               </Link>
             </Button>
@@ -131,18 +126,16 @@ const PurchaseOrdersList = () => {
         columns={columns}
         data={state.data}
         {...list.tableProps}
-        onRowClick={(po) => navigate(`${base}/orders/${po.id}`)}
+        onRowClick={(po) => navigate(`/purchasing/orders/${po.id}`)}
         emptyIcon={ClipboardList}
         emptyTitle="No purchase orders"
         emptyActionLabel={canManage ? "New Purchase Order" : undefined}
-        onEmptyAction={canManage ? () => navigate(`${base}/orders/new`) : undefined}
+        onEmptyAction={canManage ? () => navigate("/purchasing/orders/new") : undefined}
         minWidth="900px"
         columnWidths={["125px", "auto", "105px", "145px", "130px", "125px", "80px"]}
       />
     </div>
   )
 }
-
-const PurchaseOrders = () => <PurchaseOrdersList key={useKind()} />
 
 export default PurchaseOrders

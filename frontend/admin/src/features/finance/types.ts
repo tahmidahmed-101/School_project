@@ -1,4 +1,4 @@
-// Mirrors kull-mart api/v1/admin/accounting/serializers.py. Decimals arrive as strings.
+// Mirrors school-project api/v1/admin/accounting/serializers.py. Decimals arrive as strings.
 
 export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense"
 
@@ -24,9 +24,6 @@ export interface AccountPayload {
 
 export type JournalEntryStatus = "draft" | "posted"
 
-/** Which half an entry belongs to; blank is the whole business (rent, salaries, owner money). */
-export type JournalEntryKind = "stock" | "preorder" | ""
-
 /** JournalEntryLineSerializer */
 export interface JournalEntryLine {
   id: string
@@ -43,7 +40,6 @@ export interface JournalEntry {
   reference_id: string | null
   status: JournalEntryStatus
   description: string
-  kind: JournalEntryKind
   reverses_id: string | null
   reversed_by_id: string | null
   lines: JournalEntryLine[]
@@ -55,7 +51,6 @@ export interface JournalEntryCreatePayload {
   reference_type?: string
   reference_id?: string | null
   description?: string
-  kind?: JournalEntryKind
   lines: { account_id: string; debit?: string; credit?: string }[]
 }
 
@@ -114,7 +109,6 @@ export interface Expense {
   category_id: string | null
   payment_account_id: string
   reference_number: string
-  kind: JournalEntryKind
   journal_entry_id: string | null
   deleted_at: string | null
 }
@@ -129,22 +123,17 @@ export interface ExpenseCreatePayload {
   category_id?: string | null
   payment_account_id: string
   reference_number?: string
-  kind?: JournalEntryKind
 }
 
-/** ExpenseUpdateSerializer — amount/date/accounts are frozen once posted; a new `kind` re-posts the entry. */
+/** ExpenseUpdateSerializer — amount/date/accounts are frozen once posted. */
 export interface ExpenseUpdatePayload {
   payee?: string
   description?: string
   reference_number?: string
-  kind?: JournalEntryKind
 }
 
 // Reports (apps/accounting/selectors/reports.py) — amounts are JSON numbers.
 
-type ReportKind = "stock" | "preorder"
-
-/** Whole business; `unassigned_*` sit on entries not marked stock or pre-order. */
 export interface ProfitAndLossReport {
   revenue: number
   cost_of_goods_sold: number
@@ -152,21 +141,6 @@ export interface ProfitAndLossReport {
   gross_margin_percent: number | null
   operating_expenses: number
   net_income: number
-  unassigned_revenue: number
-  unassigned_cost_of_goods_sold: number
-}
-
-/** One half. Whole-business expenses are not taken off; `company_wide_left_out` names them. */
-export interface KindProfitAndLossReport {
-  kind: ReportKind
-  revenue: number
-  cost_of_goods_sold: number
-  gross_profit: number
-  gross_margin_percent: number | null
-  goods_written_off: number
-  operating_expenses: number
-  profit_before_company_costs: number
-  company_wide_left_out: string[]
 }
 
 export interface BalanceSheetReport {
@@ -181,34 +155,11 @@ export interface BalanceSheetReport {
   out_of_balance: number
 }
 
-export interface KindBalanceSheetReport {
-  kind: ReportKind
-  inventory_asset: number
-  accounts_receivable: number
-  refund_payable: number
-  customer_balance: number
-  accounts_payable: number
-  goods_received_not_billed: number
-  company_wide_left_out: string[]
-}
-
 export interface CashFlowReport {
   net_change_in_cash: number
-  company_wide: number
 }
 
-export interface KindCashFlowReport {
-  kind: ReportKind
-  customer_receipts: number
-  customer_refunds: number
-  supplier_payments: number
-  expenses_paid: number
-  other: number
-  net_change_in_cash: number
-  company_wide_left_out: string[]
-}
-
-/** Asked with `kind`, so the ledger figures are for that half only. */
+/** Asked with `kind=stock`, so the ledger figures are for stock items. */
 export interface InventoryValuationReport {
   inventory_value: number
   ledger_inventory_asset: number

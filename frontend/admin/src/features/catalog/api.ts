@@ -2,7 +2,6 @@ import { api, apiCall, extractApiError } from "@/lib/api/client"
 import { unwrapList } from "@/lib/api/envelope"
 import { fetchAllPages } from "@/lib/api/fetchAll"
 import { invalidateAllPages } from "@/hooks/use-all-pages"
-import type { Kind } from "@/hooks/use-kind"
 import type {
   Brand,
   BrandPayload,
@@ -53,11 +52,11 @@ export const restoreProduct = (id: string) =>
 export const bulkProductStatus = (ids: string[], is_active: boolean) =>
   apiCall<BulkActionResult>(() => api.post(`${C}/products/bulk-status/`, { ids, is_active }))
 
-/** Search products of one kind by name (for pickers). */
-export async function searchProducts(search: string, kind: Kind) {
+/** Search stock products by name (for pickers). */
+export async function searchProducts(search: string) {
   try {
     const res = await api.get(`${C}/products/`, {
-      params: { page: 1, page_size: 20, search, category_type: kind },
+      params: { page: 1, page_size: 20, search, category_type: "stock" },
     })
     return unwrapList<Product>(res.data, 1, 20).items
   } catch (err) {
@@ -112,17 +111,13 @@ export const bulkUpdateVariants = (productId: string, payload: VariantBulkUpdate
 
 // ---- categories ----
 export const CATEGORIES_ENDPOINT = `${C}/categories/`
-export const categoryListParams = (kind?: Kind) => ({
-  ordering: "name",
-  ...(kind ? { category_type: kind } : {}),
-})
+export const CATEGORY_LIST_PARAMS = { ordering: "name", category_type: "stock" }
 const categoriesChanged = <R>(res: R) => {
   invalidateAllPages(CATEGORIES_ENDPOINT)
   return res
 }
-/** Every category of one kind, or of both when no kind is given (all pages; page_size is capped at 100 server-side). */
-export const fetchAllCategories = (kind?: Kind) =>
-  fetchAllPages<Category>(CATEGORIES_ENDPOINT, categoryListParams(kind))
+/** Every stock category (all pages; page_size is capped at 100 server-side). */
+export const fetchAllCategories = () => fetchAllPages<Category>(CATEGORIES_ENDPOINT, CATEGORY_LIST_PARAMS)
 export const createCategory = (payload: CategoryPayload) =>
   apiCall<Category>(() => api.post(`${C}/categories/`, payload).then(categoriesChanged))
 export const updateCategory = (id: string, payload: CategoryPayload) =>
@@ -138,8 +133,8 @@ export const restoreCategory = (id: string) =>
   apiCall<Category>(() => api.post(`${C}/categories/${id}/restore/`).then(categoriesChanged))
 
 // ---- brands ----
-/** Every active brand of one kind (for pickers). */
-export const fetchAllBrands = (kind: Kind) => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true, kind })
+/** Every active stock brand (for pickers). */
+export const fetchAllBrands = () => fetchAllPages<Brand>(`${C}/brands/`, { is_active: true, kind: "stock" })
 /** One brand by id, active or not. */
 export const fetchBrand = (id: string) => apiCall<Brand>(() => api.get(`${C}/brands/${id}/`))
 export const createBrand = (payload: BrandPayload) => apiCall<Brand>(() => api.post(`${C}/brands/`, payload))

@@ -1,4 +1,3 @@
-import { isPreOrderShopProduct } from "@/lib/product";
 import type { Product } from "@/lib/types";
 
 export const TRENDING_SIZE = 10;
@@ -40,13 +39,12 @@ export function categoryShelf(stockProducts: Product[], categoryId: string): Pro
  * grows. Every shelf keeps catalogue order within its picks, so the subset yields the same shelves as the full list.
  */
 export function homeProducts(products: Product[]): Product[] {
-  const stock = products.filter((p) => !isPreOrderShopProduct(p));
-  const keep = new Set<string>([...trending(stock), ...bestSellers(stock)].map((p) => p.id));
+  const keep = new Set<string>([...trending(products), ...bestSellers(products)].map((p) => p.id));
   const perCategory = new Map<string, number>();
-  for (const p of stock) {
+  for (const p of products) {
     const seen = perCategory.get(p.category) ?? 0;
     if (seen < CATEGORY_SHELF_SIZE) keep.add(p.id);
     perCategory.set(p.category, seen + 1);
   }
-  return stock.filter((p) => keep.has(p.id));
+  return products.filter((p) => keep.has(p.id));
 }

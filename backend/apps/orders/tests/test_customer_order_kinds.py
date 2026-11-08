@@ -7,8 +7,6 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from apps.accounts.factories import CustomerUserFactory
-from apps.business.models import BusinessProfile
-from apps.business.selectors.business_profile import get_business_profile
 from apps.orders.factories import PaymentFactory, SalesOrderFactory, SalesOrderLineFactory
 from apps.orders.models import SalesOrder
 
@@ -18,11 +16,11 @@ HISTORY = "/api/v1/customer/orders/"
 TRACK = "/api/v1/public/tracking/orders/track/"
 
 
-def _order(customer, order_type, **fields):
+def _order(customer, **fields):
     order = SalesOrderFactory(
         customer=customer,
         status=SalesOrder.Status.CONFIRMED,
-        order_type=order_type,
+        order_type=SalesOrder.OrderType.STOCK,
         grand_total=Decimal("1000.00"),
         **fields,
     )
@@ -30,28 +28,24 @@ def _order(customer, order_type, **fields):
     return order
 
 
-def test_history_lists_one_kind_when_asked(api_client, customer_user):
+def test_history_takes_order_type_stock(api_client, customer_user):
     api_client.force_authenticate(user=customer_user)
-    stock = _order(customer_user, SalesOrder.OrderType.STOCK)
-    preorder = _order(customer_user, SalesOrder.OrderType.PREORDER, preorder_stage="purchasing")
-    PaymentFactory(order=preorder, amount=Decimal("300.00"))
+    order = _order(customer_user)
+    PaymentFactory(order=order, amount=Decimal("300.00"))
 
-    stock_rows = api_client.get(HISTORY, {"order_type": "stock"}).data["data"]["results"]
-    preorder_rows = api_client.get(HISTORY, {"order_type": "preorder"}).data["data"]["results"]
+    rows = api_client.get(HISTORY, {"order_type": "stock"}).data["data"]["results"]
 
-    assert [row["id"] for row in stock_rows] == [str(stock.id)]
-    assert [row["id"] for row in preorder_rows] == [str(preorder.id)]
-    row = preorder_rows[0]
-    assert row["order_type"] == "preorder"
-    assert row["preorder_stage"] == "purchasing"
-    assert row["paid_total"] == "300.00"
-    assert row["balance_due"] == "700.00"
+    assert [row["id"] for row in rows] == [str(order.id)]
+    assert rows[0]["order_type"] == "stock"
+    assert rows[0]["paid_total"] == "300.00"
+    assert rows[0]["balance_due"] == "700.00"
 
 
-def test_history_refuses_an_unknown_order_type(api_client, customer_user):
+@pytest.mark.parametrize("order_type", ["both", "preorder"])
+def test_history_refuses_an_order_type_other_than_stock(api_client, customer_user, order_type):
     api_client.force_authenticate(user=customer_user)
 
-    response = api_client.get(HISTORY, {"order_type": "both"})
+    response = api_client.get(HISTORY, {"order_type": order_type})
 
     assert response.status_code == 400
 
@@ -59,31 +53,16 @@ def test_history_refuses_an_unknown_order_type(api_client, customer_user):
 def test_history_reads_payments_in_one_query(api_client, customer_user):
     api_client.force_authenticate(user=customer_user)
     for _ in range(3):
-        PaymentFactory(order=_order(customer_user, SalesOrder.OrderType.PREORDER))
+        PaymentFactory(order=_order(customer_user))
 
     with CaptureQueriesContext(connection) as queries:
-        api_client.get(HISTORY, {"order_type": "preorder"})
+        api_client.get(HISTORY)
 
     assert sum('FROM "orders_payment"' in query["sql"] for query in queries) == 1
 
 
-def test_history_reads_the_deposit_percent_once(api_client, customer_user):
-    api_client.force_authenticate(user=customer_user)
-    profile = get_business_profile()
-    profile.preorder_deposit_percent = Decimal("30.00")
-    profile.save(update_fields=["preorder_deposit_percent"])
-    for _ in range(3):
-        _order(customer_user, SalesOrder.OrderType.PREORDER)
-
-    with CaptureQueriesContext(connection) as queries:
-        rows = api_client.get(HISTORY, {"order_type": "preorder"}).data["data"]["results"]
-
-    assert sum(BusinessProfile._meta.db_table in query["sql"] for query in queries) == 1
-    assert [row["deposit_due"] for row in rows] == ["300.00"] * 3
-
-
-def test_tracking_tells_a_preorder_apart_and_shows_what_is_paid(api_client, customer_user):
-    order = _order(customer_user, SalesOrder.OrderType.PREORDER, contact_phone="01711223344")
+def test_tracking_shows_what_is_paid(api_client, customer_user):
+    order = _order(customer_user, contact_phone="01711223344")
     PaymentFactory(order=order, amount=Decimal("300.00"))
 
     response = api_client.post(
@@ -92,14 +71,14 @@ def test_tracking_tells_a_preorder_apart_and_shows_what_is_paid(api_client, cust
 
     assert response.status_code == 200, response.data
     data = response.data["data"]
-    assert data["order_type"] == "preorder"
+    assert data["order_type"] == "stock"
     assert data["paid_total"] == "300.00"
     assert data["balance_due"] == "700.00"
 
 
 def test_customer_tracks_their_own_order_without_a_phone(api_client, customer_user):
     api_client.force_authenticate(user=customer_user)
-    order = _order(customer_user, SalesOrder.OrderType.STOCK)
+    order = _order(customer_user)
 
     response = api_client.get(f"{HISTORY}{order.id}/track/")
 
@@ -109,7 +88,7 @@ def test_customer_tracks_their_own_order_without_a_phone(api_client, customer_us
 
 def test_customer_cannot_track_someone_elses_order(api_client, customer_user):
     api_client.force_authenticate(user=customer_user)
-    order = _order(CustomerUserFactory(), SalesOrder.OrderType.STOCK)
+    order = _order(CustomerUserFactory())
 
     response = api_client.get(f"{HISTORY}{order.id}/track/")
 

@@ -323,7 +323,6 @@ const SaleForm = () => {
                       <ProductPickerDialog
                         open={pickingProduct}
                         onOpenChange={setPickingProduct}
-                        kind="stock"
                         title="Add a product to the promotion"
                         onPick={(product) => {
                           if (!field.value.some((p) => p.id === product.id)) {

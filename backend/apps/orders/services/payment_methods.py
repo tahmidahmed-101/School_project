@@ -10,7 +10,7 @@ from apps.orders.selectors.payment_methods import get_payment_method_state
 
 
 @transaction.atomic
-def set_payment_method_enabled(*, key: str, is_enabled: bool, kind: str = KIND_STOCK) -> dict:
+def set_payment_method_enabled(*, key: str, is_enabled: bool) -> dict:
     spec = PAYMENT_METHODS_BY_KEY.get(key)
     if spec is None:
         raise BusinessRuleViolationError("Unknown payment method.", code="unknown_payment_method")
@@ -20,25 +20,25 @@ def set_payment_method_enabled(*, key: str, is_enabled: bool, kind: str = KIND_S
             code="payment_method_locked",
         )
 
-    setting, _ = PaymentMethodSetting.objects.get_or_create(key=key, kind=kind)
+    setting, _ = PaymentMethodSetting.objects.get_or_create(key=key, kind=KIND_STOCK)
     if setting.is_enabled != is_enabled:
         setting.is_enabled = is_enabled
         setting.save(update_fields=["is_enabled"])
 
-    return _state(key, kind)
+    return _state(key)
 
 
-def set_payment_method_pay_to(*, key: str, pay_to: str, kind: str = KIND_STOCK) -> dict:
+def set_payment_method_pay_to(*, key: str, pay_to: str) -> dict:
     if key not in PAYMENT_METHODS_BY_KEY:
         raise BusinessRuleViolationError("Unknown payment method.", code="unknown_payment_method")
-    setting, _ = PaymentMethodSetting.objects.get_or_create(key=key, kind=kind)
+    setting, _ = PaymentMethodSetting.objects.get_or_create(key=key, kind=KIND_STOCK)
     setting.pay_to = pay_to.strip()
     setting.save(update_fields=["pay_to"])
-    return _state(key, kind)
+    return _state(key)
 
 
-def _state(key: str, kind: str) -> dict:
-    state = get_payment_method_state(key, kind=kind)
+def _state(key: str) -> dict:
+    state = get_payment_method_state(key)
     if state is None:
         raise RuntimeError(f"Payment method state missing for known key {key!r}.")
     return state

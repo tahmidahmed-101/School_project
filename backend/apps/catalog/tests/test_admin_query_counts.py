@@ -1,15 +1,12 @@
-"""The admin product endpoints batched stock and reorder points but resolved
-each variant's pre-ordered quantity with its own query, so the list grew by one
-query per variant. These lock in the batched behaviour."""
+"""The admin product endpoints batch stock and reorder points for the whole
+page. These lock in the batched behaviour, so the list does not grow by one
+query per variant."""
 
 from __future__ import annotations
-
-from datetime import timedelta
 
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
-from django.utils import timezone
 
 from apps.catalog.factories import ProductFactory, make_options, make_variant
 from apps.catalog.selectors.sales import live_sales
@@ -25,18 +22,10 @@ def _live_sales_already_loaded():
 
 
 def _product(variants: int):
-    now = timezone.now()
     product = ProductFactory(is_active=True)
     sizes = make_options(product, {"Size": SIZES[:variants]})
     for index in range(variants):
-        make_variant(
-            product,
-            [sizes[SIZES[index]]],
-            is_preorder_enabled=True,
-            preorder_start_date=now - timedelta(days=1),
-            preorder_end_date=now + timedelta(days=10),
-            preorder_stock_limit=5,
-        )
+        make_variant(product, [sizes[SIZES[index]]])
     return product
 
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { useKind } from "@/hooks/use-kind"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { PackageCheck } from "lucide-react"
@@ -36,8 +35,6 @@ function damagedOf(raw: string | undefined, max: number): number | null {
  */
 export function ReceiveBackDialog({ shipment, open, onOpenChange, onDone }: ReceiveBackDialogProps) {
   const dispatch = useAppDispatch()
-  const pageKind = useKind()
-  const isPreorder = (shipment.order_type ?? pageKind) === "preorder"
   // Lists and the order page carry shipments without their lines, so they are loaded on open.
   const [lines, setLines] = useState<ShipmentLine[] | null>(shipment.lines ?? null)
   const [loadError, setLoadError] = useState("")
@@ -81,9 +78,7 @@ export function ReceiveBackDialog({ shipment, open, onOpenChange, onDone }: Rece
       toast.success(
         totalDamaged > 0
           ? `Consignment received back — ${totalDamaged} damaged unit${totalDamaged === 1 ? "" : "s"} written off`
-          : isPreorder
-            ? "Consignment received back — the units are set aside for this pre-order again"
-            : "Consignment received back and restocked"
+          : "Consignment received back and restocked"
       )
       onOpenChange(false)
       setDamaged({})
@@ -144,9 +139,7 @@ export function ReceiveBackDialog({ shipment, open, onOpenChange, onDone }: Rece
           <DialogTitle>Receive consignment back</DialogTitle>
           <DialogDescription>
             Enter how many units of each item came back damaged.{" "}
-            {isPreorder
-              ? "Sellable units count as arrived again and are set aside for this pre-order so they can be shipped again."
-              : "Sellable units go back into stock and are held for this order so they can be shipped again."}{" "}
+            Sellable units go back into stock and are held for this order so they can be shipped again.{" "}
             Damaged units are written off and stay owed to the customer until you replace them. No payment is refunded
             here.
           </DialogDescription>

@@ -2,13 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { CartItem, Product } from "@/lib/types";
-import { getMaxOrderQuantity, productKind, type ProductKind } from "@/lib/product";
+import { getMaxOrderQuantity } from "@/lib/product";
 import { trackAddToCart } from "@/lib/analytics";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { ORDER_QUANTITY_CAP, applyVariant, soleVariant, variantById } from "@/lib/variants";
 import { useAuth } from "@/modules/auth";
-import { MIXED_BASKET_CODE, cartRefusalCode, setCartCustomer, syncGuestCart } from "./data/guestCart";
-import { acceptsProduct, basketGroups, basketKind, itemCountByKind, type BasketGroup } from "./domain/kind";
+import { setCartCustomer, syncGuestCart } from "./data/guestCart";
 import { toCartTargets } from "./domain/sync";
 
 interface CartContextType {
@@ -23,30 +22,24 @@ interface CartContextType {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  itemCountByKind: Record<ProductKind, number>;
+  /** Units in the cart, summed over its lines. */
+  totalItems: number;
   /** Sum of the SKU prices in the cart. An estimate: the backend prices the order at checkout. */
   subtotal: number;
-  kind: ProductKind | "mixed" | null;
-  /** One entry per kind held; more than one only for a cart saved before kinds were kept apart. */
-  groups: BasketGroup[];
-  /** Kind of the product the last `addItem` turned away because the cart holds the other kind. */
-  refusedKind: ProductKind | null;
-  /** The server would not take a line because its copy of the cart holds the other kind. */
-  serverRefusedMixed: boolean;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
 /**
- * v2: lines carry the backend variant id. The v1 key ("kullmart:cart") held mock-catalogue products that do not
+ * v2: lines carry the backend variant id. The v1 key ("schoolproject:cart") held mock-catalogue products that do not
  * exist in the API and could never be ordered, so it is discarded rather than migrated.
  */
-const CART_KEY = "kullmart:cart:v2";
-const LEGACY_CART_KEY = "kullmart:cart";
+const CART_KEY = "schoolproject:cart:v2";
+const LEGACY_CART_KEY = "schoolproject:cart";
 /** Quiet time after the last cart change before it is mirrored to the backend, so a run of +/- taps is one sync. */
 const SYNC_DELAY_MS = 600;
 
-/** One line never holds more than the product page lets a shopper pick (stock, or the pre-order limit). */
+/** One line never holds more than the product page lets a shopper pick. */
 const lineCap = (product: Product) => Math.max(1, Math.min(ORDER_QUANTITY_CAP, getMaxOrderQuantity(product)));
 
 /** Keeps the saved cart small and current: only what the drawer and checkout render, not the full SKU list. */
@@ -90,8 +83,6 @@ function sanitizeCart(raw: unknown): CartItem[] {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [storedItems, setStoredItems, isHydrated] = usePersistedState<unknown>(CART_KEY, []);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [refusedKind, setRefusedKind] = useState<ProductKind | null>(null);
-  const [serverRefusedMixed, setServerRefusedMixed] = useState(false);
 
   const items = useMemo(() => sanitizeCart(storedItems), [storedItems]);
   const setItems = useCallback(
@@ -115,18 +106,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isHydrated || authStatus === "loading") return;
     setCartCustomer(asCustomer ? authRequest : null);
-    let stale = false;
-    const timer = setTimeout(
-      () =>
-        void syncGuestCart(toCartTargets(items)).then(() => {
-          if (!stale) setServerRefusedMixed(cartRefusalCode() === MIXED_BASKET_CODE);
-        }),
-      SYNC_DELAY_MS,
-    );
-    return () => {
-      stale = true;
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => void syncGuestCart(toCartTargets(items)), SYNC_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [items, isHydrated, authStatus, asCustomer, authRequest]);
 
   const addItem = useCallback(
@@ -138,16 +119,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const line = toCartProduct(applyVariant(product, variant));
       const variantTitle = variant.title || undefined;
 
-      if (!acceptsProduct(items, line)) {
-        setRefusedKind(productKind(line));
-        setIsDrawerOpen(true);
-        return false;
-      }
-      setRefusedKind(null);
-
       setItems((prev) => {
-        // Several adds in one tick (move all to cart) each see the same `items`, so the rule is applied here too.
-        if (!acceptsProduct(prev, line)) return prev;
         const existingIdx = prev.findIndex((item) => item.variantId === variant.id);
         if (existingIdx > -1) {
           const updated = [...prev];
@@ -175,7 +147,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (openDrawer) setIsDrawerOpen(true);
       return true;
     },
-    [items, setItems],
+    [setItems],
   );
 
   const removeItem = useCallback(
@@ -206,17 +178,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [setItems]);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
-  const closeDrawer = useCallback(() => {
-    setIsDrawerOpen(false);
-    setRefusedKind(null);
-  }, []);
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
 
-  const countByKind = useMemo(() => itemCountByKind(items), [items]);
-
+  const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [items]);
-  const kind = useMemo(() => basketKind(items), [items]);
-  const groups = useMemo(() => basketGroups(items), [items]);
 
   const value = useMemo(
     () => ({
@@ -229,12 +195,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openDrawer,
       closeDrawer,
       toggleDrawer,
-      itemCountByKind: countByKind,
+      totalItems,
       subtotal,
-      kind,
-      groups,
-      refusedKind,
-      serverRefusedMixed,
     }),
     [
       items,
@@ -246,12 +208,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openDrawer,
       closeDrawer,
       toggleDrawer,
-      countByKind,
+      totalItems,
       subtotal,
-      kind,
-      groups,
-      refusedKind,
-      serverRefusedMixed,
     ],
   );
 

@@ -47,4 +47,4 @@ def category_ids_with_descendants(category_ids) -> set:
 
 
 def get_category_by_slug(slug: str) -> Category | None:
-    return active_categories().filter(slug=slug).first()
+    return active_categories(category_type=Category.CategoryType.STOCK).filter(slug=slug).first()

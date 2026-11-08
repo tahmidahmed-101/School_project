@@ -275,7 +275,6 @@ DEMO_PAY_TO: dict[str, str] = {
     PaymentMethodKey.NAGAD: "01800000002",
 }
 DEMO_STOREFRONT_METHODS = [PaymentMethodKey.COD, PaymentMethodKey.BKASH, PaymentMethodKey.NAGAD]
-DEMO_DEPOSIT_PERCENT = "30"
 
 HERO_ALT_PREFIX = "Demo slide"
 # Placement, background colour, tag (en, bn), title (en, bn), link.
@@ -298,15 +297,6 @@ HERO_SLIDES: list[tuple[str, tuple[int, int, int], str, str, str, str, str]] = [
         "অর্ডারের আগে ভাউচার নিয়ে নিন",
         "/shop",
     ),
-    (
-        "preorder",
-        (70, 60, 110),
-        "Pre-order",
-        "প্রি-অর্ডার",
-        "Order now, get it when it lands",
-        "এখন অর্ডার করুন, পণ্য এলেই পাবেন",
-        "/pre-order",
-    ),
 ]
 # Placement, then the line in English and Bangla.
 PROMO_LINES: list[tuple[str, str, str]] = [
@@ -315,32 +305,12 @@ PROMO_LINES: list[tuple[str, str, str]] = [
         "Demo store: cash on delivery, bKash and Nagad accepted",
         "ডেমো স্টোর: ক্যাশ অন ডেলিভারি, বিকাশ আর নগদে পেমেন্ট করা যায়",
     ),
-    (
-        "preorder",
-        "Demo store: cash on delivery, bKash and Nagad accepted",
-        "ডেমো স্টোর: ক্যাশ অন ডেলিভারি, বিকাশ আর নগদে পেমেন্ট করা যায়",
-    ),
-    (
-        "preorder",
-        "Demo store: pay an advance now, the rest before delivery",
-        "ডেমো স্টোর: এখন অগ্রিম দিন, বাকিটা ডেলিভারির আগে",
-    ),
 ]
 
-DEMO_BRANDS: list[tuple[str, str, str]] = [
-    ("Izara", "House label for shirting and panjabi.", "stock"),
-    ("Padma Loom", "Knit and jersey basics.", "stock"),
-    ("Northline", "Denim and trousers.", "stock"),
-    ("Farline Imports", "Imported goods brought in on pre-order.", "preorder"),
-]
-
-PREORDER_CATEGORY = ("Pre-order Imports", "Ordered from the supplier after you book.")
-# Name, price and whether the pre-order window is "open" or "upcoming".
-PREORDER_PRODUCTS: list[tuple[str, str, str]] = [
-    ("Imported Travel Backpack", "3200.00", "open"),
-    ("Wireless Earbuds Pro", "2450.00", "open"),
-    ("Smart Fitness Band", "1850.00", "open"),
-    ("Mini Projector", "8900.00", "upcoming"),
+DEMO_BRANDS: list[tuple[str, str]] = [
+    ("Izara", "House label for shirting and panjabi."),
+    ("Padma Loom", "Knit and jersey basics."),
+    ("Northline", "Denim and trousers."),
 ]
 
 BUNDLE_SKU = f"{SKU_PREFIX}-BND-01"
