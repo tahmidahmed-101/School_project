@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { collectedVouchers, toVoucher, unexpiredVouchers } from "../vouchers";
 
 const api = {
-  code: "KULL10",
+  code: "SAVE10",
   discount_type: "percentage",
   value: "10.00",
   min_order_amount: "2500.00",
@@ -12,7 +12,7 @@ const api = {
 describe("toVoucher", () => {
   it("turns the API's decimal strings into numbers", () => {
     expect(toVoucher(api)).toEqual({
-      code: "KULL10",
+      code: "SAVE10",
       kind: "percentage",
       value: 10,
       minSpend: 2500,

@@ -4,7 +4,7 @@ import { avatarInitial, avatarSrc, firstName } from "../avatar";
 describe("avatarInitial", () => {
   it("uses the name, then the email", () => {
     expect(avatarInitial({ name: "jane doe", email: "x@example.com" })).toBe("J");
-    expect(avatarInitial({ name: "  ", email: "pranto@example.com" })).toBe("P");
+    expect(avatarInitial({ name: "  ", email: "student@example.com" })).toBe("S");
     expect(avatarInitial({ name: "", email: "" })).toBe("?");
   });
 

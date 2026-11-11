@@ -3,7 +3,7 @@ import { suggestEmailCorrection } from "../email";
 
 describe("suggestEmailCorrection", () => {
   it("catches the slips that locked real customers out", () => {
-    expect(suggestEmailCorrection("mdpranto278@gamil.com")).toBe("mdpranto278@gmail.com");
+    expect(suggestEmailCorrection("student278@gamil.com")).toBe("student278@gmail.com");
     expect(suggestEmailCorrection("test@gmai.com")).toBe("test@gmail.com");
   });
 

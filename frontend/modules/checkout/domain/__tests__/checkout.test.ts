@@ -53,7 +53,7 @@ describe("isBdMobile", () => {
 });
 
 describe("buildCheckoutRequest", () => {
-  const request = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", couponCode: "KULL10" });
+  const request = buildCheckoutRequest(validForm, items, { paymentMethod: "cod", couponCode: "SAVE10" });
 
   it("sends only variant ids and quantities, never prices", () => {
     expect(request.items).toEqual([
@@ -69,7 +69,7 @@ describe("buildCheckoutRequest", () => {
       phone: "01712-345678",
       first_name: "Rahim Uddin",
       payment_method: "cod",
-      coupon_code: "KULL10",
+      coupon_code: "SAVE10",
       notes: "ring the bell",
       shipping_address: {
         full_name: "Rahim Uddin",

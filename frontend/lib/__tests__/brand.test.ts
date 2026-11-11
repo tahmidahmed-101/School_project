@@ -135,7 +135,7 @@ describe("mergeBrand contact (floating button)", () => {
   });
 
   it("has no Messenger link for a URL that is not a Facebook page", () => {
-    expect(mergeBrand(profile({ social: { facebook: "https://example.com/kull" } })).contact.messenger).toBe("");
+    expect(mergeBrand(profile({ social: { facebook: "https://example.com/school" } })).contact.messenger).toBe("");
     expect(
       mergeBrand(profile({ social: { facebook: "https://www.facebook.com/profile.php?id=1" } })).contact.messenger,
     ).toBe("");
